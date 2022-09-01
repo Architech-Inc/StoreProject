@@ -25,11 +25,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Controllers\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\StoreProjectModels\StoreProjectModels.csproj" />
+    <ProjectReference Include="..\StoreServices\StoreServices.csproj" />
   </ItemGroup>
 
 </Project>

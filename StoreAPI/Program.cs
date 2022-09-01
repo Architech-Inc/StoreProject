@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using StoreProjectModels.DatabaseModels;
+using StoreServices.Interfaces;
+using StoreServices;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +12,9 @@ builder.Services.AddDbContext<store_dbContext>(options =>
 {
 	options.UseMySQL(builder.Configuration.GetConnectionString("Default"));
 });
+
+builder.Services.AddScoped<ICategoryService, CategoryService>();
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
