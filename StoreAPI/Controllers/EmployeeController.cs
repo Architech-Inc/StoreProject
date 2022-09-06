@@ -5,10 +5,12 @@ using StoreServices.Interfaces;
 
 namespace StoreAPI.Controllers
 {
+	[Route("employee")]
+	[ApiController]
 	public class EmployeeController : Controller
 	{
-		private readonly EmployeeService employeeService;
-		public EmployeeController(EmployeeService employeeService)
+		private readonly IEmployeeService employeeService;
+		public EmployeeController(IEmployeeService employeeService)
 		{
 			this.employeeService = employeeService;
 		}
@@ -27,19 +29,19 @@ namespace StoreAPI.Controllers
 		}
 		[HttpPost]
 		[Route("addEmployee")]
-		public IActionResult AddUser(Employee employee)
+		public IActionResult AddEmployee(Employee employee)
 		{
 			return Ok(employeeService.AddEmployee(employee));
 		}
 		[HttpPost]
 		[Route("updateEmployee")]
-		public IActionResult UpdateUser(Employee employee)
+		public IActionResult UpdateEmployee(Employee employee)
 		{
 			return Ok(employeeService.UpdateEmployee(employee));
 		}
 		[HttpDelete]
 		[Route("deleteEmployee")]
-		public IActionResult DeleteUser(string employeeId)
+		public IActionResult DeleteEmployee(string employeeId)
 		{
 			return Ok(employeeService.DeleteEmployee(employeeId));
 		}

@@ -1,4 +1,5 @@
-﻿using StoreProjectModels.DatabaseModels;
+﻿using Microsoft.EntityFrameworkCore;
+using StoreProjectModels.DatabaseModels;
 using StoreProjectModels.Models;
 using StoreServices.Interfaces;
 using System;
@@ -19,7 +20,7 @@ namespace StoreServices
             try
             {
                 user.UserId = Authentication.GenerateGuid();
-                if (DbContext.Users.Where(u => u.UserId == user.UserId).ToList().FirstOrDefault() == null) return new(false, "UserExists");
+                if (DbContext.Users.Where(u => u.UserId == user.UserId).ToList().FirstOrDefault() != null) return new(false, "UserExists");
                 DbContext.Users.Add(user);
                 DbContext.SaveChanges();
                 return new(true, "Success");
@@ -34,9 +35,12 @@ namespace StoreServices
         {
             try
             {
-                if (DbContext.Users.Where(u => u.UserId == userId).FirstOrDefault() == null) return new(false, "UserNotFound");
-                DbContext.Users.Remove(DbContext.Users.Where(u => u.UserId == userId).FirstOrDefault());
-                return new(true, "Success");
+                User user = DbContext.Users.Where(u => u.UserId == userId).FirstOrDefault();
+				if (user == null) return new(false, "UserNotFound");
+				DbContext.Entry<User>(user).State = EntityState.Deleted;
+                DbContext.Users.Remove(user);
+                DbContext.SaveChanges();
+				return new(true, "Success");
             }
             catch (Exception ex)
             {
@@ -49,7 +53,12 @@ namespace StoreServices
             return new ObservableCollection<User>(DbContext.Users);
         }
 
-        public User GetUser(string userId) => DbContext.Users.Where(u => u.UserId == userId).FirstOrDefault();
+        public User GetUser(string userId)
+        {
+            User user = DbContext.Users.Where(u => u.UserId == userId).FirstOrDefault();
+            if (user == null) return null;
+            return user;
+        }
 
         public ResponseModel UpdateUser(User user)
         {
@@ -57,7 +66,9 @@ namespace StoreServices
 			if (user == null) return new(false, "UserNotFound");
 			try
 			{
-				DbContext.Users.Update(user);
+                _user = user;
+                DbContext.Entry<User>(_user).State = EntityState.Detached;
+				DbContext.Users.Update(_user);
 				DbContext.SaveChanges();
 				return new(true, "Success");
 			}

@@ -25,7 +25,7 @@ namespace StoreServices
 			try
 			{
 				employee.EmployeeId = Authentication.GenerateGuid();
-				if (DbContext.Users.Where(u => u.UserId == employee.EmployeeId).ToList().FirstOrDefault() == null) return new(false, "UserExists");
+				if (DbContext.Users.Where(e => e.EmployeeId == employee.EmployeeId).ToList().FirstOrDefault() != null) return new(false, "EmployeeExists");
 				DbContext.Employees.Add(employee);
 				DbContext.SaveChanges();
 				return new(true, "Success");
@@ -40,8 +40,11 @@ namespace StoreServices
 		{
 			try
 			{
-				if (DbContext.Employees.Where(u => u.EmployeeId == employeeId).FirstOrDefault() == null) return new(false, "UserNotFound");
-				DbContext.Employees.Remove(DbContext.Employees.Where(u => u.EmployeeId == employeeId).FirstOrDefault());
+				Employee employee = DbContext.Employees.Where(e => e.EmployeeId == employeeId).FirstOrDefault();
+				if (employee == null) return new(false, "EmployeeNotFound");
+				DbContext.Entry<Employee>(employee).State = EntityState.Deleted;
+				DbContext.Employees.Remove(employee);
+				DbContext.SaveChanges();
 				return new(true, "Success");
 			}
 			catch (Exception ex)
@@ -57,16 +60,20 @@ namespace StoreServices
 
 		public Employee GetEmployee(string employeeId)
 		{
-			return DbContext.Employees.Where(e => e.EmployeeId == employeeId).FirstOrDefault();
+			Employee employee = DbContext.Employees.Where(e => e.EmployeeId == employeeId).FirstOrDefault();
+			if (employee == null) return null;
+			return employee;
 		}
 
 		public ResponseModel UpdateEmployee(Employee employee)
 		{
-			Employee _user = DbContext.Employees.Where(u => u.EmployeeId == employee.EmployeeId).ToList().FirstOrDefault();
-			if (employee == null) return new(false, "EmployeeNotFound");
+			Employee _employee = DbContext.Employees.Where(e => e.EmployeeId == employee.EmployeeId).ToList().FirstOrDefault();
+			if (_employee == null) return new(false, "EmployeeNotFound");
 			try
 			{
-				DbContext.Employees.Update(employee);
+				DbContext.Entry<Employee>(_employee).State = EntityState.Detached;
+				_employee = employee;
+				DbContext.Employees.Update(_employee);
 				DbContext.SaveChanges();
 				return new(true, "Success");
 			}

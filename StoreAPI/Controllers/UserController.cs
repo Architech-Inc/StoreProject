@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using StoreProjectModels.DatabaseModels;
 using StoreServices;
+using StoreServices.Interfaces;
 
 namespace StoreAPI.Controllers
 {
@@ -8,8 +9,8 @@ namespace StoreAPI.Controllers
 	[ApiController]
 	public class UserController : ControllerBase
 	{
-		private readonly UserService _userService;
-		public UserController(UserService userService)
+		private readonly IUserService _userService;
+		public UserController(IUserService userService)
 		{
 			_userService = userService;
 		}

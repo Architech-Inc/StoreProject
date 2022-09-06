@@ -18,6 +18,8 @@ builder.Services.AddDbContext<store_dbContext>(options =>
 });
 
 builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 
 builder.Services.AddCors(p => p.AddPolicy("corspolicy", build =>
 {
