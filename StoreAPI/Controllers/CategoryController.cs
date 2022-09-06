@@ -6,10 +6,10 @@ namespace StoreAPI.Controllers
 {
 	[Route("api/[controller]")]
 	[ApiController]
-	public class CategoryService : ControllerBase
+	public class CategoryController : ControllerBase
 	{
 		private readonly ICategoryService categoryService;
-		public CategoryService(ICategoryService _categoryService)
+		public CategoryController(ICategoryService _categoryService)
 		{
 			this.categoryService = _categoryService;
 		}

@@ -24,6 +24,7 @@ namespace StoreProjectModels.DatabaseModels
         public string Contact { get; set; }
         public string Pob { get; set; }
         public DateTime Dob { get; set; }
+        public string ImgBase64 { get; set; }
 
         public virtual Department Dept { get; set; }
         public virtual Salary Salary { get; set; }
