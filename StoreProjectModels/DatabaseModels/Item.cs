@@ -24,7 +24,7 @@ namespace StoreProjectModels.DatabaseModels
         public int? DiscountPercentage { get; set; }
         public int? ItemCode { get; set; }
         public DateTime DateCreated { get; set; }
-        public string ImgBase64 { get; set; }
+        public byte[] Image { get; set; }
 
         public virtual Category Category { get; set; }
         public virtual Unit Unit { get; set; }

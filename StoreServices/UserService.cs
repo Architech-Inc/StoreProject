@@ -14,6 +14,14 @@ namespace StoreServices
     public class UserService : IUserService
     {
         private readonly store_dbContext DbContext;
+        public UserService(store_dbContext dbContext)
+        {
+            DbContext = dbContext; 
+        }
+        public UserService()
+        {
+
+        }
         public ResponseModel AddUser(User user)
         {
             if (user == null) return new(false, "UserNull");

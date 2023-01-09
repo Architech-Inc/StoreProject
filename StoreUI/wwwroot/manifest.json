@@ -1,0 +1,49 @@
+{
+    "lang": "en-us",
+    "name": "ClexAn Foods",
+    "short_name": "ClexAn",
+    "description": "Point Of Sale and store management application",
+    "start_url": "index.html",
+    "background_color": "#2f3d58",
+    "theme_color": "#2f3d58",
+    "orientation": "any",
+    "display": "standalone",
+    "icons": [
+        {
+            "src": "images/clarkstore.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "images/clarkstore 256x256.png",
+            "sizes": "256x256",
+            "type": "image/png"
+        },
+        {
+            "src": "images/clarkstore 128x128.png",
+            "sizes": "128x128",
+            "type": "image/png"
+        },
+        {
+            "src": "images/clarkstore 64x64.png",
+            "sizes": "64x64",
+            "type": "image/png"
+        },
+        {
+            "src": "images/clarkstore 32x32.png",
+            "sizes": "32x32",
+            "type": "image/png"
+        },
+        {
+            "src": "images/clarkstore 16x16.png",
+            "sizes": "16x16",
+            "type": "image/png"
+        },
+        {
+            "src": "images/clarkstore 8x8.png",
+            "sizes": "8x8",
+            "type": "image/png"
+        }
+    ],
+    "publisher": "Architech Inc."
+}

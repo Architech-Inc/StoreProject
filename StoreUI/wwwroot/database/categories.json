@@ -1,0 +1,37 @@
+[
+    {
+        "catID": 0,
+        "catName": "Beverges",
+        "NoP": 100
+    },
+    {
+        "catID": 1,
+        "catName": "Groceries",
+        "NoP": 34
+    },
+    {
+        "catID": 2,
+        "catName": "Alcohols",
+        "NoP": 4
+    },
+    {
+        "catID": 3,
+        "catName": "Vegitebles",
+        "NoP": 12
+    },
+    {
+        "catID": 4,
+        "catName": "Fish",
+        "NoP": 9
+    },
+    {
+        "catID": 5,
+        "catName": "Meat",
+        "NoP": 0
+    },
+    {
+        "catID": 6,
+        "catName": "Detegents",
+        "NoP": 45
+    }
+]

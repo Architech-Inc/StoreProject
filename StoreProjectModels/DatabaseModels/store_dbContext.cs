@@ -18,7 +18,7 @@ namespace StoreProjectModels.DatabaseModels
         }
 
         public virtual DbSet<Category> Categories { get; set; }
-        public virtual DbSet<Costumer> Costumers { get; set; }
+        public virtual DbSet<Customer> Customers { get; set; }
         public virtual DbSet<Department> Departments { get; set; }
         public virtual DbSet<Employee> Employees { get; set; }
         public virtual DbSet<Invoice> Invoices { get; set; }
@@ -30,14 +30,14 @@ namespace StoreProjectModels.DatabaseModels
         public virtual DbSet<Unit> Units { get; set; }
         public virtual DbSet<User> Users { get; set; }
 
-//        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-//        {
-//            if (!optionsBuilder.IsConfigured)
-//            {
-//#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see http://go.microsoft.com/fwlink/?LinkId=723263.
-//                optionsBuilder.UseMySQL("server=localhost;port=3306;database=store_db;user=root;password=");
-//            }
-//        }
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            if (!optionsBuilder.IsConfigured)
+            {
+#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see http://go.microsoft.com/fwlink/?LinkId=723263.
+                optionsBuilder.UseMySQL("server=localhost;port=3306;database=store_db;user=root;password=");
+            }
+        }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -60,16 +60,16 @@ namespace StoreProjectModels.DatabaseModels
                 entity.Property(e => e.NoP).HasColumnType("int(11)");
             });
 
-            modelBuilder.Entity<Costumer>(entity =>
+            modelBuilder.Entity<Customer>(entity =>
             {
-                entity.ToTable("costumer");
+                entity.ToTable("customer");
 
                 entity.HasIndex(e => e.NidNumber, "nid_number")
                     .IsUnique();
 
-                entity.Property(e => e.CostumerId)
+                entity.Property(e => e.CustomerId)
                     .HasMaxLength(100)
-                    .HasColumnName("costumerID");
+                    .HasColumnName("customerID");
 
                 entity.Property(e => e.Address)
                     .IsRequired()
@@ -102,14 +102,11 @@ namespace StoreProjectModels.DatabaseModels
 
             modelBuilder.Entity<Department>(entity =>
             {
-                entity.HasKey(e => e.DeptId)
-                    .HasName("PRIMARY");
-
                 entity.ToTable("department");
 
-                entity.Property(e => e.DeptId)
+                entity.Property(e => e.DepartmentId)
                     .HasColumnType("int(11)")
-                    .HasColumnName("deptID");
+                    .HasColumnName("departmentID");
 
                 entity.Property(e => e.Description)
                     .IsRequired()
@@ -126,7 +123,10 @@ namespace StoreProjectModels.DatabaseModels
             {
                 entity.ToTable("employee");
 
-                entity.HasIndex(e => e.DeptId, "department");
+                entity.HasIndex(e => e.DepartmentId, "department");
+
+                entity.HasIndex(e => e.Email, "email")
+                    .IsUnique();
 
                 entity.HasIndex(e => e.SalaryId, "is_paid");
 
@@ -146,9 +146,9 @@ namespace StoreProjectModels.DatabaseModels
 
                 entity.Property(e => e.DateEmployed).HasColumnName("date_employed");
 
-                entity.Property(e => e.DeptId)
+                entity.Property(e => e.DepartmentId)
                     .HasColumnType("int(11)")
-                    .HasColumnName("deptID")
+                    .HasColumnName("departmentID")
                     .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.Dob)
@@ -165,10 +165,10 @@ namespace StoreProjectModels.DatabaseModels
                     .HasMaxLength(15)
                     .HasColumnName("first_name");
 
-                entity.Property(e => e.ImgBase64)
+                entity.Property(e => e.Image)
                     .IsRequired()
-                    .HasColumnType("longtext")
-                    .HasColumnName("imgBase64");
+                    .HasColumnType("longblob")
+                    .HasColumnName("image");
 
                 entity.Property(e => e.LastName)
                     .IsRequired()
@@ -189,16 +189,14 @@ namespace StoreProjectModels.DatabaseModels
                     .HasColumnName("salaryID")
                     .HasDefaultValueSql("'NULL'");
 
-                entity.HasOne(d => d.Dept)
+                entity.HasOne(d => d.Department)
                     .WithMany(p => p.Employees)
-                    .HasForeignKey(d => d.DeptId)
-                    .OnDelete(DeleteBehavior.SetNull)
+                    .HasForeignKey(d => d.DepartmentId)
                     .HasConstraintName("department");
 
                 entity.HasOne(d => d.Salary)
                     .WithMany(p => p.Employees)
                     .HasForeignKey(d => d.SalaryId)
-                    .OnDelete(DeleteBehavior.SetNull)
                     .HasConstraintName("is_paid");
             });
 
@@ -206,7 +204,7 @@ namespace StoreProjectModels.DatabaseModels
             {
                 entity.ToTable("invoice");
 
-                entity.HasIndex(e => e.CostumerId, "costumer");
+                entity.HasIndex(e => e.CustomerId, "costumer");
 
                 entity.HasIndex(e => e.UserId, "user");
 
@@ -225,9 +223,9 @@ namespace StoreProjectModels.DatabaseModels
                     .HasColumnType("int(30)")
                     .HasColumnName("bank_account_number");
 
-                entity.Property(e => e.CostumerId)
+                entity.Property(e => e.CustomerId)
                     .HasMaxLength(100)
-                    .HasColumnName("costumerID")
+                    .HasColumnName("customerID")
                     .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.DateRecorded)
@@ -254,10 +252,10 @@ namespace StoreProjectModels.DatabaseModels
                     .HasMaxLength(100)
                     .HasColumnName("userID");
 
-                entity.HasOne(d => d.Costumer)
+                entity.HasOne(d => d.Customer)
                     .WithMany(p => p.Invoices)
-                    .HasForeignKey(d => d.CostumerId)
-                    .HasConstraintName("costumer");
+                    .HasForeignKey(d => d.CustomerId)
+                    .HasConstraintName("customer");
 
                 entity.HasOne(d => d.User)
                     .WithMany(p => p.Invoices)
@@ -295,10 +293,10 @@ namespace StoreProjectModels.DatabaseModels
                     .HasColumnName("discount_percentage")
                     .HasDefaultValueSql("'NULL'");
 
-                entity.Property(e => e.ImgBase64)
+                entity.Property(e => e.Image)
                     .IsRequired()
-                    .HasColumnType("longtext")
-                    .HasColumnName("imgBase64");
+                    .HasColumnType("longblob")
+                    .HasColumnName("image");
 
                 entity.Property(e => e.InStock)
                     .HasColumnType("int(11)")
@@ -550,7 +548,7 @@ namespace StoreProjectModels.DatabaseModels
 
                 entity.Property(e => e.Name)
                     .IsRequired()
-                    .HasMaxLength(25)
+                    .HasMaxLength(100)
                     .HasColumnName("name");
 
                 entity.Property(e => e.Type)
@@ -567,6 +565,9 @@ namespace StoreProjectModels.DatabaseModels
 
                 entity.HasIndex(e => e.UnitId, "unit_assigned");
 
+                entity.HasIndex(e => e.Username, "username")
+                    .IsUnique();
+
                 entity.Property(e => e.UserId)
                     .HasMaxLength(100)
                     .HasColumnName("userID");
@@ -578,13 +579,13 @@ namespace StoreProjectModels.DatabaseModels
                     .HasDefaultValueSql("'''user'''");
 
                 entity.Property(e => e.EmployeeId)
-                    .HasMaxLength(20)
+                    .HasMaxLength(100)
                     .HasColumnName("employeeID")
                     .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.Password)
                     .IsRequired()
-                    .HasMaxLength(8)
+                    .HasMaxLength(100)
                     .HasColumnName("password");
 
                 entity.Property(e => e.UnitId)

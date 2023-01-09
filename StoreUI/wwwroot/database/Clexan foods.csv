@@ -1,0 +1,20 @@
+itemID,Item_name,item_type,unit_price,in_stock
+1,Chin-chin,small,XAF 100.00,50
+2,Chin-chin,medium,XAF 500.00,21
+3,Chin-chin,large,"XAF 1,000.00",5
+4,Dough-nuts,,XAF 100.00,44
+5,Pea nuts,small,XAF 100.00,76
+6,Pea nuts,large,"XAF 1,300.00",10
+7,Eggs,retail,XAF 100.00,90
+8,Eggs,tray,"XAF 2,200.00",4
+9,maggi,5-pieces,XAF 50.00,50
+10,Salt,small,XAF 50.00,100
+11,Sugar,5-cube,XAF 25.00,300
+12,Parle J,small size,XAF 25.00,62
+13,Planet,1.25l,XAF 500.00,12
+14,Sponge,soft,XAF 50.00,13
+15,Sponge,small-strong,XAF 50.00,8
+16,Tomatoes,Sachet,XAF 100.00,42
+17,Spagetti,small-250,XAF 250.00,12
+18,Omo,local,XAF 50.00,30
+19,Top milk,small,XAF 50.00,8

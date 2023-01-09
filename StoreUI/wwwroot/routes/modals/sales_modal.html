@@ -1,0 +1,37 @@
+<div class="s-main-view">
+    <div class="headBar">
+        <div class="sortSale-wrapper">
+            <label for="sortList">Sort</label>
+            <select name="sortList" id="sortList">
+                <option selected value="d_asc">Date Ascending</option>
+                <option value="d_desc">Date Descending</option>
+            </select>
+        </div>
+        <div class="filterSales-wrapper">
+            <label for="filterList">Filter</label>
+            <img src="images/filter.svg" alt="filter" class="filter-menu-btn">
+        </div>
+    </div>
+    <div class="filter-menu">
+        <ul class="filter-option-list">
+            <li class="filter-item">
+                <input type="checkbox" class="filter-checkbox" name="check" id="check_">
+                <label for="filterByMonth" class="filter-label">By Month</label>
+                <input type="text" name="filter-input" id="filterByMonth" class="filter-input">
+            </li>
+            <li class="filter-item">
+                <input type="checkbox" class="filter-checkbox" name="check" id="check_">
+                <label for="filterByYear" class="filter-label">By Year</label>
+                <input type="text" name="filter-input" id="filterByYear" class="filter-input">
+            </li>
+            <li class="filter-item">
+                <input type="checkbox" class="filter-checkbox" name="check" id="check_">
+                <label for="filterByDate" class="filter-label">By Date</label>
+                <input type="date" name="filter-input" id="filterByDate" class="filter-input">
+            </li>
+        </ul>
+    </div>
+    <div class="sales-list">
+
+    </div>
+</div>

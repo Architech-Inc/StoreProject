@@ -1,0 +1,184 @@
+@font-face {
+    font-family: 'Open Sans';
+    src: url('../fonts/OpenSans-VariableFont_wdth\,wght.ttf') format('truetype');
+}
+div#welcomeView {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    margin: auto;
+    width: 380px;
+    min-width: 380px;
+    max-width: 380px;
+    height: fit-content;
+    height: -moz-fit-content;
+    background-color: white;
+    /* background-color: rgba(255, 255, 255, 0.63); */
+    -webkit-backdrop-filter: blur(50px);
+    backdrop-filter: blur(50px);
+    border: none;
+    border-radius: 15px;
+    padding: 10px;
+    box-shadow: 3px 4px 15px 5px #00000050;
+}
+
+div.viewNameSpace {
+    box-sizing: border-box;
+    display: flex;
+    text-align: center;
+    font-size: 30px;
+    text-shadow: 1px 1px 2px black;
+    cursor: default;
+}
+
+sign.atSign {
+    width: -moz-fit-content;
+    width: fit-content;
+    width: -moz-fit-content;
+    height: fit-content;
+    color: green;
+    padding: 0%;
+    margin: 0%;
+    text-align: center;
+    font-size: 50px;
+    font-weight: bold;
+}
+
+.nameSpace {
+    margin: auto;
+    text-align: center;
+    color: rgb(94, 90, 90);
+}
+
+
+
+div#avatarBox {
+    width: fit-content;
+    width: -moz-fit-content;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    margin: 2% auto;
+    text-align: center;
+    font-weight: bold;
+    font-size: 1.5em;
+}
+
+img#avatar {
+    width: auto;
+    border-radius: 15px;
+    background-color: rgba(0, 0, 0, 0);
+}
+
+span.avatarText {
+    margin: 0%;
+    padding: 0%;
+}
+
+div#welcomeView > div.formArea {
+    box-sizing: border-box;
+    width: 60%;
+    height: auto;
+    display: inline-block;
+    flex-direction: column;
+    margin: 0px auto;
+    background-color: none;
+}
+
+div.formArea form {
+
+}
+
+form div.formSection {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: auto;
+    margin: 5px 0px;
+    position: relative;
+}
+
+form div.formSection.LDiv{
+    margin-top: 20px;
+    display: flex;
+    justify-items: center;
+    align-items: center;
+}
+
+form div.formSection label {
+    color: rgb(43, 43, 43);
+    font-size: 1em;
+}
+
+input:not(.browser-default) {
+    width: 100%;
+    height: 30px;
+    position: relative;
+    border: 0.14rem solid rgb(70, 70, 70);
+    border-radius: 5px;
+    box-sizing: border-box;
+    resize: vertical;
+    color: rgb(48, 48, 48);
+    font-size: 1em;
+}
+
+
+input:not(.browser-default):focus {
+    color: rgb(0, 0, 0);
+    accent-color: green;
+    outline: 0.1em solid rgb(48, 48, 48);
+}
+
+form div.formSection span#inputError-0, form div.formSection span#inputError-1 {
+    height: 12px;
+    color: red;
+    display: inline-block;
+    padding: 0px 8px;
+    font-size: 0.8rem;
+}
+
+form div.formSection button#login, .btn_add, .resetbtn, button.btn_save {
+    width: 60%;
+    height: 30px;
+    font-family: 'Open sans';
+    color: white;
+    font-weight: bold;
+    text-align: center;
+    border: 1px solid slategrey;
+    border-radius: 5px;
+    background-color: green;
+}
+
+
+form div.formSection button#login:focus, 
+form div.formSection button#login:hover {
+    color: black;
+    background-color: rgb(0, 99, 0);
+    border: 0.12em solid rgb(43, 42, 42);
+    box-shadow: 0px 0px 2px 0px rgba(0, 0, 0, 0.644);
+}
+
+p.forgot_pass {
+    font-size: 0.76em;
+}
+
+p.forgot_pass a {
+    text-decoration: none;
+}
+
+p.forgot_pass a:hover {
+    transition: all .1s ease-in;
+    color: white;
+    background-color: green;
+    padding-inline: 1px;
+    border-radius: 2px;
+    text-decoration: underline;
+}
+/* 
+button#login {
+    max-width: 80px;
+    margin-left: -80px;
+    margin-right: auto;
+} */

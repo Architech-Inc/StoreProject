@@ -4,7 +4,7 @@ using StoreServices.Interfaces;
 
 namespace StoreAPI.Controllers
 {
-	[Route("api/[controller]")]
+	[Route("api/category")]
 	[ApiController]
 	public class CategoryController : ControllerBase
 	{
@@ -15,17 +15,31 @@ namespace StoreAPI.Controllers
 		}
 
 		[HttpGet]
-		[Route("GetAllCategories")]
+		[Route("getAllCategories")]
 		public IActionResult GetAllCategories()
 		{
 			return Ok(categoryService.GetAllCategories());
 		}
 
 		[HttpPost]
-		[Route("AddCategory")]
+		[Route("addCategory")]
 		public IActionResult AddCategory(Category category)
 		{
 			return Ok(categoryService.AddCategory(category));
+		}
+
+		[HttpDelete]
+		[Route("deleteCategory")]
+		public IActionResult DeleteCategory(int id)
+		{
+			return Ok(categoryService.DeleteCategory(id));
+		}
+
+		[HttpPut]
+		[Route("updateCategory")]
+		public IActionResult UpdateCategory(Category category)
+		{
+			return Ok(categoryService.UpdateCategory(category));
 		}
 	}
 }

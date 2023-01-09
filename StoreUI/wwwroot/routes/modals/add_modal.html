@@ -1,0 +1,73 @@
+<div class="record_view">
+    <h3 id="es-header">Add Form</h3>
+    <form class="record_form">
+        <table id="formTable">
+            <tr>
+                <td>
+                    <label for="name">Name</label>
+                </td>
+                <td>
+                    <input name="name" id="it-name" placeholder="Item name" autocapitalize="words">
+                </td>
+                <td>
+                    <label for="type">Type</label>
+                </td>
+                <td>
+                    <input width="20px" type="text" name="price" id="it-type" placeholder="Item type">
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <label for="price">Price</label>
+                </td>
+                <td>
+                    <input width="20px" type="number" name="price" id="it-price" placeholder="Unit price">
+                </td>
+                <td>
+                    <label for="stock">In-stock</label>
+                </td>
+                <td>
+                    <input type="number" name="stock" id="it-stock" placeholder="stock">
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <label for="category">Category</label>
+                </td>
+                <td>
+                    <input name="category" id="it-cat" list="category_list" placeholder="Category" autocapitalize="words">
+                    <datalist id="category_list">
+                    </datalist>
+                </td>
+                <td>
+                    <label for="it-img">Image</label>
+                </td>
+                <td>
+                    <input type="file" accept="image/jpeg, image/png" name="file" id="it-img" placeholder="Type image name">
+                </td>
+            </tr>
+        </table>
+        <div class="btnflex">
+            <button type="reset" class="resetbtn">Reset</button>
+            <button type="button" class="btn_add" id="itemtolist">Add Item</button>
+        </div>
+
+    </form>
+    <div class="added">
+        <table class="addedlisttable">
+            <tr class="Ldata" id="tHeader">
+                <th class="Ldata1 tID">ID</th>
+                <th class="Ldata2 tName">Item Name</th>
+                <th class="Ldata3 tType">Type</th>
+                <th class="Ldata4 tUP">Uint Price</th>
+                <th class="Ldata5 tStock">In-stock</th>
+                <th class="Ldata6 tCat">Category</th>
+                <th class="Ldata7 tImg">Image Name</th>
+                <th class="Ldata8 tOP"></th>
+            </tr>
+        </table>
+    </div>
+    <div class="BtnSection btnflex">
+        <button type="button" class="btn_save" id="btnNewItems">Save Items</button>
+    </div>
+</div>

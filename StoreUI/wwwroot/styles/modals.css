@@ -1,0 +1,271 @@
+.modalView {
+    display: none;
+    width: 100%;
+    height: 100vh;
+    max-width: 100%;
+    position: absolute;
+    top: 0%;
+    left: 0%;
+    right: 0%;
+    bottom: 0%;
+    background: rgba(255, 255, 255, 0.075);
+    backdrop-filter: blur(2px);
+    z-index: 50;
+    box-sizing: content-box;
+    overflow-x: auto;
+}
+
+div.loading-frame {
+     height: 100%;
+     position: fixed;
+     width: 100%;
+     background-color: rgba(0, 0, 0, 0.425);
+     -webkit-backdrop-filter: blur(10px);
+     backdrop-filter: blur(10px);
+     top: 0px;
+     left: 0px;
+     right: 0px;
+     bottom: 0px;
+     z-index: 59;
+     box-sizing: content-box;
+     overflow-x: auto;
+ }
+
+.modalHeader {
+    width: auto;
+    height: 40px;
+    left: 0%;
+    right: 0%;
+    display: flex;
+    padding-inline-start: 3px;
+    background-color: #3b3b3b;
+    margin: 0px;
+    margin-right: 0px;
+    margin-bottom: 1px;
+    box-shadow: 0px 2px 8px 1px rgba(80, 80, 80, 0.493);
+}
+
+.exitModal {
+    width: 35px;
+    height: 35px;
+    position: relative;
+    /* margin-left: auto; */
+    margin: auto 3px auto auto;
+    top: auto;
+    display: block;
+    border-radius: 5px;
+}
+
+.exitModal:hover {
+	transition: 0.12s;
+	background-color: rgba(240, 6, 6, 0.479);
+}
+
+.exitModal img {
+    position: inherit;
+    width: inherit;
+    height: inherit;
+}
+
+div.fl-BtnCover {
+    background-color: rgba(0, 0, 0, 0);
+    border: 0px solid rgba(0, 0, 0, 0);
+    display: flex;
+    flex-direction: column;
+    z-index: 48;
+    width: 80px;
+    height: 72px;
+    min-width: 65px;
+    min-height: 72px;
+    position: absolute;
+    bottom: 1vh;
+    right: 1vw;
+    box-sizing: border-box;
+    overflow: hidden;
+    overflow-x: none;
+    padding: 2px;
+    padding-top: 7px;
+}
+
+div.fl-BtnCover a.fl{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
+    background-color: green;
+    text-decoration: none;
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+    box-shadow: -0.3px 0px 3px 1.5px rgba(0, 0, 0, 0.432);
+    align-content: space-around;
+    flex-direction: column;
+    flex-wrap: nowrap;
+}
+
+div.fl-BtnCover a.fl-main {
+    padding: 12px;
+    margin: auto;
+    min-width: 60px;
+    min-height: 60px;
+    max-width: 60px;
+    max-height: 60px;
+}
+
+div.fl-BtnCover a.fl-sub-0 {
+    padding: 10px;
+    min-width: 50px;
+    min-height: 50px;
+    max-width: 50px;
+    max-height: 50px;
+    margin: auto;
+    margin-top: 11%;
+}
+
+div.fl-BtnCover a.fl-sub-1 {
+    padding: 8px;
+    min-width: 40px;
+    min-height: 40px;
+    max-width: 40px;
+    max-height: 40px;
+    margin: auto;
+    margin-top: 11%;
+}
+
+div.fl-BtnCover a.fl-main:hover,
+div.fl-BtnCover a.fl-sub-0:hover,
+div.fl-BtnCover a.fl-sub-1:hover {
+    box-shadow: -0.3px 0px 4.5px 1.7px black;
+}
+
+img.fl-main-img {
+    position: relative;
+    height: 35px;
+    width: 35px;
+    display: block;
+    align-self: auto;
+}
+
+div.fl-BtnCover a.fl-sub-0 img.fl-main-img {
+    height: 30px;
+    width: 30px;
+}
+
+div.fl-BtnCover a.fl-sub-1 img.fl-main-img {
+    height: 25px;
+    width: 25px;
+}
+
+.detailModalCover, .catModalDetailCover {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    background-color: aquamarine;
+    top: 0%;
+    left: 0%;
+    right: 0%;
+    bottom: 0%;
+    background: rgba(255, 255, 255, 0.075);
+    backdrop-filter: blur(5px);
+    z-index: 50;
+    box-sizing: content-box;
+    overflow-x: auto;
+    justify-content: center;
+    align-items: center;
+    z-index: 51;
+}
+
+.detailModalCover .detailBox, .catDetailBox {
+    display: flex;
+    flex-direction: column;
+    background-color: rgb(255, 255, 255);
+    width: 350px;
+    height: 500px;
+    border-radius: 15px;
+    overflow: hidden;
+    padding: 1%;
+    border: 1px solid rgba(160, 160, 160, 0.342);
+    box-shadow: 0px 0px 6px 2px rgba(190, 190, 190, 0.83);
+}
+
+#exitDetail {
+    top: 3px;
+    right: 5px
+}
+
+.detailBox img.it_avatar {
+    width: 25%;
+    margin-inline: auto;
+    margin-top: 5%;
+    margin-bottom: 5%;
+}
+
+.detailBox table {
+    width: 100%;
+}
+
+.detailBox table tr {
+    margin-bottom: 1%;
+    border-bottom: 1px solid gray;
+}
+
+.detailBox table tr th {
+    text-align: left;
+}
+
+.detailBox table tr td {
+    text-align: right;
+}
+
+.detailBox .BtnSection {
+    margin-top: auto;
+    margin-bottom: 3%;
+}
+
+.catModalDetailCover {
+    backdrop-filter: blur(1px);
+}
+
+.catModalDetailCover div.catDetailBox {
+    width: 100%;
+    height: fit-content;
+    background-color: white;
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+div.catDetailBox .d-wrapper {
+    margin: 2px 0px;
+    margin-inline: 10px;
+    display: flex;
+    flex-direction: row;
+}
+
+div.catDetailBox .d-wrapper {
+    border-bottom: 1px solid gray;
+}
+
+div.catDetailBox .d-wrapper h5 {
+    margin: 0%;
+    padding: 0%;
+}
+
+div.catDetailBox .d-wrapper span{
+    justify-self: end;
+    margin-left: auto;
+    cursor: text;
+}
+
+div.catDetailBox .headerCaption {
+    text-align: center;
+    color: #3b3b3b;
+    box-shadow: none;
+    font-size: 1rem;
+}
+
+div.catDetailBox .BtnSection * {
+    background-color: rgb(255, 0, 0);
+}

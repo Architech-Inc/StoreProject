@@ -1,11 +1,13 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using StoreProjectModels.DatabaseModels;
 using StoreServices;
 using StoreServices.Interfaces;
 
 namespace StoreAPI.Controllers
 {
-	[Route("employee")]
+	//[Authorize]
+	[Route("api/employee")]
 	[ApiController]
 	public class EmployeeController : Controller
 	{
@@ -21,11 +23,18 @@ namespace StoreAPI.Controllers
 		{
 			return Ok(employeeService.GetAllEmployees());
 		}
-		[HttpPost]
+		[HttpGet]
 		[Route("getEmployee")]
 		public IActionResult GetEmployee(string employeeId)
 		{
 			return Ok(employeeService.GetEmployee(employeeId));
+		}
+		[AllowAnonymous]
+		[HttpPost]
+		[Route("emailCheck")]
+		public IActionResult AddEmployee(string email)
+		{
+			return Ok(employeeService.EmailExists(email));
 		}
 		[HttpPost]
 		[Route("addEmployee")]
@@ -33,7 +42,7 @@ namespace StoreAPI.Controllers
 		{
 			return Ok(employeeService.AddEmployee(employee));
 		}
-		[HttpPost]
+		[HttpPut]
 		[Route("updateEmployee")]
 		public IActionResult UpdateEmployee(Employee employee)
 		{

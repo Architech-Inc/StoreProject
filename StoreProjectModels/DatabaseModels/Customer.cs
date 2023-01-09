@@ -5,14 +5,14 @@ using System.Collections.Generic;
 
 namespace StoreProjectModels.DatabaseModels
 {
-    public partial class Costumer
+    public partial class Customer
     {
-        public Costumer()
+        public Customer()
         {
             Invoices = new HashSet<Invoice>();
         }
 
-        public string CostumerId { get; set; }
+        public string CustomerId { get; set; }
         public int NidNumber { get; set; }
         public string Name { get; set; }
         public string Email { get; set; }

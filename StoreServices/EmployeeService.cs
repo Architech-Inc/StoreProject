@@ -28,11 +28,34 @@ namespace StoreServices
 				if (DbContext.Users.Where(e => e.EmployeeId == employee.EmployeeId).ToList().FirstOrDefault() != null) return new(false, "EmployeeExists");
 				DbContext.Employees.Add(employee);
 				DbContext.SaveChanges();
+				try
+				{
+					User user = new()
+					{
+						UserId = Authentication.GenerateGuid(),
+						EmployeeId = employee.EmployeeId,
+						Username = $"{employee.FirstName}{Convert.ToString(employee.NidNumber).Substring(Convert.ToString(employee.NidNumber).Length - 4)}",
+						AccountType = "user",
+						Password = Authentication.EncryptPassword(employee.LastName.ToLower()),
+						Employee = null,
+						Unit = null,
+						Invoices = new HashSet<Invoice>(),
+						ItemsOrders = new HashSet<ItemsOrder>(),
+						Sales = new HashSet<Sale>()
+					};
+					DbContext.Users.Add(user);
+					DbContext.SaveChanges();
+					//return new(true, "Success");
+				}
+				catch (Exception ex)
+				{
+					return new(false, $"Failed on adding user: {ex.Message}");
+				}
 				return new(true, "Success");
 			}
 			catch (Exception ex)
 			{
-				return new(false, $"Failed: {ex}");
+				return new(false, $"Failed: {ex.Message}");
 			}
 		}
 
@@ -49,13 +72,20 @@ namespace StoreServices
 			}
 			catch (Exception ex)
 			{
-				return new(false, $"Failed: {ex}");
+				return new(false, $"Failed: {ex.Message}");
 			}
 		}
 
-		public ObservableCollection<Employee> GetAllEmployees()
+		public ResponseModel EmailExists(string email)
 		{
-			return new(DbContext.Employees);
+			string em = DbContext.Employees.Where(e => e.Email == email).Select(e => e.Email).SingleOrDefault();
+			if (em == null || em == "") return new(true, "DoesNotExists");
+			return new(false, "Exists");
+		}
+
+		public IEnumerable<Employee> GetAllEmployees()
+		{
+			return new List<Employee>(DbContext.Employees);
 		}
 
 		public Employee GetEmployee(string employeeId)
@@ -79,7 +109,7 @@ namespace StoreServices
 			}
 			catch (Exception ex)
 			{
-				return new(false, $"Failed: {ex}");
+				return new(false, $"Failed: {ex.Message}");
 			}
 		}
 	}

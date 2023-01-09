@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<style>
+		:root {
+			--green: green;
+		}
+
+		div.l-fadeIn {
+			display: flex;
+			animation: fadeIn .2s;
+		}
+		div.l-fadeOut {
+			animation: fadeOut .2s;
+		}
+		@keyframes fadeIn {
+			from {
+				opacity: 0;
+			}
+
+			to {
+				opacity: 1;
+			}
+		}
+		@keyframes fadeOut {
+			from {
+				opacity: 1;
+			}
+			to {
+				opacity: 0;
+			}
+		}
+
+		svg#at {
+			width: 250px;
+			stroke: var(--green);
+			fill: #ccc;
+			stroke-dasharray: 1641;
+			stroke-dashoffset: -1641;
+			animation: 1.5s linear forwards at,
+				1s linear 2.5s infinite forwards fadeInOut;
+	
+		}
+	
+		svg.start-anim {
+			animation: 1.5s linear forwards at,
+				1s linear 2.5s infinite forwards fadeInOut;
+		}
+	
+		@keyframes at {
+			0% {
+				fill: white;
+				stroke-dashoffset: -1641;
+			}
+	
+			50% {
+				fill: #ccc;
+			}
+	
+			100% {
+				stroke-dashoffset: 0;
+				fill: var(--green);
+			}
+		}
+	
+		@keyframes fadeInOut {
+			0% {
+				transform: scale(1, 1);
+				opacity: 1;
+			}
+	
+			50% {
+				transform: scale(0.987, 0.987);
+				opacity: 0.89;
+			}
+	
+			100% {
+				transform: scale(1, 1);
+				opacity: 1;
+			}
+		}
+	</style>
+	<link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+	<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+	<link rel="manifest" href="manifest.json">
+
+	<link rel="stylesheet" href="vendors/jquery-ui-1.13.2.custom/jquery-ui.min.css">
+	<link rel="stylesheet" href="vendors/kendo ui/kendo.default-v2.min.css">
+	<link rel="stylesheet" href="vendors/tailwind/tailwindcss.css">
+	<link rel="stylesheet" href="styles/index.css">
+	<link rel="stylesheet" href="styles/popups-modal.css">
+	<link rel="stylesheet" href="styles/welcome.css">
+	<link rel="stylesheet" href="styles/dashboard.css">
+	<link rel="stylesheet" href="styles/enterSales.css">
+	<link rel="stylesheet" href="styles/modals.css">
+	<link rel="stylesheet" href="styles/media-queries.css">
+
+	<script src="vendors/jquery-3.6.0.min.js" ></script>
+	<script src="vendors/jquery-ui-1.13.2.custom/jquery-ui.min.js" defer></script>
+	<script src="vendors/kendo ui/jszip.min.js" defer></script>
+	<script src="vendors/kendo ui/kendo.all.min.js" defer></script>
+	<script src="vendors/tailwind/tailwindcss.js" defer></script>
+	<script src="scripts/route-module.js" defer></script>
+	<script src="scripts/classes.js" defer></script>
+	<script src="scripts/functions.js" defer></script>
+	<script src="scripts/init.js" defer></script>
+
+
+	<title>ClexAn Foods</title>
+</head>
+<body>
+	<div class="loading" style="
+			height: 100vh;
+			width: 100vw;
+			bottom: 0px;
+			right: 0%;
+			top: 0%;
+			left: 0%;
+			display: none;
+			flex-direction: column;
+			position: absolute;
+			justify-content: center;
+			align-items: center;
+			z-index: 60;
+			background-color: white;
+			">
+		<svg id="at" width="262px" height="262px" viewBox="0 0 262 262" version="1.1"
+			xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg">
+			<defs>
+				<filter filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB" id="filter_1">
+					<feFlood flood-opacity="0" result="BackgroundImageFix" />
+					<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" />
+					<feOffset dx="2" dy="2" />
+					<feGaussianBlur stdDeviation="2" />
+					<feColorMatrix type="matrix"
+						values="0 0 0 0 0.16078432 0 0 0 0 0.16078432 0 0 0 0 0.16078432 0 0 0 0.49803922 0" />
+					<feBlend mode="normal" in2="BackgroundImageFix" result="effect0_dropShadow" />
+					<feBlend mode="normal" in="SourceGraphic" in2="effect0_dropShadow" result="shape" />
+				</filter>
+			</defs>
+			<g stroke-width="3" id="@" filter="url(#filter_1)" transform="translate(4 4)">
+				<path
+					d="M224.62 122.437Q224.62 140.015 219.005 154.602Q213.39 169.189 203.136 177.49Q192.882 185.791 179.332 185.791Q170.299 185.791 163.341 181.458Q156.383 177.124 153.331 170.044L151.378 170.044Q138.195 185.791 117.809 185.791Q96.2024 185.791 83.7513 172.791Q71.3001 159.79 71.3001 137.207Q71.3001 111.45 87.6575 95.7031Q104.015 79.9561 130.382 79.9561Q140.88 79.9561 153.514 81.9702Q166.149 83.9844 174.327 86.792L171.52 146.484Q171.52 163.452 180.797 163.452Q188.61 163.452 193.248 152.039Q197.887 140.625 197.887 122.192Q197.887 102.539 189.708 87.4634Q181.53 72.3877 166.698 64.4531Q151.867 56.5186 132.824 56.5186Q108.165 56.5186 89.9769 66.6504Q71.7884 76.7822 62.0838 95.8862Q52.3792 114.99 52.3792 140.015Q52.3792 173.706 70.3846 191.711Q88.3899 209.717 122.57 209.717Q135.509 209.717 151.012 206.848Q166.515 203.979 181.53 198.486L181.53 221.924Q155.407 233.032 123.546 233.032Q77.1595 233.032 51.2195 208.618Q25.2796 184.204 25.2796 140.747Q25.2796 110.596 38.5242 85.9985Q51.7688 61.4014 76.2439 47.4243Q100.719 33.4473 132.579 33.4473Q159.435 33.4473 180.553 44.4336Q201.671 55.4199 213.146 75.6836Q224.62 95.9473 224.62 122.437ZM99.6204 137.695Q99.6204 163.452 120.617 163.452Q131.603 163.452 137.34 155.701Q143.077 147.949 144.298 130.493L145.885 103.516Q139.659 102.173 131.847 102.173Q116.588 102.173 108.104 111.694Q99.6204 121.216 99.6204 137.695Z" />
+			</g>
+		</svg>
+		<p class="loadingText">App Loading<i id="dots">...</i></p>
+	</div>
+	<script>
+		const at = document.querySelector('#at');
+		const loaderElement = document.querySelector('.loading');
+		const dotsEl = document.querySelector('#dots');
+		const addAnim = () => {
+			at.classList.add('start-anim')
+		}
+		const removeAnim = () => {
+			at.classList.remove('start-anim')
+		}
+		const showLoader = () => {
+			loaderElement.classList.add('l-fadeIn');
+			loaderElement.style.display = 'flex';
+		}
+		const hideLoader = () => {
+			loaderElement.classList.add('l-fadeOut')
+			setTimeout(() => {
+				removeFades();
+			}, 200);
+		}
+		const removeFades = () => {
+			loaderElement.classList.remove('l-fadeIn');
+			loaderElement.classList.remove('l-fadeOut');
+			loaderElement.style.display = 'none';
+			removeAnim();
+		}
+		const Dots = (i, text) => {
+			if (i != 0) {
+				text = text + '.';
+				i--;
+			}
+			if (i == 0) {
+				text = '';
+				i = 4;
+			}
+			setTimeout(() => {
+				Dots(i, text);
+			}, 350)
+			dots.innerText = text;
+		}
+		function atStart() {
+			Dots(4, "");
+			showLoader();
+			addAnim();
+		}
+		function atClose (t) {
+			setTimeout(() => {
+				hideLoader();
+			}, t);
+		}
+		atStart();
+	</script>
+
+	<div class="loading-frame hidden absolute flex flex-col justify-center items-center text-center">
+		<div class="loadframe flex flex-col items-center ">
+			<svg id="spinner" class=" h-10 w-10 mb-5 animate-spin text-white" xmlns="http://www.w3.org/2000/svg" fill="none"
+				viewBox="0 0 24 24">
+				<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+				<path class="opacity-75" fill="currentColor"
+					d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+				</path>
+			</svg>
+			<p class="text-lg text-white">Loading</p>
+		</div>
+	</div>
+
+    <header id="page_header" class="page_header">
+
+	</header>
+
+	<div id="main_content" class="main_content">
+		
+	</div>
+
+	<footer class="page_footer" id="page_footer">
+
+	</footer>
+
+	<div class="alertCover">
+		<div class="alertBox">
+			<div class="infoHead">
+				<img src="" alt="Image" class="typeImg">
+				<h2 class="typeName"></h2>
+			</div>
+			<div class="alertBody">
+				
+			</div>
+			<div class="alertOptions">
+				<button type="submit" class="alertCancel" id="cancelHandler">Cancel</button>
+				<button type="button" class="alertConfirm" id="alertBtnHandler">OK</button:button>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		
+	</script>
+</body>
+</html>

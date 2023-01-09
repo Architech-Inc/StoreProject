@@ -1,0 +1,33 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"liveServer.settings.port": 5509
+	},
+	"launch": {
+		"configurations": [
+			{
+				"name": "Attach to Edge",
+				"port": 9222,
+				"request": "attach",
+				"type": "pwa-msedge",
+				"webRoot": "${workspaceFolder}"
+			},
+			{
+				"name": "Launch Microsoft Edge and open the Edge DevTools",
+				"request": "launch",
+				"type": "vscode-edge-devtools.debug",
+				"url": ""
+			},
+			{
+				"name": "Launch Microsoft Edge and open the Edge DevTools",
+				"request": "launch",
+				"type": "vscode-edge-devtools.debug",
+				"url": ""
+			}
+		]
+	}
+}

@@ -1,0 +1,154 @@
+﻿[
+    {
+        "itemID": "1",
+        "itemName": "Chin-chin",
+        "item_type": "small",
+        "unit_price": "XAF 100.00",
+        "in_stock": "50",
+        "item_img": "img/chinchin-pkg.png"
+    },
+    {
+        "itemID": "2",
+        "itemName": "Chin-chin",
+        "item_type": "medium",
+        "unit_price": "XAF 500.00",
+        "in_stock": "21",
+        "item_img": "img/chinchin-p.png"
+    },
+    {
+        "itemID": "3",
+        "itemName": "Chin-chin",
+        "item_type": "large",
+        "unit_price": "XAF 1,000.00",
+        "in_stock": "5",
+        "item_img": "img/peanuts-g.png"
+    },
+    {
+        "itemID": "4",
+        "itemName": "Dough-nuts",
+        "item_type": "",
+        "unit_price": "XAF 100.00",
+        "in_stock": "44",
+        "item_img": "img/doughnt.png"
+    },
+    {
+        "itemID": "5",
+        "itemName": "Pea nuts",
+        "item_type": "small",
+        "unit_price": "XAF 100.00",
+        "in_stock": "76",
+        "item_img": "img/peanuts-fl.png"
+    },
+    {
+        "itemID": "6",
+        "itemName": "Pea nuts",
+        "item_type": "large",
+        "unit_price": "XAF 1,300.00",
+        "in_stock": "10",
+        "item_img": "img/peanuts-g.png"
+    },
+    {
+        "itemID": "7",
+        "itemName": "Eggs",
+        "item_type": "retail",
+        "unit_price": "XAF 100.00",
+        "in_stock": "90",
+        "item_img": "img/egg-cr.png"
+    },
+    {
+        "itemID": "8",
+        "itemName": "Eggs",
+        "item_type": "tray",
+        "unit_price": "XAF 2,200.00",
+        "in_stock": "4",
+        "item_img": "img/eggs-tray.png"
+    },
+    {
+        "itemID": "9",
+        "itemName": "maggi",
+        "item_type": "5-pieces",
+        "unit_price": "XAF 50.00",
+        "in_stock": "50",
+        "item_img": "img/maggi-s-c.png"
+    },
+    {
+        "itemID": "10",
+        "itemName": "Salt",
+        "item_type": "small",
+        "unit_price": "XAF 50.00",
+        "in_stock": "100",
+        "item_img": "img/salt.png"
+    },
+    {
+        "itemID": "11",
+        "itemName": "Sugar",
+        "item_type": "5-cube",
+        "unit_price": "XAF 25.00",
+        "in_stock": "300",
+        "item_img": "img/sugar-c.png"
+    },
+    {
+        "itemID": "12",
+        "itemName": "Parle G",
+        "item_type": "small size",
+        "unit_price": "XAF 25.00",
+        "in_stock": "62",
+        "item_img": "img/parle-g.png"
+    },
+    {
+        "itemID": "13",
+        "itemName": "Planet",
+        "item_type": "1.25l",
+        "unit_price": "XAF 500.00",
+        "in_stock": "12",
+        "item_img": "img/planet-1l.png"
+    },
+    {
+        "itemID": "14",
+        "itemName": "Sponge",
+        "item_type": "soft",
+        "unit_price": "XAF 50.00",
+        "in_stock": "13",
+        "item_img": "img/sponge-1.png"
+    },
+    {
+        "itemID": "15",
+        "itemName": "Sponge",
+        "item_type": "small-strong",
+        "unit_price": "XAF 50.00",
+        "in_stock": "8",
+        "item_img": "img/sponge-2.png"
+    },
+    {
+        "itemID": "16",
+        "itemName": "Tomatoes",
+        "item_type": "Sachet",
+        "unit_price": "XAF 100.00",
+        "in_stock": "42",
+        "item_img": "img/tomat-ss.png"
+    },
+    {
+        "itemID": "17",
+        "itemName": "Spagetti",
+        "item_type": "small-250",
+        "unit_price": "XAF 250.00",
+        "in_stock": "12",
+        "item_img": "img/spagg-s.png"
+    },
+    {
+        "itemID": "18",
+        "itemName": "Omo",
+        "item_type": "local",
+        "unit_price": "XAF 50.00",
+        "in_stock": "30",
+        "item_img": "img/omo-s.png"
+    },
+    {
+        "itemID": "19",
+        "itemName": "Top milk",
+        "item_type": "small",
+        "unit_price": "XAF 50.00",
+        "in_stock": "8",
+        "item_img": "img/top-milk.png"
+    }
+]

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace StoreServices.Interfaces
 {
-	internal interface IInvoicesService
+	public interface IContextInit
 	{
 	}
 }

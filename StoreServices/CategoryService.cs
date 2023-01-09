@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using StoreProjectModels.DatabaseModels;
 using StoreProjectModels.Models;
 using System.Collections.ObjectModel;
+using Microsoft.EntityFrameworkCore;
 
 namespace StoreServices
 {
@@ -29,7 +30,19 @@ namespace StoreServices
 
 		public ResponseModel DeleteCategory(int id)
 		{
-			throw new NotImplementedException();
+			Category category = DBContext.Categories.Find(id);
+			if (category != null) return new(false, "CategoryNotFound");
+			try
+			{
+				DBContext.Entry<Category>(category).State = EntityState.Detached;
+				DBContext.Categories.Remove(category);
+				DBContext.SaveChanges();
+				return new(true, "Success");
+			}
+			catch (Exception ex)
+			{
+				return new(false, $"Failed due to: {ex.Message}");
+			}
 		}
 
 		public ObservableCollection<Category> GetAllCategories()
@@ -42,9 +55,20 @@ namespace StoreServices
 			throw new NotImplementedException();
 		}
 
-		public ResponseModel UpdateCategory(int id, Category category)
+		public ResponseModel UpdateCategory(Category category)
 		{
-			throw new NotImplementedException();
+			if (category != null) return new(false, "CategoryNotFound");
+			try
+			{
+				DBContext.Entry<Category>(category).State = EntityState.Detached;
+				DBContext.Categories.Update(category);
+				DBContext.SaveChanges();
+				return new(true, "Success");
+			}
+			catch (Exception ex)
+			{
+				return new(false, $"Failed due to: {ex.Message}");
+			}
 		}
 	}
 }

@@ -1,0 +1,65 @@
+<div class="record_view">
+    <h3 id="es-header">Enter sales</h3>
+    <form class="record_form">
+        <table id="formTable" >
+            <tr>
+                <td>
+                    <label for="name">Name</label>
+                </td>
+                <td>
+                    <input name="name" id="itname" list="item_list" placeholder="Item name" inputmode=""  autocapitalize="words"/>
+                    <datalist id="item_list">
+                    </datalist>
+                </td>
+                <td>
+                    <label for="itprice">Unit Price</label>
+                </td>
+                <td>
+                    <input disabled width="20px" type="number" name="price" id="itprice" inputmode="numeric" placeholder="N/A">
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <label for="quantity">Quantity</label>
+                </td>
+                <td>
+                    <input type="number" name="quantity" id="it_qty" placeholder="Quantity sold">
+                </td>
+                <td>
+                    <label for="itamount">Amount</label>
+                </td>
+                <td>
+                    <input type="number" name="name" id="itamount" placeholder="Amount">
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <label for="date">Date</label>
+                </td>
+                <td>
+                    <input type="date" name="date" id="itdate" >
+                </td>
+            </tr>
+        </table>
+        <div class="btnflex">
+            <button type="reset" class="resetbtn">Reset</button>
+            <button type="button" class="btn_add" id="btntolist">Add Record</button>
+        </div>
+        
+    </form>
+    <div class="added">
+        <table class="addedlisttable">
+            <tr class="Ldata" id="tHeader">
+                <th class="Ldata1 tID">ID</th>
+                <th class="Ldata2 tName">Item Name</th>
+                <th class="Ldata3 tQty">Quantity</th>
+                <th class="Ldata4 tAmount">Amount</th>
+                <th class="Ldata5 tDate">Date</th>
+                <th class="Ldata6 tOP"></th>
+            </tr>
+        </table>
+    </div>
+    <div class="BtnSection btnflex">
+        <button type="button" class="btn_save" id="saveNewRecords">Save Records</button>
+    </div>
+</div>

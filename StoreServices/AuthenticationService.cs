@@ -1,4 +1,5 @@
 ﻿using Microsoft.IdentityModel.Tokens;
+using Newtonsoft.Json;
 using StoreProjectModels.DatabaseModels;
 using StoreProjectModels.Models;
 using StoreServices.Interfaces;
@@ -27,19 +28,20 @@ namespace StoreServices
 			User user = DatabaseContext.Users.Where(u => u.Username == username).FirstOrDefault();
 			if (user == null) return new(false, "UserNotFound");
 			user.Password = Convert.ToString(Guid.NewGuid());
-			UserService userService = new();
+			UserService userService = new(DatabaseContext);
 			userService.UpdateUser(user);
 			return new(true, user.Password);
 		}
 		public ResponseModel Reset(UserCredential userCredential)
 		{
+			if (userCredential == null) return new(false, "UserNotFound");
 			User user = DatabaseContext.Users.Where(u => u.Username == userCredential.UserName).FirstOrDefault();
 			if (user == null) return new(false, "UserNotFound");
 			if (user.Password != userCredential.Code) return new(false, "IncorrectCode");
 			user.Password = Authentication.EncryptPassword(userCredential.Password);
-			UserService userService = new();
+			UserService userService = new(DatabaseContext);
 			userService.UpdateUser(user);
-			return new(true, Authentication.EncryptPassword(userCredential.Password));
+			return new(true, "Done");
 		}
 
 		public ResponseModel IsTokenValid(string token)
@@ -95,22 +97,35 @@ namespace StoreServices
 				JwtSecurityTokenHandler tokenHandler = new();
 				byte[] tokenKey = Encoding.ASCII.GetBytes(Authentication.AuthenticationKey);
 				days = 1;
+				DateTime ExpiryDate = DateTime.UtcNow.AddSeconds(600);
 				SecurityTokenDescriptor tokenDescriptor = new()
 				{
 					Subject = new ClaimsIdentity(new Claim[]
 					{
 						new Claim(ClaimTypes.Name, userCredential.UserName)
 					}),
-					Expires = DateTime.UtcNow.AddSeconds(600),
+					Expires = ExpiryDate,
 					SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(tokenKey), SecurityAlgorithms.HmacSha256Signature)
 				};
 				var token = tokenHandler.CreateToken(tokenDescriptor);
-				return new(true, $"{{ \"userId\": {user.UserId},\"token\": \"{tokenHandler.WriteToken(token)}\" }}");
+				return new(true, JsonConvert.SerializeObject(new MyClass(user.UserId, tokenHandler.WriteToken(token), ExpiryDate)));
 			}
 			catch (Exception ex)
 			{
 				return new(false, $"Check database connections: {ex.Message}");
 			}
+		}
+		class MyClass
+		{
+			public MyClass(string uid, string token, DateTime dateTime)
+			{
+				this.UserId = uid;
+				this.Token = token;
+				this.ExpiryDate = dateTime;
+			}
+			public string UserId { get; set; }
+			public string Token { get; set; }
+			public DateTime ExpiryDate { get; set; }
 		}
 	}
 }

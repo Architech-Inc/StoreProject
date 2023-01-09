@@ -5,7 +5,7 @@ using StoreServices.Interfaces;
 
 namespace StoreAPI.Controllers
 {
-	[Route("user")]
+	[Route("api/user")]
 	[ApiController]
 	public class UserController : ControllerBase
 	{
@@ -21,7 +21,7 @@ namespace StoreAPI.Controllers
 		{
 			return Ok(_userService.GetAllUsers());
 		}
-		[HttpPost]
+		[HttpGet]
 		[Route("getUser")]
 		public IActionResult GetUser(string userId)
 		{
@@ -33,7 +33,7 @@ namespace StoreAPI.Controllers
 		{
 			return Ok(_userService.AddUser(user));
 		}
-		[HttpPost]
+		[HttpPut]
 		[Route("updateUser")]
 		public IActionResult UpdateUser(User user)
 		{

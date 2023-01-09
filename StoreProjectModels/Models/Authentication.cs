@@ -14,7 +14,7 @@ namespace StoreProjectModels.Models
 			return Convert.ToString(Guid.NewGuid());
 		}
 
-		public static string AuthenticationKey = "SkillIt Authencation";
+		public static string AuthenticationKey { get; set; } = "Store Authencation";
 
 		public static string EncryptPassword(string password)
 		{

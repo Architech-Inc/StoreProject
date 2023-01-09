@@ -1,0 +1,417 @@
+.record_view {
+    justify-self: center;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    margin: auto;
+    width: 100%;
+    min-width: 480px;
+    max-width: 80%;
+    height: fit-content;
+    max-height: 575.6px;
+    background-color: white;
+    /* background-color: rgba(255, 255, 255, 0.63); */
+    backdrop-filter: blur(50px);
+    border: none;
+    border-radius: 15px;
+    padding: 10px;
+    overflow: hidden;
+    overflow-y: auto;
+    box-shadow: 3px 4px 15px 5px #00000050;
+}
+
+#es-header{
+    box-sizing: border-box;
+    display: flex;
+    text-align: center;
+    font-size: 30px;
+    margin: auto;
+    text-align: center;
+    color: rgb(94, 90, 90);
+    text-shadow: 1px 1px 2px black;
+    cursor: default;
+}
+
+form.record_form {
+    margin: auto;
+    margin-top: 5px;
+    margin-bottom: 10px;
+}
+
+div.added{
+    background-color: white;
+    width: 100%;
+    height: 300px;
+    box-sizing: border-box;
+    border: 1px solid black;
+    overflow-y: auto;
+}
+
+
+.record_form {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+#formTable{
+    display: flex;
+    margin-bottom: 15px;
+    justify-content: flex-start;
+    min-width: 100%;
+}
+#formTable tr td #itprice, #itamount {
+    width: 100px;
+}
+
+img.empty_input {
+    position: absolute;
+    background-color: rgba(53, 53, 53, 0.164);
+    width: 15px;
+    height: 15px;
+    z-index: 99999;
+    border-radius: 50%;
+    padding: .5%;
+    align-items: center;
+}
+
+img.empty_input:hover,
+img.empty_input:focus {
+    background-color: rgba(53, 53, 53, 0.5);
+}
+
+.btnflex{
+    justify-content: flex-end;
+}
+
+.record_form button.btn_add,
+.resetbtn, button.btn_save{
+    width: fit-content;
+    padding: 0% 3%;
+    margin-left: unset;
+    margin-inline-end: 0%;
+}
+
+.record_form button.btn_add:hover,
+.record_form button.resetbtn:hover,
+button.btn_save:hover{
+    color: black;
+    background-color: rgb(0, 99, 0);
+    border: 0.12em solid rgb(43, 42, 42);
+    box-shadow: 0px 0px 2px 0px rgba(0, 0, 0, 0.644);
+}
+
+.BtnSection {
+    margin-top: 1%;
+}
+
+input#itdate:not(.browser-default){
+    resize: none;
+}
+
+div.added {
+    overflow-x: auto;
+}
+
+div.added table.addedlisttable {
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+    border-collapse: collapse;
+    text-align: left;
+    color: rgb(34, 34, 34);
+    cursor: default;
+    word-wrap: normal;
+    word-break: keep-all;
+    overflow-wrap: unset;
+}
+div.added table.addedlisttable th {
+    border-left: 1px solid white;
+    border-right: 1px solid white;
+    padding-left: 5px;
+    padding-right: 5px;
+}
+div.added table.addedlisttable tr th, div.added table.addedlisttable tr td {
+    border-bottom: 1px solid #ddd;
+    height: 20px;
+    word-wrap: normal;
+    word-break: keep-all;
+    overflow-wrap: unset;
+}
+
+div.added table.addedlisttable tr:hover {background-color: #f5f5f5}
+
+div.added table.addedlisttable #tHeader {
+    border:  1px solid rgb(94, 90, 90);
+    width: 100%;
+    color: white;
+    background-color: rgba(0, 128, 0, 0.788);
+}
+
+.tDate, .Ldata5 {
+    min-width: 120px;
+}
+
+.Ldata5 {
+    text-align: center;
+}
+
+.tName, Ldata2{
+    min-width: 200px;
+    padding: 0% 0% 0% 01%;
+}
+
+.tID, .tQty, .tAmount {
+    text-align: right;
+    text-indent: unset;
+}
+.tAmount{
+    min-width: 120px;
+}
+.itC {
+    text-align: left;
+    float: left;
+    padding-left: 3%;
+}
+.tDel{
+    min-width: fit-content;
+}
+.itDel{
+    right: 0px;
+    box-sizing: border-box;
+    width: 27px;
+    background-color: red;
+    padding: 0.1%;
+    border-radius: 15%;
+    margin: 0px;width: fit-content;
+}
+
+.itDel:hover {
+   background-color:  rgba(192, 0, 0, 0.863);
+}
+
+div.item_view {
+    background-color: rgba(255, 255, 255, 0.932);
+    width: 100%;
+    height: -webkit-fill-available;
+    display: flex;
+    flex-wrap: wrap;
+    padding: 5%;
+    max-width: 100%;
+    overflow-y: auto;
+	gap: 1rem 1rem;
+    backdrop-filter: blur(10px);
+    box-sizing: border-box;
+}
+
+.item_view .mini_card {
+    background-color: wheat;
+    width: 120px; /* calc((100%/2)-5);*/
+    height: 120px;
+    display: none;
+    flex-direction: column;
+    position: relative;
+    padding: 0px;
+    background-color: rgb(255, 255, 255);
+    /* background-image: radial-gradient(circle, rgb(18, 22, 78), rgb(44, 52, 165), rgb(18, 22, 78));
+	background-image: radial-gradient( rgb(44, 52, 165) 5%, rgb(18, 22, 78) 90%,  rgb(44, 52, 165) 5%); */
+    text-align: center;
+    color: black;
+    border: 1px solid rgba(156, 156, 156, 0.479);
+    box-shadow: 0px 0px 5px 1px rgba(163, 163, 163, 0.83);
+    border-radius: 10%;
+    backdrop-filter: blur(1px);
+	font-family: 'Open Sans semibold';
+    font-size: small;
+    cursor: default;
+    margin: auto;
+    opacity: 0;
+    overflow: hidden;
+}
+
+.item_view .mini_card:hover, div.category:hover, div.sales-item:hover {
+    transition: ease-in .12s;
+    background-color: rgba(177, 177, 177, 0.171);
+    border: 1px solid rgba(105, 105, 105, 0.342);
+       /*  box-shadow: 0px 0px 6px 2px rgba(138, 138, 138, 0.83); */
+}
+
+.item_view .mini_card a.mc-front{
+    background-color: rgba(255, 255, 255, 0);
+    position: absolute;
+    width: 100%;
+    margin: 0px;
+    height: 100%;
+    z-index: 2;
+}
+
+.item_view .mini_card .itPrice, .item_view .mini_card .itName {
+    text-align: none;
+    /* margin-left: 5%; */
+}
+
+.item_view .mini_card img.itImg {
+    width: 90px;
+    max-width: 90px;
+    max-width: 65px;
+    margin: auto;
+    shape-rendering: optimizeSpeed;
+}
+
+.item_view .mini_card img.itEdit {
+    display: none;
+    position: absolute;
+    width: 20px;
+    margin-right: 5px;
+    margin-top: 5px;
+    right: 0px;
+    top: 0%;
+    /* border: 1px dashed black; */
+    border-radius: 20%;
+    padding: 2%;
+    z-index: 3;
+}
+
+.item_view .mini_card img.itEdit:hover {
+    transition: .1s ease-in;
+    width: 22px;
+    margin-right: 4px;
+    margin-top: 4px;
+    background-color: rgba(71, 71, 71, 0.288);
+    backdrop-filter: blur(5px);
+}
+
+div.cat-form {
+    display: flex;
+    flex-direction: row;
+    min-width: 100%;
+    gap: 20px;
+    margin-top: 3%;
+}
+
+div.cat-form button {
+    height: 100%;
+}
+
+div.cat-list, div.sales-list {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 10px;
+    margin-top: 5%;
+}
+
+div.category, div.sales-item {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    width: 100%;
+    box-shadow: 0px 0px 5px 1px rgba(163, 163, 163, 0.83);
+    border-radius: 6px;
+    height: 35px;
+}
+
+
+
+div.category img, div.sales-item img {
+    margin-left: auto;
+    margin-right: 10px;
+    width: 25px;
+}
+
+div.category h5, div.sales-item h5 {
+    margin: 0%;
+    padding: 0px;
+    padding-inline-start: 10px;
+    left: auto;
+}
+
+div.s-main-view {
+    display: flex;
+    flex-direction: column;
+    width: 100vw;
+    background-color: whitesmoke;
+    height: 100%;
+}
+
+div.s-main-view .headBar {
+    height: 35px;
+    display: inline-flex;
+    align-items: center;
+    border-bottom: 1px solid #3b3b3b;
+}
+
+div.s-main-view .sales-list {
+    width: -webkit-fill-available;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+div.s-main-view .sales-list .sales-item {
+    width: auto;
+    height: auto;
+    margin-inline: 10px;
+    gap: 2px;
+    flex-wrap: wrap;
+    padding-block: 3px;
+}
+
+.sales-item span {
+    margin-inline: auto;
+}
+
+.filter-menu{
+    display: none;
+    flex-direction: column;
+    position: absolute;
+    /* background-color: #3b3b3b; */
+    background-color: #f5f5f5;
+    padding: 0%;
+    width: 274.5px;
+    right: 5%;
+    top: 76px;
+    border: 1px solid rgba(156, 156, 156, 0.479);
+    box-shadow: 0px 0px 5px 1px rgba(163, 163, 163, 0.83);
+}
+
+div.filter-menu ul {
+    width: auto;
+    padding-inline-start: 0%;
+}
+
+li.filter-item:not(.browser-default) {
+    display: flex;
+    margin-block: 10px;
+    padding-inline: 0px;
+    width: auto;
+    margin-inline: 4%;
+}
+
+li.filter-item * {
+    margin: auto;
+}
+
+li.filter-item:not(.browser-default) .filter-checkbox {
+    width: 17px;
+    margin-inline-start: 0px;
+}
+
+input.filter-checkbox:focus {
+        outline-offset: 0px;
+        outline: 0px;
+}
+
+li.filter-item label {
+    margin-left: 0%;
+    margin-inline-start: 10px;
+    text-align: start;
+}
+
+li.filter-item input {
+    width: 125px;
+    margin-left: 0%;
+    margin-inline-end: 0px;
+}
+
+

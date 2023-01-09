@@ -1,0 +1,20 @@
+itemID,item_name,item_type,unit_price,in_stock
+1,Chin-chin,small,100,50
+2,Chin-chin,medium,500,21
+3,Chin-chin,large,"1,000",5
+4,Dough-nuts,,100,44
+5,Pea nuts,small,100,76
+6,Pea nuts,large,"1,300",10
+7,Eggs,retail,100,90
+8,Eggs,tray,"2,200",4
+9,maggi,5-pieces,50,50
+10,Salt,small,50,100
+11,Sugar,5-cube,25,300
+12,Parle J,small size,25,62
+13,Planet,1.25l,500,12
+14,Sponge,soft,50,13
+15,Sponge,small-strong,50,8
+16,Tomatoes,Sachet,100,42
+17,Spagetti,small-250,250,12
+18,Omo,local,50,30
+19,Top milk,small,50,8

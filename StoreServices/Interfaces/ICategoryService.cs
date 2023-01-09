@@ -15,6 +15,6 @@ namespace StoreServices.Interfaces
 		ObservableCollection<Category> GetAllCategories();
 		ResponseModel AddCategory(Category category);
 		ResponseModel DeleteCategory(int id);
-		ResponseModel UpdateCategory(int id, Category category);
+		ResponseModel UpdateCategory(Category category);
 	}
 }

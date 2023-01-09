@@ -11,10 +11,11 @@ namespace StoreServices.Interfaces
 {
 	public interface IEmployeeService
 	{
+		ResponseModel EmailExists(string email);
 		ResponseModel AddEmployee(Employee employee);
 		ResponseModel DeleteEmployee(string employeeId);
 		ResponseModel UpdateEmployee(Employee employee);
-		ObservableCollection<Employee> GetAllEmployees();
+		IEnumerable<Employee> GetAllEmployees();
 		Employee GetEmployee(string employeeId);
 	}
 }

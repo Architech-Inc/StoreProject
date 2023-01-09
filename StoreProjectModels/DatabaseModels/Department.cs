@@ -12,7 +12,7 @@ namespace StoreProjectModels.DatabaseModels
             Employees = new HashSet<Employee>();
         }
 
-        public int DeptId { get; set; }
+        public int DepartmentId { get; set; }
         public string Name { get; set; }
         public string Description { get; set; }
 
