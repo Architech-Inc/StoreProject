@@ -1,5 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using StoreProjectModels.CRUD;
+using StoreProjectModels.Data;
 using StoreProjectModels.DatabaseModels;
+using StoreProjectModels.DbContexts;
 using StoreProjectModels.Models;
 using StoreServices.Interfaces;
 using System;
@@ -13,16 +16,14 @@ namespace StoreServices
 {
     public class UserService : IUserService
     {
-        private readonly store_dbContext DbContext;
-        public UserService(store_dbContext dbContext)
+        private readonly StoreDbContext DbContext;
+        private readonly ICrud Crud;
+        public UserService(StoreDbContext dbContext, ICrud crud)
         {
-            DbContext = dbContext; 
+            DbContext = dbContext;
+            Crud = crud;
         }
-        public UserService()
-        {
-
-        }
-        public ResponseModel AddUser(User user)
+        public CrudResponse AddUser(User user)
         {
             if (user == null) return new(false, "UserNull");
             try
@@ -39,11 +40,11 @@ namespace StoreServices
             }
         }
 
-        public ResponseModel DeleteUser(string userId)
+        public CrudResponse DeleteUser(string userId)
         {
             try
             {
-                User user = DbContext.Users.Where(u => u.UserId == userId).FirstOrDefault();
+                User user = DbContext.Users.Where(u => u.UserId == userId).FirstOrDefault()!;
 				if (user == null) return new(false, "UserNotFound");
 				DbContext.Entry<User>(user).State = EntityState.Deleted;
                 DbContext.Users.Remove(user);
@@ -63,14 +64,14 @@ namespace StoreServices
 
         public User GetUser(string userId)
         {
-            User user = DbContext.Users.Where(u => u.UserId == userId).FirstOrDefault();
-            if (user == null) return null;
+            User user = DbContext.Users.Where(u => u.UserId == userId).FirstOrDefault()!;
+            if (user == null) return null!;
             return user;
         }
 
-        public ResponseModel UpdateUser(User user)
+        public CrudResponse UpdateUser(User user)
         {
-            User _user = DbContext.Users.Where(u => u.UserId == user.UserId).ToList().FirstOrDefault();
+            User _user = DbContext.Users.Where(u => u.UserId == user.UserId).ToList().FirstOrDefault()!;
 			if (user == null) return new(false, "UserNotFound");
 			try
 			{

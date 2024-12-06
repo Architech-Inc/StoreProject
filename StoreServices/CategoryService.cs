@@ -8,18 +8,23 @@ using StoreProjectModels.DatabaseModels;
 using StoreProjectModels.Models;
 using System.Collections.ObjectModel;
 using Microsoft.EntityFrameworkCore;
+using StoreProjectModels.CRUD;
+using StoreProjectModels.Data;
+using StoreProjectModels.DbContexts;
 
 namespace StoreServices
 {
 	public class CategoryService: ICategoryService
 	{
-		private readonly store_dbContext DBContext;
-		public CategoryService(store_dbContext store_DbContext)
+		private readonly StoreDbContext DBContext;
+        private readonly ICrud Crud;
+        public CategoryService(StoreDbContext StoreDbContext, ICrud crud)
 		{
-			this.DBContext = store_DbContext;
+			this.DBContext = StoreDbContext;
+			Crud = crud;
 		}
 
-		public ResponseModel AddCategory(Category category)
+		public CrudResponse AddCategory(Category category)
 		{
 			var cat = DBContext.Categories.FirstOrDefault(c => c.CategoryId == category.CategoryId);
 			if (cat != null) return new(false, "CategoryExists");
@@ -28,13 +33,13 @@ namespace StoreServices
 			return new(true, "Success");
 		}
 
-		public ResponseModel DeleteCategory(int id)
+		public CrudResponse DeleteCategory(int id)
 		{
 			Category category = DBContext.Categories.Find(id);
 			if (category != null) return new(false, "CategoryNotFound");
 			try
 			{
-				DBContext.Entry<Category>(category).State = EntityState.Detached;
+				DBContext.Entry<Category>(category!).State = EntityState.Detached;
 				DBContext.Categories.Remove(category);
 				DBContext.SaveChanges();
 				return new(true, "Success");
@@ -55,12 +60,12 @@ namespace StoreServices
 			throw new NotImplementedException();
 		}
 
-		public ResponseModel UpdateCategory(Category category)
+		public CrudResponse UpdateCategory(Category category)
 		{
 			if (category != null) return new(false, "CategoryNotFound");
 			try
 			{
-				DBContext.Entry<Category>(category).State = EntityState.Detached;
+				DBContext.Entry<Category>(category!).State = EntityState.Detached;
 				DBContext.Categories.Update(category);
 				DBContext.SaveChanges();
 				return new(true, "Success");

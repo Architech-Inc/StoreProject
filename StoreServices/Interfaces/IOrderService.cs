@@ -1,4 +1,5 @@
-﻿using StoreProjectModels.DatabaseModels;
+﻿using StoreProjectModels.Data;
+using StoreProjectModels.DatabaseModels;
 using StoreProjectModels.Models;
 using System;
 using System.Collections.Generic;
@@ -11,9 +12,9 @@ namespace StoreServices.Interfaces
 {
 	public interface IOrderService
 	{
-		ResponseModel AddItemsOrder(ItemsOrder itemsOrder);
-		ResponseModel UpdateItemsOrder(ItemsOrder itemsOrder);
-		ResponseModel DeleteItemsOrder(long itemsOrderId);
+		CrudResponse AddItemsOrder(ItemsOrder itemsOrder);
+		CrudResponse UpdateItemsOrder(ItemsOrder itemsOrder);
+		CrudResponse DeleteItemsOrder(long itemsOrderId);
 		ObservableCollection<ItemsOrder> GetAllItemsOrders();
 		ItemsOrder GetItemsOrder(long itemsOrderId);
 	}

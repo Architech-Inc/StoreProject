@@ -1,6 +1,9 @@
 ﻿using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
+using StoreProjectModels.CRUD;
+using StoreProjectModels.Data;
 using StoreProjectModels.DatabaseModels;
+using StoreProjectModels.DbContexts;
 using StoreProjectModels.Models;
 using StoreServices.Interfaces;
 using System;
@@ -18,33 +21,36 @@ namespace StoreServices
 	public class AuthenticationService: IAuthenticationService
 	{
 		private readonly IAuthenticationService _authenticationService;
-		private readonly store_dbContext DatabaseContext;
-		public AuthenticationService(store_dbContext store_DbContext)
+		private readonly StoreDbContext DatabaseContext;
+		private readonly ICrud Crud;
+		private readonly UserService userService;
+
+        public AuthenticationService(StoreDbContext StoreDbContext, UserService userService, ICrud crud)
 		{
-			this.DatabaseContext = store_DbContext;
+			this.DatabaseContext = StoreDbContext;
+			this.userService = userService;
+			Crud = crud;
 		}
-		public ResponseModel GenerateCode(string username)
+		public CrudResponse GenerateCode(string username)
 		{
 			User user = DatabaseContext.Users.Where(u => u.Username == username).FirstOrDefault();
 			if (user == null) return new(false, "UserNotFound");
 			user.Password = Convert.ToString(Guid.NewGuid());
-			UserService userService = new(DatabaseContext);
 			userService.UpdateUser(user);
-			return new(true, user.Password);
+			return new(true, user.Password!);
 		}
-		public ResponseModel Reset(UserCredential userCredential)
+		public CrudResponse Reset(UserCredential userCredential)
 		{
 			if (userCredential == null) return new(false, "UserNotFound");
-			User user = DatabaseContext.Users.Where(u => u.Username == userCredential.UserName).FirstOrDefault();
+			User user = DatabaseContext.Users.Where(u => u.Username == userCredential.UserName).FirstOrDefault()!;
 			if (user == null) return new(false, "UserNotFound");
 			if (user.Password != userCredential.Code) return new(false, "IncorrectCode");
 			user.Password = Authentication.EncryptPassword(userCredential.Password);
-			UserService userService = new(DatabaseContext);
 			userService.UpdateUser(user);
 			return new(true, "Done");
 		}
 
-		public ResponseModel IsTokenValid(string token)
+		public CrudResponse IsTokenValid(string token)
 		{
 			try
 			{
@@ -86,12 +92,12 @@ namespace StoreServices
 			}
 		}
 
-		public ResponseModel Authenticate(UserCredential userCredential)
+		public CrudResponse Authenticate(UserCredential userCredential)
 		{
 			try
 			{
 				int days = 1;
-				User user = DatabaseContext.Users.Where(u => u.Username == userCredential.UserName).FirstOrDefault();
+				User user = DatabaseContext.Users.Where(u => u.Username == userCredential.UserName).FirstOrDefault()!;
 				if (user == null) return new(false, "UserNotFound");
 				if (Crypto.VerifyHashedPassword(user.Password, userCredential.Password) != true) return new(false, "Incorrect");
 				JwtSecurityTokenHandler tokenHandler = new();

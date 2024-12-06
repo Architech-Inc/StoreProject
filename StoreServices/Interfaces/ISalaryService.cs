@@ -1,4 +1,5 @@
-﻿using StoreProjectModels.DatabaseModels;
+﻿using StoreProjectModels.Data;
+using StoreProjectModels.DatabaseModels;
 using StoreProjectModels.Models;
 using System;
 using System.Collections.Generic;
@@ -11,11 +12,11 @@ namespace StoreServices.Interfaces
 {
 	public interface ISalaryService
 	{
-		ResponseModel AddSalary(Salary salary);
-		ResponseModel AddSalaries(ObservableCollection<Salary> salaries);
-		ResponseModel UpdateSalary(Salary salary);
-		ResponseModel DeleteSalary(int salaryId);
-		ResponseModel DeleteSalaries(ObservableCollection<Salary> salaries);
+		CrudResponse AddSalary(Salary salary);
+		CrudResponse AddSalaries(ObservableCollection<Salary> salaries);
+		CrudResponse UpdateSalary(Salary salary);
+		CrudResponse DeleteSalary(int salaryId);
+		CrudResponse DeleteSalaries(ObservableCollection<Salary> salaries);
 		ObservableCollection<Salary> GetAllSalaries();
 		Salary GetSalary(int salaryId);
 	}

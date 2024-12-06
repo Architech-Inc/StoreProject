@@ -15,6 +15,9 @@ namespace StoreProjectModels.DatabaseModels
         public int DepartmentId { get; set; }
         public string Name { get; set; }
         public string Description { get; set; }
+        public string DepartmentCode { get; set; }
+        public string IconPath { get; set; }
+        public DateTime DateCreated { get; set; }
 
         public virtual ICollection<Employee> Employees { get; set; }
     }

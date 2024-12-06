@@ -14,7 +14,8 @@ namespace StoreProjectModels.DatabaseModels
 
         public int SalaryId { get; set; }
         public float Amount { get; set; }
-        public string Code { get; set; }
+        public string SalaryLevel { get; set; }
+        public string SalaryCode { get; set; }
 
         public virtual ICollection<Employee> Employees { get; set; }
     }

@@ -1,5 +1,7 @@
 ﻿using StoreProjectModels.CRUD;
+using StoreProjectModels.Data;
 using StoreProjectModels.DatabaseModels;
+using StoreProjectModels.DbContexts;
 using StoreProjectModels.Models;
 using StoreServices.Interfaces;
 using System;
@@ -13,20 +15,22 @@ namespace StoreServices
 {
 	public class InvoiceService : IInvoiceService
 	{
-		private readonly store_dbContext DbContext;
-		public InvoiceService(store_dbContext dbContext)
+		private readonly StoreDbContext DbContext;
+        private readonly ICrud Crud;
+        public InvoiceService(StoreDbContext dbContext, ICrud crud)
+        {
+            DbContext = dbContext;
+            Crud = crud;
+        }
+
+        public CrudResponse AddInvoice(Invoice invoice)
 		{
-			DbContext = dbContext;
+			return Crud.CreateEntity<Invoice>(invoice.InvoiceId, invoice);
 		}
 
-		public ResponseModel AddInvoice(Invoice invoice)
+		public CrudResponse DeleteInvoice(long invoiceId)
 		{
-			return Crud.Create<Invoice>(invoice.InvoiceId, invoice, DbContext);
-		}
-
-		public ResponseModel DeleteInvoice(long invoiceId)
-		{
-			return Crud.Delete<Invoice>(invoiceId, DbContext);
+			return Crud.DeleteEntity<Invoice>(invoiceId);
 		}
 
 		public ObservableCollection<Invoice> GetAllInvoices()
@@ -39,9 +43,9 @@ namespace StoreServices
 			return DbContext.Invoices.Find(invoiceId);
 		}
 
-		public ResponseModel UpdateInvoice(Invoice invoice)
+		public CrudResponse UpdateInvoice(Invoice invoice)
 		{
-			return Crud.Update<Invoice>(invoice.InvoiceId, invoice, DbContext);
+			return Crud.UpdateEntity<Invoice>(invoice.InvoiceId, invoice);
 		}
 	}
 }

@@ -1,5 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using StoreProjectModels.CRUD;
+using StoreProjectModels.Data;
 using StoreProjectModels.DatabaseModels;
+using StoreProjectModels.DbContexts;
 using StoreProjectModels.Models;
 using StoreServices.Interfaces;
 using System;
@@ -13,13 +16,15 @@ namespace StoreServices
 {
 	public class EmployeeService : IEmployeeService
 	{
-		private readonly store_dbContext DbContext;
-		public EmployeeService(store_dbContext dbContext)
-		{
-			DbContext = dbContext;
-		}
+		private readonly StoreDbContext DbContext;
+        private readonly ICrud Crud;
+        public EmployeeService(StoreDbContext dbContext, ICrud crud)
+        {
+            DbContext = dbContext;
+            Crud = crud;
+        }
 
-		public ResponseModel AddEmployee(Employee employee)
+        public CrudResponse AddEmployee(Employee employee)
 		{
 			if (employee == null) return new(false, "EmployeeNull");
 			try
@@ -35,11 +40,11 @@ namespace StoreServices
 						UserId = Authentication.GenerateGuid(),
 						EmployeeId = employee.EmployeeId,
 						Username = $"{employee.FirstName}{Convert.ToString(employee.NidNumber).Substring(Convert.ToString(employee.NidNumber).Length - 4)}",
-						AccountType = "user",
+						RoleId = 1,
 						Password = Authentication.EncryptPassword(employee.LastName.ToLower()),
 						Employee = null,
-						Unit = null,
-						Invoices = new HashSet<Invoice>(),
+						//Unit = null,
+						//Invoices = new HashSet<Invoice>(),
 						ItemsOrders = new HashSet<ItemsOrder>(),
 						Sales = new HashSet<Sale>()
 					};
@@ -59,7 +64,7 @@ namespace StoreServices
 			}
 		}
 
-		public ResponseModel DeleteEmployee(string employeeId)
+		public CrudResponse DeleteEmployee(string employeeId)
 		{
 			try
 			{
@@ -76,7 +81,7 @@ namespace StoreServices
 			}
 		}
 
-		public ResponseModel EmailExists(string email)
+		public CrudResponse EmailExists(string email)
 		{
 			string em = DbContext.Employees.Where(e => e.Email == email).Select(e => e.Email).SingleOrDefault();
 			if (em == null || em == "") return new(true, "DoesNotExists");
@@ -95,7 +100,7 @@ namespace StoreServices
 			return employee;
 		}
 
-		public ResponseModel UpdateEmployee(Employee employee)
+		public CrudResponse UpdateEmployee(Employee employee)
 		{
 			Employee _employee = DbContext.Employees.Where(e => e.EmployeeId == employee.EmployeeId).ToList().FirstOrDefault();
 			if (_employee == null) return new(false, "EmployeeNotFound");

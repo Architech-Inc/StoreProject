@@ -1,5 +1,7 @@
 ﻿using StoreProjectModels.CRUD;
+using StoreProjectModels.Data;
 using StoreProjectModels.DatabaseModels;
+using StoreProjectModels.DbContexts;
 using StoreProjectModels.Models;
 using StoreServices.Interfaces;
 using System;
@@ -13,30 +15,32 @@ namespace StoreServices
 {
 	public class SalaryService : ISalaryService
 	{
-		private readonly store_dbContext DbContext;
-		public SalaryService(store_dbContext dbContext)
+		private readonly StoreDbContext DbContext;
+        private readonly ICrud Crud;
+        public SalaryService(StoreDbContext dbContext, ICrud crud)
+        {
+            DbContext = dbContext;
+            Crud = crud;
+        }
+
+        public CrudResponse AddSalary(Salary salary)
 		{
-			DbContext = dbContext;
+			return Crud.CreateEntity<Salary>(salary.SalaryId, salary);
 		}
 
-		public ResponseModel AddSalary(Salary salary)
+		public CrudResponse AddSalaries(ObservableCollection<Salary> salaries)
 		{
-			return Crud.Create<Salary>(salary.SalaryId, salary, DbContext);
+			return Crud.CreateEntities<Salary>(nameof(Salary.SalaryId), salaries);
 		}
 
-		public ResponseModel AddSalaries(ObservableCollection<Salary> salaries)
+		public CrudResponse DeleteSalaries(ObservableCollection<Salary> salaries)
 		{
-			return Crud.CreateRange<Salary>(salaries, DbContext);
+			return Crud.DeleteEntities<Salary>(salaries);
 		}
 
-		public ResponseModel DeleteSalaries(ObservableCollection<Salary> salaries)
+		public CrudResponse DeleteSalary(int salaryId)
 		{
-			return Crud.DeleteRange<Salary>(salaries, DbContext);
-		}
-
-		public ResponseModel DeleteSalary(int salaryId)
-		{
-			return Crud.Delete<Salary>(salaryId, DbContext);
+			return Crud.DeleteEntity<Salary>(salaryId);
 		}
 
 		public ObservableCollection<Salary> GetAllSalaries()
@@ -49,9 +53,9 @@ namespace StoreServices
 			return DbContext.Salaries.Find(salaryId);
 		}
 
-		public ResponseModel UpdateSalary(Salary salary)
+		public CrudResponse UpdateSalary(Salary salary)
 		{
-			return Crud.Update<Salary>(salary.SalaryId, salary, DbContext);
+			return Crud.UpdateEntity<Salary>(salary.SalaryId, salary);
 		}
 	}
 }

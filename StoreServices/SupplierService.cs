@@ -1,4 +1,5 @@
-﻿using StoreProjectModels.DatabaseModels;
+﻿using StoreProjectModels.Data;
+using StoreProjectModels.DatabaseModels;
 using StoreProjectModels.Models;
 using StoreServices.Interfaces;
 using System;
@@ -12,12 +13,12 @@ namespace StoreServices
 {
 	public class SupplierService : ISupplierService
 	{
-		public ResponseModel AddSupplier(Supplier supplier)
+		public CrudResponse AddSupplier(Supplier supplier)
 		{
 			throw new NotImplementedException();
 		}
 
-		public ResponseModel DeleteSupplier(string supplierId)
+		public CrudResponse DeleteSupplier(string supplierId)
 		{
 			throw new NotImplementedException();
 		}
@@ -32,7 +33,7 @@ namespace StoreServices
 			throw new NotImplementedException();
 		}
 
-		public ResponseModel UpdateSupplier(Supplier supplier)
+		public CrudResponse UpdateSupplier(Supplier supplier)
 		{
 			throw new NotImplementedException();
 		}

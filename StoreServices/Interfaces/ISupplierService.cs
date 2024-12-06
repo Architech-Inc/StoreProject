@@ -1,4 +1,5 @@
-﻿using StoreProjectModels.DatabaseModels;
+﻿using StoreProjectModels.Data;
+using StoreProjectModels.DatabaseModels;
 using StoreProjectModels.Models;
 using System;
 using System.Collections.Generic;
@@ -11,9 +12,9 @@ namespace StoreServices.Interfaces
 {
 	public interface ISupplierService
 	{
-		ResponseModel AddSupplier(Supplier supplier);
-		ResponseModel UpdateSupplier(Supplier supplier);
-		ResponseModel DeleteSupplier(string supplierId);
+		CrudResponse AddSupplier(Supplier supplier);
+		CrudResponse UpdateSupplier(Supplier supplier);
+		CrudResponse DeleteSupplier(string supplierId);
 		ObservableCollection<Supplier> GetAllSuppliers();
 		Supplier GetSupplier(string supplierId);
 	}

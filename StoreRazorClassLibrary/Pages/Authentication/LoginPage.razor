@@ -1,0 +1,57 @@
+﻿@page "/auth/login"
+@layout AuthenticationLayout
+
+<div class="form-page">
+    <div id="welcomeView" class="welcomeView">
+        <div class="viewNameSpace">
+            <h2 class="nameSpace">
+                <sign class="atSign">@("@")</sign>ClexAn
+            </h2>
+        </div>
+
+        <div id="avatarBox">
+            <img src="@(LibraryHelper.ContentPath)images/admin.png" alt="avatar" id="avatar" />
+            <span id="avatarText">Admin</span>
+        </div>
+
+        <div class="formArea">
+            <EditForm Model="@LoginModel">
+                <div class="formSection">
+                    <label for="username">Username</label>
+                    <input @bind="@LoginModel.Username" title="username" tabindex="0" type="text" name="username" id="inputUserName" inputmode="text">
+                    <span id="inputError-0"></span>
+                </div>
+                <div class="formSection">
+                    <label for="password">Password</label>
+                    <input @bind="@LoginModel.Password" title="password" placeholder="" type="password" name="password" id="inputPassword" inputmode="text">
+                    <span id="inputError-1"></span>
+                </div>
+                <div title="Login" lang="en-us" class="formSection LDiv">
+                    <button @onclick="()=>{Navigation.NavigateTo(Navigation.BaseUri);}" type="button" id="login">Login</button>
+                </div>
+                <p class="forgot_pass">Forgot password? Contact <a id="contact-link" href="#supportView">God Admin</a></p>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+
+
+@code {
+    public string AtCharacter { get; } = "@";
+
+    public LoginCredential LoginModel { get; set; } = new();
+
+    protected override async void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("alert");
+            await JSRuntime.InvokeVoidAsync("LoadScripts");
+            Interop.LoadScripts();
+            await Interop.Prompt(AtCharacter);
+        }
+        
+        base.OnAfterRender(firstRender);
+    }
+}

@@ -1,5 +1,7 @@
 ﻿using StoreProjectModels.CRUD;
+using StoreProjectModels.Data;
 using StoreProjectModels.DatabaseModels;
+using StoreProjectModels.DbContexts;
 using StoreProjectModels.Models;
 using StoreServices.Interfaces;
 using System;
@@ -13,31 +15,33 @@ namespace StoreServices
 {
 	public class ItemService: IItemService
 	{
-		private readonly store_dbContext DbContext;
-		public ItemService(store_dbContext dbContext)
+		private readonly StoreDbContext DbContext;
+        private readonly ICrud Crud;
+        public ItemService(StoreDbContext dbContext, ICrud crud)
+        {
+            DbContext = dbContext;
+            Crud = crud;
+        }
+
+        public CrudResponse AddItem(Item item)
 		{
-			DbContext = dbContext;
+			return Crud.CreateEntity<Item>(item.ItemId, item);
 		}
 
-		public ResponseModel AddItem(Item item)
+		public CrudResponse AddItems(ObservableCollection<Item> items)
 		{
-			return Crud.Create<Item>(item.ItemId, item, DbContext);
+			return Crud.CreateEntities<Item>(nameof(Item.ItemId), items);
 		}
 
-		public ResponseModel AddItems(ObservableCollection<Item> items)
+		public CrudResponse DeleteItem(long itemId)
 		{
-			return Crud.CreateRange<Item>(items, DbContext);
+			return Crud.DeleteEntity<Item>(itemId);
 		}
 
-		public ResponseModel DeleteItem(long itemId)
-		{
-			return Crud.Delete<Item>(itemId, DbContext);
-		}
-
-		public ResponseModel DeleteItems(ObservableCollection<Item> items)
+		public CrudResponse DeleteItems(ObservableCollection<Item> items)
 		{
 			//DbContext.Entry<ObservableCollection<Item>>(items).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
-			return Crud.DeleteRange<Item>(items, DbContext);
+			return Crud.DeleteEntities<Item>(items);
 		}
 
 		public ObservableCollection<Item> GetAllItems()
@@ -50,9 +54,9 @@ namespace StoreServices
 			return DbContext.Items.Find(itemId);
 		}
 
-		public ResponseModel UpdateItem(Item item)
+		public CrudResponse UpdateItem(Item item)
 		{
-			return Crud.Update<Item>(item.ItemId, item, DbContext);
+			return Crud.UpdateEntity<Item>(item.ItemId, item);
 		}
 	}
 }

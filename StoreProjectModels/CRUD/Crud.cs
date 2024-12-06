@@ -1,137 +1,194 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Google.Protobuf.WellKnownTypes;
 using Microsoft.EntityFrameworkCore;
-using StoreProjectModels.DatabaseModels;
-using StoreProjectModels.Models;
+using StoreProjectModels.Data;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using StoreProjectModels.DatabaseModels;
+using StoreProjectModels.DbContexts;
 
 namespace StoreProjectModels.CRUD
 {
-	//public class Person<T> : ICrud<T>
-	//{
-	//	public ResponseModel Add<T1>(dynamic id, dynamic value, store_dbContext DbContext)
-	//	{
-	//		throw new NotImplementedException();
-	//	}
-
-	//	public ObservableCollection<T> Collection(store_dbContext DbContext)
-	//	{
-	//		throw new NotImplementedException();
-	//	}
-
-	//	public ResponseModel Delete<T1>(dynamic id, store_dbContext DbContext)
-	//	{
-	//		throw new NotImplementedException();
-	//	}
-
-	//	public T1 GetSingle<T1>(dynamic id, store_dbContext DbContext)
-	//	{
-	//		throw new NotImplementedException();
-	//	}
-
-	//	public ResponseModel Update<T1>(dynamic id, dynamic value, store_dbContext DbContext)
-	//	{
-	//		throw new NotImplementedException();
-	//	}
-	//}
-	public static class Crud//<T>: ICrud<T>, where T: class
+	public class Crud: ICrud
 	{
-		public static T Read<T>(dynamic id, store_dbContext DbContext) where T: class
+        private readonly StoreDbContext _dbContext;
+		public Crud(StoreDbContext dbContext)
 		{
-			return DbContext.Find<T>(id);
+			_dbContext = dbContext;
 		}
-		public static ResponseModel UpdateRange<T>(dynamic value)
-		{
-			return new(true, "");
-		}
-		public static ResponseModel Create<T>(dynamic id, T value, store_dbContext DbContext) where T: class
+
+		CrudResponse ICrud.CreateEntity<T>(dynamic entityId, T entity)
 		{
 			string name = typeof(T).Name;
-			if (value == null) return new(false, $"{name}Null");
+			if (entity == null) return new(false, $"{name}Null");
 			try
 			{
-				if (DbContext.Find<T>(id) != null) return new(false, $"{name}Exists");
-				DbContext.Add<T>(value);
-				DbContext.SaveChanges();
-				return new(true, "Success");
+				if (_dbContext.Find<T>(entityId) != null) return new(false, $"{name}Exists");
+				//_dbContext.Entry<T>(entity).State = EntityState.Added;
+				_dbContext.Add<T>(entity);
+				_dbContext.SaveChanges();
+				return new(true, "Create success");
 			}
 			catch (Exception ex)
 			{
-				return new(false, $"Failed: {ex}");
+				return new(false, $"Create failed", $"Details: {ex.Message}");
 			}
 		}
-		public static ResponseModel CreateRange<T>(dynamic list, store_dbContext DbContext) where T: class
+
+		public CrudResponse CreateEntities<T>(string primaryKeyName, ObservableCollection<T> entities) where T : class
 		{
+			ObservableCollection<T> found = new();
+			int countFound = 0, countNotFound = 0;
+
+			if (entities.Count < 1)
+			{
+				return new(false, "Entities empty");
+			}
+
 			try
 			{
-				DbContext.AddRange(list);
-				DbContext.SaveChanges();
-				return new(true, "Success");
-			}
-			catch (Exception ex)
-			{
-				return new(false, $"Failed: {ex}");
-			}
-		}
-		public static ResponseModel Delete<T>(dynamic id, store_dbContext DbContext) where T: class
-		{
-			T obj = DbContext.Find<T>(id);
-			string name = typeof(T).Name;
-			if (obj == null) return new(false, $"{name}NotFound");
-			try
-			{
-				DbContext.Entry<T>(obj).State = EntityState.Deleted;
-				//DbContext.Remove<T>(obj);
-				DbContext.SaveChanges();
-				return new(true, "Success");
-			}
-			catch (Exception ex)
-			{
-				return new(false, $"Failed: {ex}");
-			}
-		}
-		public static ResponseModel DeleteRange<T>(dynamic list, store_dbContext DbContext) where T: class
-		{
-			try
-			{
-				foreach (var item in list)
+				foreach (var entity in entities)
 				{
-					DbContext.Entry<T>(item).State = EntityState.Deleted;
+					var entityId = _dbContext.Entry<T>(entity).Property(primaryKeyName).CurrentValue;
+					T obj = _dbContext.Find<T>(entityId)!;
+					if (obj != null)
+					{
+						found.Add(obj);
+						countFound++;
+					}
+					else
+					{
+						_dbContext.Entry<T>(entity).State = EntityState.Detached;
+						_dbContext.Entry<T>(entity).State = EntityState.Added;
+						_dbContext.SaveChanges();
+						countNotFound++;
+					}
 				}
-				/*for (int i = 0; i < list.Count; i++)
+				return new(true, "Creates success", new OperationInfo(countFound, countNotFound, JsonConvert.SerializeObject(found)).ToString());
+			}
+			catch (Exception ex)
+			{
+				return new(false, $"Creates failed", $"Details: {ex.Message}");
+			}
+		}
+
+		CrudResponse ICrud.DeleteEntity<T>(dynamic entityId)
+		{
+			T entity = _dbContext.Find<T>(entityId);
+			string name = typeof(T).Name;
+			if (entity == null) return new(false, $"{name}NotFound");
+			try
+			{
+				_dbContext.Entry<T>(entity).State = EntityState.Deleted;
+				_dbContext.SaveChanges();
+				return new(true, "Delete success");
+			}
+			catch (Exception ex)
+			{
+				return new(false, $"Delete failed", $"Details: {ex.Message}");
+			}
+		}
+
+		public CrudResponse DeleteEntities<T>(dynamic entities) where T : class
+		{
+			try
+			{
+				foreach (var entity in entities)
 				{
-					DbContext.Entry<T>(list[i]).State = EntityState.Detached;
-				}*/
-				//DbContext.RemoveRange(list);
-				DbContext.SaveChanges();
+					_dbContext.Entry<T>(entity).State = EntityState.Deleted;
+				}
+				_dbContext.SaveChanges();
 				return new(true, "Success");
 			}
 			catch (Exception ex)
 			{
-				return new(false, $"Failed: {ex}");
+				return new(false, $"Deletes failed", $"Details: {ex.Message}");
 			}
 		}
-		public static ResponseModel Update<T>(dynamic id, T value, store_dbContext DbContext) where T: class
+
+		ObservableCollection<T> ICrud.GetEntities<T>()
 		{
-			T obj = DbContext.Find<T>(id);
+			throw new NotImplementedException();
+		}
+
+		T ICrud.GetEntity<T>(dynamic entityId)
+		{
+			return _dbContext.Find<T>(entityId);
+		}
+
+		CrudResponse ICrud.UpdateEntities<T>(string primaryKeyName, ObservableCollection<T> entities)
+		{
+			ObservableCollection<T> notFound = new();
+			int countFound = 0, countNotFound = 0;
+
+			if(entities.Count < 1)
+			{
+				return new(false, "Entities empty");
+			}
+
+			try
+			{
+				foreach (var entity in entities)
+				{
+					var entityId = _dbContext.Entry<T>(entity).Property(primaryKeyName).CurrentValue;
+					T obj = _dbContext.Find<T>(entityId)!;
+					if (obj != null)
+					{
+						_dbContext.Entry<T>(obj).State = EntityState.Detached;
+						obj = entity;
+						_dbContext.Entry<T>(obj).State = EntityState.Modified;
+						_dbContext.SaveChanges();
+						countFound++;
+					}
+					else
+					{
+						notFound.Add(entity);
+						countNotFound++;
+					}
+				}
+				return new(true, "Updates success", new OperationInfo(countFound, countNotFound, JsonConvert.SerializeObject(notFound)).ToString());
+			}
+			catch (Exception ex)
+			{
+				return new(false, $"Updates failed", $"Details: {ex.Message}");
+			}
+		}
+
+		CrudResponse ICrud.UpdateEntity<T>(dynamic entityId, T entity)
+		{
+			T obj = _dbContext.Find<T>(entityId);
 			string name = typeof(T).Name;
 			if (obj == null) return new(false, $"{name}NotFound");
 			try
 			{
-				DbContext.Entry<T>(obj).State = EntityState.Detached;
-				obj = value;
-				DbContext.Entry<T>(obj).State = EntityState.Modified;
-				//DbContext.Update<T>(obj);
-				DbContext.SaveChanges();
-				return new(true, "Success");
+				_dbContext.Entry<T>(obj).State = EntityState.Detached;
+				obj = entity;
+				_dbContext.Entry<T>(obj).State = EntityState.Modified;
+				_dbContext.SaveChanges();
+				return new(true, "Update success");
 			}
 			catch (Exception ex)
 			{
-				return new(false, $"Failed: {ex}");
+				return new(false, $"Update failed", $"Details: {ex.Message}");
+			}
+		}
+
+		class OperationInfo
+		{
+            public OperationInfo(int found, int notFound, string data)
+            {
+				Found = found;
+				NotFound = notFound;
+				Data = data; 
+			}
+			public int Found { get; set; }
+			public int NotFound { get; set; }
+			public string Data { get; set; } = string.Empty;
+
+			public override string ToString()
+			{
+				return JsonConvert.SerializeObject(this);
 			}
 		}
 	}

@@ -1,5 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using StoreProjectModels.CRUD;
+using StoreProjectModels.Data;
 using StoreProjectModels.DatabaseModels;
+using StoreProjectModels.DbContexts;
 using StoreProjectModels.Models;
 using StoreServices.Interfaces;
 using System;
@@ -13,13 +16,15 @@ namespace StoreServices
 {
 	public class DepartmentService: IDepartmentService
 	{
-		private readonly store_dbContext DbContext;
-		public DepartmentService(store_dbContext dbContext)
+		private readonly StoreDbContext DbContext;
+        private readonly ICrud Crud;
+        public DepartmentService(StoreDbContext dbContext, ICrud crud)
 		{
 			DbContext = dbContext;
+			Crud = crud;
 		}
 
-		public ResponseModel AddDepartment(Department department)
+		public CrudResponse AddDepartment(Department department)
 		{
 			if (department == null) return new(false, "DepartmentNull");
 			try
@@ -34,7 +39,7 @@ namespace StoreServices
 			}
 		}
 
-		public ResponseModel DeleteDepartment(int deptId)
+		public CrudResponse DeleteDepartment(int deptId)
 		{
 			Department department = DbContext.Departments.Find(deptId);
 			if (department == null) return new(false, "DepartmentNotFound");
@@ -61,7 +66,7 @@ namespace StoreServices
 			return DbContext.Departments.Find(deptId);
 		}
 
-		public ResponseModel UpdateDepartment(Department department)
+		public CrudResponse UpdateDepartment(Department department)
 		{
 			if (department == null) return new(false, "DepartmentNull");
 			try

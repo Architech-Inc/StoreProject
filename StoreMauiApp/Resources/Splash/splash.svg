@@ -1,0 +1,79 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+
+
+<svg id="at" width="756px" height="756px" viewBox="0 0 456 456" version="1.1"
+			xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg">
+
+  <link rel="stylesheet" href="style.css" type="text/css" />
+  
+  <defs>
+    <filter filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB" id="filter_1">
+      <feFlood flood-opacity="0" result="BackgroundImageFix" />
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" />
+      <feOffset dx="2" dy="2" />
+      <feGaussianBlur stdDeviation="2" />
+      <feColorMatrix type="matrix"
+        values="0 0 0 0 0.16078432 0 0 0 0 0.16078432 0 0 0 0 0.16078432 0 0 0 0.49803922 0" />
+      <feBlend mode="normal" in2="BackgroundImageFix" result="effect0_dropShadow" />
+      <feBlend mode="normal" in="SourceGraphic" in2="effect0_dropShadow" result="shape" />
+    </filter>
+  </defs>
+  <g stroke-width="3" id="@" filter="url(#filter_1)" transform="translate(4 4)">
+    <path
+      d="M224.62 122.437Q224.62 140.015 219.005 154.602Q213.39 169.189 203.136 177.49Q192.882 185.791 179.332 185.791Q170.299 185.791 163.341 181.458Q156.383 177.124 153.331 170.044L151.378 170.044Q138.195 185.791 117.809 185.791Q96.2024 185.791 83.7513 172.791Q71.3001 159.79 71.3001 137.207Q71.3001 111.45 87.6575 95.7031Q104.015 79.9561 130.382 79.9561Q140.88 79.9561 153.514 81.9702Q166.149 83.9844 174.327 86.792L171.52 146.484Q171.52 163.452 180.797 163.452Q188.61 163.452 193.248 152.039Q197.887 140.625 197.887 122.192Q197.887 102.539 189.708 87.4634Q181.53 72.3877 166.698 64.4531Q151.867 56.5186 132.824 56.5186Q108.165 56.5186 89.9769 66.6504Q71.7884 76.7822 62.0838 95.8862Q52.3792 114.99 52.3792 140.015Q52.3792 173.706 70.3846 191.711Q88.3899 209.717 122.57 209.717Q135.509 209.717 151.012 206.848Q166.515 203.979 181.53 198.486L181.53 221.924Q155.407 233.032 123.546 233.032Q77.1595 233.032 51.2195 208.618Q25.2796 184.204 25.2796 140.747Q25.2796 110.596 38.5242 85.9985Q51.7688 61.4014 76.2439 47.4243Q100.719 33.4473 132.579 33.4473Q159.435 33.4473 180.553 44.4336Q201.671 55.4199 213.146 75.6836Q224.62 95.9473 224.62 122.437ZM99.6204 137.695Q99.6204 163.452 120.617 163.452Q131.603 163.452 137.34 155.701Q143.077 147.949 144.298 130.493L145.885 103.516Q139.659 102.173 131.847 102.173Q116.588 102.173 108.104 111.694Q99.6204 121.216 99.6204 137.695Z" />
+  </g>
+  
+  <script >
+    const at = document.querySelector('#at');
+    const loaderElement = document.querySelector('.loading');
+    const dotsEl = document.querySelector('#dots');
+    const addAnim = () => {
+    at.classList.add('start-anim')
+    }
+    const removeAnim = () => {
+    at.classList.remove('start-anim')
+    }
+    const showLoader = () => {
+    loaderElement.classList.add('l-fadeIn');
+    loaderElement.style.display = 'flex';
+    }
+    const hideLoader = () => {
+    loaderElement.classList.add('l-fadeOut')
+    setTimeout(() => {
+    removeFades();
+    }, 200);
+    }
+    const removeFades = () => {
+    loaderElement.classList.remove('l-fadeIn');
+    loaderElement.classList.remove('l-fadeOut');
+    loaderElement.style.display = 'none';
+    removeAnim();
+    }
+    const Dots = (i, text) => {
+    if (i != 0) {
+    text = text + '.';
+    i--;
+    }
+    if (i == 0) {
+    text = '';
+    i = 4;
+    }
+    setTimeout(() => {
+    Dots(i, text);
+    }, 350)
+    dots.innerText = text;
+    }
+    function atStart() {
+    Dots(4, "");
+    showLoader();
+    addAnim();
+    }
+    function atClose (t) {
+    setTimeout(() => {
+    hideLoader();
+    }, t);
+    }
+    atStart();
+  </script>
+</svg>

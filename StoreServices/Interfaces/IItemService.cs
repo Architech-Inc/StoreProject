@@ -1,4 +1,5 @@
-﻿using StoreProjectModels.DatabaseModels;
+﻿using StoreProjectModels.Data;
+using StoreProjectModels.DatabaseModels;
 using StoreProjectModels.Models;
 using System;
 using System.Collections.Generic;
@@ -11,11 +12,11 @@ namespace StoreServices.Interfaces
 {
 	public interface IItemService
 	{
-		ResponseModel AddItem(Item item);
-		ResponseModel AddItems(ObservableCollection<Item> items);
-		ResponseModel UpdateItem(Item item);
-		ResponseModel DeleteItem(long itemId);
-		ResponseModel DeleteItems(ObservableCollection<Item> items);
+		CrudResponse AddItem(Item item);
+		CrudResponse AddItems(ObservableCollection<Item> items);
+		CrudResponse UpdateItem(Item item);
+		CrudResponse DeleteItem(long itemId);
+		CrudResponse DeleteItems(ObservableCollection<Item> items);
 		ObservableCollection<Item> GetAllItems();
 		Item GetItem(long itemId);
 	}

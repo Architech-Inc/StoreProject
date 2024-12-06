@@ -1,20 +1,17 @@
-﻿using StoreProjectModels.DatabaseModels;
-using StoreProjectModels.Models;
-using System;
-using System.Collections.Generic;
+﻿using StoreProjectModels.Data;
 using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace StoreProjectModels.CRUD
 {
-	public interface ICrud<T>
+	public interface ICrud
 	{
-		ResponseModel Add<T>(dynamic id, dynamic value, store_dbContext DbContext);
-		ResponseModel Update<T>(dynamic id, dynamic value, store_dbContext DbContext);
-		ResponseModel Delete<T>(dynamic id, store_dbContext DbContext);
-		T GetSingle<T>(dynamic id, store_dbContext DbContext);
-		ObservableCollection<T> Collection(store_dbContext DbContext);
+		CrudResponse CreateEntities<T>(string primaryKeyName, ObservableCollection<T> entities) where T : class;
+		CrudResponse CreateEntity<T>(dynamic entityId, T entity) where T : class;
+		CrudResponse DeleteEntities<T>(dynamic entities) where T : class;
+		CrudResponse DeleteEntity<T>(dynamic entityId) where T: class;
+		ObservableCollection<T> GetEntities<T>() where T : class;
+		T GetEntity<T>(dynamic entityId) where T: class;
+		CrudResponse UpdateEntities<T>(string primaryKeyName, ObservableCollection<T> entities) where T : class;
+		CrudResponse UpdateEntity<T>(dynamic entityId, T entity) where T : class;
 	}
 }

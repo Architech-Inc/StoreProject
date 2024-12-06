@@ -1,4 +1,5 @@
-﻿using StoreProjectModels.DatabaseModels;
+﻿using StoreProjectModels.Data;
+using StoreProjectModels.DatabaseModels;
 using StoreProjectModels.Models;
 using System;
 using System.Collections.Generic;
@@ -11,10 +12,10 @@ namespace StoreServices.Interfaces
 {
 	public interface IEmployeeService
 	{
-		ResponseModel EmailExists(string email);
-		ResponseModel AddEmployee(Employee employee);
-		ResponseModel DeleteEmployee(string employeeId);
-		ResponseModel UpdateEmployee(Employee employee);
+		CrudResponse EmailExists(string email);
+		CrudResponse AddEmployee(Employee employee);
+		CrudResponse DeleteEmployee(string employeeId);
+		CrudResponse UpdateEmployee(Employee employee);
 		IEnumerable<Employee> GetAllEmployees();
 		Employee GetEmployee(string employeeId);
 	}

@@ -1,4 +1,5 @@
-﻿ using StoreProjectModels.DatabaseModels;
+﻿using StoreProjectModels.Data;
+using StoreProjectModels.DatabaseModels;
 using StoreProjectModels.Models;
 using System;
 using System.Collections.Generic;
@@ -10,9 +11,9 @@ namespace StoreServices.Interfaces
 {
 	public interface IAuthenticationService
 	{
-		ResponseModel GenerateCode(string username);
-		ResponseModel Reset(UserCredential userCredential);
-		ResponseModel IsTokenValid(string token);
-		ResponseModel Authenticate(UserCredential userCredential);
+		CrudResponse GenerateCode(string username);
+		CrudResponse Reset(UserCredential userCredential);
+		CrudResponse IsTokenValid(string token);
+		CrudResponse Authenticate(UserCredential userCredential);
 	}
 }

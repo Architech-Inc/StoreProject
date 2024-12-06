@@ -1,4 +1,5 @@
-﻿using StoreProjectModels.DatabaseModels;
+﻿using StoreProjectModels.Data;
+using StoreProjectModels.DatabaseModels;
 using StoreProjectModels.Models;
 using System;
 using System.Collections.Generic;
@@ -13,8 +14,8 @@ namespace StoreServices.Interfaces
 	{
 		Category GetCategory(int id);
 		ObservableCollection<Category> GetAllCategories();
-		ResponseModel AddCategory(Category category);
-		ResponseModel DeleteCategory(int id);
-		ResponseModel UpdateCategory(Category category);
+		CrudResponse AddCategory(Category category);
+		CrudResponse DeleteCategory(int id);
+		CrudResponse UpdateCategory(Category category);
 	}
 }

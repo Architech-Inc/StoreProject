@@ -1,5 +1,8 @@
-﻿using StoreProjectModels.CRUD;
+﻿using Microsoft.EntityFrameworkCore;
+using StoreProjectModels.CRUD;
+using StoreProjectModels.Data;
 using StoreProjectModels.DatabaseModels;
+using StoreProjectModels.DbContexts;
 using StoreProjectModels.Models;
 using StoreServices.Interfaces;
 using System;
@@ -13,29 +16,31 @@ namespace StoreServices
 {
 	public class SaleService : ISaleService
 	{
-		private readonly store_dbContext DbContext;
-		public SaleService(store_dbContext store_DbContext)
+		private readonly StoreDbContext DbContext;
+        private readonly ICrud Crud;
+        public SaleService(StoreDbContext StoreDbContext, ICrud crud)
+        {
+            DbContext = StoreDbContext;
+            Crud = crud;
+        }
+        public CrudResponse AddSale(Sale sale)
 		{
-			DbContext = store_DbContext;
-		}
-		public ResponseModel AddSale(Sale sale)
-		{
-			return Crud.Create<Sale>(sale.SaleId, sale, DbContext);
-		}
-
-		public ResponseModel AddSales(ObservableCollection<Sale> sales)
-		{
-			return Crud.CreateRange<Sale>(sales, DbContext);
+			return Crud.CreateEntity<Sale>(sale.SaleId, sale);
 		}
 
-		public ResponseModel DeleteSale(long saleId)
+		public CrudResponse AddSales(ObservableCollection<Sale> sales)
 		{
-			return Crud.Delete<Sale>(saleId, DbContext);
+			return Crud.CreateEntities<Sale>(nameof(Sale.SaleId), sales);
 		}
 
-		public ResponseModel DeleteSales(ObservableCollection<Sale> sales)
+		public CrudResponse DeleteSale(long saleId)
 		{
-			return Crud.DeleteRange<Sale>(sales, DbContext);
+			return Crud.DeleteEntity<Sale>(saleId);
+		}
+
+		public CrudResponse DeleteSales(ObservableCollection<Sale> sales)
+		{
+			return Crud.DeleteEntities<Sale>(sales);
 		}
 
 		public ObservableCollection<Sale> GetAllSales()
@@ -48,9 +53,9 @@ namespace StoreServices
 			return DbContext.Sales.Find(saleId);
 		}
 
-		public ResponseModel UpdateSale(Sale sale)
+		public CrudResponse UpdateSale(Sale sale)
 		{
-			return Crud.Update(sale.SaleId, sale, DbContext);
+			return Crud.UpdateEntity(sale.SaleId, sale);
 		}
 	}
 }

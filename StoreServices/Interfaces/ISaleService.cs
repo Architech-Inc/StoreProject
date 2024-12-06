@@ -1,4 +1,5 @@
-﻿using StoreProjectModels.DatabaseModels;
+﻿using StoreProjectModels.Data;
+using StoreProjectModels.DatabaseModels;
 using StoreProjectModels.Models;
 using System;
 using System.Collections.Generic;
@@ -11,11 +12,11 @@ namespace StoreServices.Interfaces
 {
 	public interface ISaleService
 	{
-		ResponseModel AddSale(Sale sale);
-		ResponseModel AddSales(ObservableCollection<Sale> sales);
-		ResponseModel UpdateSale(Sale sale);
-		ResponseModel DeleteSale(long saleId);
-		ResponseModel DeleteSales(ObservableCollection<Sale> sales);
+		CrudResponse AddSale(Sale sale);
+		CrudResponse AddSales(ObservableCollection<Sale> sales);
+		CrudResponse UpdateSale(Sale sale);
+		CrudResponse DeleteSale(long saleId);
+		CrudResponse DeleteSales(ObservableCollection<Sale> sales);
 		ObservableCollection<Sale> GetAllSales();
 		Sale GetSale(long saleId);
 	}

@@ -8,13 +8,14 @@ using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.IdentityModel.Tokens;
 using StoreProjectModels.Models;
 using System.Text;
+using StoreProjectModels.DbContexts;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
 builder.Services.AddControllers();
-builder.Services.AddDbContext<store_dbContext>(options =>
+builder.Services.AddDbContext<StoreDbContext>(options =>
 {
 	options.UseMySQL(builder.Configuration.GetConnectionString("Default"));
 });

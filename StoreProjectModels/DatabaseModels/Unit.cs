@@ -10,14 +10,13 @@ namespace StoreProjectModels.DatabaseModels
         public Unit()
         {
             Items = new HashSet<Item>();
-            Users = new HashSet<User>();
         }
 
         public int UnitId { get; set; }
         public string Name { get; set; }
         public string Type { get; set; }
+        public string UnitCode { get; set; }
 
         public virtual ICollection<Item> Items { get; set; }
-        public virtual ICollection<User> Users { get; set; }
     }
 }

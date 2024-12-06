@@ -1,5 +1,7 @@
 ﻿using StoreProjectModels.CRUD;
+using StoreProjectModels.Data;
 using StoreProjectModels.DatabaseModels;
+using StoreProjectModels.DbContexts;
 using StoreProjectModels.Models;
 using StoreServices.Interfaces;
 using System;
@@ -13,20 +15,22 @@ namespace StoreServices
 {
 	public class OrderService : IOrderService
 	{
-		private readonly store_dbContext DbContext;
-		public OrderService(store_dbContext dbContext)
+		private readonly StoreDbContext DbContext;
+        private readonly ICrud Crud;
+        public OrderService(StoreDbContext dbContext, ICrud crud)
+        {
+            DbContext = dbContext;
+            Crud = crud;
+        }
+
+        public CrudResponse AddItemsOrder(ItemsOrder itemsOrder)
 		{
-			DbContext = dbContext;
+			return Crud.CreateEntity<ItemsOrder>(itemsOrder.OrderId, itemsOrder);
 		}
 
-		public ResponseModel AddItemsOrder(ItemsOrder itemsOrder)
+		public CrudResponse DeleteItemsOrder(long itemsOrderId)
 		{
-			return Crud.Create<ItemsOrder>(itemsOrder.OrderId, itemsOrder, DbContext);
-		}
-
-		public ResponseModel DeleteItemsOrder(long itemsOrderId)
-		{
-			return Crud.Delete<ItemsOrder>(itemsOrderId, DbContext);
+			return Crud.DeleteEntity<ItemsOrder>(itemsOrderId);
 		}
 
 		public ObservableCollection<ItemsOrder> GetAllItemsOrders()
@@ -39,9 +43,9 @@ namespace StoreServices
 			return DbContext.ItemsOrders.Find(itemsOrderId);
 		}
 
-		public ResponseModel UpdateItemsOrder(ItemsOrder itemsOrder)
+		public CrudResponse UpdateItemsOrder(ItemsOrder itemsOrder)
 		{
-			return Crud.Update<ItemsOrder>(itemsOrder.OrderId, itemsOrder, DbContext);
+			return Crud.UpdateEntity<ItemsOrder>(itemsOrder.OrderId, itemsOrder);
 		}
 	}
 }

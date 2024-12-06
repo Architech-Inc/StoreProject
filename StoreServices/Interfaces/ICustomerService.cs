@@ -1,4 +1,5 @@
-﻿using StoreProjectModels.DatabaseModels;
+﻿using StoreProjectModels.Data;
+using StoreProjectModels.DatabaseModels;
 using StoreProjectModels.Models;
 using System;
 using System.Collections.Generic;
@@ -11,10 +12,10 @@ namespace StoreServices.Interfaces
 {
 	public interface ICustomerService
 	{
-		ResponseModel AddCustomer(Customer customer);
-		ResponseModel UpdateCustomer(Customer customer);
-		ResponseModel DeleteCustomer(string customerId);
-		ResponseModel DeleteCustomers(ObservableCollection<Customer> customers);
+		CrudResponse AddCustomer(Customer customer);
+		CrudResponse UpdateCustomer(Customer customer);
+		CrudResponse DeleteCustomer(string customerId);
+		CrudResponse DeleteCustomers(ObservableCollection<Customer> customers);
 		ObservableCollection<Customer> GetAllCustomers();
 		Customer GetCustomer(string customerId);
 	}

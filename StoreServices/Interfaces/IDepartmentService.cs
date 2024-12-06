@@ -1,4 +1,5 @@
-﻿using StoreProjectModels.DatabaseModels;
+﻿using StoreProjectModels.Data;
+using StoreProjectModels.DatabaseModels;
 using StoreProjectModels.Models;
 using System;
 using System.Collections.Generic;
@@ -11,9 +12,9 @@ namespace StoreServices.Interfaces
 {
 	public interface IDepartmentService
 	{
-		ResponseModel AddDepartment(Department user);
-		ResponseModel UpdateDepartment(Department user);
-		ResponseModel DeleteDepartment(int deptId);
+		CrudResponse AddDepartment(Department user);
+		CrudResponse UpdateDepartment(Department user);
+		CrudResponse DeleteDepartment(int deptId);
 		ObservableCollection<Department> GetAllDepartments();
 		Department GetDepartment(int deptId);
 	}

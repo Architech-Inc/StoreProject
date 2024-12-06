@@ -1,5 +1,7 @@
 ﻿using StoreProjectModels.CRUD;
+using StoreProjectModels.Data;
 using StoreProjectModels.DatabaseModels;
+using StoreProjectModels.DbContexts;
 using StoreProjectModels.Models;
 using StoreServices.Interfaces;
 using System;
@@ -13,26 +15,28 @@ namespace StoreServices
 {
 	public class CustomerService : ICustomerService
 	{
-		private readonly store_dbContext DbContext;
-		public CustomerService(store_dbContext dbContext)
+		private readonly StoreDbContext DbContext;
+		private readonly ICrud Crud;
+		public CustomerService(StoreDbContext dbContext, ICrud crud)
 		{
 			DbContext = dbContext;
+			Crud = crud;
 		}
 
-		public ResponseModel AddCustomer(Customer customer)
+		public CrudResponse AddCustomer(Customer customer)
 		{
 			customer.CustomerId = Authentication.GenerateGuid();
-			return Crud.Create(customer.CustomerId, customer, DbContext);
+			return Crud.CreateEntity(customer.CustomerId, customer);
 		}
 
-		public ResponseModel DeleteCustomer(string customerId)
+		public CrudResponse DeleteCustomer(string customerId)
 		{
-			return Crud.Delete<Customer>(customerId, DbContext);
+			return Crud.DeleteEntity<Customer>(customerId);
 		}
 
-		public ResponseModel DeleteCustomers(ObservableCollection<Customer> customers)
+		public CrudResponse DeleteCustomers(ObservableCollection<Customer> customers)
 		{
-			return Crud.DeleteRange<Customer>(customers, DbContext);
+			return Crud.DeleteEntities<Customer>(customers);
 		}
 
 		public ObservableCollection<Customer> GetAllCustomers()
@@ -42,12 +46,12 @@ namespace StoreServices
 
 		public Customer GetCustomer(string customerId)
 		{
-			return Crud.Read<Customer>(customerId, DbContext);
+			return Crud.GetEntity<Customer>(customerId);
 		}
 
-		public ResponseModel UpdateCustomer(Customer customer)
+		public CrudResponse UpdateCustomer(Customer customer)
 		{
-			return Crud.Update<Customer>(customer.CustomerId, customer, DbContext);
+			return Crud.UpdateEntity<Customer>(customer.CustomerId, customer);
 		}
 	}
 }
