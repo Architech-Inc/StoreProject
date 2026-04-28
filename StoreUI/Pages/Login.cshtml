@@ -4,36 +4,40 @@
     ViewData["Title"] = "Store - Login";
 }
 
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card shadow">
-                <div class="card-body">
-                    <h2 class="card-title text-center mb-4">Store Management System</h2>
-                    
-                    @if (!string.IsNullOrEmpty(Model?.ErrorMessage))
-                    {
-                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                            @Model.ErrorMessage
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
-                    }
-
-                    <form method="post">
-                        <div class="mb-3">
-                            <label for="username" class="form-label">Username</label>
-                            <input type="text" class="form-control" id="username" name="username" required />
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="password" class="form-label">Password</label>
-                            <input type="password" class="form-control" id="password" name="password" required />
-                        </div>
-
-                        <button type="submit" class="btn btn-primary w-100">Login</button>
-                    </form>
-                </div>
+<section class="auth-shell">
+    <div class="auth-panel glass-panel">
+        <div class="auth-head text-center">
+            <div class="auth-brandline">
+                <span class="auth-at">@("@")</span>ClexAn
             </div>
+            <div class="auth-avatar-wrap">
+                <img src="https://img.icons8.com/color/144/user-male-circle--v1.png" alt="Admin avatar" class="auth-avatar" />
+            </div>
+            <h1 class="auth-title">Admin Login</h1>
+            <p class="auth-subtitle">Secure access to inventory, records, and operations.</p>
         </div>
+
+        @if (!string.IsNullOrEmpty(Model?.ErrorMessage))
+        {
+            <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+                @Model.ErrorMessage
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+
+        <form method="post" class="auth-form">
+            <div class="mb-3">
+                <label for="username" class="form-label">Username</label>
+                <input type="text" class="form-control app-input" id="username" name="username" autocomplete="username" required />
+            </div>
+
+            <div class="mb-3">
+                <label for="password" class="form-label">Password</label>
+                <input type="password" class="form-control app-input" id="password" name="password" autocomplete="current-password" required />
+            </div>
+
+            <button type="submit" class="btn app-btn-primary w-100">Login</button>
+            <p class="auth-help mt-3 mb-0">Forgot password? Contact system administrator.</p>
+        </form>
     </div>
-</div>
+</section>

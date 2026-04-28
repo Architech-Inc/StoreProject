@@ -6,6 +6,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Store.API.Middleware;
 using Store.DbServices.Extensions;
+using Store.DbServices.Seeding;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -118,6 +119,9 @@ builder.Services.AddHealthChecks();
 // ═════════════════════════════════════════════════════════════════════════════
 var app = builder.Build();
 // ═════════════════════════════════════════════════════════════════════════════
+
+if (app.Environment.IsDevelopment())
+    await app.Services.SeedStoreDatabaseAsync();
 
 // ─── Global Exception Handling (first in pipeline) ───────────────────────────
 app.UseMiddleware<ExceptionHandlingMiddleware>();
