@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Store.Models.Entities;
 using Store.Models.Entities.Contacts;
 
@@ -88,6 +89,59 @@ public class StoreDbContext : DbContext
 
         // Automatically discover and apply all IEntityTypeConfiguration<T> in this assembly
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(StoreDbContext).Assembly);
+
+        // Keep legacy-style schema naming: lower snake_case for table and column names.
+        ApplySnakeCaseNaming(modelBuilder);
+    }
+
+    private static void ApplySnakeCaseNaming(ModelBuilder modelBuilder)
+    {
+        foreach (var entity in modelBuilder.Model.GetEntityTypes())
+        {
+            if (entity.ClrType is null)
+                continue;
+
+            entity.SetTableName(ToSnakeCase(entity.ClrType.Name));
+
+            foreach (var property in entity.GetProperties())
+                property.SetColumnName(ToSnakeCase(property.Name));
+
+            foreach (var key in entity.GetKeys())
+                key.SetName(ToSnakeCase(key.GetName() ?? $"pk_{entity.ClrType.Name}"));
+
+            foreach (var fk in entity.GetForeignKeys())
+                fk.SetConstraintName(ToSnakeCase(fk.GetConstraintName() ?? $"fk_{entity.ClrType.Name}"));
+
+            foreach (var index in entity.GetIndexes())
+                index.SetDatabaseName(ToSnakeCase(index.GetDatabaseName() ?? $"ix_{entity.ClrType.Name}"));
+        }
+    }
+
+    private static string ToSnakeCase(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return value;
+
+        var chars = new List<char>(value.Length + 8);
+
+        for (var i = 0; i < value.Length; i++)
+        {
+            var c = value[i];
+
+            if (char.IsUpper(c))
+            {
+                if (i > 0 && (char.IsLower(value[i - 1]) || char.IsDigit(value[i - 1])))
+                    chars.Add('_');
+
+                chars.Add(char.ToLowerInvariant(c));
+            }
+            else
+            {
+                chars.Add(c);
+            }
+        }
+
+        return new string(chars.ToArray());
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
