@@ -1,34 +1,32 @@
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
-using StoreServices.Interfaces;
-using StoreServices;
-using StoreUI.Data;
-using StoreRazorClassLibrary;
+using System.Net.Http.Headers;
+using Store.Models.Interfaces.Services;
+using StoreUI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
-builder.Services.AddServerSideBlazor();
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.IsEssential = true;
+});
 
-// Add LibraryJsInterop to container
-builder.Services.AddScoped<LibraryJsInterop>();
+// API HttpClient with JWT token handling
+var apiBaseUrl = builder.Configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7112";
+builder.Services.AddHttpClient<IApiClientService, ApiClientService>(client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl);
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+});
 
-//Add Store services to the container
-//builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
-//builder.Services.AddScoped<ICategoryService, CategoryService>();
-//builder.Services.AddScoped<IContextInit, ContextInit>();
-//builder.Services.AddScoped<ICustomerService, CustomerService>();
-//builder.Services.AddScoped<IDepartmentService, DepartmentService>();
-//builder.Services.AddScoped<IEmployeeService, EmployeeService>();
-//builder.Services.AddScoped<IInvoiceService, InvoiceService>();
-//builder.Services.AddScoped<IItemService, ItemService>();
-//builder.Services.AddScoped<IOrderService, OrderService>();
-//builder.Services.AddScoped<ISalaryService, SalaryService>();
-//builder.Services.AddScoped<ISaleService, SaleService>();
-//builder.Services.AddScoped<ISupplierService, SupplierService>();
-//builder.Services.AddScoped<IUnitService, UnitService>();
-//builder.Services.AddScoped<IUserService, UserService>();
+// API service implementations
+builder.Services.AddScoped<IAuthenticationService, ApiAuthenticationService>();
+builder.Services.AddScoped<IUserService, ApiUserService>();
+builder.Services.AddScoped<IEmployeeService, ApiEmployeeService>();
+builder.Services.AddScoped<ICustomerService, ApiCustomerService>();
+builder.Services.AddScoped<IItemService, ApiItemService>();
+builder.Services.AddScoped<IInvoiceService, ApiInvoiceService>();
 
 var app = builder.Build();
 
@@ -43,10 +41,12 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseStaticFiles();
+app.UseSession();
 
 app.UseRouting();
 
-app.MapBlazorHub();
-app.MapFallbackToPage("/_Host");
+app.MapRazorPages();
+
+app.Run();
 
 app.Run();

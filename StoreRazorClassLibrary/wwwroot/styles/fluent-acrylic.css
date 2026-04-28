@@ -1,0 +1,286 @@
+:root {
+    --fx-accent: #0d8198;
+    --fx-accent-strong: #04667b;
+    --fx-green: #0f8a3a;
+    --fx-green-strong: #0b6f2f;
+    --fx-text: #1f2329;
+    --fx-muted: #5a6573;
+    --fx-surface: rgba(255, 255, 255, 0.7);
+    --fx-surface-strong: rgba(255, 255, 255, 0.86);
+    --fx-panel-dark: rgba(26, 32, 38, 0.88);
+    --fx-border: rgba(255, 255, 255, 0.4);
+    --fx-shadow: 0 16px 34px rgba(8, 33, 51, 0.16);
+}
+
+html,
+body,
+.page,
+.form-page {
+    background: radial-gradient(circle at 14% -14%, #ffffff 0%, #edf4fa 42%, #e6edf7 100%) !important;
+    color: var(--fx-text);
+}
+
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(circle at 20% 25%, rgba(13, 129, 152, 0.18), transparent 35%),
+        radial-gradient(circle at 85% 18%, rgba(76, 200, 221, 0.18), transparent 33%),
+        radial-gradient(circle at 55% 88%, rgba(175, 238, 248, 0.23), transparent 30%);
+}
+
+#main_content,
+header.page_header,
+.gridBody,
+.modalView,
+.detailModalCover,
+.catModalDetailCover {
+    position: relative;
+    z-index: 1;
+}
+
+header.page_header > .headerChild {
+    background: rgba(4, 102, 123, 0.8) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 0 10px 24px rgba(2, 38, 53, 0.2);
+    -webkit-backdrop-filter: blur(16px) saturate(150%);
+    backdrop-filter: blur(16px) saturate(150%);
+}
+
+.headerCaption,
+.headerCaption-0 {
+    text-shadow: none;
+    letter-spacing: 0.01em;
+}
+
+.headerCaption-0:first-of-type {
+    color: #d8fff2;
+}
+
+div#welcomeView {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.63)) !important;
+    border: 1px solid var(--fx-border);
+    box-shadow: var(--fx-shadow);
+    -webkit-backdrop-filter: blur(20px) saturate(145%);
+    backdrop-filter: blur(20px) saturate(145%);
+}
+
+.nameSpace,
+span.avatarText,
+form div.formSection label {
+    color: #2a3037;
+    text-shadow: none;
+}
+
+sign.atSign {
+    color: var(--fx-accent-strong);
+}
+
+input:not(.browser-default) {
+    background-color: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(33, 48, 61, 0.33);
+    color: var(--fx-text);
+    border-radius: 8px;
+}
+
+input:not(.browser-default):focus {
+    border-color: var(--fx-accent);
+    outline: 3px solid rgba(13, 129, 152, 0.2);
+    box-shadow: 0 0 0 4px rgba(13, 129, 152, 0.1);
+}
+
+form div.formSection button#login,
+.btn_add,
+.resetbtn,
+button.btn_save,
+.gs-btn {
+    background: linear-gradient(145deg, var(--fx-green), #19a447) !important;
+    color: white;
+    border: 0;
+    border-radius: 9px;
+    transition: transform 0.14s ease, box-shadow 0.14s ease, background-color 0.14s ease;
+}
+
+form div.formSection button#login:hover,
+.gs-btn:hover,
+.record_form button.btn_add:hover,
+.record_form button.resetbtn:hover,
+button.btn_save:hover {
+    background: linear-gradient(145deg, var(--fx-green-strong), #14853a) !important;
+    color: white !important;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 16px rgba(6, 67, 26, 0.25);
+}
+
+div.stackPanel {
+    box-shadow: 1px 0 24px rgba(22, 33, 41, 0.22);
+    border-right: 1px solid rgba(255, 255, 255, 0.22);
+    background: linear-gradient(180deg, rgba(236, 245, 255, 0.72), rgba(224, 234, 246, 0.65));
+}
+
+.panelHeader {
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.9), rgba(239, 246, 255, 0.85));
+    box-shadow: 0 6px 16px rgba(8, 33, 51, 0.13);
+}
+
+.panel_list {
+    background: var(--fx-panel-dark);
+}
+
+.panel_list li:not(.browser-default) {
+    border-bottom: 1px solid rgba(232, 244, 255, 0.18);
+    text-shadow: none;
+    color: #f5f8fb;
+}
+
+.panel_list li:hover,
+.panel_list li.li_selected {
+    background: rgba(142, 203, 224, 0.35);
+}
+
+div.stackInfo {
+    background-color: rgba(18, 24, 29, 0.86);
+    color: #ecf3f9;
+}
+
+div.stInfo span {
+    color: #d7e3ee;
+}
+
+.gridBody .grid {
+    border: 1px solid rgba(255, 255, 255, 0.52);
+    border-radius: 16px;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.58));
+    box-shadow: 0 10px 24px rgba(16, 36, 61, 0.13);
+    -webkit-backdrop-filter: blur(12px) saturate(150%);
+    backdrop-filter: blur(12px) saturate(150%);
+    transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
+}
+
+.gridBody .grid:hover {
+    transform: translateY(-2px);
+    background-color: rgba(237, 248, 251, 0.9);
+    box-shadow: 0 14px 26px rgba(16, 36, 61, 0.16);
+    color: #1e2a35;
+}
+
+.modalView,
+.detailModalCover,
+.catModalDetailCover,
+.alertCover {
+    background: rgba(7, 20, 28, 0.28) !important;
+    -webkit-backdrop-filter: blur(9px) saturate(125%);
+    backdrop-filter: blur(9px) saturate(125%);
+}
+
+.modalHeader,
+div.s-main-view .headBar,
+.infoHead {
+    background: rgba(37, 43, 50, 0.92) !important;
+    color: #edf2f8;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 8px 18px rgba(3, 10, 14, 0.25);
+}
+
+.exitModal:hover,
+.exitPanel:hover {
+    background-color: rgba(215, 58, 58, 0.8);
+}
+
+.record_view,
+.detailModalCover .detailBox,
+.catDetailBox,
+.alertBox {
+    border: 1px solid rgba(255, 255, 255, 0.44);
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0.66));
+    box-shadow: var(--fx-shadow);
+    -webkit-backdrop-filter: blur(16px) saturate(145%);
+    backdrop-filter: blur(16px) saturate(145%);
+}
+
+#es-header,
+div.catDetailBox .headerCaption {
+    color: #313841;
+    text-shadow: none;
+}
+
+div.added,
+div.added table.addedlisttable,
+div.item_view,
+.filter-menu {
+    background: var(--fx-surface-strong);
+    border-color: rgba(33, 48, 61, 0.15);
+}
+
+div.added table.addedlisttable #tHeader {
+    background-color: rgba(15, 138, 58, 0.88);
+}
+
+div.added table.addedlisttable tr:hover,
+div.category:hover,
+div.sales-item:hover,
+.item_view .mini_card:hover {
+    background-color: rgba(193, 231, 238, 0.55);
+}
+
+.item_view .mini_card,
+div.category,
+div.sales-item {
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 12px;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.66));
+    box-shadow: 0 8px 20px rgba(17, 40, 59, 0.1);
+}
+
+.filter-menu {
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    box-shadow: 0 14px 24px rgba(17, 40, 59, 0.14);
+}
+
+div.alertOptions button {
+    color: var(--fx-accent-strong);
+    border-radius: 8px;
+    padding-inline: 9px;
+}
+
+div.alertOptions button:focus,
+div.alertOptions button:hover {
+    background-color: rgba(13, 129, 152, 0.18);
+    color: #0b5568;
+}
+
+.gridBody .grid,
+.item_view .mini_card,
+div.category,
+div.sales-item,
+.alertBox,
+.record_view,
+#welcomeView {
+    animation: fade-up 0.28s ease both;
+}
+
+@keyframes fade-up {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 600px) {
+    .gridBody {
+        gap: 1rem 0.75rem;
+        padding-top: 0.8rem;
+    }
+
+    .gridBody .grid {
+        width: 44%;
+        min-width: 132px;
+    }
+}
