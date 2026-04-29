@@ -18,7 +18,7 @@ html,
 body,
 .page,
 .form-page {
-    background: radial-gradient(circle at 14% -14%, #ffffff 0%, #edf4fa 42%, #e6edf7 100%) !important;
+    background: radial-gradient(circle at 14% -14%, #f7fafc 0%, #eef3f8 40%, #e9edf2 100%) !important;
     color: var(--fx-text);
 }
 
@@ -41,7 +41,7 @@ body::after {
     background:
         linear-gradient(135deg, rgba(255, 255, 255, 0.32), transparent 28%),
         linear-gradient(315deg, rgba(13, 129, 152, 0.06), transparent 34%);
-    opacity: 0.9;
+    opacity: 0.38;
 }
 
 #main_content,
@@ -231,20 +231,12 @@ div.stackPanel {
     border-bottom: 1px solid rgba(232, 244, 255, 0.18);
     text-shadow: none;
     color: #f5f8fb;
-    margin-inline: 0.35rem;
-    width: auto;
-    border-radius: 12px;
-    padding-inline-start: 0.9rem;
-    padding-top: 0.95rem;
-    font-weight: 600;
-    letter-spacing: 0.015em;
-    transition: background-color 0.16s ease, transform 0.16s ease, color 0.16s ease;
+    transition: background-color 0.16s ease, color 0.16s ease;
 }
 
 .panel_list li:hover,
 .panel_list li.li_selected {
     background: rgba(142, 203, 224, 0.35);
-    transform: translateX(3px);
 }
 
 div.stackInfo {
@@ -259,7 +251,7 @@ div.stInfo span {
 
 .gridBody .grid {
     border: 1px solid rgba(255, 255, 255, 0.52);
-    border-radius: 16px;
+    border-radius: 10px;
     background: linear-gradient(145deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.58));
     box-shadow: 0 10px 24px rgba(16, 36, 61, 0.13);
     -webkit-backdrop-filter: blur(12px) saturate(150%);
@@ -275,16 +267,6 @@ div.stInfo span {
     inset: 0;
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.38), transparent 45%);
     pointer-events: none;
-}
-
-.gridBody .grid::after {
-    content: "";
-    position: absolute;
-    inset: auto 12% 0;
-    height: 3px;
-    border-radius: 999px;
-    background: linear-gradient(90deg, var(--fx-accent), var(--fx-green));
-    opacity: 0.85;
 }
 
 .gridBody .grid:hover {
@@ -331,7 +313,7 @@ div.s-main-view .headBar,
 
 .modalHeader,
 .infoHead {
-    border-radius: 18px 18px 0 0;
+    border-radius: 0;
 }
 
 .modalHeader h3,
@@ -362,19 +344,6 @@ div.s-main-view .headBar,
 div.s-main-view,
 .filter-menu {
     position: relative;
-    overflow: hidden;
-}
-
-.record_view::before,
-.detailModalCover .detailBox::before,
-.catDetailBox::before,
-.alertBox::before,
-div.s-main-view::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.34), transparent 18%);
 }
 
 #es-header,
@@ -391,7 +360,6 @@ div.catDetailBox .headerCaption {
 .cat-form {
     display: flex;
     align-items: center;
-    padding: 0.25rem 0 0.9rem;
 }
 
 .cat-form input {
@@ -424,7 +392,7 @@ div.added table.addedlisttable #tHeader {
 
 div.added table.addedlisttable td,
 div.added table.addedlisttable th {
-    padding: 0.7rem 0.8rem;
+    padding: 0.3rem 0.45rem;
 }
 
 div.added table.addedlisttable tr:hover,
@@ -452,8 +420,8 @@ div.sales-item:hover {
 }
 
 div.item_view {
-    padding: 0.85rem;
-    gap: 0.85rem;
+    padding: 0;
+    gap: 0;
 }
 
 .item_view .mini_card {
@@ -466,25 +434,23 @@ div.item_view {
 
 .cat-list,
 .sales-list {
-    padding: 0.85rem;
+    padding: 0;
     background: linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(242, 248, 252, 0.64));
 }
 
 div.category,
 div.sales-item {
-    padding: 0.8rem 0.9rem;
+    padding: 0.3rem 0.45rem;
 }
 
 div.category + div.category,
 div.sales-item + div.sales-item {
-    margin-top: 0.7rem;
+    margin-top: 0.35rem;
 }
 
 div.s-main-view {
-    margin: auto;
-    width: min(88%, 1120px);
     border: 1px solid rgba(255, 255, 255, 0.44);
-    border-radius: 20px;
+    border-radius: 10px;
     background: linear-gradient(145deg, rgba(255, 255, 255, 0.84), rgba(255, 255, 255, 0.62));
     box-shadow: var(--fx-shadow-strong);
     -webkit-backdrop-filter: blur(16px) saturate(145%);
@@ -492,12 +458,7 @@ div.s-main-view {
 }
 
 div.s-main-view .headBar {
-    border-radius: 20px 20px 0 0;
-    padding: 0.75rem 1rem;
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-    justify-content: space-between;
+    border-radius: 0;
 }
 
 .sortSale-wrapper,
@@ -519,8 +480,8 @@ div.s-main-view .headBar {
 }
 
 .filter-menu {
-    margin: 0.85rem 1rem 0;
-    padding: 0.8rem 0.9rem;
+    margin: 0;
+    padding: 0.35rem 0.45rem;
 }
 
 .filter-option-list {
@@ -533,8 +494,8 @@ div.s-main-view .headBar {
     display: grid;
     grid-template-columns: auto 1fr 1fr;
     align-items: center;
-    gap: 0.7rem;
-    padding: 0.55rem 0;
+    gap: 0.4rem;
+    padding: 0.35rem 0;
 }
 
 .filter-item + .filter-item {
@@ -557,8 +518,7 @@ div.s-main-view .headBar {
 }
 
 .sales-list {
-    margin: 0.85rem 1rem 1rem;
-    min-height: 260px;
+    margin: 0;
 }
 
 .filter-menu {
@@ -618,7 +578,6 @@ div.s-main-view {
     }
 
     .cat-form,
-    div.s-main-view .headBar,
     .filter-item {
         grid-template-columns: 1fr;
         flex-direction: column;
@@ -629,12 +588,8 @@ div.s-main-view {
         flex-direction: column;
     }
 
-    div.s-main-view {
-        width: calc(100% - 1.25rem);
-    }
-
     .sales-list,
     .filter-menu {
-        margin-inline: 0.65rem;
+        margin-inline: 0;
     }
 }
