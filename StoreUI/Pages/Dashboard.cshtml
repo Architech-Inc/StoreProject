@@ -106,16 +106,16 @@
     </div>
 
     <!-- Floating action buttons -->
-    <div class="fl-BtnCover">
-        <a href="#" class="fl fl-sub-1">
-            <img src="~/images/form.png" alt="" class="fl-main-img" />
-        </a>
-        <a href="#" class="fl fl-sub-0">
-            <img src="~/images/view.png" alt="" class="fl-main-img" />
-        </a>
-        <a href="#" class="fl fl-main">
-            <img src="~/images/add.png" alt="" class="fl-main-img" />
-        </a>
+    <div class="fl-BtnCover" aria-label="Quick actions">
+        <button type="button" class="fl fl-sub-1" data-open-modal="rec-modal" title="Record Sales" aria-label="Record Sales">
+            <img src="~/images/form.png" alt="Record Sales" class="fl-main-img" />
+        </button>
+        <button type="button" class="fl fl-sub-0" data-open-modal="sales-modal" title="View Sales" aria-label="View Sales">
+            <img src="~/images/view.png" alt="View Sales" class="fl-main-img" />
+        </button>
+        <button type="button" class="fl fl-main" data-open-modal="add-modal" title="Add Products" aria-label="Add Products">
+            <img src="~/images/add.png" alt="Add Products" class="fl-main-img" />
+        </button>
     </div>
 
 </div>

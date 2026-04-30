@@ -9,7 +9,8 @@
     };
 
     openTiles.forEach(tile => {
-        tile.addEventListener('click', () => {
+        tile.addEventListener('click', e => {
+            e.preventDefault();
             const id = tile.getAttribute('data-open-modal');
             closeAll();
             if (id) {
