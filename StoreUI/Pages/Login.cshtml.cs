@@ -26,7 +26,8 @@ public class LoginModel : PageModel
 
     public IActionResult OnGet()
     {
-        if (User?.Identity?.IsAuthenticated == true)
+        var token = HttpContext.Session.GetString("access_token");
+        if (!string.IsNullOrEmpty(token))
             return RedirectToPage("Dashboard");
 
         return Page();
