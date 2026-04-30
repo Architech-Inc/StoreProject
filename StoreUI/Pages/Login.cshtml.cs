@@ -44,7 +44,7 @@ public class LoginModel : PageModel
         var request = new LoginRequest { Username = Username, Password = Password };
         var response = await _authService.LoginAsync(request);
 
-        if (response is null)
+        if (response is null || string.IsNullOrWhiteSpace(response.AccessToken))
         {
             ErrorMessage = "Login failed. Please check your credentials.";
             _logger.LogWarning("Failed login attempt for user: {Username}", Username);

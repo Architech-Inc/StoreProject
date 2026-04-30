@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using Store.Models.DTOs.Common;
 
 namespace StoreUI.Services;
 
@@ -12,6 +13,7 @@ public class ApiClientService : IApiClientService
     private readonly HttpClient _httpClient;
     private readonly ILogger<ApiClientService> _logger;
     private string? _token;
+    private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
     public ApiClientService(HttpClient httpClient, ILogger<ApiClientService> logger)
     {
@@ -44,7 +46,7 @@ public class ApiClientService : IApiClientService
             }
 
             var content = await response.Content.ReadAsStringAsync(ct);
-            return JsonSerializer.Deserialize<T>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            return DeserializeResponse<T>(content);
         }
         catch (Exception ex)
         {
@@ -68,7 +70,7 @@ public class ApiClientService : IApiClientService
             }
 
             var responseContent = await response.Content.ReadAsStringAsync(ct);
-            return JsonSerializer.Deserialize<T>(responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            return DeserializeResponse<T>(responseContent);
         }
         catch (Exception ex)
         {
@@ -92,7 +94,7 @@ public class ApiClientService : IApiClientService
             }
 
             var responseContent = await response.Content.ReadAsStringAsync(ct);
-            return JsonSerializer.Deserialize<T>(responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            return DeserializeResponse<T>(responseContent);
         }
         catch (Exception ex)
         {
@@ -123,5 +125,21 @@ public class ApiClientService : IApiClientService
     public async Task<HttpResponseMessage> GetRawAsync(string endpoint, CancellationToken ct = default)
     {
         return await _httpClient.GetAsync(endpoint, ct);
+    }
+
+    private static T? DeserializeResponse<T>(string content)
+    {
+        var apiResponse = JsonSerializer.Deserialize<ApiResponse<T>>(content, JsonOptions);
+        if (apiResponse is not null)
+        {
+            if (apiResponse.Success)
+            {
+                return apiResponse.Data;
+            }
+
+            return default;
+        }
+
+        return JsonSerializer.Deserialize<T>(content, JsonOptions);
     }
 }

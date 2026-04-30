@@ -30,16 +30,18 @@
         }
 
         <div class="formArea">
-            <form method="post">
+            <form method="post" id="loginForm" novalidate>
                 @Html.AntiForgeryToken()
                 <div class="formSection">
-                    <label for="Username">Username</label>
-                    <input title="username" tabindex="0" type="text" asp-for="Username" id="inputUserName" autocomplete="username" />
+                    <label for="inputUserName">Username</label>
+                    <input title="username" tabindex="0" type="text" asp-for="Username" id="inputUserName"
+                           autocomplete="username" minlength="3" maxlength="100" />
                     <span id="inputError-0"></span>
                 </div>
                 <div class="formSection">
-                    <label for="Password">Password</label>
-                    <input title="password" type="password" asp-for="Password" id="inputPassword" autocomplete="current-password" />
+                    <label for="inputPassword">Password</label>
+                    <input title="password" type="password" asp-for="Password" id="inputPassword"
+                           autocomplete="current-password" minlength="8" maxlength="128" />
                     <span id="inputError-1"></span>
                 </div>
                 <div class="formSection LDiv">
@@ -48,6 +50,56 @@
                 <p class="forgot_pass">Forgot password? Contact <a href="#">God Admin</a></p>
             </form>
         </div>
+    </div>
+</div>
+<script>
+    (function () {
+        const form = document.getElementById('loginForm');
+        const usernameInput = document.getElementById('inputUserName');
+        const passwordInput = document.getElementById('inputPassword');
+        const usernameErr = document.getElementById('inputError-0');
+        const passwordErr = document.getElementById('inputError-1');
+
+        function validateUsername() {
+            const val = usernameInput.value.trim();
+            if (!val) {
+                usernameErr.textContent = 'Username is required.';
+                return false;
+            }
+            if (val.length < 3) {
+                usernameErr.textContent = 'Username must be at least 3 characters.';
+                return false;
+            }
+            usernameErr.textContent = '';
+            return true;
+        }
+
+        function validatePassword() {
+            const val = passwordInput.value;
+            if (!val) {
+                passwordErr.textContent = 'Password is required.';
+                return false;
+            }
+            if (val.length < 8) {
+                passwordErr.textContent = 'Password must be at least 8 characters.';
+                return false;
+            }
+            passwordErr.textContent = '';
+            return true;
+        }
+
+        usernameInput.addEventListener('input', validateUsername);
+        passwordInput.addEventListener('input', validatePassword);
+
+        form.addEventListener('submit', function (e) {
+            const u = validateUsername();
+            const p = validatePassword();
+            if (!u || !p) {
+                e.preventDefault();
+            }
+        });
+    })();
+</script>
     </div>
 </div>
 </body>
