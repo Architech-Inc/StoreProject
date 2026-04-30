@@ -48,5 +48,3 @@ app.UseRouting();
 app.MapRazorPages();
 
 app.Run();
-
-app.Run();

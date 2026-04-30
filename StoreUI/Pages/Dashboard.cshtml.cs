@@ -1,12 +1,15 @@
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace StoreUI.Pages;
 
 public class DashboardModel : PageModel
 {
-    public void OnGet()
+    public IActionResult OnGet()
     {
         if (!User?.Identity?.IsAuthenticated ?? true)
-            RedirectToPage("Login");
+            return RedirectToPage("Login");
+
+        return Page();
     }
 }

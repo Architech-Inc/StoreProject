@@ -24,10 +24,12 @@ public class LoginModel : PageModel
         _logger = logger;
     }
 
-    public void OnGet()
+    public IActionResult OnGet()
     {
         if (User?.Identity?.IsAuthenticated == true)
-            RedirectToPage("Dashboard");
+            return RedirectToPage("Dashboard");
+
+        return Page();
     }
 
     public async Task<IActionResult> OnPostAsync()

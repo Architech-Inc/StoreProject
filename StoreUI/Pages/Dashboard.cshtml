@@ -1,57 +1,437 @@
 @page
 @model StoreUI.Pages.DashboardModel
 @{
-    ViewData["Title"] = "Dashboard - Store Management";
+    ViewData["Title"] = "Explore";
 }
 
-<section class="dashboard-shell">
-    <div class="dashboard-hero glass-panel mb-4">
-        <div>
-            <h1 class="dashboard-title">Store Operations Hub</h1>
-            <p class="dashboard-subtitle mb-0">Manage inventory, customers, employees, invoices, and records from one workspace.</p>
-        </div>
-        <div class="hero-badge">Live Workspace</div>
-    </div>
+<div id="main_content">
 
-    <div class="row g-3 g-lg-4">
-        <div class="col-12 col-md-6 col-xl-3">
-            <div class="card app-card h-100 text-center">
-                <div class="card-body d-flex flex-column">
-                    <h5 class="card-title">Items</h5>
-                    <p class="card-text">Manage product inventory</p>
-                    <a href="/items" class="btn app-btn-primary mt-auto">View Items</a>
+    <!-- Top header bar -->
+    <header class="page_header">
+        <div class="headerChild">
+            <div class="headerMenu">
+                <img src="~/images/menu.png" alt="menu" />
+            </div>
+            <h2 class="headerCaption-0">ClexAn /&nbsp;</h2>
+            <h2 class="headerCaption">Explore</h2>
+        </div>
+    </header>
+
+    <!-- Left sidebar panel -->
+    <div class="stackPanel" id="stackPanel">
+        <div class="panelHeader">
+            <div class="exitPanel" id="exitPanel">
+                <img alt="close" src="~/images/exit.png" class="exit" />
+            </div>
+            <div class="infoAdmin">
+                <img src="~/images/admin.png" alt="admin" class="adminPic" />
+                <div class="infoCover">
+                    <span class="adminNameLabel">Admin:</span>
+                    <span class="AdminName">Clarks</span>
                 </div>
             </div>
         </div>
-
-        <div class="col-12 col-md-6 col-xl-3">
-            <div class="card app-card h-100 text-center">
-                <div class="card-body d-flex flex-column">
-                    <h5 class="card-title">Customers</h5>
-                    <p class="card-text">Manage customer records</p>
-                    <a href="/customers" class="btn app-btn-primary mt-auto">View Customers</a>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-12 col-md-6 col-xl-3">
-            <div class="card app-card h-100 text-center">
-                <div class="card-body d-flex flex-column">
-                    <h5 class="card-title">Employees</h5>
-                    <p class="card-text">Manage employee information</p>
-                    <a href="/employees" class="btn app-btn-primary mt-auto">View Employees</a>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-12 col-md-6 col-xl-3">
-            <div class="card app-card h-100 text-center">
-                <div class="card-body d-flex flex-column">
-                    <h5 class="card-title">Invoices</h5>
-                    <p class="card-text">View sales transactions</p>
-                    <a href="/invoices" class="btn app-btn-primary mt-auto">View Invoices</a>
-                </div>
+        <ul class="panel_list">
+            <li id="clickId_rec" class="li_selected">Records</li>
+            <li id="clickId_dash">Dashboard</li>
+            <li id="clickId_an">Analytics</li>
+            <li id="clickId_bs">Business Stats</li>
+            <li id="clickId_db">DB Operations</li>
+            <li id="clickId_set">Settings</li>
+            <li id="clickId_log">
+                Logout
+                <img src="~/images/logout.png" alt="logout" class="lgIcon" />
+            </li>
+        </ul>
+        <div class="stackInfo" style="padding: 2%;">
+            <img src="~/images/clarkstore.png" alt="ClexAn logo" />
+            <div class="stInfo">
+                <h3 class="thick">ClexAn Foods</h3>
+                <span>Publisher: Architech Inc.</span>
             </div>
         </div>
     </div>
+
+    <!-- Main grid content -->
+    <div class="gridBody">
+        <div class="grid" id="grid_rec" data-open-modal="rec-modal">
+            <a class="gridOverLayer"></a>
+            <div class="gridIcon">
+                <img src="~/images/form.png" alt="Record Sales" class="selected" />
+            </div>
+            <h4>Record Sales</h4>
+        </div>
+        <div class="grid" id="grid_sales" data-open-modal="sales-modal">
+            <a class="gridOverLayer"></a>
+            <div class="gridIcon">
+                <img src="~/images/view.png" alt="View Sales" class="selected" />
+            </div>
+            <h4>View Sales</h4>
+        </div>
+        <div class="grid" id="grid_add" data-open-modal="add-modal">
+            <a class="gridOverLayer"></a>
+            <div class="gridIcon">
+                <img src="~/images/add.png" alt="Add Products" class="selected" />
+            </div>
+            <h4>Add Products</h4>
+        </div>
+        <div class="grid" id="grid_items" data-open-modal="items-modal">
+            <a class="gridOverLayer"></a>
+            <div class="gridIcon">
+                <img src="~/images/menu.png" alt="Inventory" class="selected" />
+            </div>
+            <h4>Inventory</h4>
+        </div>
+        <div class="grid" id="grid_cat" data-open-modal="cat-modal">
+            <a class="gridOverLayer"></a>
+            <div class="gridIcon">
+                <img src="~/images/category.png" alt="Categories" class="selected" />
+            </div>
+            <h4>Categories</h4>
+        </div>
+        <div class="grid" id="grid_inv">
+            <a class="gridOverLayer"></a>
+            <div class="gridIcon">
+                <img src="~/images/invoice.png" alt="Invoices" class="selected" />
+            </div>
+            <h4>Invoices</h4>
+        </div>
+        <div class="grid" id="grid_wh">
+            <a class="gridOverLayer"></a>
+            <div class="gridIcon">
+                <img src="~/images/warehouse.png" alt="Stock" class="selected" />
+            </div>
+            <h4>Stock Mgr.</h4>
+        </div>
+    </div>
+
+    <!-- Floating action buttons -->
+    <div class="fl-BtnCover">
+        <a href="#" class="fl fl-sub-1">
+            <img src="~/images/form.png" alt="" class="fl-main-img" />
+        </a>
+        <a href="#" class="fl fl-sub-0">
+            <img src="~/images/view.png" alt="" class="fl-main-img" />
+        </a>
+        <a href="#" class="fl fl-main">
+            <img src="~/images/add.png" alt="" class="fl-main-img" />
+        </a>
+    </div>
+
+</div>
+
+<!-- ===== MODAL: Record Sales ===== -->
+<div class="modalView" id="rec-modal">
+    <div class="modalHeader">
+        <span class="headerCaption">Record Sales</span>
+        <button type="button" class="exitModal" data-close-modal>
+            <img src="~/images/exit.png" alt="close" />
+        </button>
+    </div>
+    <div class="record_view">
+        <h3 id="es-header">Enter sales</h3>
+        <form class="record_form">
+            <table id="formTable">
+                <tr>
+                    <td><label for="itname">Name</label></td>
+                    <td><input name="name" id="itname" placeholder="Item name" /></td>
+                    <td><label for="itprice">Unit Price</label></td>
+                    <td><input disabled type="number" name="price" id="itprice" placeholder="N/A" /></td>
+                </tr>
+                <tr>
+                    <td><label for="it_qty">Quantity</label></td>
+                    <td><input type="number" name="quantity" id="it_qty" placeholder="Quantity sold" /></td>
+                    <td><label for="itamount">Amount</label></td>
+                    <td><input type="number" name="amount" id="itamount" placeholder="Amount" /></td>
+                </tr>
+                <tr>
+                    <td><label for="itdate">Date</label></td>
+                    <td><input type="date" name="date" id="itdate" /></td>
+                </tr>
+            </table>
+            <div class="btnflex BtnSection">
+                <button type="reset" class="resetbtn">Reset</button>
+                <button type="button" class="btn_add" id="btntolist">Add Record</button>
+            </div>
+        </form>
+        <div class="added">
+            <table class="addedlisttable">
+                <tr class="Ldata" id="tHeader">
+                    <th class="tID">ID</th>
+                    <th class="tName">Item Name</th>
+                    <th class="tQty">Quantity</th>
+                    <th class="tAmount">Amount</th>
+                    <th class="tDate">Date</th>
+                    <th class="tOP"></th>
+                </tr>
+            </table>
+        </div>
+        <div class="BtnSection btnflex">
+            <button type="button" class="btn_save" id="saveNewRecords">Save Records</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MODAL: View Sales ===== -->
+<div class="modalView" id="sales-modal">
+    <div class="modalHeader">
+        <span class="headerCaption">View Sales</span>
+        <button type="button" class="exitModal" data-close-modal>
+            <img src="~/images/exit.png" alt="close" />
+        </button>
+    </div>
+    <div class="s-main-view record_view">
+        <div class="sales-list"></div>
+    </div>
+</div>
+
+<!-- ===== MODAL: Add Products ===== -->
+<div class="modalView" id="add-modal">
+    <div class="modalHeader">
+        <span class="headerCaption">Add Items</span>
+        <button type="button" class="exitModal" data-close-modal>
+            <img src="~/images/exit.png" alt="close" />
+        </button>
+    </div>
+    <div class="record_view">
+        <h3 id="es-header">Add Form</h3>
+        <form class="record_form">
+            <table id="formTable">
+                <tr>
+                    <td><label for="it-name">Name</label></td>
+                    <td><input name="name" id="it-name" placeholder="Item name" /></td>
+                    <td><label for="it-type">Type</label></td>
+                    <td><input type="text" name="type" id="it-type" placeholder="Item type" /></td>
+                </tr>
+                <tr>
+                    <td><label for="it-price">Price</label></td>
+                    <td><input type="number" name="price" id="it-price" placeholder="Unit price" /></td>
+                    <td><label for="it-stock">In-stock</label></td>
+                    <td><input type="number" name="stock" id="it-stock" placeholder="stock" /></td>
+                </tr>
+                <tr>
+                    <td><label for="it-cat">Category</label></td>
+                    <td><input name="category" id="it-cat" placeholder="Category" /></td>
+                    <td><label for="it-img">Image</label></td>
+                    <td><input type="file" accept="image/jpeg, image/png" name="file" id="it-img" /></td>
+                </tr>
+            </table>
+            <div class="btnflex BtnSection">
+                <button type="reset" class="resetbtn">Reset</button>
+                <button type="button" class="btn_add" id="itemtolist">Add Item</button>
+            </div>
+        </form>
+        <div class="added">
+            <table class="addedlisttable">
+                <tr class="Ldata" id="tHeader">
+                    <th class="tID">ID</th>
+                    <th class="tName">Item Name</th>
+                    <th class="tType">Type</th>
+                    <th class="tUP">Unit Price</th>
+                    <th class="tStock">In-stock</th>
+                    <th class="tCat">Category</th>
+                    <th class="tImg">Image Name</th>
+                    <th class="tOP"></th>
+                </tr>
+            </table>
+        </div>
+        <div class="BtnSection btnflex">
+            <button type="button" class="btn_save" id="btnNewItems">Save Items</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MODAL: Inventory ===== -->
+<div class="modalView" id="items-modal">
+    <div class="modalHeader">
+        <span class="headerCaption">Inventory</span>
+        <button type="button" class="exitModal" data-close-modal>
+            <img src="~/images/exit.png" alt="close" />
+        </button>
+    </div>
+    <div class="second-child item_view"></div>
+</div>
+
+<!-- ===== MODAL: Categories ===== -->
+<div class="modalView" id="cat-modal">
+    <div class="modalHeader">
+        <span class="headerCaption">Categories</span>
+        <button type="button" class="exitModal" data-close-modal>
+            <img src="~/images/exit.png" alt="close" />
+        </button>
+    </div>
+    <div class="record_view">
+        <h3 id="es-header">All Categories</h3>
+        <div class="record_form">
+            <div class="cat-form BtnSection">
+                <input name="category" id="cat_name" placeholder="Enter category" />
+                <button type="button" class="gs-btn" id="catToList">Save</button>
+            </div>
+        </div>
+        <div class="cat-list"></div>
+    </div>
+</div>
+
+<section class="store-app">
+    <header class="top-bar">
+        <div class="top-caption">ClexAn / <span>Explore</span></div>
+    </header>
+
+    <aside class="left-rail">
+        <div class="admin-card">
+            <img src="~/images/admin.png" alt="Admin" class="admin-avatar" />
+            <div class="admin-meta">
+                <p>Admin:</p>
+                <strong>Clarks</strong>
+            </div>
+        </div>
+
+        <nav class="main-nav">
+            <a class="nav-item active" href="#">Records</a>
+            <a class="nav-item" href="#">Dashboard</a>
+            <a class="nav-item" href="#">Analytics</a>
+            <a class="nav-item" href="#">Business Stats</a>
+            <a class="nav-item" href="#">DB Operations</a>
+            <a class="nav-item" href="#">Settings</a>
+            <a class="nav-item" href="#">Logout <span class="logout-icon"><img src="~/images/logout.png" alt="Logout" /></span></a>
+        </nav>
+
+        <div class="publisher-card">
+            <span class="publisher-logo"><img src="~/images/clarkstore.png" alt="Logo" /></span>
+            <div>
+                <p>ClexAn Foods</p>
+                <small>Publisher: Architech Inc.</small>
+            </div>
+        </div>
+    </aside>
+
+    <section class="workspace">
+        <div class="tile-row">
+            <button type="button" class="app-tile" data-open-modal="sales-modal">
+                <span class="tile-icon"><img src="~/images/form.png" alt="Record" /></span>
+                <span>Record Sales</span>
+            </button>
+            <button type="button" class="app-tile" data-open-modal="sales-mgt-modal">
+                <span class="tile-icon"><img src="~/images/view.png" alt="View" /></span>
+                <span>View Sales</span>
+            </button>
+            <button type="button" class="app-tile" data-open-modal="add-items-modal">
+                <span class="tile-icon"><img src="~/images/add.png" alt="Add" /></span>
+                <span>Add Products</span>
+            </button>
+            <button type="button" class="app-tile" data-open-modal="items-modal">
+                <span class="tile-icon"><img src="~/images/menu.png" alt="Inventory" /></span>
+                <span>Inventory</span>
+            </button>
+            <button type="button" class="app-tile" data-open-modal="categories-modal">
+                <span class="tile-icon"><img src="~/images/category.png" alt="Categories" /></span>
+                <span>Categories</span>
+            </button>
+            <button type="button" class="app-tile">
+                <span class="tile-icon"><img src="~/images/invoice.png" alt="Invoices" /></span>
+                <span>Invoices</span>
+            </button>
+            <button type="button" class="app-tile">
+                <span class="tile-icon"><img src="~/images/warehouse.png" alt="Stock" /></span>
+                <span>Stock Mgr.</span>
+            </button>
+            <button type="button" class="app-tile">
+                <span class="tile-icon"><img src="~/images/warehouse.png" alt="Stock" /></span>
+                <span>Stock Mgr.</span>
+            </button>
+        </div>
+
+        <div class="floating-actions">
+            <button type="button" class="float-btn">&#x1F4DD;</button>
+            <button type="button" class="float-btn">&#x1F4DD;</button>
+            <button type="button" class="float-btn">&#x1F4DD;</button>
+        </div>
+    </section>
 </section>
+
+<div class="modal-overlay" id="categories-modal">
+    <div class="modal-top">Categories Manager <button type="button" class="modal-close" data-close-modal>&#x2715;</button></div>
+    <div class="modal-card category-card">
+        <h2>All Categories</h2>
+        <div class="inline-form">
+            <input type="text" placeholder="Enter category" />
+            <button type="button">Save</button>
+        </div>
+        <ul class="line-list">
+            <li>Beverages <button type="button" class="icon-btn"><img src="~/images/delicon.png" alt="Delete" /></button></li>
+            <li>Grains <button type="button" class="icon-btn"><img src="~/images/delicon.png" alt="Delete" /></button></li>
+        </ul>
+    </div>
+</div>
+
+<div class="modal-overlay" id="items-modal">
+    <div class="modal-top">View Items <button type="button" class="modal-close" data-close-modal>&#x2715;</button></div>
+    <div class="modal-sheet">
+        <div class="item-grid">
+            <div class="item-card"><span>Chin-chin</span><strong>XAF 100.00</strong></div>
+            <div class="item-card"><span>Dough-nuts</span><strong>XAF 100.00</strong></div>
+            <div class="item-card"><span>Eggs</span><strong>XAF 2,200.00</strong></div>
+            <div class="item-card"><span>Salt</span><strong>XAF 50.00</strong></div>
+            <div class="item-card"><span>Sugar</span><strong>XAF 25.00</strong></div>
+            <div class="item-card"><span>Parle G</span><strong>XAF 25.00</strong></div>
+            <div class="item-card"><span>Planet</span><strong>XAF 500.00</strong></div>
+            <div class="item-card"><span>Top milk</span><strong>XAF 50.00</strong></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="add-items-modal">
+    <div class="modal-top">Add Items <button type="button" class="modal-close" data-close-modal>&#x2715;</button></div>
+    <div class="modal-card form-card">
+        <h2>Add Form</h2>
+        <div class="form-grid">
+            <label>Name <input type="text" placeholder="Item name" /></label>
+            <label>Type <input type="text" placeholder="Item type" /></label>
+            <label>Price <input type="text" placeholder="Unit price" /></label>
+            <label>In-stock <input type="text" placeholder="stock" /></label>
+            <label>Category <input type="text" placeholder="Category" /></label>
+            <label>Image <input type="file" /></label>
+        </div>
+        <div class="form-actions">
+            <button type="button">Reset</button>
+            <button type="button">Add Item</button>
+        </div>
+        <div class="table-like">
+            <div class="thead">ID | Item Name | Type | Unit Price | In-stock | Category | Image Name</div>
+            <div class="tbody"></div>
+        </div>
+        <div class="save-row"><button type="button">Save Items</button></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="sales-modal">
+    <div class="modal-top">Record Sales <button type="button" class="modal-close" data-close-modal>&#x2715;</button></div>
+    <div class="modal-card form-card">
+        <h2>Enter sales</h2>
+        <div class="form-grid">
+            <label>Name <input type="text" placeholder="Item name" /></label>
+            <label>Unit Price <input type="text" placeholder="N/A" /></label>
+            <label>Quantity <input type="text" placeholder="Quantity sold" /></label>
+            <label>Amount <input type="text" placeholder="Amount" /></label>
+            <label>Date <input type="text" placeholder="dd/mm/yyyy" /></label>
+        </div>
+        <div class="form-actions">
+            <button type="button">Reset</button>
+            <button type="button">Add Record</button>
+        </div>
+        <div class="table-like">
+            <div class="thead">ID | Item Name | Quantity | Amount | Date</div>
+            <div class="tbody"></div>
+        </div>
+        <div class="save-row"><button type="button">Save Records</button></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="sales-mgt-modal">
+    <div class="modal-top">Sales Management <button type="button" class="modal-close" data-close-modal>&#x2715;</button></div>
+    <div class="modal-sheet">
+        <div class="sales-row">Pea nuts (small) | Qty: 230 | UP: 100 | Amount: 23000fcfa | Date: 2025-11-15 <button type="button" class="icon-btn"><img src="~/images/delicon.png" alt="Delete" /></button></div>
+        <div class="sales-row">Dough-nuts () | Qty: 34 | UP: 100 | Amount: 3400fcfa | Date: 2025-10-28 <button type="button" class="icon-btn"><img src="~/images/delicon.png" alt="Delete" /></button></div>
+        <div class="sales-row">Chin-chin (small) | Qty: 24345 | UP: 100 | Amount: 2434500fcfa | Date: 2025-10-29 <button type="button" class="icon-btn"><img src="~/images/delicon.png" alt="Delete" /></button></div>
+    </div>
+</div>

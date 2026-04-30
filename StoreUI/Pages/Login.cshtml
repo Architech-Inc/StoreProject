@@ -1,43 +1,54 @@
 @page
 @model StoreUI.Pages.LoginModel
 @{
-    ViewData["Title"] = "Store - Login";
+    ViewData["Title"] = "Login";
+    Layout = null;
 }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ClexAn Login</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+<div class="auth-page">
+    <div id="welcomeView">
+        <div class="viewNameSpace">
+            <h2 class="nameSpace"><sign class="atSign">@@</sign>ClexAn</h2>
+        </div>
 
-<section class="auth-shell">
-    <div class="auth-panel glass-panel">
-        <div class="auth-head text-center">
-            <div class="auth-brandline">
-                <span class="auth-at">@("@")</span>ClexAn
-            </div>
-            <div class="auth-avatar-wrap">
-                <img src="https://img.icons8.com/color/144/user-male-circle--v1.png" alt="Admin avatar" class="auth-avatar" />
-            </div>
-            <h1 class="auth-title">Admin Login</h1>
-            <p class="auth-subtitle">Secure access to inventory, records, and operations.</p>
+        <div id="avatarBox">
+            <img src="~/images/admin.png" alt="avatar" id="avatar" />
+            <span id="avatarText" class="avatarText">Admin</span>
         </div>
 
         @if (!string.IsNullOrEmpty(Model?.ErrorMessage))
         {
-            <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
-                @Model.ErrorMessage
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
+            <p class="auth-error">@Model.ErrorMessage</p>
         }
 
-        <form method="post" class="auth-form">
-            <div class="mb-3">
-                <label for="username" class="form-label">Username</label>
-                <input type="text" class="form-control app-input" id="username" name="username" autocomplete="username" required />
-            </div>
-
-            <div class="mb-3">
-                <label for="password" class="form-label">Password</label>
-                <input type="password" class="form-control app-input" id="password" name="password" autocomplete="current-password" required />
-            </div>
-
-            <button type="submit" class="btn app-btn-primary w-100">Login</button>
-            <p class="auth-help mt-3 mb-0">Forgot password? Contact system administrator.</p>
-        </form>
+        <div class="formArea">
+            <form method="post">
+                @Html.AntiForgeryToken()
+                <div class="formSection">
+                    <label for="Username">Username</label>
+                    <input title="username" tabindex="0" type="text" asp-for="Username" id="inputUserName" autocomplete="username" />
+                    <span id="inputError-0"></span>
+                </div>
+                <div class="formSection">
+                    <label for="Password">Password</label>
+                    <input title="password" type="password" asp-for="Password" id="inputPassword" autocomplete="current-password" />
+                    <span id="inputError-1"></span>
+                </div>
+                <div class="formSection LDiv">
+                    <button type="submit" id="login">LOGIN</button>
+                </div>
+                <p class="forgot_pass">Forgot password? Contact <a href="#">God Admin</a></p>
+            </form>
+        </div>
     </div>
-</section>
+</div>
+</body>
+</html>
