@@ -1,0 +1,130 @@
+@page
+@model StoreUI.Pages.InventoryOpsModel
+@{
+    ViewData["Title"] = "Inventory Operations";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
+}
+
+<div class="ops-page">
+    <header>
+        <h1>Inventory Operations</h1>
+        <p>Process GRN, returns, adjustments, and reorder monitoring.</p>
+        <a class="link" href="/Dashboard">Back to Dashboard</a>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="status">@Model.StatusMessage</div>
+    }
+
+    <section class="card">
+        <h2>Low Stock Reorder Suggestions</h2>
+        <table>
+            <thead>
+                <tr><th>Item</th><th>Stock</th><th>Reorder</th><th>Suggested</th><th>Est. Cost</th></tr>
+            </thead>
+            <tbody>
+            @foreach (var row in Model.ReorderSuggestions)
+            {
+                <tr>
+                    <td>@row.ItemName</td>
+                    <td>@row.CurrentStock</td>
+                    <td>@row.ReorderLevel</td>
+                    <td>@row.SuggestedOrderQuantity</td>
+                    <td>@row.EstimatedCost.ToString("N2")</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </section>
+
+    @if (Model.CanWrite)
+    {
+        <section class="grid-3">
+            <article class="card">
+                <h2>Goods Receipt</h2>
+                <form method="post" asp-page-handler="Receive">
+                    <label>Item</label>
+                    <select asp-for="ReceiveItemId" required>
+                        <option value="">Select item</option>
+                        @foreach (var item in Model.Items)
+                        {
+                            <option value="@item.ItemId">@item.Name</option>
+                        }
+                    </select>
+                    <label>Quantity</label>
+                    <input asp-for="ReceiveQuantity" type="number" min="1" required />
+                    <label>Unit Cost</label>
+                    <input asp-for="ReceiveUnitCost" type="number" step="0.01" min="0" />
+                    <label>Reference</label>
+                    <input asp-for="ReceiveReference" />
+                    <button type="submit">Post GRN</button>
+                </form>
+            </article>
+
+            <article class="card">
+                <h2>Stock Return</h2>
+                <form method="post" asp-page-handler="Return">
+                    <label>Item</label>
+                    <select asp-for="ReturnItemId" required>
+                        <option value="">Select item</option>
+                        @foreach (var item in Model.Items)
+                        {
+                            <option value="@item.ItemId">@item.Name</option>
+                        }
+                    </select>
+                    <label>Quantity</label>
+                    <input asp-for="ReturnQuantity" type="number" min="1" required />
+                    <label>Reason</label>
+                    <input asp-for="ReturnReason" required />
+                    <button type="submit">Apply Return</button>
+                </form>
+            </article>
+
+            <article class="card">
+                <h2>Stock Adjustment</h2>
+                <form method="post" asp-page-handler="Adjust">
+                    <label>Item</label>
+                    <select asp-for="AdjustItemId" required>
+                        <option value="">Select item</option>
+                        @foreach (var item in Model.Items)
+                        {
+                            <option value="@item.ItemId">@item.Name</option>
+                        }
+                    </select>
+                    <label>Quantity Delta</label>
+                    <input asp-for="QuantityDelta" type="number" required />
+                    <label>Reason</label>
+                    <input asp-for="AdjustmentReason" required />
+                    <button type="submit">Apply Adjustment</button>
+                </form>
+            </article>
+        </section>
+    }
+
+    <section class="card">
+        <h2>Stock Movement Audit Trail</h2>
+        <table>
+            <thead>
+                <tr><th>Date (UTC)</th><th>Item</th><th>Type</th><th>Delta</th><th>Before</th><th>After</th><th>Reason</th></tr>
+            </thead>
+            <tbody>
+            @foreach (var row in Model.Movements)
+            {
+                <tr>
+                    <td>@row.DateCreated.ToString("yyyy-MM-dd HH:mm")</td>
+                    <td>@row.ItemName</td>
+                    <td>@row.MovementType</td>
+                    <td>@row.QuantityDelta</td>
+                    <td>@row.StockBefore</td>
+                    <td>@row.StockAfter</td>
+                    <td>@row.Reason</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </section>
+</div>

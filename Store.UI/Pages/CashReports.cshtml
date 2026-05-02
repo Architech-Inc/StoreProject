@@ -1,0 +1,111 @@
+@page
+@model StoreUI.Pages.CashReportsModel
+@{
+    ViewData["Title"] = "Cash & Reports";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
+}
+
+<div class="ops-page">
+    <header>
+        <h1>Cash Management & Reporting</h1>
+        <p>Shift lifecycle, Z-report, payment breakdown, and gross margin tracking.</p>
+        <a class="link" href="/Dashboard">Back to Dashboard</a>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="status">@Model.StatusMessage</div>
+    }
+
+    <section class="grid-2">
+        @if (Model.CanCashWrite)
+        {
+            <article class="card">
+                <h2>Open Shift</h2>
+                <form method="post" asp-page-handler="OpenShift">
+                    <label>Opening Float</label>
+                    <input asp-for="OpeningFloat" type="number" step="0.01" min="0" required />
+                    <label>Notes</label>
+                    <input asp-for="OpenNotes" />
+                    <button type="submit">Open Shift</button>
+                </form>
+            </article>
+
+            <article class="card">
+                <h2>Close Shift</h2>
+                <form method="post" asp-page-handler="CloseShift">
+                    <label>Closing Float</label>
+                    <input asp-for="ClosingFloat" type="number" step="0.01" min="0" required />
+                    <label>Notes</label>
+                    <input asp-for="CloseNotes" />
+                    <button type="submit">Close Shift</button>
+                </form>
+            </article>
+        }
+    </section>
+
+    <section class="card">
+        <h2>Active Shift</h2>
+        @if (Model.ActiveShift is null)
+        {
+            <p>No open shift.</p>
+        }
+        else
+        {
+            <div class="preview-grid">
+                <p><strong>Opened:</strong> @Model.ActiveShift.OpenedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC</p>
+                <p><strong>Opening Float:</strong> @Model.ActiveShift.OpeningFloat.ToString("N2")</p>
+                <p><strong>Status:</strong> @Model.ActiveShift.Status</p>
+            </div>
+        }
+    </section>
+
+    @if (Model.CanReportRead)
+    {
+        <section class="card">
+            <h2>Daily Z Report</h2>
+            <form method="get" class="inline-form">
+                <input asp-for="ReportDateUtc" type="date" />
+                <button type="submit">Load Report</button>
+            </form>
+
+            @if (Model.Report is not null)
+            {
+                <div class="preview-grid">
+                    <p><strong>Gross Sales:</strong> @Model.Report.GrossSales.ToString("N2")</p>
+                    <p><strong>Discounts:</strong> @Model.Report.Discounts.ToString("N2")</p>
+                    <p><strong>Net Sales:</strong> @Model.Report.NetSales.ToString("N2")</p>
+                    <p><strong>COGS:</strong> @Model.Report.Cogs.ToString("N2")</p>
+                    <p><strong>Gross Margin:</strong> @Model.Report.GrossMargin.ToString("N2")</p>
+                    <p><strong>Invoices:</strong> @Model.Report.InvoiceCount</p>
+                    <p><strong>Average Basket:</strong> @Model.Report.AverageBasket.ToString("N2")</p>
+                </div>
+
+                <h3>Payment Breakdown</h3>
+                <table>
+                    <thead><tr><th>Type</th><th>Total</th><th>Invoices</th></tr></thead>
+                    <tbody>
+                    @foreach (var row in Model.Report.PaymentBreakdown)
+                    {
+                        <tr><td>@row.PaymentType</td><td>@row.TotalAmount.ToString("N2")</td><td>@row.InvoiceCount</td></tr>
+                    }
+                    </tbody>
+                </table>
+
+                <h3>Top Products</h3>
+                <table>
+                    <thead><tr><th>Item</th><th>Qty</th><th>Revenue</th><th>Margin</th></tr></thead>
+                    <tbody>
+                    @foreach (var row in Model.Report.TopProducts)
+                    {
+                        <tr><td>@row.ItemName</td><td>@row.QuantitySold</td><td>@row.Revenue.ToString("N2")</td><td>@row.GrossMargin.ToString("N2")</td></tr>
+                    }
+                    </tbody>
+                </table>
+            }
+        </section>
+    }
+</div>

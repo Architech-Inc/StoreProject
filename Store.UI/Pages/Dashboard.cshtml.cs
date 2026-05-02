@@ -3,12 +3,13 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Invoices;
 using Store.Models.DTOs.Items;
+using Store.Models.DTOs.Operations;
 using Store.Models.Interfaces.Services;
 using StoreUI.Services;
 
 namespace StoreUI.Pages;
 
-public class DashboardModel : PageModel
+public class DashboardModel : SecurePageModel
 {
     private readonly IItemService _itemService;
     private readonly IInvoiceService _invoiceService;
@@ -27,6 +28,12 @@ public class DashboardModel : PageModel
     public bool HasLoadError { get; private set; }
     public string? LoadErrorMessage { get; private set; }
 
+    public bool CanInventoryRead { get; private set; }
+    public bool CanPricingRead { get; private set; }
+    public bool CanCashRead { get; private set; }
+    public bool CanReportsRead { get; private set; }
+    public bool CanAdminRoleMatrix { get; private set; }
+
     public DashboardModel(
         IItemService itemService,
         IInvoiceService invoiceService,
@@ -43,13 +50,17 @@ public class DashboardModel : PageModel
 
     public async Task<IActionResult> OnGetAsync(CancellationToken ct)
     {
-        var token = HttpContext.Session.GetString("access_token");
-        if (string.IsNullOrWhiteSpace(token))
+        if (!TryGetSecurityContext(out var token, out var permissions))
         {
-            return RedirectToPage("Login");
+            return GoToLogin();
         }
 
         _apiClient.SetToken(token);
+        CanInventoryRead = HasPermission(permissions, PermissionKeys.InventoryRead);
+        CanPricingRead = HasPermission(permissions, PermissionKeys.PricingRead);
+        CanCashRead = HasPermission(permissions, PermissionKeys.CashRead);
+        CanReportsRead = HasPermission(permissions, PermissionKeys.ReportsRead);
+        CanAdminRoleMatrix = HasPermission(permissions, PermissionKeys.AdminRoleMatrix);
 
         try
         {

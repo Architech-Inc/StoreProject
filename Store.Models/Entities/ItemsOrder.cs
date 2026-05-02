@@ -19,4 +19,5 @@ public class ItemsOrder : BaseEntity
     public User? CreatedByUser { get; set; }
 
     public ICollection<OrderItem> Items { get; set; } = new List<OrderItem>();
+    public ICollection<StockMovement> StockMovements { get; set; } = new List<StockMovement>();
 }

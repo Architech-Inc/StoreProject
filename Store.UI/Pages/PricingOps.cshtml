@@ -1,0 +1,171 @@
+@page
+@using Store.Models.Enums
+@model StoreUI.Pages.PricingOpsModel
+@{
+    ViewData["Title"] = "Pricing & Promotions";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
+}
+
+<div class="ops-page">
+    <header>
+        <h1>Pricing & Promotions</h1>
+        <p>Tax profiles, bundle rules, segment pricing, and transaction preview.</p>
+        <a class="link" href="/Dashboard">Back to Dashboard</a>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="status">@Model.StatusMessage</div>
+    }
+
+    @if (Model.CanWrite)
+    {
+        <section class="grid-3">
+            <article class="card">
+                <h2>Tax Profile</h2>
+                <form method="post" asp-page-handler="Tax">
+                    <label>Name</label>
+                    <input asp-for="TaxName" required />
+                    <label>Rate %</label>
+                    <input asp-for="TaxRate" type="number" step="0.01" min="0" max="100" required />
+                    <label>Application</label>
+                    <select asp-for="TaxApplicationType">
+                        <option value="Exclusive">Exclusive</option>
+                        <option value="Inclusive">Inclusive</option>
+                    </select>
+                    <button type="submit">Save Tax Profile</button>
+                </form>
+            </article>
+
+            <article class="card">
+                <h2>Bundle Rule</h2>
+                <form method="post" asp-page-handler="Bundle">
+                    <label>Name</label>
+                    <input asp-for="BundleName" required />
+                    <label>Trigger Item</label>
+                    <select asp-for="BundleTriggerItemId" required>
+                        <option value="">Select item</option>
+                        @foreach (var item in Model.Items)
+                        {
+                            <option value="@item.ItemId">@item.Name</option>
+                        }
+                    </select>
+                    <label>Reward Item</label>
+                    <select asp-for="BundleRewardItemId" required>
+                        <option value="">Select item</option>
+                        @foreach (var item in Model.Items)
+                        {
+                            <option value="@item.ItemId">@item.Name</option>
+                        }
+                    </select>
+                    <label>Trigger Qty</label>
+                    <input asp-for="BundleTriggerQty" type="number" min="1" required />
+                    <label>Reward Qty</label>
+                    <input asp-for="BundleRewardQty" type="number" min="1" required />
+                    <label>Reward Discount %</label>
+                    <input asp-for="BundleDiscountPercent" type="number" step="0.01" min="0" max="100" required />
+                    <button type="submit">Save Bundle Rule</button>
+                </form>
+            </article>
+
+            <article class="card">
+                <h2>Segment Pricing</h2>
+                <form method="post" asp-page-handler="Segment">
+                    <label>Item</label>
+                    <select asp-for="SegmentItemId" required>
+                        <option value="">Select item</option>
+                        @foreach (var item in Model.Items)
+                        {
+                            <option value="@item.ItemId">@item.Name</option>
+                        }
+                    </select>
+                    <label>Segment</label>
+                    <select asp-for="Segment">
+                        <option value="Standard">Standard</option>
+                        <option value="Wholesale">Wholesale</option>
+                        <option value="Vip">Vip</option>
+                    </select>
+                    <label>Override Price</label>
+                    <input asp-for="SegmentPrice" type="number" step="0.01" min="0" required />
+                    <button type="submit">Save Segment Price</button>
+                </form>
+            </article>
+        </section>
+    }
+
+    <section class="card">
+        <h2>Pricing Preview</h2>
+        <form method="post" asp-page-handler="Preview" class="inline-form">
+            <select asp-for="PreviewItemId" required>
+                <option value="">Select item</option>
+                @foreach (var item in Model.Items)
+                {
+                    <option value="@item.ItemId">@item.Name</option>
+                }
+            </select>
+            <input asp-for="PreviewQty" type="number" min="1" required />
+            <select asp-for="PreviewSegment">
+                <option value="Standard">Standard</option>
+                <option value="Wholesale">Wholesale</option>
+                <option value="Vip">Vip</option>
+            </select>
+            <button type="submit">Preview Total</button>
+        </form>
+
+        @if (Model.Preview is not null)
+        {
+            <div class="preview-grid">
+                <p><strong>Item:</strong> @Model.Preview.ItemName</p>
+                <p><strong>Base:</strong> @Model.Preview.BaseUnitPrice.ToString("N2")</p>
+                <p><strong>Segment:</strong> @Model.Preview.SegmentPrice.ToString("N2")</p>
+                <p><strong>Discount/Unit:</strong> @Model.Preview.DiscountPerUnit.ToString("N2")</p>
+                <p><strong>Bundle Discount:</strong> @Model.Preview.BundleDiscountTotal.ToString("N2")</p>
+                <p><strong>Subtotal:</strong> @Model.Preview.Subtotal.ToString("N2")</p>
+                <p><strong>Tax:</strong> @Model.Preview.TaxAmount.ToString("N2")</p>
+                <p><strong>Grand Total:</strong> @Model.Preview.GrandTotal.ToString("N2")</p>
+            </div>
+        }
+    </section>
+
+    <section class="card">
+        <h2>Tax Profiles</h2>
+        <table>
+            <thead><tr><th>Name</th><th>Rate</th><th>Type</th><th>Active</th></tr></thead>
+            <tbody>
+            @foreach (var row in Model.TaxProfiles)
+            {
+                <tr><td>@row.Name</td><td>@row.RatePercent%</td><td>@row.ApplicationType</td><td>@row.IsActive</td></tr>
+            }
+            </tbody>
+        </table>
+    </section>
+
+    <section class="card">
+        <h2>Bundle Rules</h2>
+        <table>
+            <thead><tr><th>Name</th><th>Trigger</th><th>Reward</th><th>Discount</th><th>Active</th></tr></thead>
+            <tbody>
+            @foreach (var row in Model.BundleRules)
+            {
+                <tr><td>@row.Name</td><td>@row.TriggerItemName x@row.TriggerQuantity</td><td>@row.RewardItemName x@row.RewardQuantity</td><td>@row.RewardDiscountPercent%</td><td>@row.IsActive</td></tr>
+            }
+            </tbody>
+        </table>
+    </section>
+
+    <section class="card">
+        <h2>Customer Segment Pricing</h2>
+        <table>
+            <thead><tr><th>Item</th><th>Segment</th><th>Price</th><th>Active</th></tr></thead>
+            <tbody>
+            @foreach (var row in Model.SegmentPricings)
+            {
+                <tr><td>@row.ItemName</td><td>@row.Segment</td><td>@row.PriceOverride.ToString("N2")</td><td>@row.IsActive</td></tr>
+            }
+            </tbody>
+        </table>
+    </section>
+</div>

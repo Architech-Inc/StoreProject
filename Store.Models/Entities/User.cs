@@ -32,4 +32,7 @@ public class User : BaseEntity
     public ICollection<Otp> Otps { get; set; } = new List<Otp>();
     public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
     public ICollection<ChangeLog> ChangeLogs { get; set; } = new List<ChangeLog>();
+    public ICollection<StockMovement> StockMovements { get; set; } = new List<StockMovement>();
+    public ICollection<CashierShift> OpenedShifts { get; set; } = new List<CashierShift>();
+    public ICollection<CashierShift> ClosedShifts { get; set; } = new List<CashierShift>();
 }

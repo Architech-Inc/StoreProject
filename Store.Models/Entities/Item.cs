@@ -19,6 +19,7 @@ public class Item : BaseEntity
     public string? Barcode { get; set; }
     public bool IsActive { get; set; } = true;
     public string? ImagePath { get; set; }
+    public int? TaxProfileId { get; set; }
 
     // Navigation
     public Category? Category { get; set; }
@@ -26,8 +27,11 @@ public class Item : BaseEntity
     public Manufacturer? Manufacturer { get; set; }
     public ItemExpiry? ItemExpiry { get; set; }
     public Discount? Discount { get; set; }
+    public TaxProfile? TaxProfile { get; set; }
 
     public ICollection<ItemCategory> ItemCategories { get; set; } = new List<ItemCategory>();
+    public ICollection<StockMovement> StockMovements { get; set; } = new List<StockMovement>();
+    public ICollection<CustomerSegmentPrice> SegmentPrices { get; set; } = new List<CustomerSegmentPrice>();
     public ICollection<ItemCode> ItemCodes { get; set; } = new List<ItemCode>();
     public ICollection<Batch> Batches { get; set; } = new List<Batch>();
     public ICollection<Sale> Sales { get; set; } = new List<Sale>();

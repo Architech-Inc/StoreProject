@@ -1,0 +1,139 @@
+:root {
+    --ops-bg: #f3f6ec;
+    --ops-paper: #ffffff;
+    --ops-ink: #152c1a;
+    --ops-subtle: #5f6d63;
+    --ops-brand: #1e7f4f;
+    --ops-brand-2: #0f5d39;
+    --ops-border: #d8e2d6;
+    --ops-danger: #b44233;
+}
+
+.ops-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px;
+    color: var(--ops-ink);
+    background: radial-gradient(circle at top right, #eaf4de 0, var(--ops-bg) 42%, #eef3ec 100%);
+    min-height: 100vh;
+}
+
+.ops-page header {
+    margin-bottom: 18px;
+}
+
+.ops-page h1 {
+    margin: 0;
+    font-size: 1.7rem;
+}
+
+.ops-page .link {
+    color: var(--ops-brand-2);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.status {
+    padding: 12px 14px;
+    border: 1px solid #c7d9c7;
+    background: #edf8ee;
+    border-radius: 12px;
+    margin-bottom: 16px;
+}
+
+.grid-2,
+.grid-3 {
+    display: grid;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.grid-2 {
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.grid-3 {
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.card {
+    background: var(--ops-paper);
+    border: 1px solid var(--ops-border);
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 16px;
+}
+
+form {
+    display: grid;
+    gap: 8px;
+}
+
+.inline-form {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+label {
+    font-size: 0.85rem;
+    color: var(--ops-subtle);
+}
+
+input,
+select,
+button {
+    font: inherit;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--ops-border);
+}
+
+button {
+    border-color: transparent;
+    color: #fff;
+    background: linear-gradient(135deg, var(--ops-brand), var(--ops-brand-2));
+    font-weight: 600;
+    cursor: pointer;
+}
+
+button.toggle.on {
+    background: linear-gradient(135deg, #1d8f5a, #0f6a40);
+}
+
+button.toggle.off {
+    background: linear-gradient(135deg, #bb5446, var(--ops-danger));
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+}
+
+th,
+td {
+    border-bottom: 1px solid #e7ece6;
+    text-align: left;
+    padding: 8px;
+    vertical-align: top;
+}
+
+.preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+}
+
+@media (max-width: 700px) {
+    .ops-page {
+        padding: 14px;
+    }
+
+    th,
+    td {
+        font-size: 0.82rem;
+        padding: 6px;
+    }
+}

@@ -60,6 +60,10 @@ public class StoreDbContext : DbContext
     public DbSet<ItemExpiry> ItemExpiries => Set<ItemExpiry>();
     public DbSet<Batch> Batches => Set<Batch>();
     public DbSet<Discount> Discounts => Set<Discount>();
+    public DbSet<StockMovement> StockMovements => Set<StockMovement>();
+    public DbSet<TaxProfile> TaxProfiles => Set<TaxProfile>();
+    public DbSet<BundleRule> BundleRules => Set<BundleRule>();
+    public DbSet<CustomerSegmentPrice> CustomerSegmentPrices => Set<CustomerSegmentPrice>();
 
     // ---- Transactions ----
     public DbSet<Invoice> Invoices => Set<Invoice>();
@@ -82,6 +86,8 @@ public class StoreDbContext : DbContext
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<ChangeLog> ChangeLogs => Set<ChangeLog>();
     public DbSet<Document> Documents => Set<Document>();
+    public DbSet<CashierShift> CashierShifts => Set<CashierShift>();
+    public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -90,8 +96,47 @@ public class StoreDbContext : DbContext
         // Automatically discover and apply all IEntityTypeConfiguration<T> in this assembly
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(StoreDbContext).Assembly);
 
+        ConfigureOperationalRelationships(modelBuilder);
+
         // Keep legacy-style schema naming: lower snake_case for table and column names.
         ApplySnakeCaseNaming(modelBuilder);
+    }
+
+    private static void ConfigureOperationalRelationships(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<CashierShift>()
+            .HasOne(x => x.OpenedByUser)
+            .WithMany(u => u.OpenedShifts)
+            .HasForeignKey(x => x.OpenedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<CashierShift>()
+            .HasOne(x => x.ClosedByUser)
+            .WithMany(u => u.ClosedShifts)
+            .HasForeignKey(x => x.ClosedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<BundleRule>()
+            .HasOne(x => x.TriggerItem)
+            .WithMany()
+            .HasForeignKey(x => x.TriggerItemId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<BundleRule>()
+            .HasOne(x => x.RewardItem)
+            .WithMany()
+            .HasForeignKey(x => x.RewardItemId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<RolePermission>()
+            .HasIndex(x => new { x.RoleId, x.PermissionKey })
+            .IsUnique();
+
+        modelBuilder.Entity<CustomerSegmentPrice>()
+            .HasIndex(x => new { x.ItemId, x.Segment, x.IsActive });
+
+        modelBuilder.Entity<StockMovement>()
+            .HasIndex(x => new { x.ItemId, x.DateCreated });
     }
 
     private static void ApplySnakeCaseNaming(ModelBuilder modelBuilder)

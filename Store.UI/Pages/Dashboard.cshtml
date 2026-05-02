@@ -21,10 +21,25 @@
         <nav class="main-nav">
             <a class="nav-link active" href="/Dashboard" aria-current="page">Dashboard</a>
             <a class="nav-link" href="/Pos">POS Terminal</a>
+            @if (Model.CanInventoryRead)
+            {
+                <a class="nav-link" href="/InventoryOps">Inventory Ops</a>
+            }
+            @if (Model.CanPricingRead)
+            {
+                <a class="nav-link" href="/PricingOps">Pricing Ops</a>
+            }
+            @if (Model.CanCashRead || Model.CanReportsRead)
+            {
+                <a class="nav-link" href="/CashReports">Cash & Reports</a>
+            }
+            @if (Model.CanAdminRoleMatrix)
+            {
+                <a class="nav-link" href="/RoleMatrix">Role Matrix</a>
+            }
             <a class="nav-link" href="#overview">Overview</a>
             <a class="nav-link" href="#invoices">Invoices</a>
             <a class="nav-link" href="#inventory">Inventory</a>
-            <a class="nav-link" href="#health">Health</a>
         </nav>
 
         <form method="post" asp-page-handler="Logout" class="logout-form">
@@ -157,8 +172,22 @@
             </header>
             <div class="action-row">
                 <a class="action-link" href="/Pos">Open POS Terminal</a>
-                <a class="action-link" href="/Dashboard#inventory">Review Inventory</a>
-                <a class="action-link" href="/Dashboard#invoices">Inspect Invoices</a>
+                @if (Model.CanInventoryRead)
+                {
+                    <a class="action-link" href="/InventoryOps">Inventory Operations</a>
+                }
+                @if (Model.CanPricingRead)
+                {
+                    <a class="action-link" href="/PricingOps">Pricing & Promotions</a>
+                }
+                @if (Model.CanCashRead || Model.CanReportsRead)
+                {
+                    <a class="action-link" href="/CashReports">Cash & Reports</a>
+                }
+                @if (Model.CanAdminRoleMatrix)
+                {
+                    <a class="action-link" href="/RoleMatrix">Role Matrix</a>
+                }
                 <a class="action-link" href="/Login">Switch User</a>
             </div>
         </section>

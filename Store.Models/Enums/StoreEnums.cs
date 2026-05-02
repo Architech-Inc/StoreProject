@@ -80,6 +80,34 @@ public enum ItemType
     Digital
 }
 
+public enum StockMovementType
+{
+    Receive,
+    Sale,
+    Return,
+    Adjustment,
+    Void
+}
+
+public enum CustomerSegment
+{
+    Standard,
+    Wholesale,
+    Vip
+}
+
+public enum TaxApplicationType
+{
+    Exclusive,
+    Inclusive
+}
+
+public enum ShiftStatus
+{
+    Open,
+    Closed
+}
+
 public enum NotificationType
 {
     Info,

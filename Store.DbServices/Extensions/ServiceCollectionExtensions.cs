@@ -45,6 +45,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISupplierService, SupplierService>();
         services.AddScoped<IOrderService, OrderService>();
         services.AddScoped<IOtpService, OtpService>();
+        services.AddScoped<IStoreOperationsService, StoreOperationsService>();
 
         return services;
     }

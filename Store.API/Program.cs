@@ -10,6 +10,7 @@ using Store.API.Contracts;
 using Store.API.Middleware;
 using Store.DbServices.Extensions;
 using Store.DbServices.Seeding;
+using Store.Models.DTOs.Operations;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -51,7 +52,17 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(PermissionKeys.InventoryRead, p => p.RequireClaim("perm", PermissionKeys.InventoryRead));
+    options.AddPolicy(PermissionKeys.InventoryWrite, p => p.RequireClaim("perm", PermissionKeys.InventoryWrite));
+    options.AddPolicy(PermissionKeys.PricingRead, p => p.RequireClaim("perm", PermissionKeys.PricingRead));
+    options.AddPolicy(PermissionKeys.PricingWrite, p => p.RequireClaim("perm", PermissionKeys.PricingWrite));
+    options.AddPolicy(PermissionKeys.CashRead, p => p.RequireClaim("perm", PermissionKeys.CashRead));
+    options.AddPolicy(PermissionKeys.CashWrite, p => p.RequireClaim("perm", PermissionKeys.CashWrite));
+    options.AddPolicy(PermissionKeys.ReportsRead, p => p.RequireClaim("perm", PermissionKeys.ReportsRead));
+    options.AddPolicy(PermissionKeys.AdminRoleMatrix, p => p.RequireClaim("perm", PermissionKeys.AdminRoleMatrix));
+});
 
 // ─── Rate Limiting ────────────────────────────────────────────────────────────
 builder.Services.AddRateLimiter(options =>

@@ -8,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using Store.Models.DTOs.Auth;
 using Store.Models.Entities;
 using Store.Models.Entities.Contacts;
+using Store.Models.DTOs.Operations;
 using Store.Models.Enums;
 using Store.Models.Interfaces;
 using Store.Models.Interfaces.Repositories;
@@ -94,7 +95,8 @@ public class AuthenticationService : IAuthenticationService
 
         if (user is null || user.Status != UserStatus.Active) return null;
 
-        var (token, newRefresh, expiry, refreshExpiry) = GenerateTokens(user);
+        var permissions = await GetPermissionClaimsAsync(user.RoleId, ct);
+        var (token, newRefresh, expiry, refreshExpiry) = GenerateTokens(user, permissions);
 
         userToken.Token = token;
         userToken.RefreshTokenHash = HashRefreshToken(newRefresh);
@@ -165,7 +167,8 @@ public class AuthenticationService : IAuthenticationService
         if (!BCrypt.Net.BCrypt.EnhancedVerify(password, user.Password.PasswordHash))
             return null;
 
-        var (token, refreshToken, expiry, refreshExpiry) = GenerateTokens(user);
+        var permissions = await GetPermissionClaimsAsync(user.RoleId, ct);
+        var (token, refreshToken, expiry, refreshExpiry) = GenerateTokens(user, permissions);
 
         if (user.UserToken is null)
         {
@@ -208,7 +211,9 @@ public class AuthenticationService : IAuthenticationService
         };
     }
 
-    private (string Token, string RefreshToken, DateTime Expiry, DateTime RefreshExpiry) GenerateTokens(User user)
+    private (string Token, string RefreshToken, DateTime Expiry, DateTime RefreshExpiry) GenerateTokens(
+        User user,
+        IEnumerable<string> permissions)
     {
         var jwtKey = _config["Jwt:Key"] ?? throw new InvalidOperationException("JWT key not configured.");
         var issuer = _config["Jwt:Issuer"];
@@ -222,22 +227,26 @@ public class AuthenticationService : IAuthenticationService
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        // Only non-sensitive claims in JWT — no password, email, or phone
-        var claims = new[]
+        var claimList = new List<Claim>
         {
-            new Claim("uid", user.UserId.ToString()),
-            new Claim(ClaimTypes.Role, user.Role.Name),
-            new Claim(JwtRegisteredClaimNames.Sub, user.Username),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            new Claim(JwtRegisteredClaimNames.Iat,
+            new("uid", user.UserId.ToString()),
+            new(ClaimTypes.Role, user.Role.Name),
+            new(JwtRegisteredClaimNames.Sub, user.Username),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new(JwtRegisteredClaimNames.Iat,
                 DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(),
                 ClaimValueTypes.Integer64)
         };
 
+        foreach (var permission in permissions)
+        {
+            claimList.Add(new Claim("perm", permission));
+        }
+
         var tokenDescriptor = new JwtSecurityToken(
             issuer: issuer,
             audience: audience,
-            claims: claims,
+            claims: claimList,
             expires: expiry,
             signingCredentials: creds);
 
@@ -245,6 +254,57 @@ public class AuthenticationService : IAuthenticationService
         var refreshToken = GenerateSecureRefreshToken();
 
         return (token, refreshToken, expiry, refreshExpiry);
+    }
+
+    private async Task<IReadOnlyList<string>> GetPermissionClaimsAsync(int roleId, CancellationToken ct)
+    {
+        var explicitPerms = await _uow.Repository<RolePermission>().Query()
+            .AsNoTracking()
+            .Where(x => x.RoleId == roleId && x.IsAllowed)
+            .Select(x => x.PermissionKey)
+            .ToListAsync(ct);
+
+        if (explicitPerms.Count > 0)
+        {
+            return explicitPerms;
+        }
+
+        var roleName = await _uow.Repository<Role>().Query()
+            .AsNoTracking()
+            .Where(x => x.RoleId == roleId)
+            .Select(x => x.Name)
+            .FirstOrDefaultAsync(ct) ?? string.Empty;
+
+        if (roleName.Equals("Admin", StringComparison.OrdinalIgnoreCase))
+        {
+            return PermissionKeys.All;
+        }
+
+        var fallback = new List<string>();
+        if (roleName.Equals("Manager", StringComparison.OrdinalIgnoreCase))
+        {
+            fallback.AddRange(new[]
+            {
+                PermissionKeys.InventoryRead,
+                PermissionKeys.InventoryWrite,
+                PermissionKeys.PricingRead,
+                PermissionKeys.PricingWrite,
+                PermissionKeys.CashRead,
+                PermissionKeys.CashWrite,
+                PermissionKeys.ReportsRead
+            });
+        }
+
+        if (roleName.Equals("Cashier", StringComparison.OrdinalIgnoreCase))
+        {
+            fallback.AddRange(new[]
+            {
+                PermissionKeys.CashRead,
+                PermissionKeys.CashWrite
+            });
+        }
+
+        return fallback;
     }
 
     private static string GenerateSecureRefreshToken()

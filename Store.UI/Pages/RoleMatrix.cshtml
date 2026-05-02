@@ -1,0 +1,58 @@
+@page
+@model StoreUI.Pages.RoleMatrixModel
+@{
+    ViewData["Title"] = "Role Permission Matrix";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
+}
+
+<div class="ops-page">
+    <header>
+        <h1>Role Permission Matrix</h1>
+        <p>Fine-grained permission control for module and endpoint access.</p>
+        <a class="link" href="/Dashboard">Back to Dashboard</a>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="status">@Model.StatusMessage</div>
+    }
+
+    <section class="card">
+        <table>
+            <thead>
+                <tr>
+                    <th>Role</th>
+                    @foreach (var permission in Model.PermissionColumns)
+                    {
+                        <th>@permission</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in Model.Matrix)
+                {
+                    <tr>
+                        <td>@row.RoleName</td>
+                        @foreach (var permission in Model.PermissionColumns)
+                        {
+                            var current = row.Permissions.TryGetValue(permission, out var allowed) && allowed;
+                            <td>
+                                <form method="post" asp-page-handler="Toggle" class="inline-form">
+                                    <input type="hidden" name="roleId" value="@row.RoleId" />
+                                    <input type="hidden" name="permissionKey" value="@permission" />
+                                    <input type="hidden" name="currentValue" value="@current" />
+                                    <button type="submit" class="toggle @(current ? "on" : "off")">
+                                        @(current ? "Allowed" : "Denied")
+                                    </button>
+                                </form>
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </section>
+</div>
