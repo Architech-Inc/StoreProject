@@ -52,4 +52,16 @@ public class InvoicesController : ControllerBase
         if (!success) return NotFound(ApiResponse<object>.Fail("Invoice not found or already voided."));
         return Ok(ApiResponse<object>.Ok(null!, "Invoice voided."));
     }
+
+    [HttpPost("{id:guid}/void")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> VoidCompat(Guid id, CancellationToken ct)
+    {
+        var userIdClaim = User.FindFirst("uid")?.Value;
+        Guid.TryParse(userIdClaim, out var userId);
+
+        var success = await _invoiceService.VoidInvoiceAsync(id, userId == Guid.Empty ? null : userId, ct);
+        if (!success) return NotFound(ApiResponse<object>.Fail("Invoice not found or already voided."));
+        return Ok(ApiResponse<object>.Ok(null!, "Invoice voided."));
+    }
 }

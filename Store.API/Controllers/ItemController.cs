@@ -7,7 +7,8 @@ using Store.Models.Interfaces.Services;
 namespace Store.API.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/item")]
+[Route("api/items")]
 [Authorize]
 public class ItemController : ControllerBase
 {
@@ -58,6 +59,15 @@ public class ItemController : ControllerBase
     [HttpPatch("{id:guid}/stock")]
     [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> AdjustStock(Guid id, [FromBody] AdjustStockRequest request, CancellationToken ct)
+    {
+        var success = await _itemService.AdjustStockAsync(id, request, ct);
+        if (!success) return NotFound(ApiResponse<object>.Fail("Item not found."));
+        return Ok(ApiResponse<object>.Ok(null!, "Stock adjusted."));
+    }
+
+    [HttpPost("{id:guid}/adjust-stock")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> AdjustStockCompat(Guid id, [FromBody] AdjustStockRequest request, CancellationToken ct)
     {
         var success = await _itemService.AdjustStockAsync(id, request, ct);
         if (!success) return NotFound(ApiResponse<object>.Fail("Item not found."));

@@ -1,0 +1,382 @@
+@page
+@model StoreUI.Pages.PosModel
+@using System.Text.Json
+@{
+    ViewData["Title"] = "POS Terminal";
+
+    var catalogJson = JsonSerializer.Serialize(Model.CatalogItems.Select(i => new
+    {
+        i.ItemId,
+        i.Name,
+        i.UnitPrice,
+        i.InStock,
+        categoryName = i.CategoryName,
+        unit = i.UnitAbbreviation,
+        discountPercentage = i.DiscountPercentage
+    }));
+
+    var customersJson = JsonSerializer.Serialize(Model.Customers.Select(c => new
+    {
+        c.CustomerId,
+        c.FullName,
+        c.PrimaryPhone
+    }));
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/pos.css" asp-append-version="true" />
+}
+
+<div class="pos-shell">
+    <header class="pos-topbar">
+        <div>
+            <h1>POS Terminal</h1>
+            <p>Fast checkout flow for supermarket operations.</p>
+        </div>
+        <div class="pos-top-actions">
+            <a class="btn btn-secondary" href="/Dashboard">Back to Dashboard</a>
+            <form method="post" asp-page-handler="Logout">
+                <button type="submit" class="btn btn-danger">Sign Out</button>
+            </form>
+        </div>
+    </header>
+
+    @if (Model.HasLoadError)
+    {
+        <div class="banner banner-error" role="alert">
+            <strong>POS Load Error:</strong> @Model.LoadErrorMessage
+        </div>
+    }
+
+    <div class="pos-grid">
+        <section class="catalog-panel" aria-label="Product catalog">
+            <div class="panel-head">
+                <h2>Catalog</h2>
+                <input id="catalogSearch" type="search" placeholder="Search products..." aria-label="Search products" />
+            </div>
+
+            <div id="catalogList" class="catalog-list"></div>
+        </section>
+
+        <section class="cart-panel" aria-label="Checkout cart">
+            <div class="panel-head">
+                <h2>Cart</h2>
+                <button type="button" class="btn btn-warning" id="clearCartBtn">Clear</button>
+            </div>
+
+            <div id="cartEmpty" class="cart-empty">No items in cart.</div>
+            <table id="cartTable" class="cart-table" hidden>
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Price</th>
+                        <th>Qty</th>
+                        <th>Total</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="cartBody"></tbody>
+            </table>
+
+            <div class="checkout-box">
+                <div class="field-row">
+                    <label for="customerSelect">Customer</label>
+                    <select id="customerSelect">
+                        <option value="">Walk-in Customer</option>
+                    </select>
+                </div>
+
+                <div class="field-row">
+                    <label for="paymentType">Payment Type</label>
+                    <select id="paymentType">
+                        <option value="0">Cash</option>
+                        <option value="1">Card</option>
+                        <option value="2">Bank Transfer</option>
+                        <option value="3">Mobile Money</option>
+                        <option value="4">Cheque</option>
+                        <option value="5">Credit</option>
+                    </select>
+                </div>
+
+                <div class="field-row">
+                    <label for="amountTendered">Amount Tendered (XAF)</label>
+                    <input id="amountTendered" type="number" min="0" step="0.01" value="0" />
+                </div>
+
+                <div class="field-row">
+                    <label for="saleNotes">Notes</label>
+                    <textarea id="saleNotes" rows="2" maxlength="300" placeholder="Optional note for this sale"></textarea>
+                </div>
+
+                <div class="totals">
+                    <div><span>Subtotal</span><strong id="subtotalText">0</strong></div>
+                    <div><span>Change</span><strong id="changeText">0</strong></div>
+                </div>
+
+                <form id="checkoutForm" method="post">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" id="checkoutBtn" class="btn btn-primary">Complete Checkout</button>
+                </form>
+
+                <div id="checkoutMessage" class="checkout-message" role="status" aria-live="polite"></div>
+            </div>
+        </section>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+(() => {
+    const catalog = @Html.Raw(catalogJson);
+    const customers = @Html.Raw(customersJson);
+
+    const cart = new Map();
+    const catalogList = document.getElementById('catalogList');
+    const catalogSearch = document.getElementById('catalogSearch');
+    const cartBody = document.getElementById('cartBody');
+    const cartTable = document.getElementById('cartTable');
+    const cartEmpty = document.getElementById('cartEmpty');
+    const subtotalText = document.getElementById('subtotalText');
+    const changeText = document.getElementById('changeText');
+    const amountTenderedInput = document.getElementById('amountTendered');
+    const customerSelect = document.getElementById('customerSelect');
+    const checkoutForm = document.getElementById('checkoutForm');
+    const checkoutBtn = document.getElementById('checkoutBtn');
+    const paymentType = document.getElementById('paymentType');
+    const saleNotes = document.getElementById('saleNotes');
+    const checkoutMessage = document.getElementById('checkoutMessage');
+    const clearCartBtn = document.getElementById('clearCartBtn');
+
+    function xaf(value) {
+        return Number(value).toLocaleString('en-US', { maximumFractionDigits: 2 });
+    }
+
+    function getEffectivePrice(item) {
+        if (!item.discountPercentage || item.discountPercentage <= 0) {
+            return Number(item.unitPrice);
+        }
+
+        const discount = Number(item.unitPrice) * (Number(item.discountPercentage) / 100);
+        return Number(item.unitPrice) - discount;
+    }
+
+    function renderCatalog(filterText = '') {
+        const q = filterText.trim().toLowerCase();
+        const filtered = q.length === 0
+            ? catalog
+            : catalog.filter(i => i.name.toLowerCase().includes(q) || (i.categoryName ?? '').toLowerCase().includes(q));
+
+        catalogList.innerHTML = '';
+
+        if (filtered.length === 0) {
+            catalogList.innerHTML = '<p class="catalog-empty">No matching products.</p>';
+            return;
+        }
+
+        for (const item of filtered) {
+            const card = document.createElement('article');
+            card.className = 'catalog-item';
+            const effectivePrice = getEffectivePrice(item);
+            card.innerHTML = `
+                <h3>${item.name}</h3>
+                <p>${item.categoryName ?? 'Uncategorized'} ${item.unit ? `• ${item.unit}` : ''}</p>
+                <div class="catalog-meta">
+                    <strong>${xaf(effectivePrice)} XAF</strong>
+                    <span>${item.inStock} in stock</span>
+                </div>
+                <button type="button" data-id="${item.itemId}">Add</button>
+            `;
+
+            card.querySelector('button').addEventListener('click', () => addToCart(item));
+            catalogList.appendChild(card);
+        }
+    }
+
+    function addToCart(item) {
+        const existing = cart.get(item.itemId);
+        const currentQty = existing ? existing.quantity : 0;
+
+        if (currentQty + 1 > item.inStock) {
+            setMessage('Cannot exceed available stock.', true);
+            return;
+        }
+
+        cart.set(item.itemId, {
+            itemId: item.itemId,
+            name: item.name,
+            unitPrice: getEffectivePrice(item),
+            maxStock: item.inStock,
+            quantity: currentQty + 1
+        });
+
+        renderCart();
+    }
+
+    function setQuantity(itemId, quantity) {
+        const entry = cart.get(itemId);
+        if (!entry) {
+            return;
+        }
+
+        if (quantity <= 0) {
+            cart.delete(itemId);
+            renderCart();
+            return;
+        }
+
+        if (quantity > entry.maxStock) {
+            setMessage(`Cannot exceed stock (${entry.maxStock}) for ${entry.name}.`, true);
+            return;
+        }
+
+        entry.quantity = quantity;
+        renderCart();
+    }
+
+    function removeItem(itemId) {
+        cart.delete(itemId);
+        renderCart();
+    }
+
+    function getSubtotal() {
+        let total = 0;
+        for (const entry of cart.values()) {
+            total += entry.unitPrice * entry.quantity;
+        }
+        return total;
+    }
+
+    function renderCart() {
+        cartBody.innerHTML = '';
+
+        if (cart.size === 0) {
+            cartTable.hidden = true;
+            cartEmpty.hidden = false;
+            subtotalText.textContent = '0';
+            changeText.textContent = '0';
+            return;
+        }
+
+        cartTable.hidden = false;
+        cartEmpty.hidden = true;
+
+        for (const entry of cart.values()) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${entry.name}</td>
+                <td>${xaf(entry.unitPrice)}</td>
+                <td><input type="number" min="1" max="${entry.maxStock}" value="${entry.quantity}" data-qty="${entry.itemId}" /></td>
+                <td>${xaf(entry.unitPrice * entry.quantity)}</td>
+                <td><button type="button" class="danger" data-del="${entry.itemId}">Remove</button></td>
+            `;
+            cartBody.appendChild(tr);
+        }
+
+        for (const input of cartBody.querySelectorAll('[data-qty]')) {
+            input.addEventListener('change', (e) => {
+                const target = e.target;
+                setQuantity(target.dataset.qty, Number(target.value));
+            });
+        }
+
+        for (const button of cartBody.querySelectorAll('[data-del]')) {
+            button.addEventListener('click', (e) => {
+                const target = e.target;
+                removeItem(target.dataset.del);
+            });
+        }
+
+        const subtotal = getSubtotal();
+        const tendered = Number(amountTenderedInput.value || '0');
+        const change = Math.max(0, tendered - subtotal);
+
+        subtotalText.textContent = `${xaf(subtotal)} XAF`;
+        changeText.textContent = `${xaf(change)} XAF`;
+    }
+
+    function setMessage(message, isError = false) {
+        checkoutMessage.textContent = message;
+        checkoutMessage.className = isError ? 'checkout-message error' : 'checkout-message ok';
+    }
+
+    async function checkoutAsync() {
+        if (cart.size === 0) {
+            setMessage('Add at least one item before checkout.', true);
+            return;
+        }
+
+        const subtotal = getSubtotal();
+        const tendered = Number(amountTenderedInput.value || '0');
+        if (tendered < subtotal) {
+            setMessage('Amount tendered must cover subtotal.', true);
+            return;
+        }
+
+        const payload = {
+            customerId: customerSelect.value || null,
+            paymentType: Number(paymentType.value),
+            amountTendered: tendered,
+            notes: saleNotes.value || null,
+            lines: Array.from(cart.values()).map(v => ({ itemId: v.itemId, quantity: v.quantity }))
+        };
+
+        const antiforgery = checkoutForm.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+        checkoutBtn.disabled = true;
+        setMessage('Processing checkout...');
+
+        try {
+            const response = await fetch('?handler=Checkout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': antiforgery
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const body = await response.json();
+            if (!response.ok || !body.success) {
+                setMessage(body.message ?? 'Checkout failed.', true);
+                return;
+            }
+
+            cart.clear();
+            amountTenderedInput.value = '0';
+            saleNotes.value = '';
+            renderCart();
+            setMessage(`Invoice ${body.invoiceId} completed. Change: ${xaf(body.changeGiven)} XAF`);
+            renderCatalog(catalogSearch.value);
+        } catch {
+            setMessage('Unable to reach server for checkout.', true);
+        } finally {
+            checkoutBtn.disabled = false;
+        }
+    }
+
+    function seedCustomers() {
+        for (const c of customers) {
+            const option = document.createElement('option');
+            option.value = c.customerId;
+            option.textContent = c.primaryPhone ? `${c.fullName} (${c.primaryPhone})` : c.fullName;
+            customerSelect.appendChild(option);
+        }
+    }
+
+    catalogSearch.addEventListener('input', () => renderCatalog(catalogSearch.value));
+    amountTenderedInput.addEventListener('input', renderCart);
+    clearCartBtn.addEventListener('click', () => {
+        cart.clear();
+        renderCart();
+    });
+    checkoutForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        checkoutAsync();
+    });
+
+    seedCustomers();
+    renderCatalog();
+    renderCart();
+})();
+</script>
+}
