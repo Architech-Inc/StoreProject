@@ -1,0 +1,22 @@
+:root {
+    --brand: #019c01;
+    --brand-dark: #006300;
+    --brand-soft: #e8f5e8;
+    --accent-red: #d13438;
+    --text-primary: #201f1e;
+    --text-secondary: #605e5c;
+    --surface: #ffffff;
+    --surface-alt: #f6f7f8;
+    --canvas: #f0f3f1;
+    --border: #d9dfdb;
+    --shadow: 0 8px 20px rgba(19, 37, 24, 0.12);
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+}

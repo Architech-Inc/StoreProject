@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
-using Store.Models.DTOs.Common;
+using Store.API.Application.Common;
+using Store.API.Contracts;
 
 namespace Store.API.Middleware;
 
@@ -32,18 +33,27 @@ public class ExceptionHandlingMiddleware
     {
         context.Response.ContentType = "application/json";
 
-        var (statusCode, message) = exception switch
+        var traceId = context.TraceIdentifier;
+
+        var (statusCode, code, message, errors) = exception switch
         {
-            InvalidOperationException => (HttpStatusCode.BadRequest, exception.Message),
-            UnauthorizedAccessException => (HttpStatusCode.Unauthorized, "Unauthorized."),
-            KeyNotFoundException => (HttpStatusCode.NotFound, exception.Message),
-            ArgumentException => (HttpStatusCode.BadRequest, exception.Message),
-            _ => (HttpStatusCode.InternalServerError, "An unexpected error occurred.")
+            RequestValidationException vex =>
+                (HttpStatusCode.BadRequest, "validation_error", "Validation failed.", vex.Errors),
+            InvalidOperationException =>
+                (HttpStatusCode.BadRequest, "invalid_operation", exception.Message, (IReadOnlyCollection<string>?)null),
+            UnauthorizedAccessException =>
+                (HttpStatusCode.Unauthorized, "unauthorized", "Unauthorized.", (IReadOnlyCollection<string>?)null),
+            KeyNotFoundException =>
+                (HttpStatusCode.NotFound, "not_found", exception.Message, (IReadOnlyCollection<string>?)null),
+            ArgumentException =>
+                (HttpStatusCode.BadRequest, "invalid_argument", exception.Message, (IReadOnlyCollection<string>?)null),
+            _ =>
+                (HttpStatusCode.InternalServerError, "server_error", "An unexpected error occurred.", (IReadOnlyCollection<string>?)null)
         };
 
         context.Response.StatusCode = (int)statusCode;
 
-        var response = ApiResponse<object>.Fail(message);
+        var response = ApiErrorResponse.From(code, message, errors, traceId);
         var json = JsonSerializer.Serialize(response, new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase

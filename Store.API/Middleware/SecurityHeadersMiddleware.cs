@@ -11,21 +11,16 @@ public class SecurityHeadersMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
-        context.Response.OnStarting(() =>
+        var headers = context.Response.Headers;
+        headers.TryAdd("X-Content-Type-Options", "nosniff");
+        headers.TryAdd("X-Frame-Options", "DENY");
+        headers.TryAdd("Referrer-Policy", "strict-origin-when-cross-origin");
+        headers.TryAdd("X-Permitted-Cross-Domain-Policies", "none");
+
+        if (context.Request.IsHttps)
         {
-            var headers = context.Response.Headers;
-            headers.TryAdd("X-Content-Type-Options", "nosniff");
-            headers.TryAdd("X-Frame-Options", "DENY");
-            headers.TryAdd("Referrer-Policy", "strict-origin-when-cross-origin");
-            headers.TryAdd("X-Permitted-Cross-Domain-Policies", "none");
-
-            if (context.Request.IsHttps)
-            {
-                headers.TryAdd("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
-            }
-
-            return Task.CompletedTask;
-        });
+            headers.TryAdd("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+        }
 
         await _next(context);
     }

@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
+using Store.API.Application.Abstractions;
+using Store.API.Application.Auth.Requests;
+using Store.API.Contracts;
 using Store.Models.DTOs.Auth;
 using Store.Models.DTOs.Common;
-using Store.Models.Interfaces.Services;
 
 namespace Store.API.Controllers;
 
@@ -9,39 +11,67 @@ namespace Store.API.Controllers;
 [Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
-    private readonly IAuthenticationService _auth;
+    private readonly IRequestDispatcher _dispatcher;
 
-    public AuthController(IAuthenticationService auth) => _auth = auth;
+    public AuthController(IRequestDispatcher dispatcher) => _dispatcher = dispatcher;
 
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request, CancellationToken ct)
     {
-        var result = await _auth.LoginAsync(request, ct);
-        if (result is null) return Unauthorized(ApiResponse<object>.Fail("Invalid credentials."));
+        var result = await _dispatcher.SendAsync(new LoginCommand(request), ct);
+        if (result is null)
+        {
+            return Unauthorized(ApiErrorResponse.From(
+                "invalid_credentials",
+                "Invalid credentials.",
+                traceId: HttpContext.TraceIdentifier));
+        }
+
         return Ok(ApiResponse<LoginResponse>.Ok(result));
     }
 
     [HttpPost("login/email")]
     public async Task<IActionResult> LoginWithEmail([FromBody] LoginWithEmailRequest request, CancellationToken ct)
     {
-        var result = await _auth.LoginWithEmailAsync(request, ct);
-        if (result is null) return Unauthorized(ApiResponse<object>.Fail("Invalid credentials."));
+        var result = await _dispatcher.SendAsync(new LoginWithEmailCommand(request), ct);
+        if (result is null)
+        {
+            return Unauthorized(ApiErrorResponse.From(
+                "invalid_credentials",
+                "Invalid credentials.",
+                traceId: HttpContext.TraceIdentifier));
+        }
+
         return Ok(ApiResponse<LoginResponse>.Ok(result));
     }
 
     [HttpPost("login/phone")]
     public async Task<IActionResult> LoginWithPhone([FromBody] LoginWithPhoneRequest request, CancellationToken ct)
     {
-        var result = await _auth.LoginWithPhoneAsync(request, ct);
-        if (result is null) return Unauthorized(ApiResponse<object>.Fail("Invalid credentials."));
+        var result = await _dispatcher.SendAsync(new LoginWithPhoneCommand(request), ct);
+        if (result is null)
+        {
+            return Unauthorized(ApiErrorResponse.From(
+                "invalid_credentials",
+                "Invalid credentials.",
+                traceId: HttpContext.TraceIdentifier));
+        }
+
         return Ok(ApiResponse<LoginResponse>.Ok(result));
     }
 
     [HttpPost("refresh")]
     public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request, CancellationToken ct)
     {
-        var result = await _auth.RefreshTokenAsync(request, ct);
-        if (result is null) return Unauthorized(ApiResponse<object>.Fail("Invalid or expired refresh token."));
+        var result = await _dispatcher.SendAsync(new RefreshTokenCommand(request), ct);
+        if (result is null)
+        {
+            return Unauthorized(ApiErrorResponse.From(
+                "invalid_refresh_token",
+                "Invalid or expired refresh token.",
+                traceId: HttpContext.TraceIdentifier));
+        }
+
         return Ok(ApiResponse<LoginResponse>.Ok(result));
     }
 
@@ -51,9 +81,11 @@ public class AuthController : ControllerBase
     {
         var userIdClaim = User.FindFirst("uid")?.Value;
         if (!Guid.TryParse(userIdClaim, out var userId))
-            return Unauthorized();
+        {
+            return Unauthorized(ApiErrorResponse.From("unauthorized", "Unauthorized.", traceId: HttpContext.TraceIdentifier));
+        }
 
-        await _auth.LogoutAsync(userId, ct);
+        await _dispatcher.SendAsync(new LogoutCommand(userId), ct);
         return Ok(ApiResponse<object>.Ok(null!, "Logged out successfully."));
     }
 
@@ -61,8 +93,15 @@ public class AuthController : ControllerBase
     [Microsoft.AspNetCore.Authorization.Authorize]
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request, CancellationToken ct)
     {
-        var success = await _auth.ResetPasswordAsync(request, ct);
-        if (!success) return BadRequest(ApiResponse<object>.Fail("Current password is incorrect."));
+        var success = await _dispatcher.SendAsync(new ResetPasswordCommand(request), ct);
+        if (!success)
+        {
+            return BadRequest(ApiErrorResponse.From(
+                "invalid_credentials",
+                "Current password is incorrect.",
+                traceId: HttpContext.TraceIdentifier));
+        }
+
         return Ok(ApiResponse<object>.Ok(null!, "Password changed successfully."));
     }
 }

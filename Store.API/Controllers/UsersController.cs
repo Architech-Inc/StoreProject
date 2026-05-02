@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Store.API.Application.Abstractions;
+using Store.API.Application.Users.Requests;
+using Store.API.Contracts;
 using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Users;
-using Store.Models.Interfaces.Services;
 
 namespace Store.API.Controllers;
 
@@ -11,23 +13,27 @@ namespace Store.API.Controllers;
 [Authorize]
 public class UsersController : ControllerBase
 {
-    private readonly IUserService _userService;
+    private readonly IRequestDispatcher _dispatcher;
 
-    public UsersController(IUserService userService) => _userService = userService;
+    public UsersController(IRequestDispatcher dispatcher) => _dispatcher = dispatcher;
 
     [HttpGet]
     [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> GetAll([FromQuery] PagedRequest request, CancellationToken ct)
     {
-        var result = await _userService.GetAllAsync(request, ct);
+        var result = await _dispatcher.SendAsync(new GetUsersQuery(request), ct);
         return Ok(ApiResponse<PagedResult<UserDto>>.Ok(result));
     }
 
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
     {
-        var user = await _userService.GetByIdAsync(id, ct);
-        if (user is null) return NotFound(ApiResponse<object>.Fail("User not found."));
+        var user = await _dispatcher.SendAsync(new GetUserByIdQuery(id), ct);
+        if (user is null)
+        {
+            return NotFound(ApiErrorResponse.From("not_found", "User not found.", traceId: HttpContext.TraceIdentifier));
+        }
+
         return Ok(ApiResponse<UserDto>.Ok(user));
     }
 
@@ -35,7 +41,7 @@ public class UsersController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Create([FromBody] CreateUserRequest request, CancellationToken ct)
     {
-        var user = await _userService.CreateAsync(request, ct);
+        var user = await _dispatcher.SendAsync(new CreateUserCommand(request), ct);
         return CreatedAtAction(nameof(GetById), new { id = user.UserId }, ApiResponse<UserDto>.Ok(user, "User created."));
     }
 
@@ -43,8 +49,12 @@ public class UsersController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateUserRequest request, CancellationToken ct)
     {
-        var user = await _userService.UpdateAsync(id, request, ct);
-        if (user is null) return NotFound(ApiResponse<object>.Fail("User not found."));
+        var user = await _dispatcher.SendAsync(new UpdateUserCommand(id, request), ct);
+        if (user is null)
+        {
+            return NotFound(ApiErrorResponse.From("not_found", "User not found.", traceId: HttpContext.TraceIdentifier));
+        }
+
         return Ok(ApiResponse<UserDto>.Ok(user));
     }
 
@@ -52,8 +62,12 @@ public class UsersController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
-        var deleted = await _userService.DeleteAsync(id, ct);
-        if (!deleted) return NotFound(ApiResponse<object>.Fail("User not found."));
+        var deleted = await _dispatcher.SendAsync(new DeleteUserCommand(id), ct);
+        if (!deleted)
+        {
+            return NotFound(ApiErrorResponse.From("not_found", "User not found.", traceId: HttpContext.TraceIdentifier));
+        }
+
         return Ok(ApiResponse<object>.Ok(null!, "User deactivated."));
     }
 
@@ -62,10 +76,17 @@ public class UsersController : ControllerBase
     {
         var userIdClaim = User.FindFirst("uid")?.Value;
         if (!Guid.TryParse(userIdClaim, out var userId))
-            return Unauthorized();
+            return Unauthorized(ApiErrorResponse.From("unauthorized", "Unauthorized.", traceId: HttpContext.TraceIdentifier));
 
-        var success = await _userService.ChangePasswordAsync(userId, request, ct);
-        if (!success) return BadRequest(ApiResponse<object>.Fail("Current password is incorrect."));
+        var success = await _dispatcher.SendAsync(new ChangeUserPasswordCommand(userId, request), ct);
+        if (!success)
+        {
+            return BadRequest(ApiErrorResponse.From(
+                "invalid_credentials",
+                "Current password is incorrect.",
+                traceId: HttpContext.TraceIdentifier));
+        }
+
         return Ok(ApiResponse<object>.Ok(null!, "Password changed."));
     }
 }

@@ -1,9 +1,12 @@
 using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Store.API.Application.DependencyInjection;
+using Store.API.Contracts;
 using Store.API.Middleware;
 using Store.DbServices.Extensions;
 using Store.DbServices.Seeding;
@@ -12,6 +15,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // ─── Database & Domain Services ──────────────────────────────────────────────
 builder.Services.AddStoreDbServices(builder.Configuration);
+builder.Services.AddArchitecture();
 
 // ─── JWT Authentication ───────────────────────────────────────────────────────
 var jwtKey = builder.Configuration["Jwt:Key"]
@@ -105,6 +109,25 @@ builder.Services.AddCors(options =>
 
 // ─── Controllers ─────────────────────────────────────────────────────────────
 builder.Services.AddControllers();
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        var errors = context.ModelState
+            .Where(kvp => kvp.Value?.Errors.Count > 0)
+            .SelectMany(kvp => kvp.Value!.Errors.Select(e =>
+                string.IsNullOrWhiteSpace(e.ErrorMessage) ? $"Invalid field '{kvp.Key}'." : e.ErrorMessage))
+            .ToArray();
+
+        var response = ApiErrorResponse.From(
+            "validation_error",
+            "Validation failed.",
+            errors,
+            context.HttpContext.TraceIdentifier);
+
+        return new BadRequestObjectResult(response);
+    };
+});
 builder.Services.AddEndpointsApiExplorer();
 
 // ─── Swagger with JWT support ─────────────────────────────────────────────────
@@ -144,8 +167,11 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
     await app.Services.SeedStoreDatabaseAsync();
 
+app.UseMiddleware<CorrelationIdMiddleware>();
+
 // ─── Global Exception Handling (first in pipeline) ───────────────────────────
 app.UseMiddleware<ExceptionHandlingMiddleware>();
+app.UseMiddleware<AuditLoggingMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {

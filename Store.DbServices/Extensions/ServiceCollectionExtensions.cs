@@ -4,10 +4,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
 using Store.DbServices.Context;
 using Store.DbServices.Repositories;
+using Store.DbServices.Repositories.Users;
 using Store.DbServices.Services;
 using Store.DbServices.UnitOfWork;
 using Store.Models.Interfaces;
 using Store.Models.Interfaces.Repositories;
+using Store.Models.Interfaces.Repositories.Users;
 using Store.Models.Interfaces.Services;
 
 namespace Store.DbServices.Extensions;
@@ -27,6 +29,7 @@ public static class ServiceCollectionExtensions
 
         // Repository + Unit of Work
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+        services.AddScoped<IUserAggregateRepository, UserAggregateRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork.UnitOfWork>();
 
         // Services

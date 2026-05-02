@@ -79,6 +79,28 @@ public class ApiClientService : IApiClientService
         }
     }
 
+    public async Task<bool> PostAsync(string endpoint, object? data, CancellationToken ct = default)
+    {
+        try
+        {
+            var json = JsonSerializer.Serialize(data);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync(endpoint, content, ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("POST {Endpoint} returned {StatusCode}", endpoint, response.StatusCode);
+                return false;
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error calling POST {Endpoint}", endpoint);
+            return false;
+        }
+    }
+
     public async Task<T?> PutAsync<T>(string endpoint, object? data, CancellationToken ct = default)
     {
         try

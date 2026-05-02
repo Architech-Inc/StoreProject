@@ -26,25 +26,25 @@ public class ApiAuthenticationService : IAuthenticationService
     public async Task<LoginResponse?> LoginWithEmailAsync(LoginWithEmailRequest request, CancellationToken ct = default)
     {
         _logger.LogInformation("Logging in with email: {Email}", request.Email);
-        return await _client.PostAsync<LoginResponse>("/api/auth/login-email", request, ct);
+        return await _client.PostAsync<LoginResponse>("/api/auth/login/email", request, ct);
     }
 
     public async Task<LoginResponse?> LoginWithPhoneAsync(LoginWithPhoneRequest request, CancellationToken ct = default)
     {
         _logger.LogInformation("Logging in with phone: {Phone}", request.Phone);
-        return await _client.PostAsync<LoginResponse>("/api/auth/login-phone", request, ct);
+        return await _client.PostAsync<LoginResponse>("/api/auth/login/phone", request, ct);
     }
 
     public async Task<LoginResponse?> RefreshTokenAsync(RefreshTokenRequest request, CancellationToken ct = default)
     {
         _logger.LogInformation("Refreshing authentication token");
-        return await _client.PostAsync<LoginResponse>("/api/auth/refresh-token", request, ct);
+        return await _client.PostAsync<LoginResponse>("/api/auth/refresh", request, ct);
     }
 
     public async Task<bool> LogoutAsync(Guid userId, CancellationToken ct = default)
     {
         _logger.LogInformation("User {UserId} logging out", userId);
-        return await _client.DeleteAsync("/api/auth/logout", ct);
+        return await _client.PostAsync("/api/auth/logout", null, ct);
     }
 
     public async Task<bool> ResetPasswordAsync(ResetPasswordRequest request, CancellationToken ct = default)
