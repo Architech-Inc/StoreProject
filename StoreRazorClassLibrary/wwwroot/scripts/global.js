@@ -1,1 +1,0 @@
-﻿const CONTENT_PATH = './_content/StoreRazorClassLibrary/'

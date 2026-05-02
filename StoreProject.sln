@@ -9,7 +9,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Store.Models", "Store.Model
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Store.DbServices", "Store.DbServices\Store.DbServices.csproj", "{53C9C3C0-4BBF-42AE-8CFB-E0B39511BD12}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StoreUI", "StoreUI\StoreUI.csproj", "{F4A7E26C-E095-F6E5-1EC5-6C04F8AEF592}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Store.UI", "Store.UI\Store.UI.csproj", "{F4A7E26C-E095-F6E5-1EC5-6C04F8AEF592}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Store.API.Tests", "Store.API.Tests\Store.API.Tests.csproj", "{A06F0E84-34F7-42BE-AB5E-3A23D6905174}"
 EndProject
