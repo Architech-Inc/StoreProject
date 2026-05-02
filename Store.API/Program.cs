@@ -19,6 +19,17 @@ var jwtKey = builder.Configuration["Jwt:Key"]
 var jwtIssuer = builder.Configuration["Jwt:Issuer"];
 var jwtAudience = builder.Configuration["Jwt:Audience"];
 
+if (!builder.Environment.IsDevelopment())
+{
+    if (jwtKey.Contains("REPLACE_WITH_A_LONG_RANDOM_SECRET_KEY", StringComparison.OrdinalIgnoreCase)
+        || jwtKey.Length < 32)
+    {
+        throw new InvalidOperationException(
+            "Production JWT key is invalid. Configure Jwt:Key with a strong secret (at least 32 characters)."
+        );
+    }
+}
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -70,6 +81,16 @@ builder.Services.AddRateLimiter(options =>
 // ─── CORS ─────────────────────────────────────────────────────────────────────
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
     ?? Array.Empty<string>();
+
+if (!builder.Environment.IsDevelopment())
+{
+    if (allowedOrigins.Length == 0 || allowedOrigins.Any(o => o == "*"))
+    {
+        throw new InvalidOperationException(
+            "Production CORS must define explicit allowed origins and cannot include '*'."
+        );
+    }
+}
 
 builder.Services.AddCors(options =>
 {
@@ -132,6 +153,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Store API v1"));
 }
 
+app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseHttpsRedirection();
 app.UseCors("StorePolicy");
 app.UseRateLimiter();
