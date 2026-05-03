@@ -8,6 +8,7 @@
     {
         itemId = i.ItemId,
         name = i.Name,
+        barcode = i.Barcode,
         unitPrice = i.UnitPrice,
         inStock = i.InStock,
         categoryName = i.CategoryName,
@@ -57,13 +58,24 @@
                 <input id="catalogSearch" type="search" placeholder="Search products..." aria-label="Search products" />
             </div>
 
+            <div class="scanner-row">
+                <label for="barcodeInput">Barcode</label>
+                <div class="scanner-input-wrap">
+                    <input id="barcodeInput" type="text" placeholder="Scan or type barcode then press Enter" autocomplete="off" />
+                    <button type="button" class="btn btn-primary" id="barcodeAddBtn">Add</button>
+                </div>
+            </div>
+
             <div id="catalogList" class="catalog-list"></div>
         </section>
 
         <section class="cart-panel" id="checkout" aria-label="Checkout cart">
             <div class="panel-head">
                 <h2>Cart</h2>
-                <button type="button" class="btn btn-warning" id="clearCartBtn">Clear</button>
+                <div class="cart-head-actions">
+                    <button type="button" class="btn btn-secondary" id="suspendSaleBtn">Suspend</button>
+                    <button type="button" class="btn btn-warning" id="clearCartBtn">Clear</button>
+                </div>
             </div>
 
             <div id="cartEmpty" class="cart-empty">No items in cart.</div>
@@ -115,6 +127,17 @@
                     <div><span>Change</span><strong id="changeText">0</strong></div>
                 </div>
 
+                <div class="suspended-sales">
+                    <label for="suspendedSaleSelect">Suspended Sales</label>
+                    <div class="suspended-actions">
+                        <select id="suspendedSaleSelect">
+                            <option value="">No suspended sale</option>
+                        </select>
+                        <button type="button" class="btn btn-secondary" id="resumeSaleBtn">Resume</button>
+                        <button type="button" class="btn btn-danger" id="deleteSuspendedBtn">Delete</button>
+                    </div>
+                </div>
+
                 <form id="checkoutForm" method="post">
                     @Html.AntiForgeryToken()
                     <button type="submit" id="checkoutBtn" class="btn btn-primary">Complete Checkout</button>
@@ -123,6 +146,20 @@
                 <div id="checkoutMessage" class="checkout-message" role="status" aria-live="polite"></div>
             </div>
         </section>
+    </div>
+</div>
+
+<div id="receiptModal" class="receipt-modal" hidden>
+    <div class="receipt-backdrop" data-close="receipt"></div>
+    <div class="receipt-dialog" role="dialog" aria-modal="true" aria-labelledby="receiptTitle">
+        <div class="receipt-head">
+            <h3 id="receiptTitle">Receipt</h3>
+            <button type="button" class="btn btn-secondary" id="receiptCloseBtn">Close</button>
+        </div>
+        <div id="receiptContent" class="receipt-content"></div>
+        <div class="receipt-actions">
+            <button type="button" class="btn btn-primary" id="receiptPrintBtn">Print</button>
+        </div>
     </div>
 </div>
 
@@ -148,9 +185,43 @@
     const saleNotes = document.getElementById('saleNotes');
     const checkoutMessage = document.getElementById('checkoutMessage');
     const clearCartBtn = document.getElementById('clearCartBtn');
+    const barcodeInput = document.getElementById('barcodeInput');
+    const barcodeAddBtn = document.getElementById('barcodeAddBtn');
+    const suspendSaleBtn = document.getElementById('suspendSaleBtn');
+    const suspendedSaleSelect = document.getElementById('suspendedSaleSelect');
+    const resumeSaleBtn = document.getElementById('resumeSaleBtn');
+    const deleteSuspendedBtn = document.getElementById('deleteSuspendedBtn');
+    const receiptModal = document.getElementById('receiptModal');
+    const receiptContent = document.getElementById('receiptContent');
+    const receiptCloseBtn = document.getElementById('receiptCloseBtn');
+    const receiptPrintBtn = document.getElementById('receiptPrintBtn');
+
+    const suspendedSalesStorageKey = 'store-ui-pos-suspended-sales';
 
     function xaf(value) {
         return Number(value).toLocaleString('en-US', { maximumFractionDigits: 2 });
+    }
+
+    function normalizeBarcode(value) {
+        return String(value ?? '').trim().toLowerCase();
+    }
+
+    function getSuspendedSales() {
+        const raw = localStorage.getItem(suspendedSalesStorageKey);
+        if (!raw) {
+            return [];
+        }
+
+        try {
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
+    }
+
+    function setSuspendedSales(sales) {
+        localStorage.setItem(suspendedSalesStorageKey, JSON.stringify(sales));
     }
 
     function getEffectivePrice(item) {
@@ -191,6 +262,23 @@
 
             card.querySelector('button').addEventListener('click', () => addToCart(item));
             catalogList.appendChild(card);
+        }
+    }
+
+    function renderSuspendedSales() {
+        const sales = getSuspendedSales();
+        const previousValue = suspendedSaleSelect.value;
+        suspendedSaleSelect.innerHTML = '<option value="">No suspended sale</option>';
+
+        for (const sale of sales) {
+            const option = document.createElement('option');
+            option.value = sale.id;
+            option.textContent = sale.label;
+            suspendedSaleSelect.appendChild(option);
+        }
+
+        if (previousValue) {
+            suspendedSaleSelect.value = previousValue;
         }
     }
 
@@ -301,6 +389,164 @@
         checkoutMessage.className = isError ? 'checkout-message error' : 'checkout-message ok';
     }
 
+    function showReceipt(checkoutResult, saleLines) {
+        const createdAt = checkoutResult.createdAt
+            ? new Date(checkoutResult.createdAt).toLocaleString()
+            : new Date().toLocaleString();
+
+        const lineItemsHtml = saleLines.map(line => `
+            <tr>
+                <td>${line.name}</td>
+                <td>${line.quantity}</td>
+                <td>${xaf(line.unitPrice)}</td>
+                <td>${xaf(line.unitPrice * line.quantity)}</td>
+            </tr>
+        `).join('');
+
+        receiptContent.innerHTML = `
+            <div class="receipt-summary">
+                <p><strong>Invoice:</strong> ${checkoutResult.invoiceId}</p>
+                <p><strong>Date:</strong> ${createdAt}</p>
+                <p><strong>Payment:</strong> ${checkoutResult.paymentType}</p>
+                <p><strong>Total:</strong> ${xaf(checkoutResult.totalAmount)} XAF</p>
+                <p><strong>Tendered:</strong> ${xaf(checkoutResult.amountTendered)} XAF</p>
+                <p><strong>Change:</strong> ${xaf(checkoutResult.changeGiven)} XAF</p>
+            </div>
+            <table class="receipt-table">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Qty</th>
+                        <th>Unit</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${lineItemsHtml}
+                </tbody>
+            </table>
+        `;
+
+        receiptModal.hidden = false;
+    }
+
+    function closeReceipt() {
+        receiptModal.hidden = true;
+    }
+
+    function suspendCurrentSale() {
+        if (cart.size === 0) {
+            setMessage('Cart is empty, nothing to suspend.', true);
+            return;
+        }
+
+        const suspendedSales = getSuspendedSales();
+        const saleId = crypto.randomUUID();
+        const snapshot = {
+            id: saleId,
+            label: `Sale ${new Date().toLocaleTimeString()}`,
+            customerId: customerSelect.value || '',
+            paymentType: paymentType.value,
+            amountTendered: amountTenderedInput.value,
+            notes: saleNotes.value || '',
+            lines: Array.from(cart.values())
+        };
+
+        suspendedSales.unshift(snapshot);
+        setSuspendedSales(suspendedSales);
+        renderSuspendedSales();
+
+        cart.clear();
+        amountTenderedInput.value = '0';
+        saleNotes.value = '';
+        customerSelect.value = '';
+        paymentType.value = '0';
+        renderCart();
+        setMessage('Sale suspended. You can resume it from the list.');
+    }
+
+    function restoreSuspendedSale(removeAfterRestore) {
+        const suspendedId = suspendedSaleSelect.value;
+        if (!suspendedId) {
+            setMessage('Select a suspended sale first.', true);
+            return;
+        }
+
+        const suspendedSales = getSuspendedSales();
+        const snapshot = suspendedSales.find(s => s.id === suspendedId);
+        if (!snapshot) {
+            setMessage('Suspended sale not found.', true);
+            renderSuspendedSales();
+            return;
+        }
+
+        if (removeAfterRestore) {
+            setSuspendedSales(suspendedSales.filter(s => s.id !== suspendedId));
+        }
+
+        cart.clear();
+        for (const line of snapshot.lines ?? []) {
+            const matchedItem = catalog.find(i => i.itemId === line.itemId);
+            const maxStock = matchedItem ? matchedItem.inStock : line.maxStock;
+            const safeQty = Math.min(line.quantity ?? 0, maxStock ?? 0);
+
+            if (!matchedItem || safeQty <= 0) {
+                continue;
+            }
+
+            cart.set(matchedItem.itemId, {
+                itemId: matchedItem.itemId,
+                name: matchedItem.name,
+                unitPrice: getEffectivePrice(matchedItem),
+                maxStock: matchedItem.inStock,
+                quantity: safeQty
+            });
+        }
+
+        customerSelect.value = snapshot.customerId || '';
+        paymentType.value = snapshot.paymentType || '0';
+        amountTenderedInput.value = snapshot.amountTendered || '0';
+        saleNotes.value = snapshot.notes || '';
+
+        renderSuspendedSales();
+        renderCart();
+        setMessage(removeAfterRestore
+            ? 'Suspended sale resumed into cart.'
+            : 'Suspended sale preview restored to cart.');
+    }
+
+    function deleteSuspendedSale() {
+        const suspendedId = suspendedSaleSelect.value;
+        if (!suspendedId) {
+            setMessage('Select a suspended sale to delete.', true);
+            return;
+        }
+
+        const suspendedSales = getSuspendedSales();
+        setSuspendedSales(suspendedSales.filter(s => s.id !== suspendedId));
+        renderSuspendedSales();
+        setMessage('Suspended sale deleted.');
+    }
+
+    function addByBarcode() {
+        const scanValue = normalizeBarcode(barcodeInput.value);
+        if (!scanValue) {
+            setMessage('Scan or type a barcode first.', true);
+            return;
+        }
+
+        const item = catalog.find(i => normalizeBarcode(i.barcode) === scanValue);
+        if (!item) {
+            setMessage(`No catalog item found for barcode "${barcodeInput.value}".`, true);
+            return;
+        }
+
+        addToCart(item);
+        barcodeInput.value = '';
+        barcodeInput.focus();
+        setMessage(`${item.name} added to cart.`);
+    }
+
     async function checkoutAsync() {
         if (cart.size === 0) {
             setMessage('Add at least one item before checkout.', true);
@@ -321,6 +567,7 @@
             notes: saleNotes.value || null,
             lines: Array.from(cart.values()).map(v => ({ itemId: v.itemId, quantity: v.quantity }))
         };
+        const saleLines = Array.from(cart.values());
 
         const antiforgery = checkoutForm.querySelector('input[name="__RequestVerificationToken"]')?.value;
 
@@ -348,6 +595,7 @@
             saleNotes.value = '';
             renderCart();
             setMessage(`Invoice ${body.invoiceId} completed. Change: ${xaf(body.changeGiven)} XAF`);
+            showReceipt(body, saleLines);
             renderCatalog(catalogSearch.value);
         } catch {
             setMessage('Unable to reach server for checkout.', true);
@@ -367,6 +615,31 @@
 
     catalogSearch.addEventListener('input', () => renderCatalog(catalogSearch.value));
     amountTenderedInput.addEventListener('input', renderCart);
+    barcodeAddBtn.addEventListener('click', addByBarcode);
+    barcodeInput.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') {
+            return;
+        }
+
+        e.preventDefault();
+        addByBarcode();
+    });
+    suspendSaleBtn.addEventListener('click', suspendCurrentSale);
+    resumeSaleBtn.addEventListener('click', () => restoreSuspendedSale(true));
+    deleteSuspendedBtn.addEventListener('click', deleteSuspendedSale);
+    receiptCloseBtn.addEventListener('click', closeReceipt);
+    receiptPrintBtn.addEventListener('click', () => window.print());
+    receiptModal.addEventListener('click', (e) => {
+        const target = e.target;
+        if (target.dataset.close === 'receipt') {
+            closeReceipt();
+        }
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !receiptModal.hidden) {
+            closeReceipt();
+        }
+    });
     clearCartBtn.addEventListener('click', () => {
         cart.clear();
         renderCart();
@@ -377,6 +650,7 @@
     });
 
     seedCustomers();
+    renderSuspendedSales();
     renderCatalog();
     renderCart();
 })();

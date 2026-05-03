@@ -78,6 +78,11 @@ body {
     font-size: 1.2rem;
 }
 
+.cart-head-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
 #catalogSearch {
     width: 240px;
     max-width: 100%;
@@ -87,6 +92,35 @@ body {
 }
 
 #catalogSearch:focus {
+    outline: none;
+    border-color: var(--brand-dark);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand-dark) 22%, transparent);
+}
+
+.scanner-row {
+    margin-bottom: 0.8rem;
+    display: grid;
+    gap: 0.35rem;
+}
+
+.scanner-row label {
+    font-size: 0.88rem;
+    color: var(--pos-muted);
+}
+
+.scanner-input-wrap {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.5rem;
+}
+
+#barcodeInput {
+    border: 1px solid var(--pos-border);
+    border-radius: var(--radius-sm);
+    padding: 0.5rem 0.75rem;
+}
+
+#barcodeInput:focus {
     outline: none;
     border-color: var(--brand-dark);
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand-dark) 22%, transparent);
@@ -247,6 +281,93 @@ body {
     align-items: center;
 }
 
+.suspended-sales {
+    display: grid;
+    gap: 0.35rem;
+    margin: 0.8rem 0;
+}
+
+.suspended-sales label {
+    font-size: 0.88rem;
+    color: var(--pos-muted);
+}
+
+.suspended-actions {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 0.45rem;
+}
+
+.suspended-actions select {
+    border: 1px solid var(--pos-border);
+    border-radius: var(--radius-sm);
+    padding: 0.48rem 0.68rem;
+    font: inherit;
+}
+
+.receipt-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+}
+
+.receipt-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(7, 10, 15, 0.5);
+}
+
+.receipt-dialog {
+    position: relative;
+    width: min(760px, calc(100vw - 2rem));
+    margin: 3rem auto;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    box-shadow: var(--shadow);
+}
+
+.receipt-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+}
+
+.receipt-head h3 {
+    margin: 0;
+}
+
+.receipt-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.4rem 1rem;
+    margin-bottom: 0.8rem;
+}
+
+.receipt-summary p {
+    margin: 0;
+}
+
+.receipt-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.receipt-table th,
+.receipt-table td {
+    border-bottom: 1px solid var(--border);
+    padding: 0.45rem;
+    text-align: left;
+}
+
+.receipt-actions {
+    margin-top: 0.85rem;
+    display: flex;
+    justify-content: flex-end;
+}
+
 .checkout-message {
     margin-top: 0.75rem;
     padding: 0.55rem 0.65rem;
@@ -296,5 +417,20 @@ body {
         width: 100%;
         justify-content: flex-start;
         flex-wrap: wrap;
+    }
+
+    .panel-head {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .cart-head-actions,
+    .suspended-actions {
+        grid-template-columns: 1fr;
+        display: grid;
+    }
+
+    .receipt-summary {
+        grid-template-columns: 1fr;
     }
 }

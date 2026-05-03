@@ -215,17 +215,6 @@
 
 @section Scripts {
     <script>
-        // Category / Department shared modal
-        function openCreate(type) {
-            const form = document.getElementById('lookupForm');
-            document.getElementById('lookupModalTitle').textContent = type === 'cat' ? 'New Category' : 'New Department';
-            form.action = type === 'cat' ? '?handler=SaveCategory' : '?handler=SaveDepartment';
-            document.getElementById('lookupId').value = '';
-            document.getElementById('lookupName').value = '';
-            document.getElementById('lookupDesc').value = '';
-            document.getElementById('lookupModal').hidden = false;
-        }
-
         function openEdit(type, id, name, desc) {
             const form = document.getElementById('lookupForm');
             document.getElementById('lookupModalTitle').textContent = type === 'cat' ? 'Edit Category' : 'Edit Department';
