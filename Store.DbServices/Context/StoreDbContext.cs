@@ -71,6 +71,7 @@ public class StoreDbContext : DbContext
     public DbSet<Sale> Sales => Set<Sale>();
     public DbSet<ItemsOrder> ItemsOrders => Set<ItemsOrder>();
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
+    public DbSet<MobileMoneyTransaction> MobileMoneyTransactions => Set<MobileMoneyTransaction>();
 
     // ---- Privileges ----
     public DbSet<Privilege> Privileges => Set<Privilege>();

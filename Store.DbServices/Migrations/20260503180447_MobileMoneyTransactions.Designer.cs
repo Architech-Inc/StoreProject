@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Store.DbServices.Context;
 
@@ -11,9 +12,11 @@ using Store.DbServices.Context;
 namespace Store.DbServices.Migrations
 {
     [DbContext(typeof(StoreDbContext))]
-    partial class StoreDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260503180447_MobileMoneyTransactions")]
+    partial class MobileMoneyTransactions
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -76,47 +79,6 @@ namespace Store.DbServices.Migrations
                         .HasDatabaseName("ix_batch_item_id");
 
                     b.ToTable("batch");
-                });
-
-            modelBuilder.Entity("Store.Models.Entities.Branch", b =>
-                {
-                    b.Property<int>("BranchId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("branch_id");
-
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("BranchId"));
-
-                    b.Property<string>("Address")
-                        .HasColumnType("longtext")
-                        .HasColumnName("address");
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasColumnType("longtext")
-                        .HasColumnName("code");
-
-                    b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("date_created");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_active");
-
-                    b.Property<DateTime>("LastModified")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("last_modified");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("longtext")
-                        .HasColumnName("name");
-
-                    b.HasKey("BranchId")
-                        .HasName("pk_branch");
-
-                    b.ToTable("branch");
                 });
 
             modelBuilder.Entity("Store.Models.Entities.BundleRule", b =>
@@ -2992,50 +2954,6 @@ namespace Store.DbServices.Migrations
                     b.ToTable("user");
                 });
 
-            modelBuilder.Entity("Store.Models.Entities.UserBranchRole", b =>
-                {
-                    b.Property<long>("UserBranchRoleId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("user_branch_role_id");
-
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("UserBranchRoleId"));
-
-                    b.Property<int>("BranchId")
-                        .HasColumnType("int")
-                        .HasColumnName("branch_id");
-
-                    b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("date_created");
-
-                    b.Property<DateTime>("LastModified")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("last_modified");
-
-                    b.Property<int>("RoleId")
-                        .HasColumnType("int")
-                        .HasColumnName("role_id");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("user_id");
-
-                    b.HasKey("UserBranchRoleId")
-                        .HasName("pk_user_branch_role");
-
-                    b.HasIndex("BranchId")
-                        .HasDatabaseName("ix_user_branch_role_branch_id");
-
-                    b.HasIndex("RoleId")
-                        .HasDatabaseName("ix_user_branch_role_role_id");
-
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("ix_user_branch_role_user_id");
-
-                    b.ToTable("user_branch_role");
-                });
-
             modelBuilder.Entity("Store.Models.Entities.UserPassword", b =>
                 {
                     b.Property<int>("UserPasswordId")
@@ -4027,36 +3945,6 @@ namespace Store.DbServices.Migrations
                     b.Navigation("Role");
                 });
 
-            modelBuilder.Entity("Store.Models.Entities.UserBranchRole", b =>
-                {
-                    b.HasOne("Store.Models.Entities.Branch", "Branch")
-                        .WithMany("UserBranchRoles")
-                        .HasForeignKey("BranchId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_user_branch_role_branch_branch_id");
-
-                    b.HasOne("Store.Models.Entities.Role", "Role")
-                        .WithMany()
-                        .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_user_branch_role_role_role_id");
-
-                    b.HasOne("Store.Models.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_user_branch_role_user_user_id");
-
-                    b.Navigation("Branch");
-
-                    b.Navigation("Role");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("Store.Models.Entities.UserPassword", b =>
                 {
                     b.HasOne("Store.Models.Entities.User", "User")
@@ -4121,11 +4009,6 @@ namespace Store.DbServices.Migrations
                         .HasConstraintName("fk_user_token_user_user_id");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Store.Models.Entities.Branch", b =>
-                {
-                    b.Navigation("UserBranchRoles");
                 });
 
             modelBuilder.Entity("Store.Models.Entities.Category", b =>

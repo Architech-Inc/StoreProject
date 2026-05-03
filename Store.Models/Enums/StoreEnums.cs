@@ -108,6 +108,20 @@ public enum ShiftStatus
     Closed
 }
 
+public enum MobileMoneyProvider
+{
+    MtnMomo,
+    OrangeMoney
+}
+
+public enum MobileMoneyStatus
+{
+    Pending,
+    Completed,
+    Failed,
+    TimedOut
+}
+
 public enum NotificationType
 {
     Info,
