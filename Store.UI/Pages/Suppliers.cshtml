@@ -1,0 +1,148 @@
+@page
+@model StoreUI.Pages.SuppliersModel
+@{
+    ViewData["Title"] = "Suppliers";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
+}
+
+<div class="ops-page">
+    <partial name="Shared/_ModuleNav" />
+
+    <header>
+        <h1>Suppliers</h1>
+        <p>Manage suppliers for purchase orders and inventory procurement.</p>
+        <a class="link" href="/Dashboard">Back to Dashboard</a>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="status @(Model.StatusMessage.StartsWith("Error") ? "error" : "ok")">
+            @Model.StatusMessage
+        </div>
+    }
+
+    <section class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <h2 style="margin:0;">Supplier List</h2>
+            <button type="button" onclick="openModal('createModal')">+ New Supplier</button>
+        </div>
+
+        @if (!Model.Suppliers.Any())
+        {
+            <p style="color:var(--ops-subtle);padding:12px 0;">No suppliers yet.</p>
+        }
+        else
+        {
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Registration #</th>
+                        <th>Notes</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var s in Model.Suppliers)
+                    {
+                        <tr>
+                            <td><strong>@s.Name</strong></td>
+                            <td>@(s.RegistrationNumber ?? "—")</td>
+                            <td>@(s.Notes ?? "—")</td>
+                            <td style="white-space:nowrap;">
+                                <button type="button"
+                                        onclick="openEdit('@s.SupplierId','@Html.Raw(s.Name.Replace("'","\\'"  ))','@Html.Raw((s.RegistrationNumber ?? "").Replace("'","\\'" ))','@Html.Raw((s.Notes ?? "").Replace("'","\\'" ))')">
+                                    Edit
+                                </button>
+                                <form method="post" asp-page-handler="Delete" asp-route-id="@s.SupplierId"
+                                      style="display:inline"
+                                      onsubmit="return confirm('Delete supplier @Html.Raw(s.Name.Replace("'","\\'" ))?')">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="danger">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </section>
+</div>
+
+<!-- Create Modal -->
+<div id="createModal" class="modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="createModalTitle">
+    <div class="modal-content">
+        <h3 id="createModalTitle">New Supplier</h3>
+        <form method="post" asp-page-handler="Create">
+            @Html.AntiForgeryToken()
+            <div class="form-group">
+                <label for="Name">Name *</label>
+                <input id="Name" name="Name" type="text" required maxlength="200" />
+            </div>
+            <div class="form-group">
+                <label for="RegistrationNumber">Registration Number</label>
+                <input id="RegistrationNumber" name="RegistrationNumber" type="text" maxlength="100" />
+            </div>
+            <div class="form-group">
+                <label for="Notes">Notes</label>
+                <textarea id="Notes" name="Notes" rows="3" maxlength="1000"></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="submit">Create</button>
+                <button type="button" onclick="closeModal('createModal')">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div id="editModal" class="modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="editModalTitle">
+    <div class="modal-content">
+        <h3 id="editModalTitle">Edit Supplier</h3>
+        <form method="post" asp-page-handler="Edit">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="EditSupplierId" id="editSupplierId" />
+            <div class="form-group">
+                <label for="EditName">Name *</label>
+                <input id="EditName" name="EditName" type="text" required maxlength="200" />
+            </div>
+            <div class="form-group">
+                <label for="EditRegistrationNumber">Registration Number</label>
+                <input id="EditRegistrationNumber" name="EditRegistrationNumber" type="text" maxlength="100" />
+            </div>
+            <div class="form-group">
+                <label for="EditNotes">Notes</label>
+                <textarea id="EditNotes" name="EditNotes" rows="3" maxlength="1000"></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="submit">Save</button>
+                <button type="button" onclick="closeModal('editModal')">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function openModal(id) {
+            document.getElementById(id).style.display = 'flex';
+        }
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+        function openEdit(id, name, regNum, notes) {
+            document.getElementById('editSupplierId').value = id;
+            document.getElementById('EditName').value = name;
+            document.getElementById('EditRegistrationNumber').value = regNum;
+            document.getElementById('EditNotes').value = notes;
+            openModal('editModal');
+        }
+        // Close modal on backdrop click
+        document.querySelectorAll('.modal').forEach(m => {
+            m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });
+        });
+    </script>
+}

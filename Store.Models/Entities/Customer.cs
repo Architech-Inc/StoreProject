@@ -21,4 +21,5 @@ public class Customer : BaseEntity
     public ICollection<CustomerLocation> Locations { get; set; } = new List<CustomerLocation>();
     public ICollection<CustomerPrivilege> Privileges { get; set; } = new List<CustomerPrivilege>();
     public ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
+    public CustomerLoyaltyAccount? LoyaltyAccount { get; set; }
 }

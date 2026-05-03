@@ -94,6 +94,10 @@ public class StoreDbContext : DbContext
     public DbSet<Branch> Branches => Set<Branch>();
     public DbSet<UserBranchRole> UserBranchRoles => Set<UserBranchRole>();
 
+    // ---- Loyalty ----
+    public DbSet<CustomerLoyaltyAccount> CustomerLoyaltyAccounts => Set<CustomerLoyaltyAccount>();
+    public DbSet<LoyaltyTransaction> LoyaltyTransactions => Set<LoyaltyTransaction>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -142,6 +146,29 @@ public class StoreDbContext : DbContext
 
         modelBuilder.Entity<StockMovement>()
             .HasIndex(x => new { x.ItemId, x.DateCreated });
+
+        // Loyalty
+        modelBuilder.Entity<CustomerLoyaltyAccount>()
+            .HasOne(x => x.Customer)
+            .WithOne(c => c.LoyaltyAccount)
+            .HasForeignKey<CustomerLoyaltyAccount>(x => x.CustomerId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<CustomerLoyaltyAccount>()
+            .HasIndex(x => x.CustomerId)
+            .IsUnique();
+
+        modelBuilder.Entity<LoyaltyTransaction>()
+            .HasOne(x => x.LoyaltyAccount)
+            .WithMany(a => a.Transactions)
+            .HasForeignKey(x => x.LoyaltyAccountId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<LoyaltyTransaction>()
+            .HasOne(x => x.Invoice)
+            .WithMany(i => i.LoyaltyTransactions)
+            .HasForeignKey(x => x.InvoiceId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 
     private static void ApplySnakeCaseNaming(ModelBuilder modelBuilder)

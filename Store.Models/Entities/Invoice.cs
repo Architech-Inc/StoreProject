@@ -22,4 +22,5 @@ public class Invoice : BaseEntity
     public ICollection<Sale> Sales { get; set; } = new List<Sale>();
     public ICollection<InvoiceTender> Tenders { get; set; } = new List<InvoiceTender>();
     public ICollection<StockMovement> StockMovements { get; set; } = new List<StockMovement>();
+    public ICollection<LoyaltyTransaction> LoyaltyTransactions { get; set; } = new List<LoyaltyTransaction>();
 }

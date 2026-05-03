@@ -1,0 +1,169 @@
+@page
+@model StoreUI.Pages.LoyaltyModel
+@{
+    ViewData["Title"] = "Customer Loyalty";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
+}
+
+<div class="ops-page">
+    <partial name="Shared/_ModuleNav" />
+
+    <header>
+        <h1>Customer Loyalty</h1>
+        <p>View and manage customer loyalty points and tier status.</p>
+        <a class="link" href="/Dashboard">Back to Dashboard</a>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="status @(Model.StatusMessage.StartsWith("Error") ? "error" : "ok")">
+            @Model.StatusMessage
+        </div>
+    }
+
+    <!-- Customer lookup -->
+    <section class="card">
+        <h2>Look Up Customer Account</h2>
+        <form method="get">
+            <div style="display:flex;gap:8px;align-items:flex-end;">
+                <div class="form-group" style="flex:1;margin:0;">
+                    <label for="customerId">Customer ID</label>
+                    <input id="customerId" name="customerId" type="text" placeholder="Paste customer GUID..."
+                           value="@Model.CustomerId" />
+                </div>
+                <button type="submit">Look Up</button>
+            </div>
+        </form>
+
+        @if (Model.CustomerId.HasValue && Model.Account is null)
+        {
+            <p style="margin-top:12px;color:var(--ops-subtle);">No loyalty account found for this customer yet. Points will be created on first earn.</p>
+        }
+    </section>
+
+    @if (Model.Account is not null)
+    {
+        <section class="card">
+            <h2>Account Summary</h2>
+            <table>
+                <tbody>
+                    <tr><td><strong>Customer ID</strong></td><td>@Model.Account.CustomerId</td></tr>
+                    <tr><td><strong>Points Balance</strong></td><td><strong>@Model.Account.Points</strong></td></tr>
+                    <tr>
+                        <td><strong>Tier</strong></td>
+                        <td>
+                            <span class="badge @Model.Account.Tier.ToLower()">@Model.Account.Tier</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="card">
+            <h2>Transaction History</h2>
+            @if (!Model.Transactions.Any())
+            {
+                <p style="color:var(--ops-subtle);">No transactions yet.</p>
+            }
+            else
+            {
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Points</th>
+                            <th>Invoice</th>
+                            <th>Note</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var t in Model.Transactions)
+                        {
+                            <tr>
+                                <td>@t.DateCreated.ToString("yyyy-MM-dd HH:mm")</td>
+                                <td><span class="badge @t.TransactionType.ToLower()">@t.TransactionType</span></td>
+                                <td>@(t.Points > 0 ? "+" + t.Points : t.Points.ToString())</td>
+                                <td>@(t.InvoiceId.HasValue ? t.InvoiceId.Value.ToString("D")[..8] + "…" : "—")</td>
+                                <td>@(t.Note ?? "—")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </section>
+    }
+
+    <!-- Actions -->
+    <section class="card">
+        <h2>Manage Points</h2>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;">
+
+            <!-- Earn -->
+            <div style="flex:1;min-width:250px;">
+                <h3>Earn Points</h3>
+                <form method="post" asp-page-handler="Earn">
+                    @Html.AntiForgeryToken()
+                    <div class="form-group">
+                        <label>Customer ID</label>
+                        <input name="EarnCustomerId" type="text" required value="@Model.CustomerId" />
+                    </div>
+                    <div class="form-group">
+                        <label>Points</label>
+                        <input name="EarnPoints" type="number" min="1" required value="1" />
+                    </div>
+                    <div class="form-group">
+                        <label>Note</label>
+                        <input name="EarnNote" type="text" />
+                    </div>
+                    <button type="submit">Earn Points</button>
+                </form>
+            </div>
+
+            <!-- Redeem -->
+            <div style="flex:1;min-width:250px;">
+                <h3>Redeem Points</h3>
+                <form method="post" asp-page-handler="Redeem">
+                    @Html.AntiForgeryToken()
+                    <div class="form-group">
+                        <label>Customer ID</label>
+                        <input name="RedeemCustomerId" type="text" required value="@Model.CustomerId" />
+                    </div>
+                    <div class="form-group">
+                        <label>Points</label>
+                        <input name="RedeemPoints" type="number" min="1" required value="1" />
+                    </div>
+                    <div class="form-group">
+                        <label>Note</label>
+                        <input name="RedeemNote" type="text" />
+                    </div>
+                    <button type="submit">Redeem Points</button>
+                </form>
+            </div>
+
+            <!-- Adjust -->
+            <div style="flex:1;min-width:250px;">
+                <h3>Adjust Points (Admin)</h3>
+                <form method="post" asp-page-handler="Adjust">
+                    @Html.AntiForgeryToken()
+                    <div class="form-group">
+                        <label>Customer ID</label>
+                        <input name="AdjustCustomerId" type="text" required value="@Model.CustomerId" />
+                    </div>
+                    <div class="form-group">
+                        <label>Points (negative to subtract)</label>
+                        <input name="AdjustPoints" type="number" required value="0" />
+                    </div>
+                    <div class="form-group">
+                        <label>Note</label>
+                        <input name="AdjustNote" type="text" />
+                    </div>
+                    <button type="submit">Apply Adjustment</button>
+                </form>
+            </div>
+        </div>
+    </section>
+</div>

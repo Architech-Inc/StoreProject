@@ -149,25 +149,26 @@ public class SupplierService : ISupplierService
     public async Task<Supplier?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
         await _uow.Repository<Supplier>().GetByIdAsync(id, ct);
 
-    public async Task<Supplier> CreateAsync(string name, string? registrationNumber, CancellationToken ct = default)
+    public async Task<Supplier> CreateAsync(string name, string? registrationNumber, string? notes = null, CancellationToken ct = default)
     {
         var supplier = new Supplier
         {
-            SupplierId = Guid.NewGuid(),
             Name = name.Trim(),
-            RegistrationNumber = registrationNumber?.Trim()
+            RegistrationNumber = registrationNumber?.Trim(),
+            Notes = notes?.Trim()
         };
         await _uow.Repository<Supplier>().AddAsync(supplier, ct);
         await _uow.SaveChangesAsync(ct);
         return supplier;
     }
 
-    public async Task<Supplier?> UpdateAsync(Guid id, string name, string? registrationNumber, CancellationToken ct = default)
+    public async Task<Supplier?> UpdateAsync(Guid id, string name, string? registrationNumber, string? notes = null, CancellationToken ct = default)
     {
         var supplier = await _uow.Repository<Supplier>().GetByIdAsync(id, ct);
         if (supplier is null) return null;
         supplier.Name = name.Trim();
         supplier.RegistrationNumber = registrationNumber?.Trim();
+        supplier.Notes = notes?.Trim();
         _uow.Repository<Supplier>().Update(supplier);
         await _uow.SaveChangesAsync(ct);
         return supplier;
