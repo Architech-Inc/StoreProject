@@ -1,0 +1,296 @@
+@page
+@model StoreUI.Pages.OrdersModel
+@using Store.Models.Enums
+@using StoreUI.Pages
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Purchase Orders";
+
+    var itemsJson = JsonSerializer.Serialize(Model.Items.Select(i => new
+    {
+        itemId = i.ItemId,
+        name = i.Name,
+        unitAbbreviation = i.UnitAbbreviation
+    }));
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
+}
+
+<div class="ops-page">
+    <partial name="Shared/_ModuleNav" />
+
+    <header>
+        <h1>Purchase Orders</h1>
+        <p>Create, receive, and track purchase orders for inventory restocking.</p>
+        <a class="link" href="/Dashboard">Back to Dashboard</a>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="status @(Model.StatusMessage.StartsWith("Error") ? "error" : "ok")">
+            @Model.StatusMessage
+        </div>
+    }
+
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+        <button type="button" onclick="openCreateModal()">+ New Purchase Order</button>
+    </div>
+
+    @if (!Model.Orders.Any())
+    {
+        <div class="empty-state">No purchase orders found.</div>
+    }
+    else
+    {
+        <table>
+            <thead>
+                <tr>
+                    <th>Order #</th>
+                    <th>Supplier</th>
+                    <th>Lines</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var o in Model.Orders)
+                {
+                    <tr>
+                        <td><strong>@o.OrderNumber</strong></td>
+                        <td>@(o.SupplierName ?? "—")</td>
+                        <td>@o.Lines.Count</td>
+                        <td>@o.TotalAmount.ToString("N0") XAF</td>
+                        <td><span class="badge @OrdersModel.StatusBadgeClass(o.Status)">@o.Status</span></td>
+                        <td>@o.DateCreated.ToString("yyyy-MM-dd")</td>
+                        <td style="display:flex;gap:4px;flex-wrap:wrap;">
+                            <button type="button" onclick="openDetail('@o.OrderId')">Detail</button>
+                            @if (o.Status == OrderStatus.Draft || o.Status == OrderStatus.Pending || o.Status == OrderStatus.Approved || o.Status == OrderStatus.PartiallyReceived)
+                            {
+                                <form method="post" asp-page-handler="Receive" style="margin:0;">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="orderId" value="@o.OrderId" />
+                                    <button type="submit" class="ok" onclick="return confirm('Mark order @o.OrderNumber as received?')">Receive</button>
+                                </form>
+                            }
+                            @if (o.Status == OrderStatus.Draft || o.Status == OrderStatus.Pending)
+                            {
+                                <form method="post" asp-page-handler="Cancel" style="margin:0;">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="orderId" value="@o.OrderId" />
+                                    <button type="submit" class="danger" onclick="return confirm('Cancel order @o.OrderNumber?')">Cancel</button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        @if (Model.TotalPages > 1)
+        {
+            <div class="pagination">
+                @if (Model.CurrentPage > 1)
+                {
+                    <a href="?page=@(Model.CurrentPage - 1)">Prev</a>
+                }
+                <span>Page @Model.CurrentPage of @Model.TotalPages</span>
+                @if (Model.CurrentPage < Model.TotalPages)
+                {
+                    <a href="?page=@(Model.CurrentPage + 1)">Next</a>
+                }
+            </div>
+        }
+    }
+</div>
+
+<!-- Create Order Modal -->
+<div class="modal-overlay" id="createOrderModal" hidden>
+    <div class="modal" role="dialog" aria-labelledby="createOrderTitle" aria-modal="true" style="max-width:680px;width:95vw;">
+        <div class="modal-head">
+            <h3 id="createOrderTitle">New Purchase Order</h3>
+            <button type="button" class="btn-close" onclick="closeCreateModal()" aria-label="Close">×</button>
+        </div>
+        <form method="post" id="createOrderForm" asp-page-handler="Create">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="OrderLinesJson" id="orderLinesJson" />
+
+            <label for="orderSupplierName">Supplier Name (optional)</label>
+            <input type="text" id="orderSupplierName" name="OrderSupplierName" maxlength="200" placeholder="e.g. ABC Distributors" />
+
+            <label for="orderNotes">Notes</label>
+            <input type="text" id="orderNotes" name="OrderNotes" maxlength="500" placeholder="Optional notes for this order" />
+
+            <div style="margin-top:12px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                    <strong>Order Lines</strong>
+                    <button type="button" onclick="addOrderLine()">+ Add Item</button>
+                </div>
+                <div id="orderLinesContainer"></div>
+                <p id="orderLinesError" style="color:var(--ops-red);display:none;">At least one order line is required.</p>
+            </div>
+
+            <div style="display:flex;gap:8px;margin-top:14px;">
+                <button type="button" onclick="submitOrderCreate()">Create Order</button>
+                <button type="button" onclick="closeCreateModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-overlay" id="detailModal" hidden>
+    <div class="modal" role="dialog" aria-labelledby="detailModalTitle" aria-modal="true" style="max-width:680px;width:95vw;">
+        <div class="modal-head">
+            <h3 id="detailModalTitle">Order Detail</h3>
+            <button type="button" class="btn-close" onclick="closeDetailModal()" aria-label="Close">×</button>
+        </div>
+        <div id="detailContent" style="margin-top:8px;">Loading…</div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+(() => {
+    const itemCatalog = @Html.Raw(itemsJson);
+
+    window.openCreateModal = function() {
+        document.getElementById('orderSupplierName').value = '';
+        document.getElementById('orderNotes').value = '';
+        document.getElementById('orderLinesContainer').innerHTML = '';
+        document.getElementById('orderLinesError').style.display = 'none';
+        addOrderLine();
+        document.getElementById('createOrderModal').hidden = false;
+    };
+
+    window.closeCreateModal = function() {
+        document.getElementById('createOrderModal').hidden = true;
+    };
+
+    document.getElementById('createOrderModal').addEventListener('click', function(e) {
+        if (e.target === this) closeCreateModal();
+    });
+
+    window.addOrderLine = function() {
+        const container = document.getElementById('orderLinesContainer');
+        const idx = container.children.length;
+
+        const row = document.createElement('div');
+        row.className = 'order-line-row';
+        row.style.cssText = 'display:grid;grid-template-columns:1fr auto auto;gap:8px;margin-bottom:8px;align-items:center;';
+
+        const select = document.createElement('select');
+        select.dataset.lineField = 'itemId';
+        select.innerHTML = '<option value="">— Select Item —</option>' +
+            itemCatalog.map(i => `<option value="${i.itemId}">${i.name}${i.unitAbbreviation ? ' (' + i.unitAbbreviation + ')' : ''}</option>`).join('');
+
+        const qtyInput = document.createElement('input');
+        qtyInput.type = 'number';
+        qtyInput.min = '1';
+        qtyInput.value = '1';
+        qtyInput.placeholder = 'Qty';
+        qtyInput.style.width = '80px';
+        qtyInput.dataset.lineField = 'qty';
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.textContent = '✕';
+        removeBtn.className = 'danger';
+        removeBtn.style.padding = '0.3rem 0.55rem';
+        removeBtn.addEventListener('click', () => container.removeChild(row));
+
+        row.appendChild(select);
+        row.appendChild(qtyInput);
+        row.appendChild(removeBtn);
+        container.appendChild(row);
+    };
+
+    window.submitOrderCreate = function() {
+        const container = document.getElementById('orderLinesContainer');
+        const rows = container.querySelectorAll('.order-line-row');
+        const linesError = document.getElementById('orderLinesError');
+        linesError.style.display = 'none';
+
+        const lines = [];
+        for (const row of rows) {
+            const itemId = row.querySelector('[data-line-field="itemId"]').value;
+            const qty = parseInt(row.querySelector('[data-line-field="qty"]').value, 10);
+            if (itemId && qty > 0) {
+                lines.push({ itemId, quantityOrdered: qty });
+            }
+        }
+
+        if (lines.length === 0) {
+            linesError.style.display = 'block';
+            return;
+        }
+
+        document.getElementById('orderLinesJson').value = JSON.stringify(lines);
+        document.getElementById('createOrderForm').submit();
+    };
+
+    window.openDetail = async function(orderId) {
+        const modal = document.getElementById('detailModal');
+        const content = document.getElementById('detailContent');
+        content.innerHTML = 'Loading…';
+        modal.hidden = false;
+
+        try {
+            const resp = await fetch(`/Orders?handler=Detail&id=${orderId}`);
+            if (!resp.ok) { content.innerHTML = 'Failed to load order.'; return; }
+            const order = await resp.json();
+
+            const lineRows = (order.lines ?? []).map(l => `
+                <tr>
+                    <td>${l.itemName}</td>
+                    <td>${l.quantityOrdered}</td>
+                    <td>${l.quantityReceived}</td>
+                    <td>${l.unitCost != null ? l.unitCost.toLocaleString() + ' XAF' : '—'}</td>
+                    <td>${l.lineTotal.toLocaleString()} XAF</td>
+                </tr>
+            `).join('');
+
+            content.innerHTML = `
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;margin-bottom:12px;">
+                    <p><strong>Order #:</strong> ${order.orderNumber}</p>
+                    <p><strong>Status:</strong> ${order.status}</p>
+                    <p><strong>Supplier:</strong> ${order.supplierName ?? '—'}</p>
+                    <p><strong>Total:</strong> ${order.totalAmount.toLocaleString()} XAF</p>
+                    <p style="grid-column:span 2"><strong>Notes:</strong> ${order.notes ?? '—'}</p>
+                </div>
+                <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
+                    <thead><tr>
+                        <th style="text-align:left;padding:6px;border-bottom:1px solid #ccc;">Item</th>
+                        <th style="text-align:left;padding:6px;border-bottom:1px solid #ccc;">Ordered</th>
+                        <th style="text-align:left;padding:6px;border-bottom:1px solid #ccc;">Received</th>
+                        <th style="text-align:left;padding:6px;border-bottom:1px solid #ccc;">Unit Cost</th>
+                        <th style="text-align:left;padding:6px;border-bottom:1px solid #ccc;">Total</th>
+                    </tr></thead>
+                    <tbody>${lineRows}</tbody>
+                </table>
+            `;
+        } catch {
+            content.innerHTML = 'Error loading order details.';
+        }
+    };
+
+    window.closeDetailModal = function() {
+        document.getElementById('detailModal').hidden = true;
+    };
+
+    document.getElementById('detailModal').addEventListener('click', function(e) {
+        if (e.target === this) closeDetailModal();
+    });
+
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') {
+            closeCreateModal();
+            closeDetailModal();
+        }
+    });
+})();
+</script>
+}

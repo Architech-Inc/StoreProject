@@ -1,0 +1,109 @@
+@page
+@model StoreUI.Pages.ProfileModel
+@{
+    ViewData["Title"] = "My Profile";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
+}
+
+<div class="ops-page">
+    <partial name="Shared/_ModuleNav" />
+
+    <header>
+        <h1>My Profile</h1>
+        <p>View your account details and change your password.</p>
+        <a class="link" href="/Dashboard">Back to Dashboard</a>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="status @(Model.StatusMessage.StartsWith("Error") ? "error" : "ok")">
+            @Model.StatusMessage
+        </div>
+    }
+
+    <section class="card" style="max-width:520px;">
+        <h2>Account Information</h2>
+        <table style="width:100%;">
+            <tbody>
+                <tr>
+                    <th style="text-align:left;padding:6px 12px 6px 0;width:40%;">Username</th>
+                    <td>@(Model.CurrentUsername ?? "—")</td>
+                </tr>
+                <tr>
+                    <th style="text-align:left;padding:6px 12px 6px 0;">Role</th>
+                    <td>@(Model.CurrentRoleName ?? "—")</td>
+                </tr>
+                <tr>
+                    <th style="text-align:left;padding:6px 12px 6px 0;">Status</th>
+                    <td>
+                        @if (Model.CurrentStatus is not null)
+                        {
+                            <span class="badge @(Model.CurrentStatus == "Active" ? "badge-success" : "badge-danger")">
+                                @Model.CurrentStatus
+                            </span>
+                        }
+                        else
+                        {
+                            <span>—</span>
+                        }
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section class="card" style="max-width:520px;margin-top:18px;">
+        <h2>Change Password</h2>
+        <form method="post" asp-page-handler="ChangePassword" autocomplete="off">
+            @Html.AntiForgeryToken()
+
+            <label for="currentPassword">Current Password *</label>
+            <input type="password" id="currentPassword" name="CurrentPassword" required autocomplete="current-password" />
+
+            <label for="newPassword" style="margin-top:10px;">New Password * <span style="color:var(--ops-subtle);font-weight:normal;">(min 8 chars)</span></label>
+            <input type="password" id="newPassword" name="NewPassword" required minlength="8" autocomplete="new-password" />
+
+            <label for="confirmPassword" style="margin-top:10px;">Confirm New Password *</label>
+            <input type="password" id="confirmPassword" name="ConfirmPassword" required minlength="8" autocomplete="new-password" />
+
+            <div id="passwordMatchError" style="color:var(--ops-red);font-size:0.88rem;display:none;margin-top:4px;">
+                Passwords do not match.
+            </div>
+
+            <div style="margin-top:14px;">
+                <button type="submit">Change Password</button>
+            </div>
+        </form>
+    </section>
+</div>
+
+@section Scripts {
+<script>
+(() => {
+    const newPwd = document.getElementById('newPassword');
+    const confirmPwd = document.getElementById('confirmPassword');
+    const matchError = document.getElementById('passwordMatchError');
+
+    function checkMatch() {
+        if (confirmPwd.value && newPwd.value !== confirmPwd.value) {
+            matchError.style.display = 'block';
+        } else {
+            matchError.style.display = 'none';
+        }
+    }
+
+    newPwd.addEventListener('input', checkMatch);
+    confirmPwd.addEventListener('input', checkMatch);
+
+    document.querySelector('form').addEventListener('submit', function(e) {
+        if (newPwd.value !== confirmPwd.value) {
+            e.preventDefault();
+            matchError.style.display = 'block';
+        }
+    });
+})();
+</script>
+}

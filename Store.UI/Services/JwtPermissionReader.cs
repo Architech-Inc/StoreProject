@@ -58,4 +58,26 @@ public static class JwtPermissionReader
 
         return perms;
     }
+
+    public static string? GetClaim(string? jwt, string claimName)
+    {
+        if (string.IsNullOrWhiteSpace(jwt)) return null;
+
+        var parts = jwt.Split('.');
+        if (parts.Length < 2) return null;
+
+        try
+        {
+            var payload = parts[1].Replace('-', '+').Replace('_', '/');
+            payload = payload.PadRight(payload.Length + (4 - payload.Length % 4) % 4, '=');
+            var json = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(payload));
+
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            if (doc.RootElement.TryGetProperty(claimName, out var node))
+                return node.GetString();
+        }
+        catch { }
+
+        return null;
+    }
 }

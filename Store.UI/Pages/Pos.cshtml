@@ -101,20 +101,15 @@
                 </div>
 
                 <div class="field-row">
-                    <label for="paymentType">Payment Type</label>
-                    <select id="paymentType">
-                        <option value="0">Cash</option>
-                        <option value="1">Card</option>
-                        <option value="2">Bank Transfer</option>
-                        <option value="3">Mobile Money</option>
-                        <option value="4">Cheque</option>
-                        <option value="5">Credit</option>
-                    </select>
-                </div>
-
-                <div class="field-row">
-                    <label for="amountTendered">Amount Tendered (XAF)</label>
-                    <input id="amountTendered" type="number" min="0" step="0.01" value="0" />
+                    <div class="tender-head">
+                        <label>Payment</label>
+                        <button type="button" class="btn btn-secondary tender-add-btn" id="addTenderLineBtn">+ Add</button>
+                    </div>
+                    <div id="tenderLinesContainer"></div>
+                    <div class="tender-summary">
+                        <span>Tendered</span><strong id="tenderedTotal">0 XAF</strong>
+                        <span>Remaining</span><strong id="tenderRemaining">0 XAF</strong>
+                    </div>
                 </div>
 
                 <div class="field-row">
@@ -125,6 +120,7 @@
                 <div class="totals">
                     <div><span>Subtotal</span><strong id="subtotalText">0</strong></div>
                     <div><span>Change</span><strong id="changeText">0</strong></div>
+                    <div class="totals-split-note" id="splitNoteRow" hidden><span id="splitNoteText"></span></div>
                 </div>
 
                 <div class="suspended-sales">
@@ -181,9 +177,85 @@
     const customerSelect = document.getElementById('customerSelect');
     const checkoutForm = document.getElementById('checkoutForm');
     const checkoutBtn = document.getElementById('checkoutBtn');
-    const paymentType = document.getElementById('paymentType');
+    const tenderLinesContainer = document.getElementById('tenderLinesContainer');
+    const addTenderLineBtn = document.getElementById('addTenderLineBtn');
+    const tenderedTotal = document.getElementById('tenderedTotal');
+    const tenderRemaining = document.getElementById('tenderRemaining');
+    const splitNoteRow = document.getElementById('splitNoteRow');
+    const splitNoteText = document.getElementById('splitNoteText');
     const saleNotes = document.getElementById('saleNotes');
     const checkoutMessage = document.getElementById('checkoutMessage');
+
+    const PAYMENT_LABELS = ['Cash', 'Card', 'Bank Transfer', 'Mobile Money', 'Cheque', 'Credit'];
+
+    function buildTenderTypeOptions(selectedValue) {
+        return PAYMENT_LABELS.map((label, idx) =>
+            `<option value="${idx}"${idx === selectedValue ? ' selected' : ''}>${label}</option>`
+        ).join('');
+    }
+
+    function addTenderLine(typeValue = 0, amount = 0) {
+        const row = document.createElement('div');
+        row.className = 'tender-line';
+
+        row.innerHTML = `
+            <select class="tender-type">${buildTenderTypeOptions(typeValue)}</select>
+            <input type="number" class="tender-amount" min="0" step="0.01" value="${amount}" placeholder="Amount" />
+            <button type="button" class="danger tender-remove" style="padding:0.3rem 0.55rem">✕</button>
+        `;
+
+        row.querySelector('.tender-type').addEventListener('change', updateTenderTotals);
+        row.querySelector('.tender-amount').addEventListener('input', updateTenderTotals);
+        row.querySelector('.tender-remove').addEventListener('click', () => {
+            if (tenderLinesContainer.children.length <= 1) return;
+            tenderLinesContainer.removeChild(row);
+            updateTenderTotals();
+        });
+
+        tenderLinesContainer.appendChild(row);
+        updateTenderTotals();
+    }
+
+    function getTenderLines() {
+        return Array.from(tenderLinesContainer.querySelectorAll('.tender-line')).map(row => ({
+            type: parseInt(row.querySelector('.tender-type').value, 10),
+            amount: parseFloat(row.querySelector('.tender-amount').value || '0')
+        })).filter(l => l.amount > 0);
+    }
+
+    function getTotalTendered() {
+        return Array.from(tenderLinesContainer.querySelectorAll('.tender-amount'))
+            .reduce((sum, input) => sum + parseFloat(input.value || '0'), 0);
+    }
+
+    function getDominantPaymentType() {
+        const lines = getTenderLines();
+        if (lines.length === 0) return 0;
+        return lines.reduce((a, b) => a.amount >= b.amount ? a : b).type;
+    }
+
+    function updateTenderTotals() {
+        const total = getTotalTendered();
+        const subtotal = getSubtotal();
+        const remaining = Math.max(0, subtotal - total);
+        const change = Math.max(0, total - subtotal);
+
+        tenderedTotal.textContent = `${xaf(total)} XAF`;
+        tenderRemaining.textContent = remaining > 0 ? `${xaf(remaining)} XAF` : '0 XAF';
+        tenderRemaining.style.color = remaining > 0 ? 'var(--pos-danger)' : 'inherit';
+
+        const lines = getTenderLines();
+        if (lines.length > 1) {
+            splitNoteRow.hidden = false;
+            splitNoteText.textContent = lines.map(l =>
+                `${PAYMENT_LABELS[l.type]}: ${xaf(l.amount)} XAF`
+            ).join(' + ');
+        } else {
+            splitNoteRow.hidden = true;
+        }
+
+        changeText.textContent = `${xaf(change)} XAF`;
+    }
     const clearCartBtn = document.getElementById('clearCartBtn');
     const barcodeInput = document.getElementById('barcodeInput');
     const barcodeAddBtn = document.getElementById('barcodeAddBtn');
@@ -328,6 +400,9 @@
         renderCart();
     }
 
+    // amountTenderedInput shim for legacy suspend/resume compatibility
+    const amountTenderedInput = { value: '0', addEventListener: () => {} };
+
     function getSubtotal() {
         let total = 0;
         for (const entry of cart.values()) {
@@ -344,6 +419,7 @@
             cartEmpty.hidden = false;
             subtotalText.textContent = '0';
             changeText.textContent = '0';
+            updateTenderTotals();
             return;
         }
 
@@ -377,11 +453,8 @@
         }
 
         const subtotal = getSubtotal();
-        const tendered = Number(amountTenderedInput.value || '0');
-        const change = Math.max(0, tendered - subtotal);
-
         subtotalText.textContent = `${xaf(subtotal)} XAF`;
-        changeText.textContent = `${xaf(change)} XAF`;
+        updateTenderTotals();
     }
 
     function setMessage(message, isError = false) {
@@ -446,8 +519,7 @@
             id: saleId,
             label: `Sale ${new Date().toLocaleTimeString()}`,
             customerId: customerSelect.value || '',
-            paymentType: paymentType.value,
-            amountTendered: amountTenderedInput.value,
+            tenderLines: getTenderLines(),
             notes: saleNotes.value || '',
             lines: Array.from(cart.values())
         };
@@ -457,10 +529,10 @@
         renderSuspendedSales();
 
         cart.clear();
-        amountTenderedInput.value = '0';
+        tenderLinesContainer.innerHTML = '';
+        addTenderLine(0, 0);
         saleNotes.value = '';
         customerSelect.value = '';
-        paymentType.value = '0';
         renderCart();
         setMessage('Sale suspended. You can resume it from the list.');
     }
@@ -504,8 +576,14 @@
         }
 
         customerSelect.value = snapshot.customerId || '';
-        paymentType.value = snapshot.paymentType || '0';
-        amountTenderedInput.value = snapshot.amountTendered || '0';
+        // Restore tender lines
+        tenderLinesContainer.innerHTML = '';
+        const savedLines = snapshot.tenderLines ?? (snapshot.paymentType !== undefined ? [{ type: parseInt(snapshot.paymentType || '0', 10), amount: parseFloat(snapshot.amountTendered || '0') }] : []);
+        if (savedLines.length > 0) {
+            for (const tl of savedLines) addTenderLine(tl.type, tl.amount);
+        } else {
+            addTenderLine(0, 0);
+        }
         saleNotes.value = snapshot.notes || '';
 
         renderSuspendedSales();
@@ -554,15 +632,16 @@
         }
 
         const subtotal = getSubtotal();
-        const tendered = Number(amountTenderedInput.value || '0');
+        const tendered = getTotalTendered();
         if (tendered < subtotal) {
-            setMessage('Amount tendered must cover subtotal.', true);
+            setMessage('Total tendered must cover subtotal.', true);
+            updateTenderTotals();
             return;
         }
 
         const payload = {
             customerId: customerSelect.value || null,
-            paymentType: Number(paymentType.value),
+            paymentType: getDominantPaymentType(),
             amountTendered: tendered,
             notes: saleNotes.value || null,
             lines: Array.from(cart.values()).map(v => ({ itemId: v.itemId, quantity: v.quantity }))
@@ -591,8 +670,10 @@
             }
 
             cart.clear();
-            amountTenderedInput.value = '0';
             saleNotes.value = '';
+            // Reset tender to single Cash line
+            tenderLinesContainer.innerHTML = '';
+            addTenderLine(0, 0);
             renderCart();
             setMessage(`Invoice ${body.invoiceId} completed. Change: ${xaf(body.changeGiven)} XAF`);
             showReceipt(body, saleLines);
@@ -613,8 +694,8 @@
         }
     }
 
+    addTenderLineBtn.addEventListener('click', () => addTenderLine());
     catalogSearch.addEventListener('input', () => renderCatalog(catalogSearch.value));
-    amountTenderedInput.addEventListener('input', renderCart);
     barcodeAddBtn.addEventListener('click', addByBarcode);
     barcodeInput.addEventListener('keydown', (e) => {
         if (e.key !== 'Enter') {
@@ -650,6 +731,7 @@
     });
 
     seedCustomers();
+    addTenderLine(0, 0);
     renderSuspendedSales();
     renderCatalog();
     renderCart();
