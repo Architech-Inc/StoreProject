@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Store.DbServices.Context;
+using Store.Models.DTOs.Operations;
 using Store.Models.Entities;
 using Store.Models.Enums;
 
@@ -22,7 +23,7 @@ public static class DatabaseSeeder
         await db.Database.MigrateAsync(ct);
 
         await SeedCatalogFromLegacyDataAsync(db, logger, ct);
-        await SeedAdminUserAsync(db, logger, ct);
+        await SeedRolesAndUsersAsync(db, logger, ct);
         await SeedAllRemainingEmptyTablesAsync(db, logger, ct);
     }
 
@@ -124,37 +125,224 @@ public static class DatabaseSeeder
         }
     }
 
-    private static async Task SeedAdminUserAsync(StoreDbContext db, ILogger logger, CancellationToken ct)
+    // -------------------------------------------------------------------------
+    // Roles, Permissions, Departments, Branches, Employees, Test Users
+    // -------------------------------------------------------------------------
+
+    private static async Task SeedRolesAndUsersAsync(StoreDbContext db, ILogger logger, CancellationToken ct)
     {
-        if (db.Users.Any())
-            return;
-
-        var adminRole = db.Roles.AsNoTracking().FirstOrDefault(r => r.Name == "Admin") ?? db.Roles.AsNoTracking().FirstOrDefault();
-        if (adminRole is null)
+        // ── 1. Roles ──────────────────────────────────────────────────────────
+        var roleNames = new[] { "Admin", "Manager", "Cashier" };
+        var roleDescriptions = new Dictionary<string, string>
         {
-            logger.LogWarning("No role found. Skipping admin user seed.");
-            return;
-        }
-
-        var user = new User
-        {
-            Username = "admin",
-            RoleId = adminRole.RoleId,
-            Status = UserStatus.Active,
-            ImagePath = "img/user_default.png"
+            ["Admin"]   = "Full system access",
+            ["Manager"] = "Inventory, pricing, cash and reports access",
+            ["Cashier"] = "Cash operations access only"
         };
 
-        db.Users.Add(user);
-        await db.SaveChangesAsync(ct);
-
-        db.UserPasswords.Add(new UserPassword
+        foreach (var name in roleNames)
         {
-            UserId = user.UserId,
-            PasswordHash = BCrypt.Net.BCrypt.EnhancedHashPassword("Admin@123", 12)
-        });
-
+            if (!db.Roles.Any(r => r.Name == name))
+            {
+                db.Roles.Add(new Role { Name = name, Description = roleDescriptions[name] });
+            }
+        }
         await db.SaveChangesAsync(ct);
-        logger.LogInformation("Seeded default admin user. Username: admin");
+
+        var roles = db.Roles.AsNoTracking().ToDictionary(r => r.Name, r => r.RoleId);
+
+        // ── 2. Role Permissions ───────────────────────────────────────────────
+        // Remove any auto-seeder junk rows
+        var junkKeys = db.RolePermissions
+            .Where(rp => rp.PermissionKey.StartsWith("seed_"))
+            .ToList();
+        if (junkKeys.Count > 0)
+        {
+            db.RolePermissions.RemoveRange(junkKeys);
+            await db.SaveChangesAsync(ct);
+        }
+
+        var rolePerms = new Dictionary<string, string[]>
+        {
+            ["Admin"] = PermissionKeys.All,
+            ["Manager"] =
+            [
+                PermissionKeys.InventoryRead,
+                PermissionKeys.InventoryWrite,
+                PermissionKeys.PricingRead,
+                PermissionKeys.PricingWrite,
+                PermissionKeys.CashRead,
+                PermissionKeys.CashWrite,
+                PermissionKeys.ReportsRead,
+                PermissionKeys.PaymentsRead
+            ],
+            ["Cashier"] =
+            [
+                PermissionKeys.CashRead,
+                PermissionKeys.CashWrite
+            ]
+        };
+
+        foreach (var (roleName, keys) in rolePerms)
+        {
+            if (!roles.TryGetValue(roleName, out var roleId)) continue;
+
+            foreach (var key in keys)
+            {
+                if (!db.RolePermissions.Any(rp => rp.RoleId == roleId && rp.PermissionKey == key))
+                {
+                    db.RolePermissions.Add(new RolePermission
+                    {
+                        RoleId = roleId,
+                        PermissionKey = key,
+                        IsAllowed = true
+                    });
+                }
+            }
+        }
+        await db.SaveChangesAsync(ct);
+        logger.LogInformation("Seeded roles and permissions.");
+
+        // ── 3. Departments ────────────────────────────────────────────────────
+        var deptNames = new[] { "Management", "Sales", "Operations" };
+        foreach (var dept in deptNames)
+        {
+            if (!db.Departments.Any(d => d.Name == dept))
+                db.Departments.Add(new Department { Name = dept, Description = dept + " department" });
+        }
+        await db.SaveChangesAsync(ct);
+
+        var depts = db.Departments.AsNoTracking().ToDictionary(d => d.Name, d => d.DepartmentId);
+
+        // ── 4. Main Branch ────────────────────────────────────────────────────
+        if (!db.Branches.Any(b => b.Code == "HQ"))
+        {
+            db.Branches.Add(new Branch
+            {
+                Name = "Main Branch (HQ)",
+                Code = "HQ",
+                Address = "1 Store Avenue, City Centre",
+                IsActive = true
+            });
+            await db.SaveChangesAsync(ct);
+        }
+
+        var mainBranchId = db.Branches.AsNoTracking()
+            .Where(b => b.Code == "HQ")
+            .Select(b => b.BranchId)
+            .First();
+
+        // ── 5. Test accounts ──────────────────────────────────────────────────
+        //  username │ role    │ password      │ first name │ last name │ dept
+        //  admin    │ Admin   │ Admin@123     │ Alice      │ Admin     │ Management
+        //  manager  │ Manager │ Manager@123   │ Mike       │ Manager   │ Sales
+        //  cashier  │ Cashier │ Cashier@123   │ Chris      │ Cashier   │ Operations
+
+        var accounts = new[]
+        {
+            new { Username = "admin",   Role = "Admin",   Password = "Admin@123",   First = "Alice", Last = "Admin",   Dept = "Management" },
+            new { Username = "manager", Role = "Manager", Password = "Manager@123", First = "Mike",  Last = "Manager", Dept = "Sales"      },
+            new { Username = "cashier", Role = "Cashier", Password = "Cashier@123", First = "Chris", Last = "Cashier", Dept = "Operations" }
+        };
+
+        foreach (var acc in accounts)
+        {
+            if (!roles.TryGetValue(acc.Role, out var roleId))
+                continue;
+
+            var deptId = depts.TryGetValue(acc.Dept, out var did) ? (int?)did : null;
+
+            var existingUser = db.Users.FirstOrDefault(u => u.Username == acc.Username);
+            if (existingUser is not null)
+            {
+                // Correct role if it was assigned before roles were seeded
+                if (existingUser.RoleId != roleId)
+                {
+                    existingUser.RoleId = roleId;
+                    db.Users.Update(existingUser);
+                }
+
+                // Link employee if not already linked
+                if (existingUser.EmployeeId is null)
+                {
+                    var emp = new Employee
+                    {
+                        FirstName    = acc.First,
+                        LastName     = acc.Last,
+                        DateEmployed = DateTime.UtcNow,
+                        Status       = EmployeeStatus.Active,
+                        DepartmentId = deptId,
+                        Gender       = Gender.NotSpecified,
+                        ImagePath    = "img/user_default.png"
+                    };
+                    db.Employees.Add(emp);
+                    await db.SaveChangesAsync(ct);
+                    existingUser.EmployeeId = emp.EmployeeId;
+                    db.Users.Update(existingUser);
+                }
+
+                await db.SaveChangesAsync(ct);
+
+                // Ensure branch-role assignment
+                if (!db.UserBranchRoles.Any(ubr => ubr.UserId == existingUser.UserId && ubr.BranchId == mainBranchId))
+                {
+                    db.UserBranchRoles.Add(new UserBranchRole
+                    {
+                        UserId   = existingUser.UserId,
+                        BranchId = mainBranchId,
+                        RoleId   = roleId
+                    });
+                    await db.SaveChangesAsync(ct);
+                }
+
+                logger.LogInformation("Updated existing user: {Username} → Role: {Role}", acc.Username, acc.Role);
+                continue;
+            }
+
+            // Create employee
+            var employee = new Employee
+            {
+                FirstName    = acc.First,
+                LastName     = acc.Last,
+                DateEmployed = DateTime.UtcNow,
+                Status       = EmployeeStatus.Active,
+                DepartmentId = deptId,
+                Gender       = Gender.NotSpecified,
+                ImagePath    = "img/user_default.png"
+            };
+            db.Employees.Add(employee);
+            await db.SaveChangesAsync(ct);
+
+            // Create user linked to employee
+            var user = new User
+            {
+                Username   = acc.Username,
+                RoleId     = roleId,
+                EmployeeId = employee.EmployeeId,
+                Status     = UserStatus.Active,
+                ImagePath  = "img/user_default.png"
+            };
+            db.Users.Add(user);
+            await db.SaveChangesAsync(ct);
+
+            // Password
+            db.UserPasswords.Add(new UserPassword
+            {
+                UserId       = user.UserId,
+                PasswordHash = BCrypt.Net.BCrypt.EnhancedHashPassword(acc.Password, 12)
+            });
+
+            // Branch role assignment
+            db.UserBranchRoles.Add(new UserBranchRole
+            {
+                UserId   = user.UserId,
+                BranchId = mainBranchId,
+                RoleId   = roleId
+            });
+
+            await db.SaveChangesAsync(ct);
+            logger.LogInformation("Seeded test user: {Username} / {Password} (Role: {Role})", acc.Username, acc.Password, acc.Role);
+        }
     }
 
     private static async Task SeedAllRemainingEmptyTablesAsync(StoreDbContext db, ILogger logger, CancellationToken ct)
