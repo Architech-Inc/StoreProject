@@ -281,6 +281,25 @@ body {
     align-items: center;
 }
 
+/* ── Offline Queue Banner ─────────────────────────────────────── */
+.offline-queue-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    background: color-mix(in srgb, var(--pos-warning) 18%, var(--pos-surface));
+    border: 1px solid var(--pos-warning);
+    border-radius: var(--radius-sm);
+    padding: 0.55rem 0.75rem;
+    font-size: 0.88rem;
+    color: var(--pos-text);
+    margin-top: 8px;
+}
+
+.offline-queue-banner span {
+    font-weight: 600;
+}
+
 /* ── Split / Mixed Tender ─────────────────────────────────────── */
 .tender-head {
     display: flex;

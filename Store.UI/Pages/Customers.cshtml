@@ -58,10 +58,15 @@
                                 <td>@(c.Notes ?? "—")</td>
                                 <td>@c.DateCreated.ToString("yyyy-MM-dd")</td>
                                 <td>
-                                    <form method="post" asp-page-handler="Delete" style="margin:0;">
-                                        <input type="hidden" name="customerId" value="@c.CustomerId" />
-                                        <button type="submit" class="danger" onclick="return confirm('Remove @(c.FullName.Replace("'", "\\'"))?')">Remove</button>
-                                    </form>
+                                    <div style="display:flex;gap:4px;">
+                                        <button type="button"
+                                            onclick="openEdit('@c.CustomerId','@Html.Raw(c.FirstName.Replace("'","\\'"))','@Html.Raw((c.MiddleName ?? "").Replace("'","\\'"))','@Html.Raw(c.LastName.Replace("'","\\'"))','@c.Gender','@Html.Raw((c.Notes ?? "").Replace("'","\\'"))')">Edit</button>
+                                        <form method="post" asp-page-handler="Delete" style="margin:0;">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="customerId" value="@c.CustomerId" />
+                                            <button type="submit" class="danger" onclick="return confirm('Remove @(c.FullName.Replace("'","\\'"))?')">Remove</button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                         }
@@ -85,6 +90,45 @@
             }
         }
     </section>
+</div>
+
+<!-- ── Edit Customer Modal ─────────────────────────────── -->
+<div class="modal-overlay" id="editCustomerModal" hidden>
+    <div class="modal" role="dialog" aria-labelledby="editCustModalTitle" aria-modal="true">
+        <div class="modal-head">
+            <h3 id="editCustModalTitle">Edit Customer</h3>
+            <button type="button" class="btn-close" onclick="closeEditModal()" aria-label="Close">×</button>
+        </div>
+
+        <form method="post" asp-page-handler="Edit">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="EditCustomerId" id="editCustomerId" />
+
+            <label for="editFirstName">First Name *</label>
+            <input asp-for="EditFirstName" id="editFirstName" required />
+
+            <label for="editMiddleName">Middle Name</label>
+            <input asp-for="EditMiddleName" id="editMiddleName" />
+
+            <label for="editLastName">Last Name *</label>
+            <input asp-for="EditLastName" id="editLastName" required />
+
+            <label for="editGender">Gender</label>
+            <select asp-for="EditGender" id="editGender">
+                <option value="NotSpecified">Not Specified</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+            </select>
+
+            <label for="editNotes">Notes</label>
+            <textarea asp-for="EditNotes" id="editNotes" rows="2"></textarea>
+
+            <div style="display:flex;gap:8px;margin-top:8px;">
+                <button type="submit">Save Changes</button>
+                <button type="button" onclick="closeEditModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
 </div>
 
 <!-- ── Create Customer Modal ─────────────────────────────── -->
@@ -134,6 +178,7 @@
 @section Scripts {
 <script>
 const modal = document.getElementById('customerModal');
+const editModal = document.getElementById('editCustomerModal');
 
 function openCreate() {
     modal.removeAttribute('hidden');
@@ -144,7 +189,25 @@ function closeModal() {
     modal.setAttribute('hidden', '');
 }
 
+function openEdit(id, firstName, middleName, lastName, gender, notes) {
+    document.getElementById('editCustomerId').value = id;
+    document.getElementById('editFirstName').value = firstName;
+    document.getElementById('editMiddleName').value = middleName;
+    document.getElementById('editLastName').value = lastName;
+    document.getElementById('editGender').value = gender;
+    document.getElementById('editNotes').value = notes;
+    editModal.removeAttribute('hidden');
+    document.getElementById('editFirstName').focus();
+}
+
+function closeEditModal() {
+    editModal.setAttribute('hidden', '');
+}
+
 modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+editModal.addEventListener('click', e => { if (e.target === editModal) closeEditModal(); });
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closeModal(); closeEditModal(); }
+});
 </script>
 }

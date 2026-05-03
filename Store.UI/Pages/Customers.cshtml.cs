@@ -26,6 +26,14 @@ public class CustomersModel : SecurePageModel
     [BindProperty] public string? Email { get; set; }
     [BindProperty] public string? Notes { get; set; }
 
+    // Edit
+    [BindProperty] public Guid EditCustomerId { get; set; }
+    [BindProperty] public string EditFirstName { get; set; } = string.Empty;
+    [BindProperty] public string EditLastName { get; set; } = string.Empty;
+    [BindProperty] public string? EditMiddleName { get; set; }
+    [BindProperty] public Gender EditGender { get; set; } = Gender.NotSpecified;
+    [BindProperty] public string? EditNotes { get; set; }
+
     [TempData] public string? StatusMessage { get; set; }
 
     public CustomersModel(ICustomerService customerService, IApiClientService apiClient)
@@ -88,6 +96,27 @@ public class CustomersModel : SecurePageModel
         _apiClient.SetToken(token);
         await _customerService.DeleteAsync(customerId, ct);
         StatusMessage = "Customer removed.";
+        return RedirectToPage();
+    }
+
+    public async Task<IActionResult> OnPostEditAsync(CancellationToken ct)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return GoToLogin();
+
+        _apiClient.SetToken(token);
+
+        var req = new UpdateCustomerRequest
+        {
+            FirstName = EditFirstName.Trim(),
+            LastName = EditLastName.Trim(),
+            MiddleName = string.IsNullOrWhiteSpace(EditMiddleName) ? null : EditMiddleName.Trim(),
+            Gender = EditGender,
+            Notes = string.IsNullOrWhiteSpace(EditNotes) ? null : EditNotes.Trim()
+        };
+
+        await _customerService.UpdateAsync(EditCustomerId, req, ct);
+        StatusMessage = $"Customer {EditFirstName} {EditLastName} updated.";
         return RedirectToPage();
     }
 }

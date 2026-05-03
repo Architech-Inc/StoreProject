@@ -139,6 +139,11 @@
                     <button type="submit" id="checkoutBtn" class="btn btn-primary">Complete Checkout</button>
                 </form>
 
+                <div id="offlineQueueBanner" class="offline-queue-banner" hidden>
+                    <span id="offlineQueueCount"></span>
+                    <button type="button" id="syncQueueBtn" class="btn btn-secondary">Sync Now</button>
+                </div>
+
                 <div id="checkoutMessage" class="checkout-message" role="status" aria-live="polite"></div>
             </div>
         </section>
@@ -679,7 +684,15 @@
             showReceipt(body, saleLines);
             renderCatalog(catalogSearch.value);
         } catch {
-            setMessage('Unable to reach server for checkout.', true);
+            // Network failure — queue the sale for later sync
+            enqueueOfflineSale(payload, saleLines);
+            cart.clear();
+            saleNotes.value = '';
+            tenderLinesContainer.innerHTML = '';
+            addTenderLine(0, 0);
+            renderCart();
+            renderCatalog(catalogSearch.value);
+            setMessage('Server unreachable. Sale saved to offline queue — will sync when connection restores.', true);
         } finally {
             checkoutBtn.disabled = false;
         }
@@ -694,7 +707,93 @@
         }
     }
 
+    // ── Offline Queue (OFF-1/OFF-2) ──────────────────────────────────────
+    const OFFLINE_QUEUE_KEY = 'store-ui-pos-offline-queue';
+    const offlineQueueBanner = document.getElementById('offlineQueueBanner');
+    const offlineQueueCount = document.getElementById('offlineQueueCount');
+    const syncQueueBtn = document.getElementById('syncQueueBtn');
+
+    function getOfflineQueue() {
+        try { return JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) || '[]'); }
+        catch { return []; }
+    }
+
+    function saveOfflineQueue(q) {
+        localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(q));
+    }
+
+    function renderOfflineBanner() {
+        const q = getOfflineQueue();
+        if (q.length === 0) {
+            offlineQueueBanner.hidden = true;
+        } else {
+            offlineQueueBanner.hidden = false;
+            offlineQueueCount.textContent = `${q.length} offline sale${q.length > 1 ? 's' : ''} pending sync`;
+        }
+    }
+
+    function enqueueOfflineSale(payload, saleLines) {
+        const q = getOfflineQueue();
+        q.push({
+            id: crypto.randomUUID(),
+            queuedAt: new Date().toISOString(),
+            payload,
+            saleLines
+        });
+        saveOfflineQueue(q);
+        renderOfflineBanner();
+    }
+
+    async function syncOfflineQueue() {
+        const q = getOfflineQueue();
+        if (q.length === 0) {
+            setMessage('No offline sales to sync.');
+            return;
+        }
+
+        const antiforgery = checkoutForm.querySelector('input[name="__RequestVerificationToken"]')?.value;
+        syncQueueBtn.disabled = true;
+        let synced = 0;
+        let failed = 0;
+        const remaining = [];
+
+        for (const entry of q) {
+            try {
+                const resp = await fetch('?handler=Checkout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': antiforgery
+                    },
+                    body: JSON.stringify(entry.payload)
+                });
+
+                const body = await resp.json();
+                if (resp.ok && body.success) {
+                    synced++;
+                } else {
+                    failed++;
+                    remaining.push(entry);
+                }
+            } catch {
+                failed++;
+                remaining.push(entry);
+            }
+        }
+
+        saveOfflineQueue(remaining);
+        renderOfflineBanner();
+        syncQueueBtn.disabled = false;
+
+        const msg = synced > 0
+            ? `Synced ${synced} offline sale${synced > 1 ? 's' : ''}.${failed > 0 ? ` ${failed} still pending.` : ''}`
+            : `Sync failed — ${failed} sale${failed > 1 ? 's' : ''} still queued.`;
+        setMessage(msg, failed > 0);
+        if (synced > 0) renderCatalog(catalogSearch.value);
+    }
+
     addTenderLineBtn.addEventListener('click', () => addTenderLine());
+    syncQueueBtn.addEventListener('click', syncOfflineQueue);
     catalogSearch.addEventListener('input', () => renderCatalog(catalogSearch.value));
     barcodeAddBtn.addEventListener('click', addByBarcode);
     barcodeInput.addEventListener('keydown', (e) => {
@@ -733,6 +832,7 @@
     seedCustomers();
     addTenderLine(0, 0);
     renderSuspendedSales();
+    renderOfflineBanner();
     renderCatalog();
     renderCart();
 })();
