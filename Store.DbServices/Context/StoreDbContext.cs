@@ -90,6 +90,10 @@ public class StoreDbContext : DbContext
     public DbSet<CashierShift> CashierShifts => Set<CashierShift>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
 
+    // ---- Branches ----
+    public DbSet<Branch> Branches => Set<Branch>();
+    public DbSet<UserBranchRole> UserBranchRoles => Set<UserBranchRole>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

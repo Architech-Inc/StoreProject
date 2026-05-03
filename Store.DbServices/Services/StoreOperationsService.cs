@@ -738,4 +738,249 @@ public class StoreOperationsService : IStoreOperationsService
         Status = x.Status,
         Notes = x.Notes
     };
+
+    // ─── Promotion Effectiveness ──────────────────────────────────────────────
+
+    public async Task<PromotionEffectivenessDto> GetPromotionEffectivenessAsync(DateTime fromDateUtc, DateTime toDateUtc, CancellationToken ct = default)
+    {
+        var toInclusive = toDateUtc.Date.AddDays(1);
+
+        // Sales in date range with discount amounts
+        var sales = await _uow.Repository<Sale>().Query()
+            .Include(s => s.Invoice)
+            .Include(s => s.Item).ThenInclude(i => i.Category)
+            .Include(s => s.Item).ThenInclude(i => i.Discount)
+            .AsNoTracking()
+            .Where(s => s.Invoice.DateCreated >= fromDateUtc && s.Invoice.DateCreated < toInclusive)
+            .ToListAsync(ct);
+
+        // Total discount given across all lines
+        var totalDiscountGiven = sales.Sum(s => s.DiscountAmount ?? 0m);
+        var invoicesWithDiscount = sales
+            .Where(s => s.DiscountAmount.HasValue && s.DiscountAmount.Value > 0)
+            .Select(s => s.InvoiceId)
+            .Distinct()
+            .Count();
+
+        // Items with active discounts — summarise sales
+        var discountedItemIds = sales
+            .Where(s => s.Item.Discount is not null && s.Item.Discount.IsActive)
+            .Select(s => s.ItemId)
+            .Distinct()
+            .ToHashSet();
+
+        var topDiscountedItems = sales
+            .Where(s => discountedItemIds.Contains(s.ItemId))
+            .GroupBy(s => new { s.ItemId, s.ItemName, s.Item.Category?.Name })
+            .Select(g => new ItemDiscountSummaryDto
+            {
+                ItemId = g.Key.ItemId,
+                ItemName = g.Key.ItemName,
+                CategoryName = g.Key.Name,
+                DiscountPercent = g.First().Item.Discount?.Percentage ?? 0m,
+                UnitsSold = g.Sum(s => s.Quantity),
+                TotalRevenue = g.Sum(s => s.LineTotal),
+                TotalDiscountGiven = g.Sum(s => s.DiscountAmount ?? 0m)
+            })
+            .OrderByDescending(x => x.TotalDiscountGiven)
+            .Take(20)
+            .ToList();
+
+        // Bundle rule hits — count invoices that included the trigger item
+        var bundleRules = await _uow.Repository<BundleRule>().Query()
+            .Include(b => b.TriggerItem)
+            .Include(b => b.RewardItem)
+            .AsNoTracking()
+            .ToListAsync(ct);
+
+        var invoiceTriggerItems = sales
+            .GroupBy(s => s.InvoiceId)
+            .ToDictionary(g => g.Key, g => g.Select(s => s.ItemId).ToHashSet());
+
+        var bundleHits = bundleRules.Select(b => new BundleHitSummaryDto
+        {
+            BundleRuleId = b.BundleRuleId,
+            BundleName = b.Name,
+            TriggerItemName = b.TriggerItem.Name,
+            RewardItemName = b.RewardItem.Name,
+            RewardDiscountPercent = b.RewardDiscountPercent,
+            TriggerInvoiceCount = invoiceTriggerItems.Values.Count(itemSet => itemSet.Contains(b.TriggerItemId))
+        })
+        .OrderByDescending(x => x.TriggerInvoiceCount)
+        .ToList();
+
+        // Segment pricing effectiveness — sales of segment-priced items
+        var segmentPrices = await _uow.Repository<CustomerSegmentPrice>().Query()
+            .Include(sp => sp.Item).ThenInclude(i => i.Category)
+            .AsNoTracking()
+            .Where(sp => sp.IsActive)
+            .ToListAsync(ct);
+
+        var salesByItemId = sales.GroupBy(s => s.ItemId).ToDictionary(g => g.Key, g => g.ToList());
+
+        var segmentSummary = segmentPrices.Select(sp =>
+        {
+            var itemSales = salesByItemId.GetValueOrDefault(sp.ItemId, new List<Sale>());
+            return new SegmentEffectivenessSummaryDto
+            {
+                Segment = sp.Segment.ToString(),
+                ItemName = sp.Item.Name,
+                CategoryName = sp.Item.Category?.Name,
+                StandardPrice = sp.Item.UnitPrice,
+                SegmentPrice = sp.PriceOverride,
+                UnitsSold = itemSales.Sum(s => s.Quantity),
+                TotalRevenue = itemSales.Sum(s => s.LineTotal)
+            };
+        })
+        .OrderByDescending(x => x.UnitsSold)
+        .ToList();
+
+        return new PromotionEffectivenessDto
+        {
+            FromDate = fromDateUtc,
+            ToDate = toDateUtc,
+            TotalDiscountGiven = totalDiscountGiven,
+            InvoicesWithDiscount = invoicesWithDiscount,
+            TopDiscountedItems = topDiscountedItems,
+            BundleHits = bundleHits,
+            SegmentSummary = segmentSummary
+        };
+    }
+
+    // ---- Branch management ----
+
+    public async Task<IReadOnlyList<BranchDto>> GetBranchesAsync(CancellationToken ct = default)
+    {
+        var branches = await _uow.Repository<Branch>().Query()
+            .AsNoTracking()
+            .OrderBy(b => b.Name)
+            .ToListAsync(ct);
+
+        return branches.Select(b => new BranchDto
+        {
+            BranchId = b.BranchId,
+            Name = b.Name,
+            Code = b.Code,
+            Address = b.Address,
+            IsActive = b.IsActive
+        }).ToList();
+    }
+
+    public async Task<BranchDto> UpsertBranchAsync(UpsertBranchRequest request, CancellationToken ct = default)
+    {
+        Branch branch;
+        if (request.BranchId.HasValue)
+        {
+            branch = await _uow.Repository<Branch>().Query()
+                .FirstOrDefaultAsync(b => b.BranchId == request.BranchId.Value, ct)
+                ?? throw new KeyNotFoundException($"Branch {request.BranchId} not found.");
+            branch.Name = request.Name;
+            branch.Code = request.Code;
+            branch.Address = request.Address;
+            branch.IsActive = request.IsActive;
+            _uow.Repository<Branch>().Update(branch);
+        }
+        else
+        {
+            branch = new Branch
+            {
+                Name = request.Name,
+                Code = request.Code,
+                Address = request.Address,
+                IsActive = request.IsActive
+            };
+            await _uow.Repository<Branch>().AddAsync(branch, ct);
+        }
+        await _uow.SaveChangesAsync(ct);
+        return new BranchDto
+        {
+            BranchId = branch.BranchId,
+            Name = branch.Name,
+            Code = branch.Code,
+            Address = branch.Address,
+            IsActive = branch.IsActive
+        };
+    }
+
+    public async Task<IReadOnlyList<UserBranchRoleDto>> GetUserBranchRolesAsync(int? branchId, Guid? userId, CancellationToken ct = default)
+    {
+        var query = _uow.Repository<UserBranchRole>().Query()
+            .Include(x => x.User)
+            .Include(x => x.Branch)
+            .Include(x => x.Role)
+            .AsNoTracking();
+
+        if (branchId.HasValue) query = query.Where(x => x.BranchId == branchId.Value);
+        if (userId.HasValue) query = query.Where(x => x.UserId == userId.Value);
+
+        var rows = await query.OrderBy(x => x.Branch.Name).ThenBy(x => x.User.Username).ToListAsync(ct);
+
+        return rows.Select(x => new UserBranchRoleDto
+        {
+            UserBranchRoleId = x.UserBranchRoleId,
+            UserId = x.UserId,
+            UserName = x.User.Username,
+            BranchId = x.BranchId,
+            BranchName = x.Branch.Name,
+            RoleId = x.RoleId,
+            RoleName = x.Role.Name
+        }).ToList();
+    }
+
+    public async Task<UserBranchRoleDto> AssignUserBranchRoleAsync(AssignUserBranchRoleRequest request, CancellationToken ct = default)
+    {
+        var existing = await _uow.Repository<UserBranchRole>().Query()
+            .FirstOrDefaultAsync(x => x.UserId == request.UserId && x.BranchId == request.BranchId && x.RoleId == request.RoleId, ct);
+
+        if (existing is not null)
+        {
+            var existingBranch = await _uow.Repository<Branch>().Query().AsNoTracking().FirstAsync(b => b.BranchId == existing.BranchId, ct);
+            var existingUser = await _uow.Repository<User>().Query().AsNoTracking().FirstAsync(u => u.UserId == existing.UserId, ct);
+            var existingRole = await _uow.Repository<Role>().Query().AsNoTracking().FirstAsync(r => r.RoleId == existing.RoleId, ct);
+            return new UserBranchRoleDto
+            {
+                UserBranchRoleId = existing.UserBranchRoleId,
+                UserId = existing.UserId,
+                UserName = existingUser.Username,
+                BranchId = existing.BranchId,
+                BranchName = existingBranch.Name,
+                RoleId = existing.RoleId,
+                RoleName = existingRole.Name
+            };
+        }
+
+        var ubr = new UserBranchRole
+        {
+            UserId = request.UserId,
+            BranchId = request.BranchId,
+            RoleId = request.RoleId
+        };
+        await _uow.Repository<UserBranchRole>().AddAsync(ubr, ct);
+        await _uow.SaveChangesAsync(ct);
+
+        var branch = await _uow.Repository<Branch>().Query().AsNoTracking().FirstAsync(b => b.BranchId == ubr.BranchId, ct);
+        var user = await _uow.Repository<User>().Query().AsNoTracking().FirstAsync(u => u.UserId == ubr.UserId, ct);
+        var role = await _uow.Repository<Role>().Query().AsNoTracking().FirstAsync(r => r.RoleId == ubr.RoleId, ct);
+
+        return new UserBranchRoleDto
+        {
+            UserBranchRoleId = ubr.UserBranchRoleId,
+            UserId = ubr.UserId,
+            UserName = user.Username,
+            BranchId = ubr.BranchId,
+            BranchName = branch.Name,
+            RoleId = ubr.RoleId,
+            RoleName = role.Name
+        };
+    }
+
+    public async Task<bool> RemoveUserBranchRoleAsync(long userBranchRoleId, CancellationToken ct = default)
+    {
+        var ubr = await _uow.Repository<UserBranchRole>().Query()
+            .FirstOrDefaultAsync(x => x.UserBranchRoleId == userBranchRoleId, ct);
+        if (ubr is null) return false;
+        _uow.Repository<UserBranchRole>().Remove(ubr);
+        await _uow.SaveChangesAsync(ct);
+        return true;
+    }
 }

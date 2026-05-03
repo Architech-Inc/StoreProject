@@ -34,6 +34,7 @@ public class DashboardModel : SecurePageModel
     public bool CanReportsRead { get; private set; }
     public bool CanAdminRoleMatrix { get; private set; }
     public bool CanPaymentsRead { get; private set; }
+    public bool CanAdminBranches { get; private set; }
 
     public DashboardModel(
         IItemService itemService,
@@ -63,6 +64,7 @@ public class DashboardModel : SecurePageModel
         CanReportsRead = HasPermission(permissions, PermissionKeys.ReportsRead);
         CanAdminRoleMatrix = HasPermission(permissions, PermissionKeys.AdminRoleMatrix);
         CanPaymentsRead = HasPermission(permissions, PermissionKeys.PaymentsRead);
+        CanAdminBranches = HasPermission(permissions, PermissionKeys.AdminBranches);
 
         try
         {

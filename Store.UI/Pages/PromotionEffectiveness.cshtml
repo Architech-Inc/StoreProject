@@ -1,0 +1,200 @@
+@page
+@model PromotionEffectivenessModel
+@using StoreUI.Pages
+@using Store.Models.DTOs.Operations
+@{
+    ViewData["Title"] = "Promotion Effectiveness";
+}
+
+<div class="page-container">
+    <h1 class="page-title">Promotion Effectiveness Dashboard</h1>
+
+    @* ── Date Filter ── *@
+    <section class="card mb-4">
+        <div class="card-header">
+            <h2 class="card-title">Date Range</h2>
+        </div>
+        <div class="card-body">
+            <form method="get" class="filter-form">
+                <label>From <input type="date" name="from" value="@Model.FromDate.ToString("yyyy-MM-dd")" class="form-control form-control-sm" /></label>
+                <label>To <input type="date" name="to" value="@Model.ToDate.ToString("yyyy-MM-dd")" class="form-control form-control-sm" /></label>
+                <button type="submit" class="btn btn-sm btn-primary">Apply</button>
+            </form>
+        </div>
+    </section>
+
+    @if (Model.Report is null)
+    {
+        <div class="alert alert-warning">Could not load promotion report.</div>
+    }
+    else
+    {
+        var r = Model.Report;
+
+        @* ── Summary Cards ── *@
+        <div class="summary-cards mb-4">
+            <div class="summary-card">
+                <span class="summary-label">Total Discount Given</span>
+                <span class="summary-value">@r.TotalDiscountGiven.ToString("N2")</span>
+            </div>
+            <div class="summary-card">
+                <span class="summary-label">Invoices w/ Discount</span>
+                <span class="summary-value">@r.InvoicesWithDiscount</span>
+            </div>
+            <div class="summary-card">
+                <span class="summary-label">Active Bundle Rules</span>
+                <span class="summary-value">@r.BundleHits.Count</span>
+            </div>
+            <div class="summary-card">
+                <span class="summary-label">Segment Price Rules</span>
+                <span class="summary-value">@r.SegmentSummary.Count</span>
+            </div>
+        </div>
+
+        @* ── Item Discount Table ── *@
+        <section class="card mb-4">
+            <div class="card-header">
+                <h2 class="card-title">Discounted Items</h2>
+            </div>
+            @if (r.TopDiscountedItems.Count == 0)
+            {
+                <p class="text-muted px-3 py-2">No discounted items sold in this period.</p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Category</th>
+                                <th>Discount %</th>
+                                <th>Units Sold</th>
+                                <th>Revenue</th>
+                                <th>Discount Given</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in r.TopDiscountedItems)
+                            {
+                                <tr>
+                                    <td>@item.ItemName</td>
+                                    <td>@(item.CategoryName ?? "—")</td>
+                                    <td>@item.DiscountPercent.ToString("N1")%</td>
+                                    <td>@item.UnitsSold</td>
+                                    <td>@item.TotalRevenue.ToString("N2")</td>
+                                    <td class="text-danger">@item.TotalDiscountGiven.ToString("N2")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+
+        @* ── Bundle Rule Hits ── *@
+        <section class="card mb-4">
+            <div class="card-header">
+                <h2 class="card-title">Bundle Rule Activity</h2>
+            </div>
+            @if (r.BundleHits.Count == 0)
+            {
+                <p class="text-muted px-3 py-2">No bundle rules configured.</p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Bundle Name</th>
+                                <th>Trigger Item</th>
+                                <th>Reward Item</th>
+                                <th>Reward Discount %</th>
+                                <th>Qualifying Invoices</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var b in r.BundleHits)
+                            {
+                                <tr>
+                                    <td>@b.BundleName</td>
+                                    <td>@b.TriggerItemName</td>
+                                    <td>@b.RewardItemName</td>
+                                    <td>@b.RewardDiscountPercent.ToString("N1")%</td>
+                                    <td>
+                                        @if (b.TriggerInvoiceCount > 0)
+                                        {
+                                            <span class="badge badge-completed">@b.TriggerInvoiceCount</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">0</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+
+        @* ── Segment Pricing Table ── *@
+        <section class="card mb-4">
+            <div class="card-header">
+                <h2 class="card-title">Segment Pricing Activity</h2>
+            </div>
+            @if (r.SegmentSummary.Count == 0)
+            {
+                <p class="text-muted px-3 py-2">No active segment price rules.</p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Segment</th>
+                                <th>Item</th>
+                                <th>Category</th>
+                                <th>Standard Price</th>
+                                <th>Segment Price</th>
+                                <th>Saving</th>
+                                <th>Units Sold</th>
+                                <th>Revenue</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var seg in r.SegmentSummary)
+                            {
+                                var saving = seg.StandardPrice - seg.SegmentPrice;
+                                <tr>
+                                    <td><span class="badge badge-pending">@seg.Segment</span></td>
+                                    <td>@seg.ItemName</td>
+                                    <td>@(seg.CategoryName ?? "—")</td>
+                                    <td>@seg.StandardPrice.ToString("N2")</td>
+                                    <td>@seg.SegmentPrice.ToString("N2")</td>
+                                    <td class="@(saving > 0 ? "text-danger" : "text-muted")">@saving.ToString("N2")</td>
+                                    <td>@seg.UnitsSold</td>
+                                    <td>@seg.TotalRevenue.ToString("N2")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+    }
+</div>
+
+<style>
+    .summary-cards { display: flex; gap: 1rem; flex-wrap: wrap; }
+    .summary-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: .5rem; padding: .75rem 1.25rem; min-width: 160px; }
+    .summary-label { display: block; font-size: .75rem; color: #6b7280; }
+    .summary-value { display: block; font-size: 1.25rem; font-weight: 700; color: #111827; }
+    .badge-completed { background: #d1fae5; color: #065f46; }
+    .badge-pending   { background: #fef3c7; color: #92400e; }
+    .badge { padding: 2px 8px; border-radius: 9999px; font-size: .75rem; font-weight: 600; }
+    .text-danger { color: #dc2626; }
+</style>

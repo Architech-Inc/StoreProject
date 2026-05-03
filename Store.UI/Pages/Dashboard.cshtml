@@ -37,6 +37,7 @@
             @if (Model.CanPricingRead)
             {
                 <a class="nav-link" href="/PricingOps">Pricing Ops</a>
+                <a class="nav-link" href="/PromotionEffectiveness">Promo Effectiveness</a>
             }
             @if (Model.CanCashRead || Model.CanReportsRead)
             {
@@ -49,6 +50,10 @@
             @if (Model.CanPaymentsRead)
             {
                 <a class="nav-link" href="/Payments">Payments</a>
+            }
+            @if (Model.CanAdminBranches)
+            {
+                <a class="nav-link" href="/BranchAdmin">Branch Admin</a>
             }
             <a class="nav-link" href="#overview">Overview</a>
             <a class="nav-link" href="#invoices">Invoices</a>
@@ -200,8 +205,7 @@
                 }
                 @if (Model.CanPricingRead)
                 {
-                    <a class="action-link" href="/PricingOps">Pricing & Promotions</a>
-                }
+                    <a class="action-link" href="/PricingOps">Pricing & Promotions</a>                    <a class="action-link" href="/PromotionEffectiveness">Promo Effectiveness</a>                }
                 @if (Model.CanCashRead || Model.CanReportsRead)
                 {
                     <a class="action-link" href="/CashReports">Cash & Reports</a>
@@ -213,6 +217,10 @@
                 @if (Model.CanPaymentsRead)
                 {
                     <a class="action-link" href="/Payments">Payments</a>
+                }
+                @if (Model.CanAdminBranches)
+                {
+                    <a class="action-link" href="/BranchAdmin">Branch Admin</a>
                 }
                 <a class="action-link" href="/Login">Switch User</a>
             </div>

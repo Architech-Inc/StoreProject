@@ -26,4 +26,12 @@ public interface IStoreOperationsService
 
     Task<IReadOnlyList<RoleMatrixDto>> GetRoleMatrixAsync(CancellationToken ct = default);
     Task<RolePermissionDto> UpdateRolePermissionAsync(UpdateRolePermissionRequest request, CancellationToken ct = default);
+
+    Task<PromotionEffectivenessDto> GetPromotionEffectivenessAsync(DateTime fromDateUtc, DateTime toDateUtc, CancellationToken ct = default);
+
+    Task<IReadOnlyList<BranchDto>> GetBranchesAsync(CancellationToken ct = default);
+    Task<BranchDto> UpsertBranchAsync(UpsertBranchRequest request, CancellationToken ct = default);
+    Task<IReadOnlyList<UserBranchRoleDto>> GetUserBranchRolesAsync(int? branchId, Guid? userId, CancellationToken ct = default);
+    Task<UserBranchRoleDto> AssignUserBranchRoleAsync(AssignUserBranchRoleRequest request, CancellationToken ct = default);
+    Task<bool> RemoveUserBranchRoleAsync(long userBranchRoleId, CancellationToken ct = default);
 }

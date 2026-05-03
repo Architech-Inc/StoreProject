@@ -63,6 +63,7 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy(PermissionKeys.ReportsRead, p => p.RequireClaim("perm", PermissionKeys.ReportsRead));
     options.AddPolicy(PermissionKeys.AdminRoleMatrix, p => p.RequireClaim("perm", PermissionKeys.AdminRoleMatrix));
     options.AddPolicy(PermissionKeys.PaymentsRead, p => p.RequireClaim("perm", PermissionKeys.PaymentsRead));
+    options.AddPolicy(PermissionKeys.AdminBranches, p => p.RequireClaim("perm", PermissionKeys.AdminBranches));
 });
 
 // ─── Rate Limiting ────────────────────────────────────────────────────────────

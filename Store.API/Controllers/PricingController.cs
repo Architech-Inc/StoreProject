@@ -66,4 +66,21 @@ public class PricingController : ControllerBase
         var result = await _ops.GetPricingPreviewAsync(request, ct);
         return result is null ? NotFound() : Ok(result);
     }
+
+    [HttpGet("promotions/effectiveness")]
+    [Authorize(Policy = PermissionKeys.PricingRead)]
+    public async Task<IActionResult> GetPromotionEffectiveness(
+        [FromQuery] DateTime? fromDate,
+        [FromQuery] DateTime? toDate,
+        CancellationToken ct)
+    {
+        var from = fromDate?.Date.ToUniversalTime() ?? DateTime.UtcNow.Date.AddDays(-30);
+        var to = toDate?.Date.ToUniversalTime() ?? DateTime.UtcNow.Date;
+
+        if (to < from)
+            return BadRequest(new { message = "toDate must be >= fromDate." });
+
+        var result = await _ops.GetPromotionEffectivenessAsync(from, to, ct);
+        return Ok(result);
+    }
 }

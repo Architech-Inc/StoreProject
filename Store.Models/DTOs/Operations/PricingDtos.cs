@@ -122,3 +122,48 @@ public class PricingPreviewDto
     public decimal TaxAmount { get; set; }
     public decimal GrandTotal { get; set; }
 }
+
+// ─── Promotion Effectiveness ──────────────────────────────────────────────────
+
+public class PromotionEffectivenessDto
+{
+    public DateTime FromDate { get; set; }
+    public DateTime ToDate { get; set; }
+    public decimal TotalDiscountGiven { get; set; }
+    public int InvoicesWithDiscount { get; set; }
+    public List<ItemDiscountSummaryDto> TopDiscountedItems { get; set; } = new();
+    public List<BundleHitSummaryDto> BundleHits { get; set; } = new();
+    public List<SegmentEffectivenessSummaryDto> SegmentSummary { get; set; } = new();
+}
+
+public class ItemDiscountSummaryDto
+{
+    public Guid ItemId { get; set; }
+    public string ItemName { get; set; } = string.Empty;
+    public string? CategoryName { get; set; }
+    public decimal DiscountPercent { get; set; }
+    public int UnitsSold { get; set; }
+    public decimal TotalRevenue { get; set; }
+    public decimal TotalDiscountGiven { get; set; }
+}
+
+public class BundleHitSummaryDto
+{
+    public int BundleRuleId { get; set; }
+    public string BundleName { get; set; } = string.Empty;
+    public string TriggerItemName { get; set; } = string.Empty;
+    public string RewardItemName { get; set; } = string.Empty;
+    public decimal RewardDiscountPercent { get; set; }
+    public int TriggerInvoiceCount { get; set; }
+}
+
+public class SegmentEffectivenessSummaryDto
+{
+    public string Segment { get; set; } = string.Empty;
+    public string ItemName { get; set; } = string.Empty;
+    public string? CategoryName { get; set; }
+    public decimal StandardPrice { get; set; }
+    public decimal SegmentPrice { get; set; }
+    public int UnitsSold { get; set; }
+    public decimal TotalRevenue { get; set; }
+}

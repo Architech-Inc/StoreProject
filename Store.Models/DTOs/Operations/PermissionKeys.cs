@@ -11,6 +11,7 @@ public static class PermissionKeys
     public const string ReportsRead = "reports.read";
     public const string AdminRoleMatrix = "admin.rolematrix";
     public const string PaymentsRead = "payments.read";
+    public const string AdminBranches = "admin.branches";
 
     public static readonly string[] All =
     [
@@ -22,6 +23,7 @@ public static class PermissionKeys
         CashWrite,
         ReportsRead,
         AdminRoleMatrix,
-        PaymentsRead
+        PaymentsRead,
+        AdminBranches
     ];
 }
