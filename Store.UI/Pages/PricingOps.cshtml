@@ -10,11 +10,21 @@
 }
 
 <div class="ops-page">
+    <partial name="Shared/_ModuleNav" />
+
     <header>
         <h1>Pricing & Promotions</h1>
         <p>Tax profiles, bundle rules, segment pricing, and transaction preview.</p>
         <a class="link" href="/Dashboard">Back to Dashboard</a>
     </header>
+
+    <nav class="page-jump" aria-label="Pricing sections">
+        <a href="#setup">Setup</a>
+        <a href="#preview">Preview</a>
+        <a href="#taxes">Tax Profiles</a>
+        <a href="#bundles">Bundle Rules</a>
+        <a href="#segments">Segment Pricing</a>
+    </nav>
 
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
     {
@@ -23,7 +33,7 @@
 
     @if (Model.CanWrite)
     {
-        <section class="grid-3">
+        <section class="grid-3" id="setup">
             <article class="card">
                 <h2>Tax Profile</h2>
                 <form method="post" asp-page-handler="Tax">
@@ -96,7 +106,7 @@
         </section>
     }
 
-    <section class="card">
+    <section class="card" id="preview">
         <h2>Pricing Preview</h2>
         <form method="post" asp-page-handler="Preview" class="inline-form">
             <select asp-for="PreviewItemId" required>
@@ -130,7 +140,7 @@
         }
     </section>
 
-    <section class="card">
+    <section class="card" id="taxes">
         <h2>Tax Profiles</h2>
         <table>
             <thead><tr><th>Name</th><th>Rate</th><th>Type</th><th>Active</th></tr></thead>
@@ -143,7 +153,7 @@
         </table>
     </section>
 
-    <section class="card">
+    <section class="card" id="bundles">
         <h2>Bundle Rules</h2>
         <table>
             <thead><tr><th>Name</th><th>Trigger</th><th>Reward</th><th>Discount</th><th>Active</th></tr></thead>
@@ -156,7 +166,7 @@
         </table>
     </section>
 
-    <section class="card">
+    <section class="card" id="segments">
         <h2>Customer Segment Pricing</h2>
         <table>
             <thead><tr><th>Item</th><th>Segment</th><th>Price</th><th>Active</th></tr></thead>

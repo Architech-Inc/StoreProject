@@ -1,0 +1,32 @@
+@using Store.Models.DTOs.Operations
+@using StoreUI.Services
+@{
+    var token = Context.Session.GetString("access_token") ?? string.Empty;
+    var permissions = JwtPermissionReader.GetPermissions(token);
+    var canInventory = permissions.Contains(PermissionKeys.InventoryRead) || permissions.Contains(PermissionKeys.InventoryWrite);
+    var canPricing = permissions.Contains(PermissionKeys.PricingRead) || permissions.Contains(PermissionKeys.PricingWrite);
+    var canCash = permissions.Contains(PermissionKeys.CashRead) || permissions.Contains(PermissionKeys.CashWrite) || permissions.Contains(PermissionKeys.ReportsRead);
+    var canRoleMatrix = permissions.Contains(PermissionKeys.AdminRoleMatrix);
+}
+
+<nav class="module-nav" aria-label="Module navigation">
+    <a href="/Dashboard">Dashboard</a>
+    <a href="/Pos">POS</a>
+    @if (canInventory)
+    {
+        <a href="/InventoryOps">Inventory</a>
+    }
+    @if (canPricing)
+    {
+        <a href="/PricingOps">Pricing</a>
+    }
+    @if (canCash)
+    {
+        <a href="/CashReports">Cash & Reports</a>
+    }
+    @if (canRoleMatrix)
+    {
+        <a href="/RoleMatrix">Role Matrix</a>
+    }
+    <a href="/Login">Switch User</a>
+</nav>

@@ -45,7 +45,7 @@ public class CashReportsModel : SecurePageModel
 
         if (!CanCashRead && !CanReportRead)
         {
-            return Forbid();
+            return AccessDenied();
         }
 
         await LoadAsync(ct);
@@ -82,7 +82,7 @@ public class CashReportsModel : SecurePageModel
         _apiClient.SetToken(token);
         if (!HasPermission(permissions, PermissionKeys.CashWrite))
         {
-            return Forbid();
+            return AccessDenied();
         }
 
         await operation();

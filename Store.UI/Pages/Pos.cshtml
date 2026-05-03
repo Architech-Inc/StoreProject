@@ -6,10 +6,10 @@
 
     var catalogJson = JsonSerializer.Serialize(Model.CatalogItems.Select(i => new
     {
-        i.ItemId,
-        i.Name,
-        i.UnitPrice,
-        i.InStock,
+        itemId = i.ItemId,
+        name = i.Name,
+        unitPrice = i.UnitPrice,
+        inStock = i.InStock,
         categoryName = i.CategoryName,
         unit = i.UnitAbbreviation,
         discountPercentage = i.DiscountPercentage
@@ -17,9 +17,9 @@
 
     var customersJson = JsonSerializer.Serialize(Model.Customers.Select(c => new
     {
-        c.CustomerId,
-        c.FullName,
-        c.PrimaryPhone
+        customerId = c.CustomerId,
+        fullName = c.FullName,
+        primaryPhone = c.PrimaryPhone
     }));
 }
 
@@ -28,6 +28,8 @@
 }
 
 <div class="pos-shell">
+    <partial name="Shared/_ModuleNav" />
+
     <header class="pos-topbar">
         <div>
             <h1>POS Terminal</h1>
@@ -49,7 +51,7 @@
     }
 
     <div class="pos-grid">
-        <section class="catalog-panel" aria-label="Product catalog">
+        <section class="catalog-panel" id="catalog" aria-label="Product catalog">
             <div class="panel-head">
                 <h2>Catalog</h2>
                 <input id="catalogSearch" type="search" placeholder="Search products..." aria-label="Search products" />
@@ -58,7 +60,7 @@
             <div id="catalogList" class="catalog-list"></div>
         </section>
 
-        <section class="cart-panel" aria-label="Checkout cart">
+        <section class="cart-panel" id="checkout" aria-label="Checkout cart">
             <div class="panel-head">
                 <h2>Cart</h2>
                 <button type="button" class="btn btn-warning" id="clearCartBtn">Clear</button>

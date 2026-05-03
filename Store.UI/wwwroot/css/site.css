@@ -268,6 +268,60 @@ div.stackPanel {
     overflow-y: auto;
 }
 
+/* ---- Shared module/page navigation ---- */
+.module-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 12px;
+}
+
+.module-nav a {
+    text-decoration: none;
+    font-weight: 600;
+    color: #0f5d39;
+    background: #ecf8ef;
+    border: 1px solid #cde6d1;
+    border-radius: 999px;
+    padding: 6px 12px;
+}
+
+.module-nav a:hover,
+.module-nav a:focus-visible {
+    background: #def3e3;
+    border-color: #7cc089;
+    outline: none;
+}
+
+.page-jump {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 12px;
+}
+
+.page-jump a {
+    text-decoration: none;
+    color: #0f172a;
+    background: #ffffff;
+    border: 1px solid #d8e2d6;
+    border-radius: 10px;
+    padding: 5px 10px;
+}
+
+@media (max-width: 700px) {
+    .module-nav,
+    .page-jump {
+        gap: 6px;
+    }
+
+    .module-nav a,
+    .page-jump a {
+        padding: 5px 9px;
+        font-size: 12px;
+    }
+}
+
 .panel_list li:not(.browser-default) {
     width: 100%;
     height: 40px;

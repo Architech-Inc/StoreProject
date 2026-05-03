@@ -63,7 +63,7 @@ public class PricingOpsModel : SecurePageModel
 
         if (!CanRead)
         {
-            return Forbid();
+            return AccessDenied();
         }
 
         await LoadAsync(ct);
@@ -131,7 +131,7 @@ public class PricingOpsModel : SecurePageModel
         _apiClient.SetToken(token);
         if (!HasPermission(permissions, PermissionKeys.PricingRead))
         {
-            return Forbid();
+            return AccessDenied();
         }
 
         var req = new PricingPreviewRequest
@@ -158,7 +158,7 @@ public class PricingOpsModel : SecurePageModel
         _apiClient.SetToken(token);
         if (!HasPermission(permissions, PermissionKeys.PricingWrite))
         {
-            return Forbid();
+            return AccessDenied();
         }
 
         await operation();

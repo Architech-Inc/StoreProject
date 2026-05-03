@@ -52,7 +52,7 @@ public class InventoryOpsModel : SecurePageModel
 
         if (!CanRead)
         {
-            return Forbid();
+            return AccessDenied();
         }
 
         await LoadAsync(ct);
@@ -124,7 +124,7 @@ public class InventoryOpsModel : SecurePageModel
         _apiClient.SetToken(token);
         if (!HasPermission(permissions, PermissionKeys.InventoryWrite))
         {
-            return Forbid();
+            return AccessDenied();
         }
 
         await operation();

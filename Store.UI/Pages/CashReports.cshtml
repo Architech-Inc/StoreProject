@@ -9,18 +9,26 @@
 }
 
 <div class="ops-page">
+    <partial name="Shared/_ModuleNav" />
+
     <header>
         <h1>Cash Management & Reporting</h1>
         <p>Shift lifecycle, Z-report, payment breakdown, and gross margin tracking.</p>
         <a class="link" href="/Dashboard">Back to Dashboard</a>
     </header>
 
+    <nav class="page-jump" aria-label="Cash report sections">
+        <a href="#shift-actions">Shift Actions</a>
+        <a href="#active-shift">Active Shift</a>
+        <a href="#daily-report">Daily Z Report</a>
+    </nav>
+
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
     {
         <div class="status">@Model.StatusMessage</div>
     }
 
-    <section class="grid-2">
+    <section class="grid-2" id="shift-actions">
         @if (Model.CanCashWrite)
         {
             <article class="card">
@@ -47,7 +55,7 @@
         }
     </section>
 
-    <section class="card">
+    <section class="card" id="active-shift">
         <h2>Active Shift</h2>
         @if (Model.ActiveShift is null)
         {
@@ -65,7 +73,7 @@
 
     @if (Model.CanReportRead)
     {
-        <section class="card">
+        <section class="card" id="daily-report">
             <h2>Daily Z Report</h2>
             <form method="get" class="inline-form">
                 <input asp-for="ReportDateUtc" type="date" />

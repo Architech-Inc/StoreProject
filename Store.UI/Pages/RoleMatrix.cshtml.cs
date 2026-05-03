@@ -28,7 +28,7 @@ public class RoleMatrixModel : SecurePageModel
         _apiClient.SetToken(token);
         if (!HasPermission(permissions, PermissionKeys.AdminRoleMatrix))
         {
-            return Forbid();
+            return AccessDenied();
         }
 
         Matrix = await _apiClient.GetAsync<List<RoleMatrixDto>>("/api/admin/role-matrix", ct)
@@ -47,7 +47,7 @@ public class RoleMatrixModel : SecurePageModel
         _apiClient.SetToken(token);
         if (!HasPermission(permissions, PermissionKeys.AdminRoleMatrix))
         {
-            return Forbid();
+            return AccessDenied();
         }
 
         var req = new UpdateRolePermissionRequest

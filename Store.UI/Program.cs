@@ -24,11 +24,17 @@ builder.Services.AddSession(options =>
 
 // API HttpClient with JWT token handling
 var apiBaseUrl = builder.Configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7112";
-builder.Services.AddHttpClient<IApiClientService, ApiClientService>(client =>
+builder.Services.AddHttpClient("StoreApi", client =>
 {
     client.BaseAddress = new Uri(apiBaseUrl);
     client.Timeout = TimeSpan.FromSeconds(20);
     client.DefaultRequestHeaders.Add("Accept", "application/json");
+});
+builder.Services.AddScoped<IApiClientService>(sp =>
+{
+    var factory = sp.GetRequiredService<IHttpClientFactory>();
+    var logger = sp.GetRequiredService<ILogger<ApiClientService>>();
+    return new ApiClientService(factory.CreateClient("StoreApi"), logger);
 });
 
 // API service implementations

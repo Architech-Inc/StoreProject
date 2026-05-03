@@ -9,18 +9,26 @@
 }
 
 <div class="ops-page">
+    <partial name="Shared/_ModuleNav" />
+
     <header>
         <h1>Inventory Operations</h1>
         <p>Process GRN, returns, adjustments, and reorder monitoring.</p>
         <a class="link" href="/Dashboard">Back to Dashboard</a>
     </header>
 
+    <nav class="page-jump" aria-label="Inventory sections">
+        <a href="#reorder">Reorder Suggestions</a>
+        <a href="#actions">Stock Actions</a>
+        <a href="#audit">Audit Trail</a>
+    </nav>
+
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
     {
         <div class="status">@Model.StatusMessage</div>
     }
 
-    <section class="card">
+    <section class="card" id="reorder">
         <h2>Low Stock Reorder Suggestions</h2>
         <table>
             <thead>
@@ -43,7 +51,7 @@
 
     @if (Model.CanWrite)
     {
-        <section class="grid-3">
+        <section class="grid-3" id="actions">
             <article class="card">
                 <h2>Goods Receipt</h2>
                 <form method="post" asp-page-handler="Receive">
@@ -105,7 +113,7 @@
         </section>
     }
 
-    <section class="card">
+    <section class="card" id="audit">
         <h2>Stock Movement Audit Trail</h2>
         <table>
             <thead>
