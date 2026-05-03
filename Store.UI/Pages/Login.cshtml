@@ -12,13 +12,15 @@
     <title>ClexAn Login</title>
     <link rel="icon" type="image/png" href="~/images/clarkstore.png" asp-append-version="true" />
     <link rel="shortcut icon" type="image/png" href="~/images/clarkstore.png" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
 <body>
 <div class="auth-page">
     <div id="welcomeView">
         <div class="viewNameSpace">
-            <h2 class="nameSpace"><sign class="atSign">@@</sign>ClexAn</h2>
+            @* <h2 class="nameSpace"><sign class="atSign">@@</sign>ClexAn</h2> *@
+            <img src="~/images/clarkstore.png" alt="logo" class="ns-image">
         </div>
 
         <div id="avatarBox">
@@ -47,7 +49,7 @@
                     <span id="inputError-1"></span>
                 </div>
                 <div class="formSection LDiv">
-                    <button type="submit" id="login">LOGIN</button>
+                    <button type="submit" id="login">Login</button>
                 </div>
                 <p class="forgot_pass">Forgot password? Contact <a href="mailto:admin@clexan.local">God Admin</a></p>
             </form>

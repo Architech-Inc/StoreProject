@@ -1,12 +1,12 @@
 :root {
-    --ops-bg: #f3f6ec;
-    --ops-paper: #ffffff;
-    --ops-ink: #152c1a;
-    --ops-subtle: #5f6d63;
-    --ops-brand: #1e7f4f;
-    --ops-brand-2: #0f5d39;
-    --ops-border: #d8e2d6;
-    --ops-danger: #b44233;
+    --ops-bg: var(--canvas);
+    --ops-paper: var(--surface);
+    --ops-ink: var(--text-primary);
+    --ops-subtle: var(--text-secondary);
+    --ops-brand: var(--brand);
+    --ops-brand-2: var(--brand-dark);
+    --ops-border: var(--border);
+    --ops-danger: var(--accent-red);
 }
 
 .ops-page {
@@ -14,7 +14,8 @@
     margin: 0 auto;
     padding: 24px;
     color: var(--ops-ink);
-    background: radial-gradient(circle at top right, #eaf4de 0, var(--ops-bg) 42%, #eef3ec 100%);
+    font-family: 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+    background: radial-gradient(circle at top right, var(--brand-soft) 0, var(--ops-bg) 42%, var(--canvas-tint-ops-end) 100%);
     min-height: 100vh;
 }
 
@@ -35,9 +36,10 @@
 
 .status {
     padding: 12px 14px;
-    border: 1px solid #c7d9c7;
-    background: #edf8ee;
-    border-radius: 12px;
+    border: 1px solid var(--brand-border);
+    background: var(--brand-soft);
+    color: var(--brand-dark);
+    border-radius: var(--radius-md);
     margin-bottom: 16px;
 }
 
@@ -59,9 +61,10 @@
 .card {
     background: var(--ops-paper);
     border: 1px solid var(--ops-border);
-    border-radius: 14px;
+    border-radius: var(--radius-lg);
     padding: 14px;
     margin-bottom: 16px;
+    box-shadow: var(--shadow);
 }
 
 form {
@@ -86,35 +89,49 @@ select,
 button {
     font: inherit;
     padding: 8px 10px;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     border: 1px solid var(--ops-border);
+}
+
+input:focus,
+select:focus {
+    outline: none;
+    border-color: var(--ops-brand-2);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--ops-brand-2) 22%, transparent);
 }
 
 button {
     border-color: transparent;
-    color: #fff;
-    background: linear-gradient(135deg, var(--ops-brand), var(--ops-brand-2));
+    color: var(--surface);
+    background: var(--ops-brand);
     font-weight: 600;
     cursor: pointer;
 }
 
+button:hover,
+button:focus-visible {
+    background: var(--ops-brand-2);
+    outline: none;
+}
+
 button.toggle.on {
-    background: linear-gradient(135deg, #1d8f5a, #0f6a40);
+    background: var(--ops-brand);
 }
 
 button.toggle.off {
-    background: linear-gradient(135deg, #bb5446, var(--ops-danger));
+    background: var(--ops-danger);
 }
 
 table {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.92rem;
+    background: var(--ops-paper);
 }
 
 th,
 td {
-    border-bottom: 1px solid #e7ece6;
+    border-bottom: 1px solid var(--border-soft);
     text-align: left;
     padding: 8px;
     vertical-align: top;

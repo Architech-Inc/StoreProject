@@ -1,12 +1,12 @@
 :root {
-    --pos-bg: #f4f6f8;
-    --pos-surface: #ffffff;
-    --pos-border: #d7dee5;
-    --pos-brand: #0f766e;
-    --pos-danger: #b42318;
-    --pos-warning: #b54708;
-    --pos-text: #0f172a;
-    --pos-muted: #475467;
+    --pos-bg: var(--canvas);
+    --pos-surface: var(--surface);
+    --pos-border: var(--border);
+    --pos-brand: var(--brand);
+    --pos-danger: var(--accent-red);
+    --pos-warning: var(--warning);
+    --pos-text: var(--text-primary);
+    --pos-muted: var(--text-secondary);
 }
 
 * {
@@ -15,9 +15,9 @@
 
 body {
     margin: 0;
-    background: linear-gradient(145deg, #ecfdf3 0%, #eef4ff 55%, #fff8eb 100%);
+    background: linear-gradient(145deg, var(--brand-soft) 0%, var(--canvas-tint-pos-mid) 55%, var(--canvas-tint-pos-end) 100%);
     color: var(--pos-text);
-    font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+    font-family: 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
 }
 
 .pos-shell {
@@ -60,9 +60,9 @@ body {
 .cart-panel {
     background: var(--pos-surface);
     border: 1px solid var(--pos-border);
-    border-radius: 16px;
+    border-radius: var(--radius-lg);
     padding: 1rem;
-    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+    box-shadow: var(--shadow);
 }
 
 .panel-head {
@@ -82,8 +82,14 @@ body {
     width: 240px;
     max-width: 100%;
     border: 1px solid var(--pos-border);
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     padding: 0.5rem 0.75rem;
+}
+
+#catalogSearch:focus {
+    outline: none;
+    border-color: var(--brand-dark);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand-dark) 22%, transparent);
 }
 
 .catalog-list {
@@ -94,9 +100,9 @@ body {
 
 .catalog-item {
     border: 1px solid var(--pos-border);
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     padding: 0.7rem;
-    background: #fff;
+    background: var(--surface-alt);
 }
 
 .catalog-item h3 {
@@ -120,7 +126,7 @@ body {
 .catalog-item button,
 .btn {
     border: none;
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     padding: 0.45rem 0.8rem;
     font-weight: 600;
     cursor: pointer;
@@ -129,29 +135,39 @@ body {
 .catalog-item button,
 .btn-primary {
     background: var(--pos-brand);
-    color: #fff;
+    color: var(--surface);
+}
+
+.catalog-item button:hover,
+.btn-primary:hover,
+.catalog-item button:focus-visible,
+.btn-primary:focus-visible {
+    background: var(--brand-dark);
+    outline: none;
 }
 
 .btn-secondary {
-    background: #e6edf4;
+    background: var(--surface-alt);
     color: var(--pos-text);
+    border: 1px solid var(--pos-border);
     text-decoration: none;
 }
 
 .btn-danger {
-    background: #fee4e2;
-    color: #912018;
+    background: var(--danger-soft);
+    color: var(--danger-text);
+    border: 1px solid var(--danger-border);
 }
 
 .btn-warning {
-    background: #fff6ed;
+    background: var(--warning-soft);
     color: var(--pos-warning);
 }
 
 .cart-empty {
     color: var(--pos-muted);
     border: 1px dashed var(--pos-border);
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     padding: 0.8rem;
     margin-bottom: 0.8rem;
 }
@@ -173,15 +189,15 @@ body {
 .cart-table input[type="number"] {
     width: 70px;
     border: 1px solid var(--pos-border);
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     padding: 0.3rem;
 }
 
 .cart-table button.danger {
-    background: #ffe2e0;
+    background: var(--danger-soft);
     border: none;
-    border-radius: 8px;
-    color: #8b1c13;
+    border-radius: var(--radius-sm);
+    color: var(--danger-text-strong);
     padding: 0.3rem 0.55rem;
     cursor: pointer;
 }
@@ -206,9 +222,17 @@ body {
 .field-row select,
 .field-row textarea {
     border: 1px solid var(--pos-border);
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     padding: 0.48rem 0.68rem;
     font: inherit;
+}
+
+.field-row input:focus,
+.field-row select:focus,
+.field-row textarea:focus {
+    outline: none;
+    border-color: var(--brand-dark);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand-dark) 22%, transparent);
 }
 
 .totals {
@@ -231,25 +255,25 @@ body {
 }
 
 .checkout-message.ok {
-    background: #ecfdf3;
-    color: #067647;
+    background: var(--brand-soft);
+    color: var(--brand-dark);
 }
 
 .checkout-message.error {
-    background: #fef3f2;
-    color: #b42318;
+    background: var(--danger-soft);
+    color: var(--danger-text);
 }
 
 .banner {
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     padding: 0.65rem 0.8rem;
     margin-bottom: 1rem;
 }
 
 .banner-error {
-    background: #fef3f2;
-    border: 1px solid #fecdca;
-    color: #b42318;
+    background: var(--danger-soft-alt);
+    border: 1px solid var(--danger-border-soft);
+    color: var(--accent-red);
 }
 
 .catalog-empty {
