@@ -1,0 +1,190 @@
+@page
+@model StoreUI.Pages.UsersModel
+@{
+    ViewData["Title"] = "Users";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
+}
+
+<div class="ops-page">
+    <partial name="Shared/_ModuleNav" />
+
+    <header>
+        <h1>User Accounts</h1>
+        <p>Manage system user accounts, roles, and account status.</p>
+        <a class="link" href="/Dashboard">Back to Dashboard</a>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="status @(Model.StatusMessage.StartsWith("Error") || Model.StatusMessage.StartsWith("Failed") ? "error" : "ok")">
+            @Model.StatusMessage
+        </div>
+    }
+
+    <section class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <h2 style="margin:0;">
+                User Accounts
+                <small style="font-weight:400;color:var(--ops-subtle);">@Model.TotalUsers total</small>
+            </h2>
+            <button type="button" onclick="openCreate()">+ New User</button>
+        </div>
+
+        @if (!Model.Users.Any())
+        {
+            <p style="color:var(--ops-subtle);padding:12px 0;">No users found.</p>
+        }
+        else
+        {
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var u in Model.Users)
+                        {
+                            <tr>
+                                <td><strong>@u.Username</strong></td>
+                                <td>@(u.RoleName ?? u.RoleId.ToString())</td>
+                                <td>
+                                    @if (u.Status == Store.Models.Enums.UserStatus.Active)
+                                    {
+                                        <span class="badge badge-green">Active</span>
+                                    }
+                                    else if (u.Status == Store.Models.Enums.UserStatus.Suspended)
+                                    {
+                                        <span class="badge badge-red">Suspended</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-gray">@u.Status</span>
+                                    }
+                                </td>
+                                <td>@u.DateCreated.ToString("yyyy-MM-dd")</td>
+                                <td style="display:flex;gap:4px;flex-wrap:nowrap;">
+                                    <button type="button" onclick="openEdit(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new { userId = u.UserId, username = u.Username, roleId = u.RoleId, status = u.Status.ToString() })))">Edit</button>
+                                    @if (u.Status == Store.Models.Enums.UserStatus.Active)
+                                    {
+                                        <form method="post" asp-page-handler="Suspend" style="margin:0;">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="userId" value="@u.UserId" />
+                                            <button type="submit" class="danger"
+                                                        onclick="@($"return confirm('Suspend account {u.Username.Replace("'", "\\'")}?')")">Suspend</button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (Model.TotalPages > 1)
+            {
+                <nav class="pagination" aria-label="User pages">
+                    @if (Model.PageNumber > 1)
+                    {
+                        <a href="?page=@(Model.PageNumber - 1)">‹ Prev</a>
+                    }
+                    <span class="active">@Model.PageNumber / @Model.TotalPages</span>
+                    @if (Model.PageNumber < Model.TotalPages)
+                    {
+                        <a href="?page=@(Model.PageNumber + 1)">Next ›</a>
+                    }
+                </nav>
+            }
+        }
+    </section>
+</div>
+
+<!-- ── Create User Modal ────────────────────────────────── -->
+<div class="modal-overlay" id="userModal" hidden>
+    <div class="modal" role="dialog" aria-labelledby="userModalTitle" aria-modal="true">
+        <div class="modal-head">
+            <h3 id="userModalTitle">New User</h3>
+            <button type="button" class="btn-close" onclick="closeModal()" aria-label="Close">×</button>
+        </div>
+        <form method="post" asp-page-handler="Create">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="EditUserId" id="editUserId" />
+
+            <label for="usernameField">Username *</label>
+            <input asp-for="NewUsername" id="usernameField" required minlength="3" maxlength="100" />
+
+            <div id="createFields">
+                <label for="emailField">Email *</label>
+                <input asp-for="NewEmail" id="emailField" type="email" />
+
+                <label for="passwordField">Password *</label>
+                <input asp-for="NewPassword" id="passwordField" type="password" minlength="8" maxlength="128" />
+            </div>
+
+            <label for="roleField">Role *</label>
+            <select asp-for="NewRoleId" id="roleField">
+                <option value="1">Admin</option>
+                <option value="2">Manager</option>
+                <option value="3">Cashier</option>
+            </select>
+
+            <div id="statusRow" style="display:none;">
+                <label for="statusField">Status</label>
+                <select asp-for="NewStatus" id="statusField">
+                    <option value="Active">Active</option>
+                    <option value="Suspended">Suspended</option>
+                </select>
+            </div>
+
+            <div style="display:flex;gap:8px;margin-top:12px;">
+                <button type="submit" id="submitBtn">Create User</button>
+                <button type="button" onclick="closeModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function openCreate() {
+            document.getElementById('userModalTitle').textContent = 'New User';
+            document.getElementById('editUserId').value = '';
+            document.getElementById('usernameField').value = '';
+            document.getElementById('emailField').value = '';
+            document.getElementById('passwordField').value = '';
+            document.getElementById('roleField').value = '3';
+            document.getElementById('createFields').style.display = '';
+            document.getElementById('statusRow').style.display = 'none';
+            document.getElementById('submitBtn').textContent = 'Create User';
+            document.getElementById('userModal').hidden = false;
+        }
+
+        function openEdit(data) {
+            document.getElementById('userModalTitle').textContent = 'Edit User';
+            document.getElementById('editUserId').value = data.userId;
+            document.getElementById('usernameField').value = data.username;
+            document.getElementById('roleField').value = data.roleId;
+            document.getElementById('statusField').value = data.status;
+            document.getElementById('createFields').style.display = 'none';
+            document.getElementById('statusRow').style.display = '';
+            document.getElementById('submitBtn').textContent = 'Save Changes';
+            document.getElementById('userModal').hidden = false;
+        }
+
+        function closeModal() {
+            document.getElementById('userModal').hidden = true;
+        }
+
+        document.getElementById('userModal').addEventListener('click', function (e) {
+            if (e.target === this) closeModal();
+        });
+    </script>
+}

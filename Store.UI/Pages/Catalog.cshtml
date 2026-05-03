@@ -84,7 +84,7 @@
                                     }
                                 </td>
                                 <td style="display:flex;gap:4px;flex-wrap:nowrap;">
-                                    <button type="button" onclick="openEdit(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new { itemId = item.ItemId, name = item.Name, description = item.Description, unitPrice = item.UnitPrice, costPrice = item.CostPrice, inStock = item.InStock, reorderLevel = item.ReorderLevel, barcode = item.Barcode })))">Edit</button>
+                                    <button type="button" onclick="openEdit(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new { itemId = item.ItemId, name = item.Name, description = item.Description, unitPrice = item.UnitPrice, costPrice = item.CostPrice, inStock = item.InStock, reorderLevel = item.ReorderLevel, barcode = item.Barcode, categoryId = item.CategoryId, unitId = item.UnitId })))">Edit</button>
                                     @if (item.IsActive)
                                     {
                                         <form method="post" asp-page-handler="Deactivate" style="margin:0;">
@@ -150,6 +150,24 @@
             <label for="itemBarcode">Barcode</label>
             <input asp-for="ItemBarcode" id="itemBarcode" />
 
+            <label for="itemCategory">Category</label>
+            <select asp-for="ItemCategoryId" id="itemCategory">
+                <option value="">— None —</option>
+                @foreach (var cat in Model.Categories)
+                {
+                    <option value="@cat.CategoryId">@cat.Name</option>
+                }
+            </select>
+
+            <label for="itemUnit">Unit</label>
+            <select asp-for="ItemUnitId" id="itemUnit">
+                <option value="">— None —</option>
+                @foreach (var u in Model.Units)
+                {
+                    <option value="@u.UnitId">@u.Name (@u.Abbreviation)</option>
+                }
+            </select>
+
             <div style="display:flex;gap:8px;margin-top:8px;">
                 <button type="submit">Save</button>
                 <button type="button" class="danger" onclick="closeModal()">Cancel</button>
@@ -174,6 +192,8 @@ function openCreate() {
     document.getElementById('itemReorderLevel').value = '';
     document.getElementById('itemBarcode').value = '';
     document.getElementById('itemInStock').disabled = false;
+        document.getElementById('itemCategory').value = '';
+        document.getElementById('itemUnit').value = '';
     modal.removeAttribute('hidden');
 }
 
@@ -188,6 +208,10 @@ function openEdit(data) {
     document.getElementById('itemInStock').disabled = true; // use GRN to change stock
     document.getElementById('itemReorderLevel').value = data.reorderLevel ?? '';
     document.getElementById('itemBarcode').value = data.barcode ?? '';
+    if (data.categoryId) document.getElementById('itemCategory').value = data.categoryId;
+    else document.getElementById('itemCategory').value = '';
+    if (data.unitId) document.getElementById('itemUnit').value = data.unitId;
+    else document.getElementById('itemUnit').value = '';
     modal.removeAttribute('hidden');
 }
 

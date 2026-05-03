@@ -1,0 +1,193 @@
+@page
+@model StoreUI.Pages.InvoicesModel
+@using Store.Models.Enums
+@{
+    ViewData["Title"] = "Invoices";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
+}
+
+<div class="ops-page">
+    <partial name="Shared/_ModuleNav" />
+
+    <header>
+        <h1>Invoices</h1>
+        <p>Browse, inspect, and void sales invoices.</p>
+        <a class="link" href="/Dashboard">Back to Dashboard</a>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="status @(Model.StatusMessage.StartsWith("Error") || Model.StatusMessage.StartsWith("Failed") ? "error" : "ok")">
+            @Model.StatusMessage
+        </div>
+    }
+
+    <!-- ── Filter bar ──────────────────────────────────────────── -->
+    <form method="get" class="filter-bar">
+        <input type="text" name="search" value="@Model.SearchTerm" placeholder="Customer or ref…" style="max-width:220px;" />
+        <select name="payType">
+            <option value="">All payment types</option>
+            @foreach (var pt in Enum.GetValues<PaymentType>())
+            {
+                <option value="@pt" selected="@(Model.PayTypeFilter == pt.ToString() ? "selected" : null)">@pt</option>
+            }
+        </select>
+        <button type="submit">Filter</button>
+        <a href="/Invoices">Clear</a>
+    </form>
+
+    <!-- ── Invoice table ──────────────────────────────────────── -->
+    <section class="card">
+        <h2 style="margin-top:0;">
+            Invoice List
+            <small style="font-weight:400;color:var(--ops-subtle);">@Model.TotalInvoices total</small>
+        </h2>
+
+        @if (!Model.Invoices.Any())
+        {
+            <p style="color:var(--ops-subtle);padding:12px 0;">No invoices match the current filter.</p>
+        }
+        else
+        {
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Customer</th>
+                            <th>Processed by</th>
+                            <th>Payment</th>
+                            <th style="text-align:right;">Total (XAF)</th>
+                            <th style="text-align:right;">Tendered</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var inv in Model.Invoices)
+                        {
+                            <tr>
+                                <td>@inv.DateCreated.ToString("yyyy-MM-dd HH:mm")</td>
+                                <td>@(inv.CustomerName ?? "—")</td>
+                                <td>@(inv.ProcessedBy ?? "—")</td>
+                                <td>@inv.PaymentType</td>
+                                <td style="text-align:right;font-weight:600;">@inv.TotalAmount.ToString("N0")</td>
+                                <td style="text-align:right;">@inv.AmountTendered.ToString("N0")</td>
+                                <td>
+                                    @if (inv.IsPaid)
+                                    {
+                                        <span class="badge badge-green">Paid</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-red">Voided</span>
+                                    }
+                                </td>
+                                <td style="display:flex;gap:4px;flex-wrap:nowrap;">
+                                    <button type="button" onclick="openDetail('@inv.InvoiceId')">Details</button>
+                                    @if (inv.IsPaid)
+                                    {
+                                        <form method="post" asp-page-handler="Void" style="margin:0;">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="invoiceId" value="@inv.InvoiceId" />
+                                            <button type="submit" class="danger" onclick="return confirm('Void invoice @inv.DateCreated.ToString("yyyy-MM-dd") for @inv.TotalAmount.ToString("N0") XAF?')">Void</button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (Model.TotalPages > 1)
+            {
+                <nav class="pagination" aria-label="Invoice pages">
+                    @if (Model.PageNumber > 1)
+                    {
+                        <a href="?page=@(Model.PageNumber - 1)&search=@Model.SearchTerm&payType=@Model.PayTypeFilter">‹ Prev</a>
+                    }
+                    <span class="active">@Model.PageNumber / @Model.TotalPages</span>
+                    @if (Model.PageNumber < Model.TotalPages)
+                    {
+                        <a href="?page=@(Model.PageNumber + 1)&search=@Model.SearchTerm&payType=@Model.PayTypeFilter">Next ›</a>
+                    }
+                </nav>
+            }
+        }
+    </section>
+</div>
+
+<!-- ── Invoice Detail Modal ───────────────────────────────── -->
+<div class="modal-overlay" id="detailModal" hidden>
+    <div class="modal" style="max-width:700px;" role="dialog" aria-labelledby="detailTitle" aria-modal="true">
+        <div class="modal-head">
+            <h3 id="detailTitle">Invoice Detail</h3>
+            <button type="button" class="btn-close" onclick="closeDetail()" aria-label="Close">×</button>
+        </div>
+        <div id="detailContent" style="font-size:14px;line-height:1.6;">
+            <p style="color:var(--ops-subtle);">Loading…</p>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const apiBase = '@Url.Content("~/")'.replace(/\/$/, '');
+
+        async function openDetail(invoiceId) {
+            document.getElementById('detailContent').innerHTML = '<p style="color:var(--ops-subtle)">Loading…</p>';
+            document.getElementById('detailModal').hidden = false;
+
+            try {
+                const resp = await fetch(`/Invoices?handler=Detail&id=${invoiceId}`, { credentials: 'same-origin' });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const data = await resp.json();
+                renderDetail(data);
+            } catch (e) {
+                document.getElementById('detailContent').innerHTML = `<p style="color:red">Failed to load: ${e.message}</p>`;
+            }
+        }
+
+        function renderDetail(inv) {
+            const lines = (inv.lines || []).map(l => `
+                <tr>
+                    <td>${l.itemName}</td>
+                    <td style="text-align:center;">${l.quantity} ${l.unitAbbreviation || ''}</td>
+                    <td style="text-align:right;">${Number(l.unitPrice).toLocaleString('fr-CM')}</td>
+                    <td style="text-align:right;">${l.discountAmount ? Number(l.discountAmount).toLocaleString('fr-CM') : '—'}</td>
+                    <td style="text-align:right;font-weight:600;">${Number(l.lineTotal).toLocaleString('fr-CM')}</td>
+                </tr>`).join('');
+
+            document.getElementById('detailTitle').textContent = `Invoice — ${new Date(inv.dateCreated).toLocaleString()}`;
+            document.getElementById('detailContent').innerHTML = `
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;margin-bottom:12px;">
+                    <div><strong>Customer:</strong> ${inv.customerName || '—'}</div>
+                    <div><strong>Processed by:</strong> ${inv.processedBy || '—'}</div>
+                    <div><strong>Payment:</strong> ${inv.paymentType}</div>
+                    <div><strong>Status:</strong> ${inv.isPaid ? '<span class="badge badge-green">Paid</span>' : '<span class="badge badge-red">Voided</span>'}</div>
+                    <div><strong>Tendered:</strong> ${Number(inv.amountTendered).toLocaleString('fr-CM')} XAF</div>
+                    <div><strong>Change:</strong> ${Number(inv.changeGiven).toLocaleString('fr-CM')} XAF</div>
+                    ${inv.notes ? `<div style="grid-column:span 2;"><strong>Notes:</strong> ${inv.notes}</div>` : ''}
+                </div>
+                <table>
+                    <thead><tr><th>Item</th><th style="text-align:center;">Qty</th><th style="text-align:right;">Price</th><th style="text-align:right;">Discount</th><th style="text-align:right;">Total</th></tr></thead>
+                    <tbody>${lines}</tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="4" style="text-align:right;font-weight:600;padding-top:8px;">Grand Total</td>
+                            <td style="text-align:right;font-weight:700;font-size:1.05em;">${Number(inv.totalAmount).toLocaleString('fr-CM')} XAF</td>
+                        </tr>
+                    </tfoot>
+                </table>`;
+        }
+
+        function closeDetail() { document.getElementById('detailModal').hidden = true; }
+        document.getElementById('detailModal').addEventListener('click', function(e) {
+            if (e.target === this) closeDetail();
+        });
+    </script>
+}

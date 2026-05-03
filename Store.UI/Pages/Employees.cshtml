@@ -1,0 +1,219 @@
+@page
+@model StoreUI.Pages.EmployeesModel
+@using Store.Models.Enums
+@{
+    ViewData["Title"] = "Employees";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
+}
+
+<div class="ops-page">
+    <partial name="Shared/_ModuleNav" />
+
+    <header>
+        <h1>Employees</h1>
+        <p>Manage staff records, departments, and employment status.</p>
+        <a class="link" href="/Dashboard">Back to Dashboard</a>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="status @(Model.StatusMessage.StartsWith("Error") || Model.StatusMessage.StartsWith("Failed") ? "error" : "ok")">
+            @Model.StatusMessage
+        </div>
+    }
+
+    <section class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <h2 style="margin:0;">
+                Staff Records
+                <small style="font-weight:400;color:var(--ops-subtle);">@Model.TotalEmployees total</small>
+            </h2>
+            <button type="button" onclick="openCreate()">+ New Employee</button>
+        </div>
+
+        @if (!Model.Employees.Any())
+        {
+            <p style="color:var(--ops-subtle);padding:12px 0;">No employees found.</p>
+        }
+        else
+        {
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Full Name</th>
+                            <th>Gender</th>
+                            <th>Department</th>
+                            <th>Date Employed</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var e in Model.Employees)
+                        {
+                            <tr>
+                                <td><strong>@e.FullName</strong></td>
+                                <td>@e.Gender</td>
+                                <td>@(e.DepartmentName ?? "—")</td>
+                                <td>@e.DateEmployed.ToString("yyyy-MM-dd")</td>
+                                <td>
+                                    @if (e.Status == EmployeeStatus.Active)
+                                    {
+                                        <span class="badge badge-green">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-gray">@e.Status</span>
+                                    }
+                                </td>
+                                <td style="display:flex;gap:4px;flex-wrap:nowrap;">
+                                    <button type="button" onclick="openEdit(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new {
+                                        employeeId = e.EmployeeId,
+                                        firstName = e.FirstName,
+                                        middleName = e.MiddleName,
+                                        lastName = e.LastName,
+                                        gender = e.Gender.ToString(),
+                                        dob = e.DateOfBirth?.ToString("yyyy-MM-dd"),
+                                        dateEmployed = e.DateEmployed.ToString("yyyy-MM-dd"),
+                                        departmentId = e.DepartmentId,
+                                        status = e.Status.ToString()
+                                    })))">Edit</button>
+                                    <form method="post" asp-page-handler="Remove" style="margin:0;">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="employeeId" value="@e.EmployeeId" />
+                                        <button type="submit" class="danger"
+                                                onclick="return confirm('Remove @(e.FullName.Replace("'", "\\'")) from staff?')">Remove</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (Model.TotalPages > 1)
+            {
+                <nav class="pagination" aria-label="Employee pages">
+                    @if (Model.PageNumber > 1)
+                    {
+                        <a href="?page=@(Model.PageNumber - 1)">‹ Prev</a>
+                    }
+                    <span class="active">@Model.PageNumber / @Model.TotalPages</span>
+                    @if (Model.PageNumber < Model.TotalPages)
+                    {
+                        <a href="?page=@(Model.PageNumber + 1)">Next ›</a>
+                    }
+                </nav>
+            }
+        }
+    </section>
+</div>
+
+<!-- ── Create/Edit Employee Modal ────────────────────────── -->
+<div class="modal-overlay" id="empModal" hidden>
+    <div class="modal" role="dialog" aria-labelledby="empModalTitle" aria-modal="true">
+        <div class="modal-head">
+            <h3 id="empModalTitle">New Employee</h3>
+            <button type="button" class="btn-close" onclick="closeModal()" aria-label="Close">×</button>
+        </div>
+        <form method="post" asp-page-handler="Save">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="EditEmployeeId" id="editEmpId" />
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 12px;">
+                <div>
+                    <label for="firstNameF">First Name *</label>
+                    <input asp-for="EmpFirstName" id="firstNameF" required maxlength="100" />
+                </div>
+                <div>
+                    <label for="middleNameF">Middle Name</label>
+                    <input asp-for="EmpMiddleName" id="middleNameF" maxlength="100" />
+                </div>
+            </div>
+
+            <label for="lastNameF">Last Name *</label>
+            <input asp-for="EmpLastName" id="lastNameF" required maxlength="100" />
+
+            <label for="genderF">Gender</label>
+            <select asp-for="EmpGender" id="genderF">
+                <option value="NotSpecified">Not Specified</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+            </select>
+
+            <label for="dobF">Date of Birth</label>
+            <input asp-for="EmpDateOfBirth" id="dobF" type="date" />
+
+            <label for="dateEmpF">Date Employed *</label>
+            <input asp-for="EmpDateEmployed" id="dateEmpF" type="date" required />
+
+            <label for="deptF">Department</label>
+            <select asp-for="EmpDepartmentId" id="deptF">
+                <option value="">— None —</option>
+                @foreach (var d in Model.Departments)
+                {
+                    <option value="@d.DepartmentId">@d.Name</option>
+                }
+            </select>
+
+            <div id="statusRowEmp" style="display:none;">
+                <label for="statusEmp">Status</label>
+                <select asp-for="EmpStatus" id="statusEmp">
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                    <option value="OnLeave">On Leave</option>
+                </select>
+            </div>
+
+            <div style="display:flex;gap:8px;margin-top:12px;">
+                <button type="submit" id="empSubmitBtn">Add Employee</button>
+                <button type="button" onclick="closeModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function openCreate() {
+            document.getElementById('empModalTitle').textContent = 'New Employee';
+            document.getElementById('editEmpId').value = '';
+            document.getElementById('firstNameF').value = '';
+            document.getElementById('middleNameF').value = '';
+            document.getElementById('lastNameF').value = '';
+            document.getElementById('genderF').value = 'NotSpecified';
+            document.getElementById('dobF').value = '';
+            document.getElementById('dateEmpF').value = '';
+            document.getElementById('deptF').value = '';
+            document.getElementById('statusRowEmp').style.display = 'none';
+            document.getElementById('empSubmitBtn').textContent = 'Add Employee';
+            document.getElementById('empModal').hidden = false;
+        }
+
+        function openEdit(data) {
+            document.getElementById('empModalTitle').textContent = 'Edit Employee';
+            document.getElementById('editEmpId').value = data.employeeId;
+            document.getElementById('firstNameF').value = data.firstName;
+            document.getElementById('middleNameF').value = data.middleName || '';
+            document.getElementById('lastNameF').value = data.lastName;
+            document.getElementById('genderF').value = data.gender;
+            document.getElementById('dobF').value = data.dob || '';
+            document.getElementById('dateEmpF').value = data.dateEmployed || '';
+            if (data.departmentId) document.getElementById('deptF').value = data.departmentId;
+            document.getElementById('statusEmp').value = data.status;
+            document.getElementById('statusRowEmp').style.display = '';
+            document.getElementById('empSubmitBtn').textContent = 'Save Changes';
+            document.getElementById('empModal').hidden = false;
+        }
+
+        function closeModal() { document.getElementById('empModal').hidden = true; }
+
+        document.getElementById('empModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+    </script>
+}

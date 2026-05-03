@@ -1,0 +1,283 @@
+@page
+@model StoreUI.Pages.LookupModel
+@{
+    ViewData["Title"] = "Lookup Management";
+    var activeTab = ViewData["ActiveTab"] as string ?? "categories";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
+}
+
+<div class="ops-page">
+    <partial name="Shared/_ModuleNav" />
+
+    <header>
+        <h1>Lookup Management</h1>
+        <p>Manage categories, measurement units, and departments used across the system.</p>
+        <a class="link" href="/Dashboard">Back to Dashboard</a>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="status @(Model.StatusMessage.StartsWith("Error") || Model.StatusMessage.StartsWith("Failed") ? "error" : "ok")">
+            @Model.StatusMessage
+        </div>
+    }
+
+    <!-- Tab nav -->
+    <nav class="pagination" style="margin-bottom:0;" aria-label="Lookup tabs">
+        <a href="?tab=categories" class="@(Model.ActiveTab == "categories" ? "active" : "")">Categories</a>
+        <a href="?tab=units"      class="@(Model.ActiveTab == "units"      ? "active" : "")">Units</a>
+        <a href="?tab=departments" class="@(Model.ActiveTab == "departments" ? "active" : "")">Departments</a>
+    </nav>
+
+    <!-- ── CATEGORIES ─────────────────────────────────────────── -->
+    @if (Model.ActiveTab == "categories")
+    {
+        <section class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                <h2 style="margin:0;">Categories</h2>
+                <button type="button" onclick="openCreate('cat')">+ New Category</button>
+            </div>
+
+            @if (!Model.Categories.Any())
+            {
+                <p style="color:var(--ops-subtle);padding:12px 0;">No categories yet.</p>
+            }
+            else
+            {
+                <table>
+                    <thead>
+                        <tr><th>ID</th><th>Name</th><th>Description</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var c in Model.Categories)
+                        {
+                            <tr>
+                                <td>@c.CategoryId</td>
+                                <td><strong>@c.Name</strong></td>
+                                <td>@(c.Description ?? "—")</td>
+                                <td style="display:flex;gap:4px;">
+                                    <button type="button" onclick="openEdit('cat', @c.CategoryId, '@Html.Raw(c.Name.Replace("'", "\\'"))', '@Html.Raw((c.Description ?? "").Replace("'", "\\'"))')">Edit</button>
+                                    <form method="post" asp-page-handler="DeleteCategory" style="margin:0;">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@c.CategoryId" />
+                                        <button type="submit" class="danger" onclick="return confirm('Delete category &quot;@Html.Raw(c.Name.Replace("\"","\\\""))&quot;?')">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </section>
+    }
+
+    <!-- ── UNITS ──────────────────────────────────────────────── -->
+    @if (Model.ActiveTab == "units")
+    {
+        <section class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                <h2 style="margin:0;">Measurement Units</h2>
+                <button type="button" onclick="openCreate('unit')">+ New Unit</button>
+            </div>
+
+            @if (!Model.Units.Any())
+            {
+                <p style="color:var(--ops-subtle);padding:12px 0;">No units yet.</p>
+            }
+            else
+            {
+                <table>
+                    <thead>
+                        <tr><th>ID</th><th>Name</th><th>Abbr.</th><th>Description</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var u in Model.Units)
+                        {
+                            <tr>
+                                <td>@u.UnitId</td>
+                                <td><strong>@u.Name</strong></td>
+                                <td><code>@u.Abbreviation</code></td>
+                                <td>@(u.Description ?? "—")</td>
+                                <td style="display:flex;gap:4px;">
+                                    <button type="button" onclick="openEditUnit(@u.UnitId, '@Html.Raw(u.Name.Replace("'", "\\'"))', '@Html.Raw(u.Abbreviation.Replace("'", "\\'"))', '@Html.Raw((u.Description ?? "").Replace("'", "\\'"))')">Edit</button>
+                                    <form method="post" asp-page-handler="DeleteUnit" style="margin:0;">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@u.UnitId" />
+                                        <button type="submit" class="danger" onclick="return confirm('Delete unit &quot;@Html.Raw(u.Name.Replace("\"","\\\""))&quot;?')">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </section>
+    }
+
+    <!-- ── DEPARTMENTS ────────────────────────────────────────── -->
+    @if (Model.ActiveTab == "departments")
+    {
+        <section class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                <h2 style="margin:0;">Departments</h2>
+                <button type="button" onclick="openCreate('dept')">+ New Department</button>
+            </div>
+
+            @if (!Model.Departments.Any())
+            {
+                <p style="color:var(--ops-subtle);padding:12px 0;">No departments yet.</p>
+            }
+            else
+            {
+                <table>
+                    <thead>
+                        <tr><th>ID</th><th>Name</th><th>Description</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var d in Model.Departments)
+                        {
+                            <tr>
+                                <td>@d.DepartmentId</td>
+                                <td><strong>@d.Name</strong></td>
+                                <td>@(d.Description ?? "—")</td>
+                                <td style="display:flex;gap:4px;">
+                                    <button type="button" onclick="openEdit('dept', @d.DepartmentId, '@Html.Raw(d.Name.Replace("'", "\\'"))', '@Html.Raw((d.Description ?? "").Replace("'", "\\'"))')">Edit</button>
+                                    <form method="post" asp-page-handler="DeleteDepartment" style="margin:0;">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@d.DepartmentId" />
+                                        <button type="submit" class="danger" onclick="return confirm('Delete department &quot;@Html.Raw(d.Name.Replace("\"","\\\""))&quot;?')">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </section>
+    }
+</div>
+
+<!-- ── Create/Edit Modal (Category / Department) ─────────── -->
+<div class="modal-overlay" id="lookupModal" hidden>
+    <div class="modal" role="dialog" aria-labelledby="lookupModalTitle" aria-modal="true">
+        <div class="modal-head">
+            <h3 id="lookupModalTitle">New Item</h3>
+            <button type="button" class="btn-close" onclick="closeModal()" aria-label="Close">×</button>
+        </div>
+        <form method="post" id="lookupForm">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="Id" id="lookupId" value="" />
+
+            <label for="lookupName">Name *</label>
+            <input type="text" id="lookupName" name="Name" required maxlength="100" />
+
+            <label for="lookupDesc">Description</label>
+            <input type="text" id="lookupDesc" name="Description" maxlength="300" />
+
+            <div style="display:flex;gap:8px;margin-top:12px;">
+                <button type="submit">Save</button>
+                <button type="button" onclick="closeModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ── Create/Edit Modal (Unit) ──────────────────────────── -->
+<div class="modal-overlay" id="unitModal" hidden>
+    <div class="modal" role="dialog" aria-labelledby="unitModalTitle" aria-modal="true">
+        <div class="modal-head">
+            <h3 id="unitModalTitle">New Unit</h3>
+            <button type="button" class="btn-close" onclick="closeUnitModal()" aria-label="Close">×</button>
+        </div>
+        <form method="post" id="unitForm">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="Id" id="unitId" value="" />
+
+            <label for="unitName">Name *</label>
+            <input type="text" id="unitName" name="Name" required maxlength="100" />
+
+            <label for="unitAbbr">Abbreviation *</label>
+            <input type="text" id="unitAbbr" name="Abbreviation" required maxlength="20" placeholder="e.g. kg, pcs, L" />
+
+            <label for="unitDesc">Description</label>
+            <input type="text" id="unitDesc" name="Description" maxlength="300" />
+
+            <div style="display:flex;gap:8px;margin-top:12px;">
+                <button type="submit">Save</button>
+                <button type="button" onclick="closeUnitModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Category / Department shared modal
+        function openCreate(type) {
+            const form = document.getElementById('lookupForm');
+            document.getElementById('lookupModalTitle').textContent = type === 'cat' ? 'New Category' : 'New Department';
+            form.action = type === 'cat' ? '?handler=SaveCategory' : '?handler=SaveDepartment';
+            document.getElementById('lookupId').value = '';
+            document.getElementById('lookupName').value = '';
+            document.getElementById('lookupDesc').value = '';
+            document.getElementById('lookupModal').hidden = false;
+        }
+
+        function openEdit(type, id, name, desc) {
+            const form = document.getElementById('lookupForm');
+            document.getElementById('lookupModalTitle').textContent = type === 'cat' ? 'Edit Category' : 'Edit Department';
+            form.action = type === 'cat' ? '?handler=SaveCategory' : '?handler=SaveDepartment';
+            document.getElementById('lookupId').value = id;
+            document.getElementById('lookupName').value = name;
+            document.getElementById('lookupDesc').value = desc;
+            document.getElementById('lookupModal').hidden = false;
+        }
+
+        function closeModal() { document.getElementById('lookupModal').hidden = true; }
+
+        document.getElementById('lookupModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+
+        // Unit modal
+        function openCreate(type) {
+            if (type === 'unit') { openUnitCreate(); return; }
+            const form = document.getElementById('lookupForm');
+            document.getElementById('lookupModalTitle').textContent = type === 'cat' ? 'New Category' : 'New Department';
+            form.action = type === 'cat' ? '?handler=SaveCategory' : '?handler=SaveDepartment';
+            document.getElementById('lookupId').value = '';
+            document.getElementById('lookupName').value = '';
+            document.getElementById('lookupDesc').value = '';
+            document.getElementById('lookupModal').hidden = false;
+        }
+
+        function openUnitCreate() {
+            document.getElementById('unitModalTitle').textContent = 'New Unit';
+            document.getElementById('unitForm').action = '?handler=SaveUnit';
+            document.getElementById('unitId').value = '';
+            document.getElementById('unitName').value = '';
+            document.getElementById('unitAbbr').value = '';
+            document.getElementById('unitDesc').value = '';
+            document.getElementById('unitModal').hidden = false;
+        }
+
+        function openEditUnit(id, name, abbr, desc) {
+            document.getElementById('unitModalTitle').textContent = 'Edit Unit';
+            document.getElementById('unitForm').action = '?handler=SaveUnit';
+            document.getElementById('unitId').value = id;
+            document.getElementById('unitName').value = name;
+            document.getElementById('unitAbbr').value = abbr;
+            document.getElementById('unitDesc').value = desc;
+            document.getElementById('unitModal').hidden = false;
+        }
+
+        function closeUnitModal() { document.getElementById('unitModal').hidden = true; }
+
+        document.getElementById('unitModal').addEventListener('click', function(e) {
+            if (e.target === this) closeUnitModal();
+        });
+    </script>
+}
