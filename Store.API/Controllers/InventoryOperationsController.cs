@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Store.Models.DTOs.Operations;
+using Store.Models.Enums;
 using Store.Models.Interfaces.Services;
 
 namespace Store.API.Controllers;
@@ -19,9 +20,9 @@ public class InventoryOperationsController : ControllerBase
 
     [HttpGet("movements")]
     [Authorize(Policy = PermissionKeys.InventoryRead)]
-    public async Task<IActionResult> GetMovements([FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken ct = default)
+    public async Task<IActionResult> GetMovements([FromQuery] int page = 1, [FromQuery] int pageSize = 50, [FromQuery] StockMovementType? type = null, CancellationToken ct = default)
     {
-        var rows = await _ops.GetStockMovementsAsync(page, pageSize, ct);
+        var rows = await _ops.GetStockMovementsAsync(page, pageSize, type, ct);
         return Ok(rows);
     }
 

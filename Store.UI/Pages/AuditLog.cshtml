@@ -1,0 +1,113 @@
+@page
+@model AuditLogModel
+@using StoreUI.Pages
+@using Store.Models.Enums
+@{
+    ViewData["Title"] = "Audit Log";
+    string TypeLabel(StockMovementType t) => t switch
+    {
+        StockMovementType.Receive     => "Goods Receipt",
+        StockMovementType.Sale        => "Sale",
+        StockMovementType.Return      => "Return",
+        StockMovementType.Adjustment  => "Adjustment",
+        StockMovementType.Void        => "Void",
+        _                             => t.ToString()
+    };
+    string TypeBadge(StockMovementType t) => t switch
+    {
+        StockMovementType.Receive     => "badge-success",
+        StockMovementType.Sale        => "badge-primary",
+        StockMovementType.Return      => "badge-warning",
+        StockMovementType.Adjustment  => "badge-info",
+        StockMovementType.Void        => "badge-danger",
+        _                             => "badge-secondary"
+    };
+}
+
+@await Html.PartialAsync("_DashboardLayout")
+
+<div class="page-content">
+    <div class="page-header">
+        <h1 class="page-title">Audit Log</h1>
+        <p class="page-subtitle">Stock movement history</p>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.StatusMessage))
+    {
+        <div class="alert alert-info">@Model.StatusMessage</div>
+    }
+
+    <!-- Filter bar -->
+    <div class="filter-bar mb-3">
+        <form method="get" class="d-flex gap-2 align-items-center flex-wrap">
+            <label class="form-label mb-0">Filter by type:</label>
+            <select name="type" class="form-select form-select-sm" style="width:180px;" onchange="this.form.submit()">
+                <option value="">All Types</option>
+                @foreach (StockMovementType t in Enum.GetValues(typeof(StockMovementType)))
+                {
+                    <option value="@((int)t)" selected="@(Model.TypeFilter == t)">@TypeLabel(t)</option>
+                }
+            </select>
+            <input type="hidden" name="page" value="1" />
+        </form>
+    </div>
+
+    <div class="card">
+        <div class="card-body p-0">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Item</th>
+                        <th>Type</th>
+                        <th>Delta</th>
+                        <th>Before</th>
+                        <th>After</th>
+                        <th>Actor</th>
+                        <th>Reason</th>
+                        <th>Reference</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Movements.Any())
+                    {
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-4">No stock movements found.</td>
+                        </tr>
+                    }
+                    @foreach (var m in Model.Movements)
+                    {
+                        <tr>
+                            <td class="text-nowrap">@m.DateCreated.ToString("dd MMM yyyy HH:mm")</td>
+                            <td>@m.ItemName</td>
+                            <td><span class="badge @TypeBadge(m.MovementType)">@TypeLabel(m.MovementType)</span></td>
+                            <td class="@(m.QuantityDelta >= 0 ? "text-success fw-bold" : "text-danger fw-bold")">
+                                @(m.QuantityDelta >= 0 ? "+" : "")@m.QuantityDelta
+                            </td>
+                            <td>@m.StockBefore</td>
+                            <td>@m.StockAfter</td>
+                            <td>@(m.PerformedByUserName ?? "—")</td>
+                            <td>@m.Reason</td>
+                            <td>@(m.ReferenceCode ?? "—")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination-bar mt-3">
+        @if (Model.CurrentPage > 1)
+        {
+            <a href="?page=@(Model.CurrentPage - 1)@(Model.TypeFilter.HasValue ? "&type=" + (int)Model.TypeFilter.Value : "")"
+               class="btn btn-sm btn-secondary">&#8592; Prev</a>
+        }
+        <span class="pagination-info">Page @Model.CurrentPage</span>
+        @if (Model.Movements.Count == Model.PageSize)
+        {
+            <a href="?page=@(Model.CurrentPage + 1)@(Model.TypeFilter.HasValue ? "&type=" + (int)Model.TypeFilter.Value : "")"
+               class="btn btn-sm btn-secondary">Next &#8594;</a>
+        }
+    </div>
+</div>

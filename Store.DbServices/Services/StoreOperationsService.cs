@@ -17,14 +17,20 @@ public class StoreOperationsService : IStoreOperationsService
         _uow = uow;
     }
 
-    public async Task<IReadOnlyList<StockMovementDto>> GetStockMovementsAsync(int page, int pageSize, CancellationToken ct = default)
+    public async Task<IReadOnlyList<StockMovementDto>> GetStockMovementsAsync(int page, int pageSize, StockMovementType? type = null, CancellationToken ct = default)
     {
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 500);
 
-        var rows = await _uow.Repository<StockMovement>().Query()
+        var query = _uow.Repository<StockMovement>().Query()
             .Include(x => x.Item)
-            .AsNoTracking()
+            .Include(x => x.PerformedByUser)
+            .AsNoTracking();
+
+        if (type.HasValue)
+            query = query.Where(x => x.MovementType == type.Value);
+
+        var rows = await query
             .OrderByDescending(x => x.DateCreated)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
@@ -39,6 +45,7 @@ public class StoreOperationsService : IStoreOperationsService
                 StockAfter = x.StockAfter,
                 Reason = x.Reason,
                 ReferenceCode = x.ReferenceCode,
+                PerformedByUserName = x.PerformedByUser != null ? x.PerformedByUser.Username : null,
                 DateCreated = x.DateCreated
             })
             .ToListAsync(ct);

@@ -66,6 +66,7 @@ public class StockMovementDto
     public int StockAfter { get; set; }
     public string Reason { get; set; } = string.Empty;
     public string? ReferenceCode { get; set; }
+    public string? PerformedByUserName { get; set; }
     public DateTime DateCreated { get; set; }
 }
 

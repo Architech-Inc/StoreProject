@@ -1,10 +1,11 @@
 using Store.Models.DTOs.Operations;
+using Store.Models.Enums;
 
 namespace Store.Models.Interfaces.Services;
 
 public interface IStoreOperationsService
 {
-    Task<IReadOnlyList<StockMovementDto>> GetStockMovementsAsync(int page, int pageSize, CancellationToken ct = default);
+    Task<IReadOnlyList<StockMovementDto>> GetStockMovementsAsync(int page, int pageSize, StockMovementType? type = null, CancellationToken ct = default);
     Task<InventoryOperationResultDto> ReceiveGoodsAsync(GoodsReceiptRequest request, Guid? actingUserId, CancellationToken ct = default);
     Task<InventoryOperationResultDto> ProcessReturnAsync(StockReturnRequest request, Guid? actingUserId, CancellationToken ct = default);
     Task<InventoryOperationResultDto> AdjustStockAsync(StockAdjustmentAuditRequest request, Guid? actingUserId, CancellationToken ct = default);
