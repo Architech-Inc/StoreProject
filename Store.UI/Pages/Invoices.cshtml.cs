@@ -87,4 +87,27 @@ public class InvoicesModel : SecurePageModel
 
         return RedirectToPage();
     }
+
+    public async Task<IActionResult> OnPostAddTenderAsync([FromQuery] Guid invoiceId, [FromBody] AddTenderRequest request, CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out _, out _)) return Unauthorized();
+        if (!ModelState.IsValid) return BadRequest(new { message = "Invalid request." });
+
+        try
+        {
+            var tender = await _invoiceService.AddTenderAsync(invoiceId, request, ct);
+            return new JsonResult(tender, new System.Text.Json.JsonSerializerOptions
+            {
+                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+            });
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound(new { message = "Invoice not found." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
 }

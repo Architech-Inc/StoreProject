@@ -23,6 +23,7 @@ public interface IStoreOperationsService
     Task<CashierShiftDto?> GetActiveShiftAsync(Guid actingUserId, CancellationToken ct = default);
     Task<CashierShiftDto?> CloseShiftAsync(ShiftCloseRequest request, Guid actingUserId, CancellationToken ct = default);
     Task<DailyZReportDto> GetDailyZReportAsync(DateTime dateUtc, CancellationToken ct = default);
+    Task<DayEndReconciliationDto> GetDayEndReconciliationAsync(DateOnly date, CancellationToken ct = default);
 
     Task<IReadOnlyList<RoleMatrixDto>> GetRoleMatrixAsync(CancellationToken ct = default);
     Task<RolePermissionDto> UpdateRolePermissionAsync(UpdateRolePermissionRequest request, CancellationToken ct = default);
@@ -34,4 +35,5 @@ public interface IStoreOperationsService
     Task<IReadOnlyList<UserBranchRoleDto>> GetUserBranchRolesAsync(int? branchId, Guid? userId, CancellationToken ct = default);
     Task<UserBranchRoleDto> AssignUserBranchRoleAsync(AssignUserBranchRoleRequest request, CancellationToken ct = default);
     Task<bool> RemoveUserBranchRoleAsync(long userBranchRoleId, CancellationToken ct = default);
+    Task<BranchPerformanceDto> GetBranchPerformanceAsync(int branchId, DateTime fromDate, DateTime toDate, CancellationToken ct = default);
 }

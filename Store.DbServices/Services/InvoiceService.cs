@@ -159,15 +159,57 @@ public class InvoiceService : IInvoiceService
         }
     }
 
+    public async Task<InvoiceTenderDto> AddTenderAsync(Guid invoiceId, AddTenderRequest request, CancellationToken ct = default)
+    {
+        var invoice = await _uow.Repository<Invoice>().Query()
+            .Include(i => i.Tenders)
+            .FirstOrDefaultAsync(i => i.InvoiceId == invoiceId, ct)
+            ?? throw new KeyNotFoundException($"Invoice {invoiceId} not found.");
+
+        if (invoice.IsPaid)
+            throw new InvalidOperationException("Invoice is already fully paid.");
+
+        var tender = new InvoiceTender
+        {
+            InvoiceId = invoiceId,
+            PaymentType = request.PaymentType,
+            Amount = request.Amount,
+            Reference = request.Reference?.Trim()
+        };
+
+        await _uow.Repository<InvoiceTender>().AddAsync(tender, ct);
+
+        invoice.AmountTendered += request.Amount;
+        if (invoice.AmountTendered >= invoice.TotalAmount)
+        {
+            invoice.IsPaid = true;
+            invoice.ChangeGiven = Math.Max(0, invoice.AmountTendered - invoice.TotalAmount);
+        }
+        _uow.Repository<Invoice>().Update(invoice);
+
+        await _uow.SaveChangesAsync(ct);
+
+        return new InvoiceTenderDto
+        {
+            InvoiceTenderId = tender.InvoiceTenderId,
+            PaymentType = tender.PaymentType.ToString(),
+            Amount = tender.Amount,
+            Reference = tender.Reference,
+            DateCreated = tender.DateCreated
+        };
+    }
+
     private static InvoiceDto MapToDto(Invoice i) => new()
     {
         InvoiceId = i.InvoiceId,
         CustomerId = i.CustomerId,
         CustomerName = i.Customer is null ? null : $"{i.Customer.FirstName} {i.Customer.LastName}".Trim(),
         UserId = i.UserId,
+        BranchId = i.BranchId,
         TotalAmount = i.TotalAmount,
         AmountTendered = i.AmountTendered,
         ChangeGiven = i.ChangeGiven,
+        OutstandingBalance = i.IsPaid ? 0 : Math.Max(0, i.TotalAmount - i.AmountTendered),
         PaymentType = i.PaymentType,
         IsPaid = i.IsPaid,
         Notes = i.Notes,
@@ -182,6 +224,14 @@ public class InvoiceService : IInvoiceService
             DiscountAmount = s.DiscountAmount,
             Quantity = s.Quantity,
             LineTotal = s.LineTotal
+        }).ToList(),
+        Tenders = i.Tenders.Select(t => new InvoiceTenderDto
+        {
+            InvoiceTenderId = t.InvoiceTenderId,
+            PaymentType = t.PaymentType.ToString(),
+            Amount = t.Amount,
+            Reference = t.Reference,
+            DateCreated = t.DateCreated
         }).ToList()
     };
 }

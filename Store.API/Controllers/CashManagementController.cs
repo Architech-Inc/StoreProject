@@ -64,6 +64,14 @@ public class CashManagementController : ControllerBase
         return Ok(report);
     }
 
+    [HttpGet("reconciliation")]
+    [Authorize(Policy = PermissionKeys.ReportsRead)]
+    public async Task<IActionResult> DayEndReconciliation([FromQuery] DateOnly? date, CancellationToken ct)
+    {
+        var reconciliation = await _ops.GetDayEndReconciliationAsync(date ?? DateOnly.FromDateTime(DateTime.UtcNow), ct);
+        return Ok(reconciliation);
+    }
+
     private bool TryGetUserId(out Guid uid)
     {
         var claim = User.FindFirst("uid")?.Value;

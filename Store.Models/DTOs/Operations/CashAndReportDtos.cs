@@ -63,3 +63,30 @@ public class DailyZReportDto
     public List<PaymentBreakdownDto> PaymentBreakdown { get; set; } = new();
     public List<TopProductDto> TopProducts { get; set; } = new();
 }
+
+public class ShiftReconciliationDto
+{
+    public Guid CashierShiftId { get; set; }
+    public string CashierName { get; set; } = string.Empty;
+    public DateTime OpenedAtUtc { get; set; }
+    public DateTime? ClosedAtUtc { get; set; }
+    public decimal OpeningFloat { get; set; }
+    public decimal? ClosingFloat { get; set; }
+    public decimal? ExpectedClosingAmount { get; set; }
+    public decimal? VarianceAmount { get; set; }
+    public ShiftStatus Status { get; set; }
+    public decimal CashSalesTotal { get; set; }
+    public int InvoiceCount { get; set; }
+    public IReadOnlyList<PaymentBreakdownDto> PaymentBreakdown { get; set; } = [];
+}
+
+public class DayEndReconciliationDto
+{
+    public DateOnly Date { get; set; }
+    public int TotalShifts { get; set; }
+    public int OpenShifts { get; set; }
+    public decimal TotalCashSales { get; set; }
+    public decimal TotalNonCashSales { get; set; }
+    public decimal TotalVariance { get; set; }
+    public IReadOnlyList<ShiftReconciliationDto> Shifts { get; set; } = [];
+}

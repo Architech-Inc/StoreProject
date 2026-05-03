@@ -1,0 +1,134 @@
+@page
+@model StoreUI.Pages.BranchDashboardModel
+@{
+    ViewData["Title"] = "Branch Performance Dashboard";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
+}
+
+<div class="ops-page">
+    <partial name="Shared/_ModuleNav" />
+
+    <header>
+        <h1>Branch Performance Dashboard</h1>
+        <p>View sales, revenue, and payment breakdown by branch for a date range.</p>
+    </header>
+
+@if (Model.ErrorMessage is not null)
+{
+    <div class="status error">@Model.ErrorMessage</div>
+}
+
+<!-- Filter bar -->
+<form method="get" class="filter-bar mb-4">
+    <div class="filter-row">
+        <div class="filter-group">
+            <label>Branch</label>
+            <select name="branchId" class="form-control">
+                <option value="">— Select branch —</option>
+                @foreach (var b in Model.Branches)
+                {
+                    <option value="@b.BranchId" selected="@(b.BranchId == Model.SelectedBranchId)">@b.Name</option>
+                }
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>From</label>
+            <input type="date" name="from" value="@Model.FromDate.ToString("yyyy-MM-dd")" class="form-control" />
+        </div>
+        <div class="filter-group">
+            <label>To</label>
+            <input type="date" name="to" value="@Model.ToDate.ToString("yyyy-MM-dd")" class="form-control" />
+        </div>
+        <div class="filter-group" style="align-self:flex-end">
+            <button type="submit" class="btn btn-primary">Load</button>
+        </div>
+    </div>
+</form>
+
+@if (Model.Performance is not null)
+{
+    var perf = Model.Performance;
+    <h2 class="section-title">@perf.BranchName — @perf.FromDate.ToString("d MMM yyyy") to @perf.ToDate.ToString("d MMM yyyy")</h2>
+
+    <!-- KPI cards -->
+    <div class="kpi-grid mb-4">
+        <div class="kpi-card">
+            <div class="kpi-label">Total Revenue</div>
+            <div class="kpi-value text-success">@perf.TotalRevenue.ToString("N2")</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Avg Order Value</div>
+            <div class="kpi-value">@perf.AverageOrderValue.ToString("N2")</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Total Invoices</div>
+            <div class="kpi-value">@perf.TotalInvoices</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Paid</div>
+            <div class="kpi-value text-success">@perf.PaidInvoices</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Unpaid</div>
+            <div class="kpi-value text-warning">@perf.UnpaidInvoices</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Outstanding Balance</div>
+            <div class="kpi-value text-danger">@perf.OutstandingBalance.ToString("N2")</div>
+        </div>
+    </div>
+
+    <div class="row-2col">
+        <!-- Revenue by payment type -->
+        <div>
+            <h3 class="section-subtitle">Revenue by Payment Type</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Payment Type</th>
+                        <th>Invoices</th>
+                        <th class="text-right">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var pt in perf.RevenueByPaymentType)
+                    {
+                        <tr>
+                            <td>@pt.PaymentType</td>
+                            <td>@pt.InvoiceCount</td>
+                            <td class="text-right">@pt.Total.ToString("N2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Daily revenue -->
+        <div>
+            <h3 class="section-subtitle">Daily Revenue</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Invoices</th>
+                        <th class="text-right">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var day in perf.DailyRevenue)
+                    {
+                        <tr>
+                            <td>@day.Date.ToString("d MMM")</td>
+                            <td>@day.InvoiceCount</td>
+                            <td class="text-right">@day.Total.ToString("N2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+</div>

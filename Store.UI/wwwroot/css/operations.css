@@ -219,9 +219,10 @@ tbody tr:hover {
     font-weight: 600;
 }
 
-.badge-green { background: #dcfce7; color: #15803d; }
-.badge-red   { background: #fee2e2; color: #b91c1c; }
-.badge-gray  { background: #f1f5f9; color: #475569; }
+.badge-green  { background: #dcfce7; color: #15803d; }
+.badge-red    { background: #fee2e2; color: #b91c1c; }
+.badge-gray   { background: #f1f5f9; color: #475569; }
+.badge-yellow { background: #fef9c3; color: #854d0e; }
 
 /* ── search/filter bar ───────────────────────── */
 .filter-bar {
@@ -339,3 +340,100 @@ td {
         padding: 6px;
     }
 }
+
+/* ── KPI grid ───────────────────────────────── */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.kpi-card {
+    background: var(--ops-surface, #fff);
+    border: 1px solid var(--ops-border, #e2e8f0);
+    border-radius: 8px;
+    padding: 14px 18px;
+}
+
+.kpi-label {
+    font-size: 0.75rem;
+    color: var(--ops-subtle, #64748b);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 4px;
+}
+
+.kpi-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--ops-text, #1e293b);
+}
+
+.text-success { color: #15803d; }
+.text-warning { color: #b45309; }
+.text-danger  { color: #b91c1c; }
+.text-right   { text-align: right; }
+
+/* ── Two-column row layout ───────────────────── */
+.row-2col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    align-items: start;
+}
+
+@media (max-width: 900px) {
+    .row-2col { grid-template-columns: 1fr; }
+}
+
+.section-title    { font-size: 1.1rem; font-weight: 600; margin: 20px 0 10px; }
+.section-subtitle { font-size: 0.95rem; font-weight: 600; margin: 0 0 8px; }
+
+/* ── Shift card (reconciliation) ─────────────── */
+.shift-card {
+    border: 1px solid var(--ops-border, #e2e8f0);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 14px;
+}
+
+.shift-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.shift-metrics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 0.875rem;
+    color: var(--ops-subtle, #64748b);
+}
+
+.shift-metrics strong { color: var(--ops-text, #1e293b); }
+
+/* ── filter-bar enhancements ─────────────────── */
+.filter-bar .filter-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.filter-group label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--ops-subtle, #64748b);
+}
+
+.mb-4 { margin-bottom: 1rem; }
+

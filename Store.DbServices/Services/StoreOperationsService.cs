@@ -635,6 +635,80 @@ public class StoreOperationsService : IStoreOperationsService
         };
     }
 
+    public async Task<DayEndReconciliationDto> GetDayEndReconciliationAsync(DateOnly date, CancellationToken ct = default)
+    {
+        var dayStart = date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var dayEnd = date.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc);
+
+        var shifts = await _uow.Repository<CashierShift>().Query()
+            .AsNoTracking()
+            .Include(s => s.OpenedByUser)
+            .Where(s => s.OpenedAtUtc >= dayStart && s.OpenedAtUtc <= dayEnd)
+            .OrderBy(s => s.OpenedAtUtc)
+            .ToListAsync(ct);
+
+        var shiftIds = shifts.Select(s => s.CashierShiftId).ToHashSet();
+
+        // Load invoices for the day
+        var invoices = await _uow.Repository<Invoice>().Query()
+            .AsNoTracking()
+            .Where(i => i.DateCreated >= dayStart && i.DateCreated <= dayEnd && i.IsPaid)
+            .ToListAsync(ct);
+
+        var shiftDtos = new List<ShiftReconciliationDto>(shifts.Count);
+        foreach (var s in shifts)
+        {
+            var shiftStart = s.OpenedAtUtc;
+            var shiftEnd = s.ClosedAtUtc ?? dayEnd;
+
+            var shiftInvoices = invoices
+                .Where(i => i.DateCreated >= shiftStart && i.DateCreated <= shiftEnd)
+                .ToList();
+
+            var paymentBreakdown = shiftInvoices
+                .GroupBy(i => i.PaymentType)
+                .Select(g => new PaymentBreakdownDto
+                {
+                    PaymentType = g.Key,
+                    TotalAmount = g.Sum(i => i.TotalAmount),
+                    InvoiceCount = g.Count()
+                })
+                .ToList();
+
+            var cashSales = shiftInvoices.Where(i => i.PaymentType == PaymentType.Cash).Sum(i => i.TotalAmount);
+
+            shiftDtos.Add(new ShiftReconciliationDto
+            {
+                CashierShiftId = s.CashierShiftId,
+                CashierName = s.OpenedByUser?.Username ?? "—",
+                OpenedAtUtc = s.OpenedAtUtc,
+                ClosedAtUtc = s.ClosedAtUtc,
+                OpeningFloat = s.OpeningFloat,
+                ClosingFloat = s.ClosingFloat,
+                ExpectedClosingAmount = s.ExpectedClosingAmount,
+                VarianceAmount = s.VarianceAmount,
+                Status = s.Status,
+                CashSalesTotal = cashSales,
+                InvoiceCount = shiftInvoices.Count,
+                PaymentBreakdown = paymentBreakdown
+            });
+        }
+
+        var cashInvoices = invoices.Where(i => i.PaymentType == PaymentType.Cash).ToList();
+        var nonCashInvoices = invoices.Where(i => i.PaymentType != PaymentType.Cash).ToList();
+
+        return new DayEndReconciliationDto
+        {
+            Date = date,
+            TotalShifts = shifts.Count,
+            OpenShifts = shifts.Count(s => s.Status == ShiftStatus.Open),
+            TotalCashSales = cashInvoices.Sum(i => i.TotalAmount),
+            TotalNonCashSales = nonCashInvoices.Sum(i => i.TotalAmount),
+            TotalVariance = shifts.Sum(s => s.VarianceAmount ?? 0),
+            Shifts = shiftDtos
+        };
+    }
+
     public async Task<IReadOnlyList<RoleMatrixDto>> GetRoleMatrixAsync(CancellationToken ct = default)
     {
         var roles = await _uow.Repository<Role>().Query().AsNoTracking().OrderBy(r => r.RoleId).ToListAsync(ct);
@@ -982,5 +1056,61 @@ public class StoreOperationsService : IStoreOperationsService
         _uow.Repository<UserBranchRole>().Remove(ubr);
         await _uow.SaveChangesAsync(ct);
         return true;
+    }
+
+    public async Task<BranchPerformanceDto> GetBranchPerformanceAsync(int branchId, DateTime fromDate, DateTime toDate, CancellationToken ct = default)
+    {
+        var branch = await _uow.Repository<Branch>().Query()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(b => b.BranchId == branchId, ct)
+            ?? throw new KeyNotFoundException($"Branch {branchId} not found.");
+
+        var invoices = await _uow.Repository<Invoice>().Query()
+            .AsNoTracking()
+            .Where(i => i.BranchId == branchId && i.DateCreated >= fromDate && i.DateCreated <= toDate)
+            .ToListAsync(ct);
+
+        var paidInvoices = invoices.Where(i => i.IsPaid).ToList();
+        var unpaidInvoices = invoices.Where(i => !i.IsPaid).ToList();
+        var totalRevenue = paidInvoices.Sum(i => i.TotalAmount);
+        var outstanding = unpaidInvoices.Sum(i => i.TotalAmount - i.AmountTendered);
+
+        var revenueByPaymentType = invoices
+            .GroupBy(i => i.PaymentType.ToString())
+            .Select(g => new PaymentTypeSummary
+            {
+                PaymentType = g.Key,
+                InvoiceCount = g.Count(),
+                Total = g.Sum(i => i.TotalAmount)
+            })
+            .OrderByDescending(x => x.Total)
+            .ToList();
+
+        var dailyRevenue = invoices
+            .GroupBy(i => DateOnly.FromDateTime(i.DateCreated))
+            .Select(g => new DailyRevenueSummary
+            {
+                Date = g.Key,
+                InvoiceCount = g.Count(),
+                Total = g.Sum(i => i.TotalAmount)
+            })
+            .OrderBy(x => x.Date)
+            .ToList();
+
+        return new BranchPerformanceDto
+        {
+            BranchId = branchId,
+            BranchName = branch.Name,
+            FromDate = fromDate,
+            ToDate = toDate,
+            TotalInvoices = invoices.Count,
+            TotalRevenue = totalRevenue,
+            AverageOrderValue = paidInvoices.Count > 0 ? Math.Round(totalRevenue / paidInvoices.Count, 2) : 0,
+            PaidInvoices = paidInvoices.Count,
+            UnpaidInvoices = unpaidInvoices.Count,
+            OutstandingBalance = outstanding,
+            RevenueByPaymentType = revenueByPaymentType,
+            DailyRevenue = dailyRevenue
+        };
     }
 }

@@ -8,6 +8,7 @@ public class Invoice : BaseEntity
     public Guid InvoiceId { get; set; }
     public Guid? UserId { get; set; }
     public Guid? CustomerId { get; set; }
+    public int? BranchId { get; set; }
     public decimal TotalAmount { get; set; }
     public decimal AmountTendered { get; set; }
     public decimal ChangeGiven { get; set; }
@@ -18,6 +19,7 @@ public class Invoice : BaseEntity
     // Navigation
     public User? User { get; set; }
     public Customer? Customer { get; set; }
+    public Branch? Branch { get; set; }
 
     public ICollection<Sale> Sales { get; set; } = new List<Sale>();
     public ICollection<InvoiceTender> Tenders { get; set; } = new List<InvoiceTender>();

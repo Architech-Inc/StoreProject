@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Invoices;
+using Store.Models.DTOs.Operations;
 using Store.Models.Interfaces.Services;
 
 namespace Store.API.Controllers;
@@ -63,5 +64,25 @@ public class InvoicesController : ControllerBase
         var success = await _invoiceService.VoidInvoiceAsync(id, userId == Guid.Empty ? null : userId, ct);
         if (!success) return NotFound(ApiResponse<object>.Fail("Invoice not found or already voided."));
         return Ok(ApiResponse<object>.Ok(null!, "Invoice voided."));
+    }
+
+    [HttpPost("{id:guid}/tender")]
+    [Authorize(Policy = PermissionKeys.CashWrite)]
+    public async Task<IActionResult> AddTender(Guid id, [FromBody] AddTenderRequest request, CancellationToken ct)
+    {
+        if (!ModelState.IsValid) return BadRequest(ModelState);
+        try
+        {
+            var tender = await _invoiceService.AddTenderAsync(id, request, ct);
+            return Ok(ApiResponse<InvoiceTenderDto>.Ok(tender, "Payment recorded."));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound(ApiResponse<object>.Fail("Invoice not found."));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ApiResponse<object>.Fail(ex.Message));
+        }
     }
 }

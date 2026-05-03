@@ -55,3 +55,33 @@ public class RemoveUserBranchRoleRequest
     [Required]
     public long UserBranchRoleId { get; set; }
 }
+
+public class BranchPerformanceDto
+{
+    public int BranchId { get; set; }
+    public string BranchName { get; set; } = string.Empty;
+    public DateTime FromDate { get; set; }
+    public DateTime ToDate { get; set; }
+    public int TotalInvoices { get; set; }
+    public decimal TotalRevenue { get; set; }
+    public decimal AverageOrderValue { get; set; }
+    public int PaidInvoices { get; set; }
+    public int UnpaidInvoices { get; set; }
+    public decimal OutstandingBalance { get; set; }
+    public IReadOnlyList<PaymentTypeSummary> RevenueByPaymentType { get; set; } = [];
+    public IReadOnlyList<DailyRevenueSummary> DailyRevenue { get; set; } = [];
+}
+
+public class PaymentTypeSummary
+{
+    public string PaymentType { get; set; } = string.Empty;
+    public int InvoiceCount { get; set; }
+    public decimal Total { get; set; }
+}
+
+public class DailyRevenueSummary
+{
+    public DateOnly Date { get; set; }
+    public int InvoiceCount { get; set; }
+    public decimal Total { get; set; }
+}

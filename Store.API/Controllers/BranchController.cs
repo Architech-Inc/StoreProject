@@ -45,4 +45,20 @@ public class BranchController : ControllerBase
         var removed = await _ops.RemoveUserBranchRoleAsync(id, ct);
         return removed ? NoContent() : NotFound();
     }
+
+    [HttpGet("{id:int}/performance")]
+    public async Task<IActionResult> GetPerformance(int id, [FromQuery] DateTime? from, [FromQuery] DateTime? to, CancellationToken ct)
+    {
+        var fromDate = from?.ToUniversalTime() ?? DateTime.UtcNow.AddDays(-30);
+        var toDate = to?.ToUniversalTime() ?? DateTime.UtcNow;
+        try
+        {
+            var result = await _ops.GetBranchPerformanceAsync(id, fromDate, toDate, ct);
+            return Ok(result);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+    }
 }

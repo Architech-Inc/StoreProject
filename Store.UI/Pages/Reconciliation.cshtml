@@ -1,0 +1,116 @@
+@page
+@model StoreUI.Pages.ReconciliationModel
+@{
+    ViewData["Title"] = "Day-End Reconciliation";
+}
+@section Styles {
+    <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
+}
+
+<div class="ops-page">
+    <partial name="Shared/_ModuleNav" />
+
+    <header>
+        <h1>Day-End Reconciliation</h1>
+        <p>Review cashier shifts, variances, and payment channel summaries for a given day.</p>
+    </header>
+
+    @if (Model.ErrorMessage is not null)
+    {
+        <div class="status error">@Model.ErrorMessage</div>
+    }
+
+    <!-- Date picker -->
+    <form method="get" class="filter-bar">
+        <input type="date" name="date" value="@Model.SelectedDate.ToString("yyyy-MM-dd")" />
+        <button type="submit">Load</button>
+        <a href="/Reconciliation">Today</a>
+    </form>
+
+    @if (Model.Report is not null)
+    {
+        var r = Model.Report;
+        <section class="card mb-4">
+            <h2 style="margin-top:0;">Summary — @r.Date.ToString("d MMM yyyy")</h2>
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-label">Total Shifts</div>
+                    <div class="kpi-value">@r.TotalShifts</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Open Shifts</div>
+                    <div class="kpi-value @(r.OpenShifts > 0 ? "text-warning" : "")">@r.OpenShifts</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Cash Sales</div>
+                    <div class="kpi-value text-success">@r.TotalCashSales.ToString("N0") XAF</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Non-Cash Sales</div>
+                    <div class="kpi-value">@r.TotalNonCashSales.ToString("N0") XAF</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Total Variance</div>
+                    <div class="kpi-value @(r.TotalVariance != 0 ? "text-danger" : "text-success")">
+                        @(r.TotalVariance >= 0 ? "+" : "")@r.TotalVariance.ToString("N0") XAF
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2 style="margin-top:0;">Shift Details</h2>
+            @if (!r.Shifts.Any())
+            {
+                <p style="color:var(--ops-subtle);">No shifts recorded for this date.</p>
+            }
+            else
+            {
+                foreach (var shift in r.Shifts)
+                {
+                    <div class="shift-card">
+                        <div class="shift-header">
+                            <strong>@shift.CashierName</strong>
+                            <span class="badge @(shift.Status.ToString() == "Open" ? "badge-yellow" : "badge-green")">@shift.Status</span>
+                            <span style="color:var(--ops-subtle);font-size:12px;">
+                                @shift.OpenedAtUtc.ToString("HH:mm") – @(shift.ClosedAtUtc?.ToString("HH:mm") ?? "ongoing")
+                            </span>
+                        </div>
+                        <div class="shift-metrics">
+                            <span>Opening float: <strong>@shift.OpeningFloat.ToString("N0")</strong></span>
+                            @if (shift.ClosingFloat.HasValue)
+                            {
+                                <span>Closing float: <strong>@shift.ClosingFloat.Value.ToString("N0")</strong></span>
+                                <span>Expected: <strong>@(shift.ExpectedClosingAmount?.ToString("N0") ?? "—")</strong></span>
+                                var variance = shift.VarianceAmount ?? 0;
+                                <span style="color:@(variance != 0 ? "var(--ops-danger)" : "var(--ops-success)")">
+                                    Variance: <strong>@(variance >= 0 ? "+" : "")@variance.ToString("N0")</strong>
+                                </span>
+                            }
+                            <span>Invoices: <strong>@shift.InvoiceCount</strong></span>
+                            <span>Cash sales: <strong>@shift.CashSalesTotal.ToString("N0") XAF</strong></span>
+                        </div>
+                        @if (shift.PaymentBreakdown.Any())
+                        {
+                            <table class="data-table" style="margin-top:8px;max-width:400px;">
+                                <thead>
+                                    <tr><th>Payment Type</th><th>Invoices</th><th class="text-right">Amount</th></tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var pb in shift.PaymentBreakdown)
+                                    {
+                                        <tr>
+                                            <td>@pb.PaymentType</td>
+                                            <td>@pb.InvoiceCount</td>
+                                            <td class="text-right">@pb.TotalAmount.ToString("N0")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
+                    </div>
+                }
+            }
+        </section>
+    }
+</div>

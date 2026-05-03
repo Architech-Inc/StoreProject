@@ -62,6 +62,7 @@
                             <th>Payment</th>
                             <th style="text-align:right;">Total (XAF)</th>
                             <th style="text-align:right;">Tendered</th>
+                            <th style="text-align:right;">Outstanding</th>
                             <th>Status</th>
                             <th></th>
                         </tr>
@@ -76,10 +77,15 @@
                                 <td>@inv.PaymentType</td>
                                 <td style="text-align:right;font-weight:600;">@inv.TotalAmount.ToString("N0")</td>
                                 <td style="text-align:right;">@inv.AmountTendered.ToString("N0")</td>
+                                <td style="text-align:right;color:var(--ops-danger);font-weight:600;">@(inv.OutstandingBalance > 0 ? inv.OutstandingBalance.ToString("N0") : "—")</td>
                                 <td>
                                     @if (inv.IsPaid)
                                     {
                                         <span class="badge badge-green">Paid</span>
+                                    }
+                                    else if (inv.OutstandingBalance > 0)
+                                    {
+                                        <span class="badge badge-yellow">Unpaid</span>
                                     }
                                     else
                                     {
@@ -88,6 +94,10 @@
                                 </td>
                                 <td style="display:flex;gap:4px;flex-wrap:nowrap;">
                                     <button type="button" onclick="openDetail('@inv.InvoiceId')">Details</button>
+                                    @if (!inv.IsPaid && inv.OutstandingBalance > 0)
+                                    {
+                                        <button type="button" class="btn-primary" onclick="openPay('@inv.InvoiceId', @inv.OutstandingBalance)">Pay</button>
+                                    }
                                     @if (inv.IsPaid)
                                     {
                                         <form method="post" asp-page-handler="Void" style="margin:0;">
@@ -131,6 +141,42 @@
         <div id="detailContent" style="font-size:14px;line-height:1.6;">
             <p style="color:var(--ops-subtle);">Loading…</p>
         </div>
+    </div>
+</div>
+
+<!-- ── Partial Payment Modal ───────────────────────────────── -->
+<div class="modal-overlay" id="payModal" hidden>
+    <div class="modal" style="max-width:440px;" role="dialog" aria-modal="true">
+        <div class="modal-head">
+            <h3>Record Payment</h3>
+            <button type="button" class="btn-close" onclick="closePay()" aria-label="Close">×</button>
+        </div>
+        <p>Outstanding: <strong id="payOutstanding"></strong></p>
+        <form id="payForm">
+            @Html.AntiForgeryToken()
+            <div class="form-group">
+                <label>Payment Type</label>
+                <select id="payType" class="form-control">
+                    @foreach (var pt in Enum.GetValues<Store.Models.Enums.PaymentType>())
+                    {
+                        <option value="@((int)pt)">@pt</option>
+                    }
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Amount (XAF)</label>
+                <input type="number" id="payAmount" class="form-control" min="0.01" step="0.01" required />
+            </div>
+            <div class="form-group">
+                <label>Reference (optional)</label>
+                <input type="text" id="payReference" class="form-control" />
+            </div>
+            <p id="payError" style="color:var(--ops-danger);margin:4px 0;"></p>
+            <div class="modal-actions">
+                <button type="button" onclick="closePay()">Cancel</button>
+                <button type="submit" id="payBtn" class="btn-primary">Record Payment</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -188,6 +234,52 @@
         function closeDetail() { document.getElementById('detailModal').hidden = true; }
         document.getElementById('detailModal').addEventListener('click', function(e) {
             if (e.target === this) closeDetail();
+        });
+
+        // ── Partial Payment ──────────────────────────────────────────
+        let currentInvoiceId = null;
+
+        function openPay(invoiceId, outstanding) {
+            currentInvoiceId = invoiceId;
+            document.getElementById('payOutstanding').textContent = Number(outstanding).toLocaleString('fr-CM') + ' XAF';
+            document.getElementById('payAmount').value = outstanding.toFixed(2);
+            document.getElementById('payError').textContent = '';
+            document.getElementById('payModal').hidden = false;
+        }
+
+        function closePay() { document.getElementById('payModal').hidden = true; }
+        document.getElementById('payModal').addEventListener('click', function(e) {
+            if (e.target === this) closePay();
+        });
+
+        document.getElementById('payForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('payBtn');
+            btn.disabled = true;
+            document.getElementById('payError').textContent = '';
+            try {
+                const body = {
+                    paymentType: parseInt(document.getElementById('payType').value),
+                    amount: parseFloat(document.getElementById('payAmount').value),
+                    reference: document.getElementById('payReference').value || null
+                };
+                const resp = await fetch(`/Invoices?handler=AddTender&invoiceId=${currentInvoiceId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': document.querySelector('[name=__RequestVerificationToken]').value },
+                    body: JSON.stringify(body),
+                    credentials: 'same-origin'
+                });
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    throw new Error(err.message || `HTTP ${resp.status}`);
+                }
+                closePay();
+                window.location.reload();
+            } catch (ex) {
+                document.getElementById('payError').textContent = ex.message;
+            } finally {
+                btn.disabled = false;
+            }
         });
     </script>
 }

@@ -10,14 +10,17 @@ public class InvoiceDto
     public string? CustomerName { get; set; }
     public Guid? UserId { get; set; }
     public string? ProcessedBy { get; set; }
+    public int? BranchId { get; set; }
     public decimal TotalAmount { get; set; }
     public decimal AmountTendered { get; set; }
     public decimal ChangeGiven { get; set; }
+    public decimal OutstandingBalance { get; set; }
     public PaymentType PaymentType { get; set; }
     public bool IsPaid { get; set; }
     public string? Notes { get; set; }
     public DateTime DateCreated { get; set; }
     public IEnumerable<SaleLineDto> Lines { get; set; } = Enumerable.Empty<SaleLineDto>();
+    public IEnumerable<InvoiceTenderDto> Tenders { get; set; } = Enumerable.Empty<InvoiceTenderDto>();
 }
 
 public class SaleLineDto
@@ -57,4 +60,24 @@ public class CreateSaleLineRequest
     public int Quantity { get; set; }
 
     public decimal? OverrideUnitPrice { get; set; }
+}
+
+public class AddTenderRequest
+{
+    [Required]
+    public PaymentType PaymentType { get; set; }
+
+    [Required, Range(0.01, double.MaxValue)]
+    public decimal Amount { get; set; }
+
+    public string? Reference { get; set; }
+}
+
+public class InvoiceTenderDto
+{
+    public int InvoiceTenderId { get; set; }
+    public string PaymentType { get; set; } = string.Empty;
+    public decimal Amount { get; set; }
+    public string? Reference { get; set; }
+    public DateTime DateCreated { get; set; }
 }

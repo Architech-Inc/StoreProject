@@ -1,6 +1,7 @@
 using Store.Models.Entities.Base;
 
 namespace Store.Models.Entities;
+// Invoice is in the same namespace — no extra using needed
 
 public class Branch : BaseEntity
 {
@@ -11,4 +12,5 @@ public class Branch : BaseEntity
     public bool IsActive { get; set; } = true;
 
     public ICollection<UserBranchRole> UserBranchRoles { get; set; } = new List<UserBranchRole>();
+    public ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
 }

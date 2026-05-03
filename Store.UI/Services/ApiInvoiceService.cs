@@ -39,4 +39,10 @@ public class ApiInvoiceService : IInvoiceService
         var result = await _client.PostAsync<bool?>($"/api/invoices/{invoiceId}/void", new { }, ct);
         return result.HasValue && result.Value;
     }
+
+    public async Task<InvoiceTenderDto> AddTenderAsync(Guid invoiceId, AddTenderRequest request, CancellationToken ct = default)
+    {
+        var result = await _client.PostAsync<InvoiceTenderDto>($"/api/invoices/{invoiceId}/tender", request, ct);
+        return result ?? throw new InvalidOperationException("Failed to record tender.");
+    }
 }
