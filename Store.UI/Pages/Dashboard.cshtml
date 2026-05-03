@@ -19,8 +19,10 @@
         </div>
 
         <nav class="main-nav">
-            <a class="nav-link active" href="/Dashboard" aria-current="page">Dashboard</a>
+            <a class="nav-link" href="/Dashboard" aria-current="page">Dashboard</a>
             <a class="nav-link" href="/Pos">POS Terminal</a>
+            <a class="nav-link" href="/Catalog">Item Catalog</a>
+            <a class="nav-link" href="/Customers">Customers</a>
             @if (Model.CanInventoryRead)
             {
                 <a class="nav-link" href="/InventoryOps">Inventory Ops</a>
@@ -173,6 +175,8 @@
             </header>
             <div class="action-row">
                 <a class="action-link" href="/Pos">Open POS Terminal</a>
+                <a class="action-link" href="/Catalog">Item Catalog</a>
+                <a class="action-link" href="/Customers">Customers</a>
                 @if (Model.CanInventoryRead)
                 {
                     <a class="action-link" href="/InventoryOps">Inventory Operations</a>

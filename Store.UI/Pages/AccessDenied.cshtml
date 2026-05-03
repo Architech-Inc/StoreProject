@@ -1,0 +1,27 @@
+@page
+@{
+    ViewData["Title"] = "Access Denied";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
+}
+
+<div class="ops-page" style="display:flex;align-items:center;justify-content:center;min-height:80vh;">
+    <div class="card" style="max-width:440px;width:100%;text-align:center;padding:40px 32px;">
+        <div style="font-size:3.5rem;margin-bottom:12px;">🔒</div>
+        <h1 style="font-size:1.4rem;margin:0 0 8px;">Access Denied</h1>
+        <p style="color:var(--ops-subtle);margin:0 0 24px;">
+            Your account does not have the required permissions to view this page.
+            Contact your administrator or sign in with a different account.
+        </p>
+        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+            <a href="/Dashboard" style="padding:9px 20px;background:var(--ops-brand);color:#fff;border-radius:var(--radius-sm);text-decoration:none;font-weight:600;">
+                Back to Dashboard
+            </a>
+            <a href="/Login" style="padding:9px 20px;border:1px solid var(--ops-border);border-radius:var(--radius-sm);text-decoration:none;color:var(--ops-ink);">
+                Switch Account
+            </a>
+        </div>
+    </div>
+</div>

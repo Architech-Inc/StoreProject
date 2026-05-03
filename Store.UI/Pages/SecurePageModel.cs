@@ -20,5 +20,5 @@ public abstract class SecurePageModel : PageModel
 
     protected RedirectToPageResult GoToLogin() => RedirectToPage("Login");
 
-    protected IActionResult AccessDenied() => StatusCode(StatusCodes.Status403Forbidden);
+    protected IActionResult AccessDenied() => RedirectToPage("AccessDenied");
 }

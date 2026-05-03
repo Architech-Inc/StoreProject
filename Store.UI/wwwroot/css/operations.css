@@ -119,6 +119,191 @@ button.toggle.on {
 }
 
 button.toggle.off {
+    background: #94a3b8;
+    color: #fff;
+}
+
+button.toggle.off:hover,
+button.toggle.off:focus-visible {
+    background: #64748b;
+}
+
+button.danger {
+    background: var(--ops-danger, #dc2626);
+}
+
+button.danger:hover,
+button.danger:focus-visible {
+    background: #b91c1c;
+}
+
+textarea {
+    font: inherit;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--ops-border);
+    resize: vertical;
+    min-height: 64px;
+}
+
+textarea:focus {
+    outline: none;
+    border-color: var(--ops-brand-2);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--ops-brand-2) 22%, transparent);
+}
+
+/* ── tables ─────────────────────────────────── */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+th,
+td {
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--ops-border);
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+th {
+    font-weight: 600;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ops-subtle);
+    background: color-mix(in srgb, var(--ops-brand) 6%, transparent);
+}
+
+tbody tr:hover {
+    background: color-mix(in srgb, var(--ops-brand) 4%, transparent);
+}
+
+/* ── preview grid ────────────────────────────── */
+.preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 8px 16px;
+    padding: 12px 0;
+    font-size: 0.9rem;
+}
+
+.preview-grid p {
+    margin: 0;
+    padding: 6px 10px;
+    background: color-mix(in srgb, var(--ops-brand) 6%, transparent);
+    border-radius: var(--radius-sm);
+}
+
+/* ── status banner variants ──────────────────── */
+.status.ok {
+    border-color: #22c55e;
+    background: #f0fdf4;
+    color: #15803d;
+}
+
+.status.error {
+    border-color: var(--ops-danger, #dc2626);
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+/* ── page-level badge pill ───────────────────── */
+.badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.badge-green { background: #dcfce7; color: #15803d; }
+.badge-red   { background: #fee2e2; color: #b91c1c; }
+.badge-gray  { background: #f1f5f9; color: #475569; }
+
+/* ── search/filter bar ───────────────────────── */
+.filter-bar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.filter-bar input,
+.filter-bar select {
+    flex: 1;
+    min-width: 180px;
+}
+
+/* ── pagination controls ─────────────────────── */
+.pagination {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-top: 12px;
+}
+
+.pagination a,
+.pagination span {
+    padding: 5px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--ops-border);
+    font-size: 0.85rem;
+    text-decoration: none;
+    color: var(--ops-ink);
+}
+
+.pagination a:hover { background: color-mix(in srgb, var(--ops-brand) 10%, transparent); }
+.pagination .active { background: var(--ops-brand); color: #fff; border-color: transparent; }
+
+/* ── modal overlay ───────────────────────────── */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+}
+
+.modal-overlay[hidden] { display: none; }
+
+.modal {
+    background: var(--ops-paper);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    width: min(460px, 92vw);
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,.25);
+}
+
+.modal-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.modal-head h3 { margin: 0; }
+
+.btn-close {
+    background: transparent;
+    border: none;
+    font-size: 1.4rem;
+    cursor: pointer;
+    color: var(--ops-subtle);
+    padding: 0 4px;
+    line-height: 1;
+}
+
+.btn-close:hover { color: var(--ops-ink); }
+
+button.toggle.off {
     background: var(--ops-danger);
 }
 

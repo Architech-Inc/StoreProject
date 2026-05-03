@@ -1,0 +1,205 @@
+@page
+@model StoreUI.Pages.CatalogModel
+@{
+    ViewData["Title"] = "Item Catalog";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
+}
+
+<div class="ops-page">
+    <partial name="Shared/_ModuleNav" />
+
+    <header>
+        <h1>Item Catalog</h1>
+        <p>Manage product and service records — prices, stock, and details.</p>
+        <a class="link" href="/Dashboard">Back to Dashboard</a>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="status">@Model.StatusMessage</div>
+    }
+
+    <section class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <h2 style="margin:0;">Products &amp; Services</h2>
+            <button type="button" onclick="openCreate()">+ New Item</button>
+        </div>
+
+        @if (!Model.Items.Any())
+        {
+            <p style="color:var(--ops-subtle);padding:12px 0;">No items found.</p>
+        }
+        else
+        {
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Category</th>
+                            <th>Unit</th>
+                            <th>Price (XAF)</th>
+                            <th>Cost (XAF)</th>
+                            <th>Stock</th>
+                            <th>Reorder</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.Items)
+                        {
+                            <tr>
+                                <td><strong>@item.Name</strong>@if (!string.IsNullOrWhiteSpace(item.Barcode)) { <small style="color:var(--ops-subtle);display:block;">@item.Barcode</small> }</td>
+                                <td>@(item.CategoryName ?? "—")</td>
+                                <td>@(item.UnitAbbreviation ?? "—")</td>
+                                <td>@item.UnitPrice.ToString("N0")</td>
+                                <td>@(item.CostPrice.HasValue ? item.CostPrice.Value.ToString("N0") : "—")</td>
+                                <td>
+                                    @if (item.InStock <= 0)
+                                    {
+                                        <span class="badge badge-red">Out</span>
+                                    }
+                                    else if (item.ReorderLevel.HasValue && item.InStock <= item.ReorderLevel.Value)
+                                    {
+                                        <span class="badge badge-red">@item.InStock ⚠</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-green">@item.InStock</span>
+                                    }
+                                </td>
+                                <td>@(item.ReorderLevel.HasValue ? item.ReorderLevel.ToString() : "—")</td>
+                                <td>
+                                    @if (item.IsActive)
+                                    {
+                                        <span class="badge badge-green">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-gray">Inactive</span>
+                                    }
+                                </td>
+                                <td style="display:flex;gap:4px;flex-wrap:nowrap;">
+                                    <button type="button" onclick="openEdit(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new { itemId = item.ItemId, name = item.Name, description = item.Description, unitPrice = item.UnitPrice, costPrice = item.CostPrice, inStock = item.InStock, reorderLevel = item.ReorderLevel, barcode = item.Barcode })))">Edit</button>
+                                    @if (item.IsActive)
+                                    {
+                                        <form method="post" asp-page-handler="Deactivate" style="margin:0;">
+                                            <input type="hidden" name="itemId" value="@item.ItemId" />
+                                            <button type="submit" class="danger">Deactivate</button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (Model.TotalPages > 1)
+            {
+                <nav class="pagination" aria-label="Catalog pages">
+                    @if (Model.PageNumber > 1)
+                    {
+                        <a href="?page=@(Model.PageNumber - 1)">‹ Prev</a>
+                    }
+                    <span class="active">@Model.PageNumber / @Model.TotalPages</span>
+                    @if (Model.PageNumber < Model.TotalPages)
+                    {
+                        <a href="?page=@(Model.PageNumber + 1)">Next ›</a>
+                    }
+                </nav>
+            }
+        }
+    </section>
+</div>
+
+<!-- ── Create / Edit Modal ────────────────────────────── -->
+<div class="modal-overlay" id="itemModal" hidden>
+    <div class="modal" role="dialog" aria-labelledby="modalTitle" aria-modal="true">
+        <div class="modal-head">
+            <h3 id="modalTitle">Item</h3>
+            <button type="button" class="btn-close" onclick="closeModal()" aria-label="Close">×</button>
+        </div>
+
+        <form method="post" asp-page-handler="Save">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="EditItemId" id="editItemId" />
+
+            <label for="itemName">Name *</label>
+            <input asp-for="ItemName" id="itemName" required />
+
+            <label for="itemDescription">Description</label>
+            <textarea asp-for="ItemDescription" id="itemDescription" rows="2"></textarea>
+
+            <label for="itemUnitPrice">Selling Price (XAF) *</label>
+            <input asp-for="ItemUnitPrice" id="itemUnitPrice" type="number" step="1" min="0" required />
+
+            <label for="itemCostPrice">Cost Price (XAF)</label>
+            <input asp-for="ItemCostPrice" id="itemCostPrice" type="number" step="1" min="0" />
+
+            <label for="itemInStock">Opening Stock *</label>
+            <input asp-for="ItemInStock" id="itemInStock" type="number" min="0" required />
+
+            <label for="itemReorderLevel">Reorder Level</label>
+            <input asp-for="ItemReorderLevel" id="itemReorderLevel" type="number" min="0" />
+
+            <label for="itemBarcode">Barcode</label>
+            <input asp-for="ItemBarcode" id="itemBarcode" />
+
+            <div style="display:flex;gap:8px;margin-top:8px;">
+                <button type="submit">Save</button>
+                <button type="button" class="danger" onclick="closeModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+const modal = document.getElementById('itemModal');
+const modalTitle = document.getElementById('modalTitle');
+
+function openCreate() {
+    modalTitle.textContent = 'New Item';
+    document.getElementById('editItemId').value = '';
+    document.getElementById('itemName').value = '';
+    document.getElementById('itemDescription').value = '';
+    document.getElementById('itemUnitPrice').value = '';
+    document.getElementById('itemCostPrice').value = '';
+    document.getElementById('itemInStock').value = '0';
+    document.getElementById('itemReorderLevel').value = '';
+    document.getElementById('itemBarcode').value = '';
+    document.getElementById('itemInStock').disabled = false;
+    modal.removeAttribute('hidden');
+}
+
+function openEdit(data) {
+    modalTitle.textContent = 'Edit Item';
+    document.getElementById('editItemId').value = data.itemId;
+    document.getElementById('itemName').value = data.name ?? '';
+    document.getElementById('itemDescription').value = data.description ?? '';
+    document.getElementById('itemUnitPrice').value = data.unitPrice ?? '';
+    document.getElementById('itemCostPrice').value = data.costPrice ?? '';
+    document.getElementById('itemInStock').value = data.inStock ?? 0;
+    document.getElementById('itemInStock').disabled = true; // use GRN to change stock
+    document.getElementById('itemReorderLevel').value = data.reorderLevel ?? '';
+    document.getElementById('itemBarcode').value = data.barcode ?? '';
+    modal.removeAttribute('hidden');
+}
+
+function closeModal() {
+    modal.setAttribute('hidden', '');
+}
+
+modal.addEventListener('click', e => {
+    if (e.target === modal) closeModal();
+});
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeModal();
+});
+</script>
+}

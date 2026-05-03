@@ -1,0 +1,150 @@
+@page
+@model StoreUI.Pages.CustomersModel
+@{
+    ViewData["Title"] = "Customers";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
+}
+
+<div class="ops-page">
+    <partial name="Shared/_ModuleNav" />
+
+    <header>
+        <h1>Customers</h1>
+        <p>Manage registered customer profiles and contact details.</p>
+        <a class="link" href="/Dashboard">Back to Dashboard</a>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="status">@Model.StatusMessage</div>
+    }
+
+    <section class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <h2 style="margin:0;">Customer Records <small style="font-weight:400;color:var(--ops-subtle);">@Model.TotalCustomers total</small></h2>
+            <button type="button" onclick="openCreate()">+ New Customer</button>
+        </div>
+
+        @if (!Model.Customers.Any())
+        {
+            <p style="color:var(--ops-subtle);padding:12px 0;">No customer records yet.</p>
+        }
+        else
+        {
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Gender</th>
+                            <th>Phone</th>
+                            <th>Email</th>
+                            <th>Notes</th>
+                            <th>Registered</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var c in Model.Customers)
+                        {
+                            <tr>
+                                <td><strong>@c.FullName</strong></td>
+                                <td>@c.Gender</td>
+                                <td>@(c.PrimaryPhone ?? "—")</td>
+                                <td>@(c.PrimaryEmail ?? "—")</td>
+                                <td>@(c.Notes ?? "—")</td>
+                                <td>@c.DateCreated.ToString("yyyy-MM-dd")</td>
+                                <td>
+                                    <form method="post" asp-page-handler="Delete" style="margin:0;">
+                                        <input type="hidden" name="customerId" value="@c.CustomerId" />
+                                        <button type="submit" class="danger" onclick="return confirm('Remove @(c.FullName.Replace("'", "\\'"))?')">Remove</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (Model.TotalPages > 1)
+            {
+                <nav class="pagination" aria-label="Customer pages">
+                    @if (Model.PageNumber > 1)
+                    {
+                        <a href="?page=@(Model.PageNumber - 1)">‹ Prev</a>
+                    }
+                    <span class="active">@Model.PageNumber / @Model.TotalPages</span>
+                    @if (Model.PageNumber < Model.TotalPages)
+                    {
+                        <a href="?page=@(Model.PageNumber + 1)">Next ›</a>
+                    }
+                </nav>
+            }
+        }
+    </section>
+</div>
+
+<!-- ── Create Customer Modal ─────────────────────────────── -->
+<div class="modal-overlay" id="customerModal" hidden>
+    <div class="modal" role="dialog" aria-labelledby="custModalTitle" aria-modal="true">
+        <div class="modal-head">
+            <h3 id="custModalTitle">New Customer</h3>
+            <button type="button" class="btn-close" onclick="closeModal()" aria-label="Close">×</button>
+        </div>
+
+        <form method="post" asp-page-handler="Create">
+            @Html.AntiForgeryToken()
+
+            <label for="firstName">First Name *</label>
+            <input asp-for="FirstName" id="firstName" required />
+
+            <label for="middleName">Middle Name</label>
+            <input asp-for="MiddleName" id="middleName" />
+
+            <label for="lastName">Last Name *</label>
+            <input asp-for="LastName" id="lastName" required />
+
+            <label for="genderSel">Gender</label>
+            <select asp-for="Gender" id="genderSel">
+                <option value="NotSpecified">Not Specified</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+            </select>
+
+            <label for="phone">Phone</label>
+            <input asp-for="Phone" id="phone" type="tel" placeholder="+237 6XXXXXXXX" />
+
+            <label for="email">Email</label>
+            <input asp-for="Email" id="email" type="email" />
+
+            <label for="notes">Notes</label>
+            <textarea asp-for="Notes" id="notes" rows="2" placeholder="Optional internal notes"></textarea>
+
+            <div style="display:flex;gap:8px;margin-top:8px;">
+                <button type="submit">Create Customer</button>
+                <button type="button" class="danger" onclick="closeModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+const modal = document.getElementById('customerModal');
+
+function openCreate() {
+    modal.removeAttribute('hidden');
+    document.getElementById('firstName').focus();
+}
+
+function closeModal() {
+    modal.setAttribute('hidden', '');
+}
+
+modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+</script>
+}
