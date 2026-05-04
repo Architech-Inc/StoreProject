@@ -96,6 +96,10 @@ public class StoreDbContext : DbContext
     public DbSet<StockTransfer> StockTransfers => Set<StockTransfer>();
     public DbSet<StockTransferItem> StockTransferItems => Set<StockTransferItem>();
 
+    // ---- Wastage & Override ----
+    public DbSet<WastageEntry> WastageEntries => Set<WastageEntry>();
+    public DbSet<DiscountOverrideRequest> DiscountOverrideRequests => Set<DiscountOverrideRequest>();
+
     // ---- Loyalty ----
     public DbSet<CustomerLoyaltyAccount> CustomerLoyaltyAccounts => Set<CustomerLoyaltyAccount>();
     public DbSet<LoyaltyTransaction> LoyaltyTransactions => Set<LoyaltyTransaction>();
@@ -218,6 +222,38 @@ public class StoreDbContext : DbContext
 
         modelBuilder.Entity<StockTransfer>()
             .HasIndex(x => new { x.Status, x.DateCreated });
+
+        // WastageEntry relationships
+        modelBuilder.Entity<WastageEntry>()
+            .HasOne(w => w.Item)
+            .WithMany()
+            .HasForeignKey(w => w.ItemId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<WastageEntry>()
+            .HasOne(w => w.RecordedByUser)
+            .WithMany()
+            .HasForeignKey(w => w.RecordedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<WastageEntry>()
+            .HasIndex(w => new { w.ItemId, w.DateCreated });
+
+        // DiscountOverrideRequest relationships
+        modelBuilder.Entity<DiscountOverrideRequest>()
+            .HasOne(r => r.RequestedByUser)
+            .WithMany()
+            .HasForeignKey(r => r.RequestedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<DiscountOverrideRequest>()
+            .HasOne(r => r.ReviewedByUser)
+            .WithMany()
+            .HasForeignKey(r => r.ReviewedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<DiscountOverrideRequest>()
+            .HasIndex(r => new { r.Status, r.DateCreated });
     }
 
     private static void ApplySnakeCaseNaming(ModelBuilder modelBuilder)

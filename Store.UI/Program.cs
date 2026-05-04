@@ -49,6 +49,8 @@ builder.Services.AddScoped<ILoyaltyCampaignService, ApiCampaignService>();
 builder.Services.AddScoped<IDiscountService, ApiDiscountService>();
 builder.Services.AddScoped<IBatchService, ApiBatchService>();
 builder.Services.AddScoped<IStockTransferService, ApiStockTransferService>();
+builder.Services.AddScoped<IWastageService, ApiWastageService>();
+builder.Services.AddScoped<IDiscountOverrideService, ApiDiscountOverrideService>();
 
 var app = builder.Build();
 

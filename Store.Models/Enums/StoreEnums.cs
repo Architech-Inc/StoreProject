@@ -111,6 +111,26 @@ public enum StockTransferStatus
     Cancelled = 4
 }
 
+/// <summary>Reason type for a wastage/shrinkage stock write-off (INV-3).</summary>
+public enum WastageType
+{
+    Damage = 0,
+    Expiry = 1,
+    Theft = 2,
+    Spoilage = 3,
+    AdminError = 4,
+    Other = 5
+}
+
+/// <summary>Status of a manager discount override request (EX-FR-3.3).</summary>
+public enum DiscountOverrideStatus
+{
+    Pending = 0,
+    Approved = 1,
+    Rejected = 2,
+    Cancelled = 3
+}
+
 public enum TaxApplicationType
 {
     Exclusive,

@@ -1,0 +1,216 @@
+@page
+@model StoreUI.Pages.DiscountOverridesModel
+@{
+    ViewData["Title"] = "Discount Override Requests";
+    ViewData["ActivePage"] = "DiscountOverrides";
+    Layout = "~/Pages/Shared/_AppLayout.cshtml";
+
+    var statuses = new[] { "Pending", "Approved", "Rejected", "Cancelled" };
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
+}
+
+<div class="page-header d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="page-title">Discount Overrides</h1>
+        <p class="page-subtitle text-muted">Submit and manage discount override approval requests.</p>
+    </div>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createModal">
+        <i class="bi bi-plus-circle me-1"></i> New Request
+    </button>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.StatusMessage))
+{
+    <div class="alert alert-info alert-dismissible fade show" role="alert">
+        @Model.StatusMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<!-- Filter Bar -->
+<div class="card mb-4">
+    <div class="card-body py-2">
+        <form method="get" class="d-flex gap-2 align-items-center flex-wrap">
+            <label class="form-label mb-0 me-1">Status:</label>
+            <select name="status" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+                <option value="">All</option>
+                @foreach (var s in statuses)
+                {
+                    <option value="@s" selected="@(Model.FilterStatus == s)">@s</option>
+                }
+            </select>
+        </form>
+    </div>
+</div>
+
+<!-- Override Requests Table -->
+<div class="card">
+    <div class="card-body p-0">
+        @if (!Model.Overrides.Any())
+        {
+            <div class="empty-state text-center py-5">
+                <i class="bi bi-percent fs-1 text-muted"></i>
+                <p class="mt-2 text-muted">No override requests found.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Item</th>
+                            <th>Type</th>
+                            <th>Value</th>
+                            <th>Justification</th>
+                            <th>Requested By</th>
+                            <th>Status</th>
+                            <th>Reviewed By</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var r in Model.Overrides)
+                        {
+                            var statusClass = r.Status switch
+                            {
+                                "Approved" => "bg-success",
+                                "Rejected" => "bg-danger",
+                                "Cancelled" => "bg-secondary",
+                                _ => "bg-warning text-dark"
+                            };
+
+                            <tr>
+                                <td>@r.DiscountOverrideRequestId</td>
+                                <td>@(r.ItemName ?? "—")</td>
+                                <td>@r.OverrideType</td>
+                                <td>
+                                    @if (r.OverrideType == "Percentage")
+                                    { <span>@r.OverrideValue%</span> }
+                                    else
+                                    { <span>@r.OverrideValue.ToString("C")</span> }
+                                </td>
+                                <td class="text-truncate" style="max-width:180px">@(r.Justification ?? "—")</td>
+                                <td>@r.RequestedByUser</td>
+                                <td><span class="badge @statusClass">@r.Status</span></td>
+                                <td>@(r.ReviewedByUser ?? "—")</td>
+                                <td>@r.DateCreated.ToLocalTime().ToString("dd MMM yyyy HH:mm")</td>
+                                <td>
+                                    @if (r.Status == "Pending")
+                                    {
+                                        <div class="d-flex gap-1">
+                                            <!-- Approve -->
+                                            <form method="post" asp-page-handler="Review">
+                                                <input type="hidden" name="ReviewRequestId" value="@r.DiscountOverrideRequestId" />
+                                                <input type="hidden" name="ReviewApproved" value="true" />
+                                                <button type="submit" class="btn btn-sm btn-success" title="Approve">
+                                                    <i class="bi bi-check-lg"></i>
+                                                </button>
+                                            </form>
+                                            <!-- Reject -->
+                                            <button class="btn btn-sm btn-danger" title="Reject"
+                                                    data-bs-toggle="modal" data-bs-target="#rejectModal_@r.DiscountOverrideRequestId">
+                                                <i class="bi bi-x-lg"></i>
+                                            </button>
+                                            <!-- Cancel -->
+                                            <form method="post" asp-page-handler="Cancel"
+                                                  onsubmit="return confirm('Cancel this override request?')">
+                                                <input type="hidden" name="CancelRequestId" value="@r.DiscountOverrideRequestId" />
+                                                <button type="submit" class="btn btn-sm btn-outline-secondary" title="Cancel">
+                                                    <i class="bi bi-slash-circle"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    }
+                                </td>
+                            </tr>
+
+                            @if (r.Status == "Pending")
+                            {
+                                <!-- Reject modal per row -->
+                                <div class="modal fade" id="rejectModal_@r.DiscountOverrideRequestId" tabindex="-1" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <form method="post" asp-page-handler="Review">
+                                                <input type="hidden" name="ReviewRequestId" value="@r.DiscountOverrideRequestId" />
+                                                <input type="hidden" name="ReviewApproved" value="false" />
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Reject Override #@r.DiscountOverrideRequestId</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <div class="mb-3">
+                                                        <label class="form-label">Reason (optional)</label>
+                                                        <textarea class="form-control" name="ReviewNotes" rows="3" maxlength="1000"></textarea>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back</button>
+                                                    <button type="submit" class="btn btn-danger">Reject</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- New Request Modal -->
+<div class="modal fade" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="Create">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createModalLabel">New Override Request</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Invoice ID (optional)</label>
+                        <input type="text" class="form-control" name="CreateInvoiceId" placeholder="Paste invoice GUID"
+                               pattern="[0-9a-fA-F\-]{36}" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Item ID (optional)</label>
+                        <input type="text" class="form-control" name="CreateItemId" placeholder="Paste item GUID"
+                               pattern="[0-9a-fA-F\-]{36}" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Override Type</label>
+                        <select class="form-select" name="CreateOverrideType">
+                            @foreach (var t in Model.DiscountTypes)
+                            {
+                                <option value="@((int)t)">@t</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Override Value <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" name="CreateOverrideValue" step="0.01" min="0.01" required />
+                        <div class="form-text">For Percentage, enter e.g. 10 for 10%. For Fixed Amount, enter the deduction amount.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Justification</label>
+                        <textarea class="form-control" name="CreateJustification" rows="2" maxlength="1000"
+                                  placeholder="Why is this override needed?"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Submit Request</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

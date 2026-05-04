@@ -52,6 +52,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IDiscountService, DiscountService>();
         services.AddScoped<IBatchService, BatchService>();
         services.AddScoped<IStockTransferService, StockTransferService>();
+        services.AddScoped<IWastageService, WastageService>();
+        services.AddScoped<IDiscountOverrideService, DiscountOverrideService>();
 
         return services;
     }
