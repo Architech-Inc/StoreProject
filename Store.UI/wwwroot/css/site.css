@@ -27,7 +27,6 @@ html, body {
     min-height: 100%;
     min-width: 100%;
     max-width: 100%;
-    max-height: 100%;
     margin: 0;
     padding: 0;
     accent-color: var(--brand);
@@ -37,7 +36,130 @@ html, body {
     letter-spacing: 0;
     color: var(--text-primary);
     background-color: var(--canvas);
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+}
+
+/* ---- Global scrollbar polish (smart + contextual) ---- */
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track {
+    background: rgba(9, 14, 12, 0.06);
+    border-radius: 999px;
+}
+
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(39, 66, 51, 0.52) 0%, rgba(24, 43, 33, 0.66) 100%);
+    border-radius: 999px;
+    border: 2px solid rgba(9, 14, 12, 0.06);
+}
+
+html::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, rgba(27, 92, 52, 0.76) 0%, rgba(19, 70, 40, 0.86) 100%);
+}
+
+.table-wrap::-webkit-scrollbar,
+.gridBody::-webkit-scrollbar,
+.record_view::-webkit-scrollbar,
+div.stackPanel::-webkit-scrollbar,
+.app-sidebar::-webkit-scrollbar,
+.main-nav::-webkit-scrollbar,
+div.added::-webkit-scrollbar,
+.ops-page::-webkit-scrollbar,
+.catalog-panel::-webkit-scrollbar,
+.cart-panel::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+}
+
+.table-wrap::-webkit-scrollbar-track,
+.gridBody::-webkit-scrollbar-track,
+.record_view::-webkit-scrollbar-track,
+div.added::-webkit-scrollbar-track,
+.ops-page::-webkit-scrollbar-track,
+.catalog-panel::-webkit-scrollbar-track,
+.cart-panel::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 999px;
+}
+
+.table-wrap::-webkit-scrollbar-thumb,
+.gridBody::-webkit-scrollbar-thumb,
+.record_view::-webkit-scrollbar-thumb,
+div.added::-webkit-scrollbar-thumb,
+.ops-page::-webkit-scrollbar-thumb,
+.catalog-panel::-webkit-scrollbar-thumb,
+.cart-panel::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 999px;
+    border: 2px solid transparent;
+}
+
+.table-wrap:hover::-webkit-scrollbar-thumb,
+.table-wrap:focus-within::-webkit-scrollbar-thumb,
+.gridBody:hover::-webkit-scrollbar-thumb,
+.gridBody:focus-within::-webkit-scrollbar-thumb,
+.record_view:hover::-webkit-scrollbar-thumb,
+.record_view:focus-within::-webkit-scrollbar-thumb,
+div.added:hover::-webkit-scrollbar-thumb,
+div.added:focus-within::-webkit-scrollbar-thumb,
+.ops-page:hover::-webkit-scrollbar-thumb,
+.ops-page:focus-within::-webkit-scrollbar-thumb,
+.catalog-panel:hover::-webkit-scrollbar-thumb,
+.catalog-panel:focus-within::-webkit-scrollbar-thumb,
+.cart-panel:hover::-webkit-scrollbar-thumb,
+.cart-panel:focus-within::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(58, 79, 66, 0.54) 0%, rgba(32, 48, 39, 0.62) 100%);
+    border-color: rgba(0, 0, 0, 0.06);
+}
+
+.table-wrap:hover::-webkit-scrollbar-thumb:hover,
+.gridBody:hover::-webkit-scrollbar-thumb:hover,
+.record_view:hover::-webkit-scrollbar-thumb:hover,
+div.added:hover::-webkit-scrollbar-thumb:hover,
+.ops-page:hover::-webkit-scrollbar-thumb:hover,
+.catalog-panel:hover::-webkit-scrollbar-thumb:hover,
+.cart-panel:hover::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, rgba(35, 97, 35, 0.72) 0%, rgba(20, 73, 20, 0.82) 100%);
+}
+
+div.stackPanel::-webkit-scrollbar-track,
+.app-sidebar::-webkit-scrollbar-track,
+.main-nav::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 999px;
+}
+
+div.stackPanel::-webkit-scrollbar-thumb,
+.app-sidebar::-webkit-scrollbar-thumb,
+.main-nav::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 999px;
+    border: 2px solid transparent;
+}
+
+div.stackPanel:hover::-webkit-scrollbar-thumb,
+div.stackPanel:focus-within::-webkit-scrollbar-thumb,
+.app-sidebar:hover::-webkit-scrollbar-thumb,
+.app-sidebar:focus-within::-webkit-scrollbar-thumb,
+.main-nav:hover::-webkit-scrollbar-thumb,
+.main-nav:focus-within::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(203, 223, 211, 0.48) 0%, rgba(161, 189, 173, 0.54) 100%);
+    border-color: rgba(11, 20, 16, 0.16);
+}
+
+div.stackPanel:hover::-webkit-scrollbar-thumb:hover,
+.app-sidebar:hover::-webkit-scrollbar-thumb:hover,
+.main-nav:hover::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, rgba(220, 236, 226, 0.66) 0%, rgba(181, 213, 196, 0.74) 100%);
 }
 
 /* ---- Main content wrapper ---- */
@@ -46,9 +168,11 @@ div#main_content {
     flex-direction: column;
     position: relative;
     height: 100%;
-    width: 100vw;
+    min-height: 100dvh;
+    width: 100%;
     min-width: 100%;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
     background-color: var(--canvas);
 }
 
@@ -164,6 +288,7 @@ div.stackPanel {
     cursor: default;
     overflow: hidden;
     overflow-y: auto;
+    overscroll-behavior-y: contain;
 }
 
 .panelHeader {
@@ -422,6 +547,7 @@ div.stInfo span {
     gap: 16px;
     overflow: hidden;
     overflow-y: auto;
+    overscroll-behavior-y: contain;
     box-sizing: border-box;
     background-color: var(--canvas);
 }
@@ -969,6 +1095,7 @@ p.forgot_pass a:hover {
     padding: 20px;
     overflow: hidden;
     overflow-y: auto;
+    overscroll-behavior-y: contain;
     box-shadow: 0 4px 16px rgba(0,0,0,0.12);
 }
 

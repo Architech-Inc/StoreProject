@@ -14,6 +14,9 @@
     flex-direction: column;
     gap: var(--space-6);
     border-right: 1px solid rgba(255, 255, 255, 0.1);
+    max-height: 100dvh;
+    overflow: hidden;
+    overscroll-behavior: contain;
 }
 
 .brand-block {
@@ -44,6 +47,10 @@
 .main-nav {
     display: grid;
     gap: var(--space-2);
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding-right: 6px;
 }
 
 .nav-link {
@@ -63,6 +70,24 @@
 .nav-link.active {
     background: rgba(1, 156, 1, 0.25);
     color: var(--nav-text);
+}
+
+.nav-section-label {
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--sidebar-muted);
+    padding: 12px 12px 4px;
+    pointer-events: none;
+    user-select: none;
+}
+
+.nav-divider {
+    border: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    margin: 6px 12px;
 }
 
 .logout-form {
@@ -89,6 +114,7 @@
     padding: var(--space-6);
     display: grid;
     gap: var(--space-5);
+    min-height: 0;
 }
 
 .topbar {
@@ -207,6 +233,8 @@
 
 .table-wrap {
     overflow-x: auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
 }
 
 table {

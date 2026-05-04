@@ -19,6 +19,7 @@
         </div>
 
         <nav class="main-nav">
+            <span class="nav-section-label">Store</span>
             <a class="nav-link" href="/Dashboard" aria-current="page">Dashboard</a>
             <a class="nav-link" href="/Pos">POS Terminal</a>
             <a class="nav-link" href="/Catalog">Item Catalog</a>
@@ -28,6 +29,11 @@
             <a class="nav-link" href="/Suppliers">Suppliers</a>
             <a class="nav-link" href="/Loyalty">Loyalty</a>
             <a class="nav-link" href="/Profile">My Profile</a>
+            @if (Model.CanInventoryRead || Model.CanPricingRead || Model.CanCashRead || Model.CanReportsRead || Model.CanPaymentsRead)
+            {
+                <hr class="nav-divider" />
+                <span class="nav-section-label">Operations</span>
+            }
             @if (Model.CanInventoryRead)
             {
                 <a class="nav-link" href="/Employees">Employees</a>
@@ -47,6 +53,11 @@
             @if (Model.CanPaymentsRead)
             {
                 <a class="nav-link" href="/Payments">Payments</a>
+            }
+            @if (Model.CanAdminBranches || Model.CanAdminRoleMatrix)
+            {
+                <hr class="nav-divider" />
+                <span class="nav-section-label">Admin</span>
             }
             @if (Model.CanAdminBranches)
             {
