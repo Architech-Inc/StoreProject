@@ -1,0 +1,221 @@
+@page
+@model StoreUI.Pages.BatchTrackingModel
+@{
+    ViewData["Title"] = "Batch & Expiry Tracking";
+    ViewData["ActivePage"] = "BatchTracking";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
+}
+
+<div class="ops-page">
+    <header>
+        <h1>Batch & Expiry Tracking</h1>
+        <p>Monitor stock lot numbers, cost prices, and expiry dates. Receive alerts for expiring items.</p>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="status @(Model.StatusMessage.StartsWith("Error") ? "error" : "ok")">@Model.StatusMessage</div>
+    }
+
+    <!-- Expiry Alert Banner -->
+    @if (Model.ExpiringBatches.Any())
+    {
+        <div class="status error" style="margin-bottom:16px;">
+            ⚠️ <strong>@Model.ExpiringBatches.Count</strong> batch(es) expiring within the next 30 days.
+            <a href="?expiryStatus=Expiring" style="margin-left:8px;color:inherit;text-decoration:underline;">View</a>
+        </div>
+    }
+
+    <!-- Filter bar -->
+    <form method="get" style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
+        <select name="expiryStatus" style="min-width:140px;">
+            <option value="" selected="@(Model.FilterStatus == null)">All Statuses</option>
+            <option value="OK" selected="@(Model.FilterStatus == "OK")">OK</option>
+            <option value="Expiring" selected="@(Model.FilterStatus == "Expiring")">Expiring Soon</option>
+            <option value="Expired" selected="@(Model.FilterStatus == "Expired")">Expired</option>
+        </select>
+        <button type="submit" class="btn-sm">Filter</button>
+    </form>
+
+    <section class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <h2 style="margin:0;">Batches <small style="font-weight:400;color:var(--ops-subtle);">@Model.Batches.Count total</small></h2>
+            <button type="button" onclick="openCreate()">+ Record Batch</button>
+        </div>
+
+        @if (!Model.Batches.Any())
+        {
+            <p style="color:var(--ops-subtle);padding:12px 0;">No batches recorded yet.</p>
+        }
+        else
+        {
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Batch #</th>
+                            <th>Item</th>
+                            <th>Qty</th>
+                            <th>Cost Price</th>
+                            <th>Received</th>
+                            <th>Expiry</th>
+                            <th>Status</th>
+                            <th>Notes</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var b in Model.Batches)
+                        {
+                            <tr>
+                                <td><code style="font-size:.78rem;">@b.BatchNumber</code></td>
+                                <td>@b.ItemName</td>
+                                <td>@b.Quantity</td>
+                                <td>GHS @b.CostPrice.ToString("N2")</td>
+                                <td>@b.ReceivedDate.ToString("MMM d, yyyy")</td>
+                                <td>@(b.ExpiryDate.HasValue ? b.ExpiryDate.Value.ToString("MMM d, yyyy") : "–")</td>
+                                <td>
+                                    @switch (b.ExpiryStatus)
+                                    {
+                                        case "Expired":
+                                            <span class="badge badge-danger">Expired</span>
+                                            break;
+                                        case "Expiring":
+                                            <span class="badge badge-warning">Expiring (@b.DaysUntilExpiry d)</span>
+                                            break;
+                                        default:
+                                            <span class="badge badge-success">OK</span>
+                                            break;
+                                    }
+                                </td>
+                                <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="@b.Notes">@b.Notes</td>
+                                <td style="white-space:nowrap;">
+                                    <button type="button" class="btn-icon" title="Edit"
+                                        onclick="openEdit('@b.BatchId', @Html.Raw(System.Text.Json.JsonSerializer.Serialize(b)))">✏️</button>
+                                    <button type="button" class="btn-icon btn-danger" title="Delete"
+                                        onclick="confirmDelete('@b.BatchId', '@System.Web.HttpUtility.JavaScriptStringEncode(b.BatchNumber)')">🗑️</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+</div>
+
+<!-- Create Modal -->
+<div id="createModal" class="modal-backdrop" style="display:none;" role="dialog" aria-modal="true">
+    <div class="modal">
+        <h3>Record Batch</h3>
+        <form method="post" asp-page-handler="Create">
+            @Html.AntiForgeryToken()
+            <div class="form-grid">
+                <label>Item ID *
+                    <input name="CreateItemId" type="text" required placeholder="Item GUID" />
+                </label>
+                <label>Batch Number *
+                    <input name="CreateBatchNumber" maxlength="100" required placeholder="e.g. LOT-2025-001" />
+                </label>
+                <label>Quantity *
+                    <input name="CreateQuantity" type="number" min="1" required />
+                </label>
+                <label>Cost Price (GHS)
+                    <input name="CreateCostPrice" type="number" min="0" step="0.01" value="0" />
+                </label>
+                <label>Received Date
+                    <input name="CreateReceivedDate" type="date" value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                </label>
+                <label>Expiry Date
+                    <input name="CreateExpiryDate" type="date" />
+                </label>
+                <label style="grid-column:1/-1;">Notes
+                    <textarea name="CreateNotes" rows="2" maxlength="500"></textarea>
+                </label>
+            </div>
+            <div class="modal-actions">
+                <button type="button" onclick="closeModal('createModal')">Cancel</button>
+                <button type="submit">Record</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div id="editModal" class="modal-backdrop" style="display:none;" role="dialog" aria-modal="true">
+    <div class="modal">
+        <h3>Edit Batch</h3>
+        <form method="post" asp-page-handler="Edit">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="EditBatchId" id="editBatchId" />
+            <div class="form-grid">
+                <label>Batch Number
+                    <input id="editBatchNumber" name="EditBatchNumber" maxlength="100" />
+                </label>
+                <label>Quantity
+                    <input id="editQty" name="EditQuantity" type="number" min="0" />
+                </label>
+                <label>Cost Price (GHS)
+                    <input id="editCost" name="EditCostPrice" type="number" min="0" step="0.01" />
+                </label>
+                <label>Expiry Date
+                    <input id="editExpiry" name="EditExpiryDate" type="date" />
+                </label>
+                <label style="grid-column:1/-1;">Notes
+                    <textarea id="editNotes" name="EditNotes" rows="2" maxlength="500"></textarea>
+                </label>
+            </div>
+            <div class="modal-actions">
+                <button type="button" onclick="closeModal('editModal')">Cancel</button>
+                <button type="submit">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete Confirm Modal -->
+<div id="deleteModal" class="modal-backdrop" style="display:none;" role="dialog" aria-modal="true">
+    <div class="modal" style="max-width:420px;">
+        <h3>Delete Batch</h3>
+        <p>Delete batch <strong id="deleteLabel"></strong>? This cannot be undone.</p>
+        <form method="post" asp-page-handler="Delete">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="DeleteBatchId" id="deleteBatchId" />
+            <div class="modal-actions">
+                <button type="button" onclick="closeModal('deleteModal')">Cancel</button>
+                <button type="submit" class="btn-danger">Delete</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function openCreate() { document.getElementById('createModal').style.display = 'flex'; }
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+function toDateInput(iso) {
+    if (!iso) return '';
+    return iso.substring(0, 10);
+}
+
+function openEdit(id, b) {
+    document.getElementById('editBatchId').value = id;
+    document.getElementById('editBatchNumber').value = b.batchNumber || '';
+    document.getElementById('editQty').value = b.quantity || '';
+    document.getElementById('editCost').value = b.costPrice || '';
+    document.getElementById('editExpiry').value = toDateInput(b.expiryDate);
+    document.getElementById('editNotes').value = b.notes || '';
+    document.getElementById('editModal').style.display = 'flex';
+}
+
+function confirmDelete(id, num) {
+    document.getElementById('deleteBatchId').value = id;
+    document.getElementById('deleteLabel').textContent = num;
+    document.getElementById('deleteModal').style.display = 'flex';
+}
+</script>
+}

@@ -1,0 +1,286 @@
+@page
+@model StoreUI.Pages.DiscountsModel
+@{
+    ViewData["Title"] = "Discount Rules";
+    ViewData["ActivePage"] = "Discounts";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
+}
+
+<div class="ops-page">
+    <header>
+        <h1>Discount Rules</h1>
+        <p>Manage item, category, and coupon-based discount rules.</p>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="status @(Model.StatusMessage.StartsWith("Error") ? "error" : "ok")">@Model.StatusMessage</div>
+    }
+
+    <!-- Filter bar -->
+    <form method="get" style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
+        <label style="display:flex;align-items:center;gap:6px;font-size:.85rem;">
+            <input type="checkbox" name="activeOnly" value="true" @(Model.FilterActiveOnly ? "checked" : "") /> Active only
+        </label>
+        <button type="submit" class="btn-sm">Filter</button>
+    </form>
+
+    <section class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <h2 style="margin:0;">Discounts <small style="font-weight:400;color:var(--ops-subtle);">@Model.Discounts.Count total</small></h2>
+            <button type="button" onclick="openCreate()">+ New Discount</button>
+        </div>
+
+        @if (!Model.Discounts.Any())
+        {
+            <p style="color:var(--ops-subtle);padding:12px 0;">No discounts defined yet.</p>
+        }
+        else
+        {
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>Value</th>
+                            <th>Applies To</th>
+                            <th>Min Qty</th>
+                            <th>Segment</th>
+                            <th>Coupon</th>
+                            <th>Uses</th>
+                            <th>Valid</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var d in Model.Discounts)
+                        {
+                            <tr>
+                                <td>@d.Name</td>
+                                <td>@d.DiscountType</td>
+                                <td>
+                                    @if (d.DiscountType == "Percentage")
+                                    { <span>@d.Percentage%</span> }
+                                    else
+                                    { <span>GHS @d.FixedAmount?.ToString("N2")</span> }
+                                </td>
+                                <td>
+                                    @if (d.ItemName is not null) { <span>Item: @d.ItemName</span> }
+                                    else if (d.CategoryName is not null) { <span>Cat: @d.CategoryName</span> }
+                                    else { <span style="color:var(--ops-subtle);">All Items</span> }
+                                </td>
+                                <td>@d.MinQuantity</td>
+                                <td>@(d.TargetSegment ?? "All")</td>
+                                <td>
+                                    @if (d.CouponCode is not null)
+                                    { <code style="font-size:.78rem;background:var(--ops-chip-bg);padding:2px 6px;border-radius:4px;">@d.CouponCode</code> }
+                                    else
+                                    { <span style="color:var(--ops-subtle);">Auto</span> }
+                                </td>
+                                <td>@d.UsedCount @(d.MaxUses.HasValue ? $"/ {d.MaxUses}" : "")</td>
+                                <td style="font-size:.8rem;">
+                                    @(d.ValidFrom?.ToString("MMM d") ?? "Any") – @(d.ValidTo?.ToString("MMM d yyyy") ?? "∞")
+                                </td>
+                                <td>
+                                    @if (d.IsCurrentlyValid)
+                                    { <span class="badge badge-success">Active</span> }
+                                    else if (!d.IsActive)
+                                    { <span class="badge badge-neutral">Inactive</span> }
+                                    else
+                                    { <span class="badge badge-warning">Expired</span> }
+                                </td>
+                                <td style="white-space:nowrap;">
+                                    <button type="button" class="btn-icon" title="Edit"
+                                        onclick="openEdit(@d.DiscountId, @Html.Raw(System.Text.Json.JsonSerializer.Serialize(d)))">✏️</button>
+                                    <button type="button" class="btn-icon btn-danger" title="Delete"
+                                        onclick="confirmDelete(@d.DiscountId, '@System.Web.HttpUtility.JavaScriptStringEncode(d.Name)')">🗑️</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+</div>
+
+<!-- Create Modal -->
+<div id="createModal" class="modal-backdrop" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="createTitle">
+    <div class="modal">
+        <h3 id="createTitle">New Discount Rule</h3>
+        <form method="post" asp-page-handler="Create">
+            @Html.AntiForgeryToken()
+            <div class="form-grid">
+                <label>Name *
+                    <input name="CreateName" maxlength="200" required placeholder="e.g. Weekend Special" />
+                </label>
+                <label>Type
+                    <select name="CreateDiscountType" onchange="toggleValueField(this, 'create')">
+                        <option value="0">Percentage</option>
+                        <option value="1">Fixed Amount</option>
+                    </select>
+                </label>
+                <label id="createPctLabel">Percentage (%)
+                    <input name="CreatePercentage" type="number" min="0" max="100" step="0.01" value="0" />
+                </label>
+                <label id="createAmtLabel" style="display:none;">Fixed Amount (GHS)
+                    <input name="CreateFixedAmount" type="number" min="0" step="0.01" />
+                </label>
+                <label>Min Quantity
+                    <input name="CreateMinQuantity" type="number" min="1" value="1" />
+                </label>
+                <label>Target Segment
+                    <select name="CreateTargetSegment">
+                        <option value="">All Segments</option>
+                        <option value="0">Standard</option>
+                        <option value="1">Wholesale</option>
+                        <option value="2">Vip</option>
+                    </select>
+                </label>
+                <label>Coupon Code (leave blank for auto-apply)
+                    <input name="CreateCouponCode" maxlength="50" placeholder="e.g. SAVE20" style="text-transform:uppercase;" />
+                </label>
+                <label>Max Uses (blank = unlimited)
+                    <input name="CreateMaxUses" type="number" min="1" placeholder="Unlimited" />
+                </label>
+                <label>Valid From
+                    <input name="CreateValidFrom" type="datetime-local" />
+                </label>
+                <label>Valid To
+                    <input name="CreateValidTo" type="datetime-local" />
+                </label>
+                <label style="grid-column:1/-1;display:flex;align-items:center;gap:8px;">
+                    <input name="CreateIsActive" type="checkbox" checked value="true" /> Active
+                </label>
+            </div>
+            <div class="modal-actions">
+                <button type="button" onclick="closeModal('createModal')">Cancel</button>
+                <button type="submit">Create</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div id="editModal" class="modal-backdrop" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="editTitle">
+    <div class="modal">
+        <h3 id="editTitle">Edit Discount</h3>
+        <form method="post" asp-page-handler="Edit">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="EditDiscountId" id="editId" />
+            <div class="form-grid">
+                <label>Name
+                    <input id="editName" name="EditName" maxlength="200" />
+                </label>
+                <label>Type
+                    <select id="editType" name="EditDiscountType" onchange="toggleValueField(this, 'edit')">
+                        <option value="0">Percentage</option>
+                        <option value="1">Fixed Amount</option>
+                    </select>
+                </label>
+                <label id="editPctLabel">Percentage (%)
+                    <input id="editPct" name="EditPercentage" type="number" min="0" max="100" step="0.01" />
+                </label>
+                <label id="editAmtLabel" style="display:none;">Fixed Amount (GHS)
+                    <input id="editAmt" name="EditFixedAmount" type="number" min="0" step="0.01" />
+                </label>
+                <label>Min Quantity
+                    <input id="editMinQty" name="EditMinQuantity" type="number" min="1" />
+                </label>
+                <label>Target Segment
+                    <select id="editSegment" name="EditTargetSegment">
+                        <option value="">All Segments</option>
+                        <option value="0">Standard</option>
+                        <option value="1">Wholesale</option>
+                        <option value="2">Vip</option>
+                    </select>
+                </label>
+                <label>Coupon Code
+                    <input id="editCoupon" name="EditCouponCode" maxlength="50" style="text-transform:uppercase;" />
+                </label>
+                <label>Max Uses
+                    <input id="editMaxUses" name="EditMaxUses" type="number" min="1" placeholder="Unlimited" />
+                </label>
+                <label>Valid From
+                    <input id="editValidFrom" name="EditValidFrom" type="datetime-local" />
+                </label>
+                <label>Valid To
+                    <input id="editValidTo" name="EditValidTo" type="datetime-local" />
+                </label>
+                <label style="grid-column:1/-1;display:flex;align-items:center;gap:8px;">
+                    <input type="hidden" name="EditIsActive" value="false" />
+                    <input id="editActive" name="EditIsActive" type="checkbox" value="true" /> Active
+                </label>
+            </div>
+            <div class="modal-actions">
+                <button type="button" onclick="closeModal('editModal')">Cancel</button>
+                <button type="submit">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete Confirm Modal -->
+<div id="deleteModal" class="modal-backdrop" style="display:none;" role="dialog" aria-modal="true">
+    <div class="modal" style="max-width:420px;">
+        <h3>Delete Discount</h3>
+        <p>Delete <strong id="deleteNameLabel"></strong>? This cannot be undone.</p>
+        <form method="post" asp-page-handler="Delete">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="DeleteDiscountId" id="deleteId" />
+            <div class="modal-actions">
+                <button type="button" onclick="closeModal('deleteModal')">Cancel</button>
+                <button type="submit" class="btn-danger">Delete</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function openCreate() { document.getElementById('createModal').style.display = 'flex'; }
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+function toggleValueField(sel, prefix) {
+    const isFixed = sel.value === '1';
+    document.getElementById(prefix + 'PctLabel').style.display = isFixed ? 'none' : '';
+    document.getElementById(prefix + 'AmtLabel').style.display = isFixed ? '' : 'none';
+}
+
+function toLocalDatetimeInput(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+}
+
+function openEdit(id, d) {
+    document.getElementById('editId').value = id;
+    document.getElementById('editName').value = d.name || '';
+    const typeVal = d.discountType === 'FixedAmount' ? '1' : '0';
+    document.getElementById('editType').value = typeVal;
+    toggleValueField(document.getElementById('editType'), 'edit');
+    document.getElementById('editPct').value = d.percentage || 0;
+    document.getElementById('editAmt').value = d.fixedAmount || '';
+    document.getElementById('editMinQty').value = d.minQuantity || 1;
+    const segMap = { Standard: '0', Wholesale: '1', Vip: '2' };
+    document.getElementById('editSegment').value = d.targetSegment ? (segMap[d.targetSegment] ?? '') : '';
+    document.getElementById('editCoupon').value = d.couponCode || '';
+    document.getElementById('editMaxUses').value = d.maxUses || '';
+    document.getElementById('editValidFrom').value = toLocalDatetimeInput(d.validFrom);
+    document.getElementById('editValidTo').value = toLocalDatetimeInput(d.validTo);
+    document.getElementById('editActive').checked = d.isActive;
+    document.getElementById('editModal').style.display = 'flex';
+}
+
+function confirmDelete(id, name) {
+    document.getElementById('deleteId').value = id;
+    document.getElementById('deleteNameLabel').textContent = name;
+    document.getElementById('deleteModal').style.display = 'flex';
+}
+</script>
+}

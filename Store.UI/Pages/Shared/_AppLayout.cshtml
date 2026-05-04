@@ -58,10 +58,13 @@
                 {
                     <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Employees" ? "active" : "")" href="/Employees">Employees</a>
                     <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "InventoryOps" ? "active" : "")" href="/InventoryOps">Inventory Ops</a>
+                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "BatchTracking" ? "active" : "")" href="/BatchTracking">Batch &amp; Expiry</a>
+                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "StockTransfers" ? "active" : "")" href="/StockTransfers">Stock Transfers</a>
                     <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "AuditLog" ? "active" : "")" href="/AuditLog">Audit Log</a>
                 }
                 @if (canPricingRead)
                 {
+                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Discounts" ? "active" : "")" href="/Discounts">Discount Rules</a>
                     <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "PricingOps" ? "active" : "")" href="/PricingOps">Pricing Ops</a>
                     <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "PromotionEffectiveness" ? "active" : "")" href="/PromotionEffectiveness">Promo Effectiveness</a>
                 }

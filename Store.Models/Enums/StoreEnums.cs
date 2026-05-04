@@ -96,6 +96,21 @@ public enum CustomerSegment
     Vip
 }
 
+public enum DiscountType
+{
+    Percentage = 0,
+    FixedAmount = 1
+}
+
+public enum StockTransferStatus
+{
+    Requested = 0,
+    Approved = 1,
+    Dispatched = 2,
+    Received = 3,
+    Cancelled = 4
+}
+
 public enum TaxApplicationType
 {
     Exclusive,

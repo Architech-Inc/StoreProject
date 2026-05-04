@@ -1,0 +1,355 @@
+@page
+@model StoreUI.Pages.StockTransfersModel
+@{
+    ViewData["Title"] = "Stock Transfers";
+    ViewData["ActivePage"] = "StockTransfers";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
+}
+
+<div class="ops-page">
+    <header>
+        <h1>Stock Transfers</h1>
+        <p>Request, approve, dispatch, and receive inter-branch stock transfers.</p>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="status @(Model.StatusMessage.StartsWith("Error") ? "error" : "ok")">@Model.StatusMessage</div>
+    }
+
+    <!-- Filter bar -->
+    <form method="get" style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
+        <select name="status" style="min-width:160px;">
+            <option value="" selected="@(Model.FilterStatus == null)">All Statuses</option>
+            <option value="Requested" selected="@(Model.FilterStatus == "Requested")">Requested</option>
+            <option value="Approved" selected="@(Model.FilterStatus == "Approved")">Approved</option>
+            <option value="Dispatched" selected="@(Model.FilterStatus == "Dispatched")">Dispatched</option>
+            <option value="Received" selected="@(Model.FilterStatus == "Received")">Received</option>
+            <option value="Cancelled" selected="@(Model.FilterStatus == "Cancelled")">Cancelled</option>
+        </select>
+        <button type="submit" class="btn-sm">Filter</button>
+    </form>
+
+    <section class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <h2 style="margin:0;">Transfers <small style="font-weight:400;color:var(--ops-subtle);">@Model.Transfers.Count total</small></h2>
+            <button type="button" onclick="openCreate()">+ New Transfer</button>
+        </div>
+
+        @if (!Model.Transfers.Any())
+        {
+            <p style="color:var(--ops-subtle);padding:12px 0;">No transfers found.</p>
+        }
+        else
+        {
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>From</th>
+                            <th>To</th>
+                            <th>Items</th>
+                            <th>Requested By</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var t in Model.Transfers)
+                        {
+                            <tr>
+                                <td><strong>#@t.StockTransferId</strong></td>
+                                <td>@t.FromBranchName</td>
+                                <td>@t.ToBranchName</td>
+                                <td>@t.Items.Count item(s)</td>
+                                <td>@t.RequestedByUser</td>
+                                <td>@t.DateCreated.ToString("MMM d, yyyy")</td>
+                                <td>
+                                    @{
+                                        var badgeClass = t.Status switch {
+                                            "Requested" => "badge-warning",
+                                            "Approved" => "badge-info",
+                                            "Dispatched" => "badge-info",
+                                            "Received" => "badge-success",
+                                            "Cancelled" => "badge-danger",
+                                            _ => "badge-neutral"
+                                        };
+                                    }
+                                    <span class="badge @badgeClass">@t.Status</span>
+                                </td>
+                                <td style="white-space:nowrap;">
+                                    <button type="button" class="btn-sm" onclick="viewDetails(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(t)))">View</button>
+                                    @if (t.Status == "Requested")
+                                    {
+                                        <button type="button" class="btn-sm" onclick="openApprove(@t.StockTransferId)">Approve</button>
+                                        <button type="button" class="btn-sm btn-danger" onclick="openReject(@t.StockTransferId)">Reject</button>
+                                    }
+                                    @if (t.Status == "Approved")
+                                    {
+                                        <button type="button" class="btn-sm" onclick="openDispatch(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(t)))">Dispatch</button>
+                                    }
+                                    @if (t.Status == "Dispatched")
+                                    {
+                                        <button type="button" class="btn-sm" onclick="openReceive(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(t)))">Receive</button>
+                                    }
+                                    @if (t.Status != "Received" && t.Status != "Cancelled")
+                                    {
+                                        <button type="button" class="btn-icon btn-danger" title="Cancel" onclick="openCancel(@t.StockTransferId)">✕</button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+</div>
+
+<!-- Create Transfer Modal -->
+<div id="createModal" class="modal-backdrop" style="display:none;" role="dialog" aria-modal="true">
+    <div class="modal" style="max-width:600px;">
+        <h3>New Stock Transfer</h3>
+        <form method="post" asp-page-handler="Create">
+            @Html.AntiForgeryToken()
+            <div class="form-grid">
+                <label>From Branch ID *
+                    <input name="CreateFromBranchId" type="number" min="1" required />
+                </label>
+                <label>To Branch ID *
+                    <input name="CreateToBranchId" type="number" min="1" required />
+                </label>
+                <label style="grid-column:1/-1;">Notes
+                    <textarea name="CreateNotes" rows="2" maxlength="1000"></textarea>
+                </label>
+            </div>
+            <h4 style="margin:12px 0 8px;">Items to Transfer</h4>
+            <div id="itemLines">
+                <div class="item-line" style="display:grid;grid-template-columns:1fr 120px 1fr auto;gap:8px;margin-bottom:6px;align-items:end;">
+                    <label style="display:flex;flex-direction:column;gap:3px;font-size:.83rem;">Item ID
+                        <input name="TransferItems[0].ItemId" type="text" placeholder="Item GUID" required />
+                    </label>
+                    <label style="display:flex;flex-direction:column;gap:3px;font-size:.83rem;">Qty
+                        <input name="TransferItems[0].RequestedQuantity" type="number" min="1" required />
+                    </label>
+                    <label style="display:flex;flex-direction:column;gap:3px;font-size:.83rem;">Notes
+                        <input name="TransferItems[0].Notes" type="text" maxlength="500" />
+                    </label>
+                    <button type="button" onclick="removeLine(this)" style="align-self:end;padding:7px 10px;" title="Remove">✕</button>
+                </div>
+            </div>
+            <button type="button" onclick="addItemLine()" style="margin-top:6px;" class="btn-sm">+ Add Item</button>
+            <div class="modal-actions">
+                <button type="button" onclick="closeModal('createModal')">Cancel</button>
+                <button type="submit">Submit Transfer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- View Details Modal -->
+<div id="viewModal" class="modal-backdrop" style="display:none;" role="dialog" aria-modal="true">
+    <div class="modal" style="max-width:600px;">
+        <h3>Transfer Details</h3>
+        <div id="viewContent"></div>
+        <div class="modal-actions">
+            <button type="button" onclick="closeModal('viewModal')">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Approve Modal -->
+<div id="approveModal" class="modal-backdrop" style="display:none;" role="dialog" aria-modal="true">
+    <div class="modal" style="max-width:420px;">
+        <h3>Approve Transfer #<span id="approveIdLabel"></span></h3>
+        <form method="post" asp-page-handler="Approve">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="ActionTransferId" id="approveTransferId" />
+            <label style="display:flex;flex-direction:column;gap:4px;margin-bottom:12px;">Notes
+                <textarea name="ApproveNotes" rows="2"></textarea>
+            </label>
+            <div class="modal-actions">
+                <button type="button" onclick="closeModal('approveModal')">Cancel</button>
+                <button type="submit">Approve</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Reject Modal -->
+<div id="rejectModal" class="modal-backdrop" style="display:none;" role="dialog" aria-modal="true">
+    <div class="modal" style="max-width:420px;">
+        <h3>Reject Transfer #<span id="rejectIdLabel"></span></h3>
+        <form method="post" asp-page-handler="Reject">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="ActionTransferId" id="rejectTransferId" />
+            <label style="display:flex;flex-direction:column;gap:4px;margin-bottom:12px;">Reason *
+                <textarea name="RejectReason" rows="2" required></textarea>
+            </label>
+            <div class="modal-actions">
+                <button type="button" onclick="closeModal('rejectModal')">Cancel</button>
+                <button type="submit" class="btn-danger">Reject</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Dispatch Modal -->
+<div id="dispatchModal" class="modal-backdrop" style="display:none;" role="dialog" aria-modal="true">
+    <div class="modal" style="max-width:560px;">
+        <h3>Dispatch Transfer #<span id="dispatchIdLabel"></span></h3>
+        <form method="post" asp-page-handler="Dispatch">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="ActionTransferId" id="dispatchTransferId" />
+            <div id="dispatchItemLines"></div>
+            <label style="display:flex;flex-direction:column;gap:4px;margin:12px 0;">Notes
+                <textarea name="DispatchNotes" rows="2"></textarea>
+            </label>
+            <div class="modal-actions">
+                <button type="button" onclick="closeModal('dispatchModal')">Cancel</button>
+                <button type="submit">Mark Dispatched</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Receive Modal -->
+<div id="receiveModal" class="modal-backdrop" style="display:none;" role="dialog" aria-modal="true">
+    <div class="modal" style="max-width:560px;">
+        <h3>Receive Transfer #<span id="receiveIdLabel"></span></h3>
+        <form method="post" asp-page-handler="Receive">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="ActionTransferId" id="receiveTransferId" />
+            <div id="receiveItemLines"></div>
+            <label style="display:flex;flex-direction:column;gap:4px;margin:12px 0;">Notes
+                <textarea name="ReceiveNotes" rows="2"></textarea>
+            </label>
+            <div class="modal-actions">
+                <button type="button" onclick="closeModal('receiveModal')">Cancel</button>
+                <button type="submit">Confirm Received</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Cancel Modal -->
+<div id="cancelModal" class="modal-backdrop" style="display:none;" role="dialog" aria-modal="true">
+    <div class="modal" style="max-width:420px;">
+        <h3>Cancel Transfer #<span id="cancelIdLabel"></span></h3>
+        <form method="post" asp-page-handler="Cancel">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="ActionTransferId" id="cancelTransferId" />
+            <label style="display:flex;flex-direction:column;gap:4px;margin-bottom:12px;">Reason
+                <textarea name="CancelReason" rows="2"></textarea>
+            </label>
+            <div class="modal-actions">
+                <button type="button" onclick="closeModal('cancelModal')">Cancel</button>
+                <button type="submit" class="btn-danger">Cancel Transfer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+let itemLineCount = 1;
+
+function openCreate() { document.getElementById('createModal').style.display = 'flex'; }
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+function addItemLine() {
+    const container = document.getElementById('itemLines');
+    const div = document.createElement('div');
+    div.className = 'item-line';
+    div.style = 'display:grid;grid-template-columns:1fr 120px 1fr auto;gap:8px;margin-bottom:6px;align-items:end;';
+    const idx = itemLineCount++;
+    div.innerHTML = `
+        <label style="display:flex;flex-direction:column;gap:3px;font-size:.83rem;">Item ID
+            <input name="TransferItems[${idx}].ItemId" type="text" placeholder="Item GUID" required />
+        </label>
+        <label style="display:flex;flex-direction:column;gap:3px;font-size:.83rem;">Qty
+            <input name="TransferItems[${idx}].RequestedQuantity" type="number" min="1" required />
+        </label>
+        <label style="display:flex;flex-direction:column;gap:3px;font-size:.83rem;">Notes
+            <input name="TransferItems[${idx}].Notes" type="text" maxlength="500" />
+        </label>
+        <button type="button" onclick="removeLine(this)" style="align-self:end;padding:7px 10px;" title="Remove">✕</button>`;
+    container.appendChild(div);
+}
+
+function removeLine(btn) {
+    const line = btn.closest('.item-line');
+    if (document.querySelectorAll('.item-line').length > 1) line.remove();
+}
+
+function viewDetails(t) {
+    let html = `<dl style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:.9rem;">
+        <dt>From</dt><dd>${t.fromBranchName}</dd>
+        <dt>To</dt><dd>${t.toBranchName}</dd>
+        <dt>Status</dt><dd>${t.status}</dd>
+        <dt>Requested By</dt><dd>${t.requestedByUser}</dd>
+        <dt>Notes</dt><dd>${t.notes || '—'}</dd>
+        ${t.rejectionReason ? `<dt>Rejection</dt><dd>${t.rejectionReason}</dd>` : ''}
+    </dl>
+    <h4 style="margin:12px 0 6px;">Items</h4>
+    <table style="width:100%;font-size:.85rem;"><thead><tr><th>Item</th><th>Requested</th><th>Dispatched</th><th>Received</th></tr></thead><tbody>`;
+    for (const i of t.items) {
+        html += `<tr><td>${i.itemName}</td><td>${i.requestedQuantity}</td><td>${i.dispatchedQuantity ?? '—'}</td><td>${i.receivedQuantity ?? '—'}</td></tr>`;
+    }
+    html += '</tbody></table>';
+    document.getElementById('viewContent').innerHTML = html;
+    document.getElementById('viewModal').style.display = 'flex';
+}
+
+function openApprove(id) {
+    document.getElementById('approveTransferId').value = id;
+    document.getElementById('approveIdLabel').textContent = id;
+    document.getElementById('approveModal').style.display = 'flex';
+}
+
+function openReject(id) {
+    document.getElementById('rejectTransferId').value = id;
+    document.getElementById('rejectIdLabel').textContent = id;
+    document.getElementById('rejectModal').style.display = 'flex';
+}
+
+function openDispatch(t) {
+    document.getElementById('dispatchTransferId').value = t.stockTransferId;
+    document.getElementById('dispatchIdLabel').textContent = t.stockTransferId;
+    let html = '';
+    t.items.forEach((item, idx) => {
+        html += `<div style="display:grid;grid-template-columns:1fr 120px;gap:8px;margin-bottom:8px;font-size:.85rem;">
+            <div><input type="hidden" name="DispatchItems[${idx}].StockTransferItemId" value="${item.stockTransferItemId}"/>${item.itemName} (requested: ${item.requestedQuantity})</div>
+            <label>Dispatched Qty<input name="DispatchItems[${idx}].DispatchedQuantity" type="number" min="0" value="${item.requestedQuantity}" /></label>
+        </div>`;
+    });
+    document.getElementById('dispatchItemLines').innerHTML = html;
+    document.getElementById('dispatchModal').style.display = 'flex';
+}
+
+function openReceive(t) {
+    document.getElementById('receiveTransferId').value = t.stockTransferId;
+    document.getElementById('receiveIdLabel').textContent = t.stockTransferId;
+    let html = '';
+    t.items.forEach((item, idx) => {
+        html += `<div style="display:grid;grid-template-columns:1fr 120px;gap:8px;margin-bottom:8px;font-size:.85rem;">
+            <div><input type="hidden" name="ReceiveItems[${idx}].StockTransferItemId" value="${item.stockTransferItemId}"/>${item.itemName} (dispatched: ${item.dispatchedQuantity ?? '?'})</div>
+            <label>Received Qty<input name="ReceiveItems[${idx}].ReceivedQuantity" type="number" min="0" value="${item.dispatchedQuantity ?? 0}" /></label>
+        </div>`;
+    });
+    document.getElementById('receiveItemLines').innerHTML = html;
+    document.getElementById('receiveModal').style.display = 'flex';
+}
+
+function openCancel(id) {
+    document.getElementById('cancelTransferId').value = id;
+    document.getElementById('cancelIdLabel').textContent = id;
+    document.getElementById('cancelModal').style.display = 'flex';
+}
+</script>
+}

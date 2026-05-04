@@ -93,6 +93,8 @@ public class StoreDbContext : DbContext
     // ---- Branches ----
     public DbSet<Branch> Branches => Set<Branch>();
     public DbSet<UserBranchRole> UserBranchRoles => Set<UserBranchRole>();
+    public DbSet<StockTransfer> StockTransfers => Set<StockTransfer>();
+    public DbSet<StockTransferItem> StockTransferItems => Set<StockTransferItem>();
 
     // ---- Loyalty ----
     public DbSet<CustomerLoyaltyAccount> CustomerLoyaltyAccounts => Set<CustomerLoyaltyAccount>();
@@ -173,6 +175,49 @@ public class StoreDbContext : DbContext
 
         modelBuilder.Entity<LoyaltyCampaign>()
             .HasIndex(x => new { x.IsActive, x.StartDate, x.EndDate });
+
+        // Discount indexes
+        modelBuilder.Entity<Discount>()
+            .HasIndex(x => new { x.IsActive, x.ValidFrom, x.ValidTo });
+
+        modelBuilder.Entity<Discount>()
+            .HasIndex(x => x.CouponCode)
+            .IsUnique()
+            .HasFilter("coupon_code IS NOT NULL");
+
+        // StockTransfer relationships
+        modelBuilder.Entity<StockTransfer>()
+            .HasOne(x => x.FromBranch)
+            .WithMany()
+            .HasForeignKey(x => x.FromBranchId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<StockTransfer>()
+            .HasOne(x => x.ToBranch)
+            .WithMany()
+            .HasForeignKey(x => x.ToBranchId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<StockTransfer>()
+            .HasOne(x => x.RequestedByUser)
+            .WithMany()
+            .HasForeignKey(x => x.RequestedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<StockTransferItem>()
+            .HasOne(x => x.Transfer)
+            .WithMany(t => t.Items)
+            .HasForeignKey(x => x.StockTransferId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<StockTransferItem>()
+            .HasOne(x => x.Item)
+            .WithMany()
+            .HasForeignKey(x => x.ItemId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<StockTransfer>()
+            .HasIndex(x => new { x.Status, x.DateCreated });
     }
 
     private static void ApplySnakeCaseNaming(ModelBuilder modelBuilder)
