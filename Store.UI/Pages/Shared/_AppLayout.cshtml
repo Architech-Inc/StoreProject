@@ -1,0 +1,136 @@
+@using Store.Models.DTOs.Operations
+@using StoreUI.Services
+@{
+    var token = Context.Session.GetString("access_token") ?? string.Empty;
+    var perms = JwtPermissionReader.GetPermissions(token);
+    var canInventoryRead = perms.Contains(PermissionKeys.InventoryRead);
+    var canPricingRead   = perms.Contains(PermissionKeys.PricingRead);
+    var canCashRead      = perms.Contains(PermissionKeys.CashRead);
+    var canReportsRead   = perms.Contains(PermissionKeys.ReportsRead);
+    var canPaymentsRead  = perms.Contains(PermissionKeys.PaymentsRead);
+    var canAdminBranches = perms.Contains(PermissionKeys.AdminBranches);
+    var canAdminRoles    = perms.Contains(PermissionKeys.AdminRoleMatrix);
+    var hasOpsSection    = canInventoryRead || canPricingRead || canCashRead || canReportsRead || canPaymentsRead;
+    var hasAdminSection  = canAdminBranches || canAdminRoles;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - ClexAn Foods</title>
+    <link rel="icon" type="image/png" href="~/images/clarkstore.png" asp-append-version="true" />
+    <link rel="shortcut icon" type="image/png" href="~/images/clarkstore.png" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/dashboard-modern.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body>
+    <div class="app-shell" id="appShell">
+        <aside class="app-sidebar" id="appSidebar" aria-label="Primary navigation">
+            <div class="brand-block">
+                <img src="~/images/clarkstore.png" alt="ClexAn Foods" />
+                <div>
+                    <strong>ClexAn Foods</strong>
+                    <span>Operations Console</span>
+                </div>
+            </div>
+
+            <nav class="main-nav">
+                <span class="nav-section-label">Store</span>
+                <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Dashboard" ? "active" : "")" href="/Dashboard">Dashboard</a>
+                <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Pos" ? "active" : "")" href="/Pos">POS Terminal</a>
+                <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Catalog" ? "active" : "")" href="/Catalog">Item Catalog</a>
+                <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Customers" ? "active" : "")" href="/Customers">Customers</a>
+                <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Invoices" ? "active" : "")" href="/Invoices">Invoices</a>
+                <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Orders" ? "active" : "")" href="/Orders">Purchase Orders</a>
+                <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Suppliers" ? "active" : "")" href="/Suppliers">Suppliers</a>
+                <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Loyalty" ? "active" : "")" href="/Loyalty">Loyalty</a>
+                <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Profile" ? "active" : "")" href="/Profile">My Profile</a>
+                @if (hasOpsSection)
+                {
+                    <hr class="nav-divider" />
+                    <span class="nav-section-label">Operations</span>
+                }
+                @if (canInventoryRead)
+                {
+                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Employees" ? "active" : "")" href="/Employees">Employees</a>
+                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "InventoryOps" ? "active" : "")" href="/InventoryOps">Inventory Ops</a>
+                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "AuditLog" ? "active" : "")" href="/AuditLog">Audit Log</a>
+                }
+                @if (canPricingRead)
+                {
+                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "PricingOps" ? "active" : "")" href="/PricingOps">Pricing Ops</a>
+                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "PromotionEffectiveness" ? "active" : "")" href="/PromotionEffectiveness">Promo Effectiveness</a>
+                }
+                @if (canCashRead || canReportsRead)
+                {
+                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "CashReports" ? "active" : "")" href="/CashReports">Cash &amp; Reports</a>
+                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Reconciliation" ? "active" : "")" href="/Reconciliation">Day-End Reconciliation</a>
+                }
+                @if (canPaymentsRead)
+                {
+                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Payments" ? "active" : "")" href="/Payments">Payments</a>
+                }
+                @if (hasAdminSection)
+                {
+                    <hr class="nav-divider" />
+                    <span class="nav-section-label">Admin</span>
+                }
+                @if (canAdminBranches)
+                {
+                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "BranchAdmin" ? "active" : "")" href="/BranchAdmin">Branch Admin</a>
+                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "BranchDashboard" ? "active" : "")" href="/BranchDashboard">Branch Dashboard</a>
+                }
+                @if (canAdminRoles)
+                {
+                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Users" ? "active" : "")" href="/Users">Users</a>
+                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Lookup" ? "active" : "")" href="/Lookup">Lookup Data</a>
+                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "RoleMatrix" ? "active" : "")" href="/RoleMatrix">Role Matrix</a>
+                }
+            </nav>
+
+            <form method="post" asp-page="/Logout" class="logout-form">
+                <button type="submit" class="logout-btn">Sign Out</button>
+            </form>
+        </aside>
+
+        <main class="app-main" role="main">
+            @RenderBody()
+        </main>
+    </div>
+
+    <div class="loading-overlay" id="loadingOverlay" role="status" aria-live="polite">
+        <div class="spinner" aria-hidden="true"></div>
+        <p>Loading...</p>
+    </div>
+
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+    <script>
+    (() => {
+        const overlay = document.getElementById('loadingOverlay');
+        const menuToggle = document.getElementById('menuToggle');
+        const shell = document.getElementById('appShell');
+
+        window.requestAnimationFrame(() => {
+            setTimeout(() => overlay?.classList.add('hide'), 250);
+        });
+
+        menuToggle?.addEventListener('click', () => {
+            const collapsed = shell?.classList.toggle('sidebar-collapsed');
+            menuToggle?.setAttribute('aria-expanded', collapsed ? 'true' : 'false');
+        });
+
+        // Highlight active nav link based on current path
+        const currentPath = window.location.pathname.toLowerCase();
+        document.querySelectorAll('.nav-link').forEach(link => {
+            if (link.getAttribute('href')?.toLowerCase() === currentPath) {
+                link.classList.add('active');
+            }
+        });
+    })();
+    </script>
+</body>
+</html>

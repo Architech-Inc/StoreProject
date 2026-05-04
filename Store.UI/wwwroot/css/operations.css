@@ -11,12 +11,10 @@
 
 .ops-page {
     max-width: 1200px;
-    margin: 0 auto;
-    padding: 24px;
+    /* margin: 0 auto;
+    padding: 24px; */
     color: var(--ops-ink);
     font-family: 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
-    background: radial-gradient(circle at top right, var(--brand-soft) 0, var(--ops-bg) 42%, var(--canvas-tint-ops-end) 100%);
-    min-height: 100vh;
 }
 
 .ops-page header {

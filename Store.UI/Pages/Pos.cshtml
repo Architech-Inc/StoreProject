@@ -3,6 +3,7 @@
 @using System.Text.Json
 @{
     ViewData["Title"] = "POS Terminal";
+    Layout = "_Layout";
 
     var catalogJson = JsonSerializer.Serialize(Model.CatalogItems.Select(i => new
     {
@@ -29,8 +30,6 @@
 }
 
 <div class="pos-shell">
-    <partial name="Shared/_ModuleNav" />
-
     <header class="pos-topbar">
         <div>
             <h1>POS Terminal</h1>

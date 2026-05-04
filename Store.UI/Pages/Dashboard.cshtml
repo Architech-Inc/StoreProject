@@ -2,89 +2,16 @@
 @model StoreUI.Pages.DashboardModel
 @{
     ViewData["Title"] = "Dashboard";
+    ViewData["ActivePage"] = "Dashboard";
 }
 
-@section Styles {
-    <link rel="stylesheet" href="~/css/dashboard-modern.css" asp-append-version="true" />
-}
-
-<div class="app-shell" id="dashboardShell">
-    <aside class="app-sidebar" id="appSidebar" aria-label="Primary navigation">
-        <div class="brand-block">
-            <img src="~/images/clarkstore.png" alt="ClexAn Foods" />
-            <div>
-                <strong>ClexAn Foods</strong>
-                <span>Operations Console</span>
-            </div>
-        </div>
-
-        <nav class="main-nav">
-            <span class="nav-section-label">Store</span>
-            <a class="nav-link" href="/Dashboard" aria-current="page">Dashboard</a>
-            <a class="nav-link" href="/Pos">POS Terminal</a>
-            <a class="nav-link" href="/Catalog">Item Catalog</a>
-            <a class="nav-link" href="/Customers">Customers</a>
-            <a class="nav-link" href="/Invoices">Invoices</a>
-            <a class="nav-link" href="/Orders">Purchase Orders</a>
-            <a class="nav-link" href="/Suppliers">Suppliers</a>
-            <a class="nav-link" href="/Loyalty">Loyalty</a>
-            <a class="nav-link" href="/Profile">My Profile</a>
-            @if (Model.CanInventoryRead || Model.CanPricingRead || Model.CanCashRead || Model.CanReportsRead || Model.CanPaymentsRead)
-            {
-                <hr class="nav-divider" />
-                <span class="nav-section-label">Operations</span>
-            }
-            @if (Model.CanInventoryRead)
-            {
-                <a class="nav-link" href="/Employees">Employees</a>
-                <a class="nav-link" href="/InventoryOps">Inventory Ops</a>
-                <a class="nav-link" href="/AuditLog">Audit Log</a>
-            }
-            @if (Model.CanPricingRead)
-            {
-                <a class="nav-link" href="/PricingOps">Pricing Ops</a>
-                <a class="nav-link" href="/PromotionEffectiveness">Promo Effectiveness</a>
-            }
-            @if (Model.CanCashRead || Model.CanReportsRead)
-            {
-                <a class="nav-link" href="/CashReports">Cash & Reports</a>
-                <a class="nav-link" href="/Reconciliation">Day-End Reconciliation</a>
-            }
-            @if (Model.CanPaymentsRead)
-            {
-                <a class="nav-link" href="/Payments">Payments</a>
-            }
-            @if (Model.CanAdminBranches || Model.CanAdminRoleMatrix)
-            {
-                <hr class="nav-divider" />
-                <span class="nav-section-label">Admin</span>
-            }
-            @if (Model.CanAdminBranches)
-            {
-                <a class="nav-link" href="/BranchAdmin">Branch Admin</a>
-                <a class="nav-link" href="/BranchDashboard">Branch Dashboard</a>
-            }
-            @if (Model.CanAdminRoleMatrix)
-            {
-                <a class="nav-link" href="/Users">Users</a>
-                <a class="nav-link" href="/Lookup">Lookup Data</a>
-                <a class="nav-link" href="/RoleMatrix">Role Matrix</a>
-            }
-        </nav>
-
-        <form method="post" asp-page-handler="Logout" class="logout-form">
-            <button type="submit" class="logout-btn">Sign Out</button>
-        </form>
-    </aside>
-
-    <main class="app-main" role="main">
-        <header class="topbar">
-            <button type="button" class="menu-toggle" id="menuToggle" aria-expanded="false" aria-controls="appSidebar">Menu</button>
-            <div>
-                <h1>Store Dashboard</h1>
-                <p>Realtime summary of sales, customers, and inventory health.</p>
-            </div>
-        </header>
+<header class="topbar">
+    <button type="button" class="menu-toggle" id="menuToggle" aria-expanded="false" aria-controls="appSidebar">Menu</button>
+    <div>
+        <h1>Store Dashboard</h1>
+        <p>Realtime summary of sales, customers, and inventory health.</p>
+    </div>
+</header>
 
         @if (Model.HasLoadError)
         {
@@ -242,29 +169,3 @@
                 <a class="action-link" href="/Login">Switch User</a>
             </div>
         </section>
-    </main>
-</div>
-
-<div class="loading-overlay" id="loadingOverlay" role="status" aria-live="polite">
-    <div class="spinner" aria-hidden="true"></div>
-    <p>Preparing dashboard...</p>
-</div>
-
-@section Scripts {
-<script>
-(() => {
-    const overlay = document.getElementById('loadingOverlay');
-    const menuToggle = document.getElementById('menuToggle');
-    const shell = document.getElementById('dashboardShell');
-
-    window.requestAnimationFrame(() => {
-        setTimeout(() => overlay?.classList.add('hide'), 250);
-    });
-
-    menuToggle?.addEventListener('click', () => {
-        const collapsed = shell?.classList.toggle('sidebar-collapsed');
-        menuToggle.setAttribute('aria-expanded', collapsed ? 'true' : 'false');
-    });
-})();
-</script>
-}

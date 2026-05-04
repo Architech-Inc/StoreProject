@@ -24,7 +24,9 @@
     };
 }
 
-@await Html.PartialAsync("_DashboardLayout")
+@section Styles {
+    <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
+}
 
 <div class="page-content">
     <div class="page-header">
