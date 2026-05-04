@@ -48,6 +48,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IStoreOperationsService, StoreOperationsService>();
         services.AddScoped<IMobileMoneyService, MobileMoneyService>();
         services.AddScoped<ILoyaltyService, LoyaltyService>();
+        services.AddScoped<ILoyaltyCampaignService, LoyaltyCampaignService>();
 
         return services;
     }

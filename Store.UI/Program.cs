@@ -45,6 +45,7 @@ builder.Services.AddScoped<ICustomerService, ApiCustomerService>();
 builder.Services.AddScoped<IItemService, ApiItemService>();
 builder.Services.AddScoped<IInvoiceService, ApiInvoiceService>();
 builder.Services.AddScoped<IOrderService, ApiOrderService>();
+builder.Services.AddScoped<ILoyaltyCampaignService, ApiCampaignService>();
 
 var app = builder.Build();
 

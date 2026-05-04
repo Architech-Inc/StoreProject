@@ -97,6 +97,7 @@ public class StoreDbContext : DbContext
     // ---- Loyalty ----
     public DbSet<CustomerLoyaltyAccount> CustomerLoyaltyAccounts => Set<CustomerLoyaltyAccount>();
     public DbSet<LoyaltyTransaction> LoyaltyTransactions => Set<LoyaltyTransaction>();
+    public DbSet<LoyaltyCampaign> LoyaltyCampaigns => Set<LoyaltyCampaign>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -169,6 +170,9 @@ public class StoreDbContext : DbContext
             .WithMany(i => i.LoyaltyTransactions)
             .HasForeignKey(x => x.InvoiceId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<LoyaltyCampaign>()
+            .HasIndex(x => new { x.IsActive, x.StartDate, x.EndDate });
     }
 
     private static void ApplySnakeCaseNaming(ModelBuilder modelBuilder)

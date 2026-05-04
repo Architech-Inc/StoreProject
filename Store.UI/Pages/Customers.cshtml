@@ -37,6 +37,7 @@
                         <tr>
                             <th>Name</th>
                             <th>Gender</th>
+                            <th>Segment</th>
                             <th>Phone</th>
                             <th>Email</th>
                             <th>Notes</th>
@@ -50,6 +51,16 @@
                             <tr>
                                 <td><strong>@c.FullName</strong></td>
                                 <td>@c.Gender</td>
+                                <td>
+                                    @{
+                                        var segClass = c.Segment switch {
+                                            Store.Models.Enums.CustomerSegment.Wholesale => "badge-blue",
+                                            Store.Models.Enums.CustomerSegment.Vip => "badge-gold",
+                                            _ => "badge-gray"
+                                        };
+                                    }
+                                    <span class="badge @segClass">@c.Segment</span>
+                                </td>
                                 <td>@(c.PrimaryPhone ?? "—")</td>
                                 <td>@(c.PrimaryEmail ?? "—")</td>
                                 <td>@(c.Notes ?? "—")</td>
@@ -57,7 +68,7 @@
                                 <td>
                                     <div style="display:flex;gap:4px;">
                                         <button type="button"
-                                            onclick="openEdit('@c.CustomerId','@Html.Raw(c.FirstName.Replace("'","\\'"))','@Html.Raw((c.MiddleName ?? "").Replace("'","\\'"))','@Html.Raw(c.LastName.Replace("'","\\'"))','@c.Gender','@Html.Raw((c.Notes ?? "").Replace("'","\\'"))')">Edit</button>
+                                            onclick="openEdit('@c.CustomerId','@Html.Raw(c.FirstName.Replace("'","\\'"))','@Html.Raw((c.MiddleName ?? "").Replace("'","\\'"))','@Html.Raw(c.LastName.Replace("'","\\'"))','@c.Gender','@c.Segment','@Html.Raw((c.Notes ?? "").Replace("'","\\'"))')">Edit</button>
                                         <form method="post" asp-page-handler="Delete" style="margin:0;">
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="customerId" value="@c.CustomerId" />
@@ -117,6 +128,13 @@
                 <option value="Female">Female</option>
             </select>
 
+            <label for="editSegment">Segment</label>
+            <select asp-for="EditSegment" id="editSegment">
+                <option value="Standard">Standard</option>
+                <option value="Wholesale">Wholesale</option>
+                <option value="Vip">VIP</option>
+            </select>
+
             <label for="editNotes">Notes</label>
             <textarea asp-for="EditNotes" id="editNotes" rows="2"></textarea>
 
@@ -155,6 +173,13 @@
                 <option value="Female">Female</option>
             </select>
 
+            <label for="segmentSel">Segment</label>
+            <select asp-for="Segment" id="segmentSel">
+                <option value="Standard">Standard</option>
+                <option value="Wholesale">Wholesale</option>
+                <option value="Vip">VIP</option>
+            </select>
+
             <label for="phone">Phone</label>
             <input asp-for="Phone" id="phone" type="tel" placeholder="+237 6XXXXXXXX" />
 
@@ -186,12 +211,13 @@ function closeModal() {
     modal.setAttribute('hidden', '');
 }
 
-function openEdit(id, firstName, middleName, lastName, gender, notes) {
+function openEdit(id, firstName, middleName, lastName, gender, segment, notes) {
     document.getElementById('editCustomerId').value = id;
     document.getElementById('editFirstName').value = firstName;
     document.getElementById('editMiddleName').value = middleName;
     document.getElementById('editLastName').value = lastName;
     document.getElementById('editGender').value = gender;
+    document.getElementById('editSegment').value = segment;
     document.getElementById('editNotes').value = notes;
     editModal.removeAttribute('hidden');
     document.getElementById('editFirstName').focus();

@@ -22,6 +22,7 @@ public class CustomersModel : SecurePageModel
     [BindProperty] public string LastName { get; set; } = string.Empty;
     [BindProperty] public string? MiddleName { get; set; }
     [BindProperty] public Gender Gender { get; set; } = Gender.NotSpecified;
+    [BindProperty] public CustomerSegment Segment { get; set; } = CustomerSegment.Standard;
     [BindProperty] public string? Phone { get; set; }
     [BindProperty] public string? Email { get; set; }
     [BindProperty] public string? Notes { get; set; }
@@ -32,6 +33,7 @@ public class CustomersModel : SecurePageModel
     [BindProperty] public string EditLastName { get; set; } = string.Empty;
     [BindProperty] public string? EditMiddleName { get; set; }
     [BindProperty] public Gender EditGender { get; set; } = Gender.NotSpecified;
+    [BindProperty] public CustomerSegment EditSegment { get; set; } = CustomerSegment.Standard;
     [BindProperty] public string? EditNotes { get; set; }
 
     [TempData] public string? StatusMessage { get; set; }
@@ -76,6 +78,7 @@ public class CustomersModel : SecurePageModel
             LastName = LastName,
             MiddleName = MiddleName,
             Gender = Gender,
+            Segment = Segment,
             Phone = Phone,
             Email = Email,
             Notes = Notes
@@ -112,6 +115,7 @@ public class CustomersModel : SecurePageModel
             LastName = EditLastName.Trim(),
             MiddleName = string.IsNullOrWhiteSpace(EditMiddleName) ? null : EditMiddleName.Trim(),
             Gender = EditGender,
+            Segment = EditSegment,
             Notes = string.IsNullOrWhiteSpace(EditNotes) ? null : EditNotes.Trim()
         };
 

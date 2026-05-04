@@ -15,6 +15,9 @@ public class Customer : BaseEntity
     public string? Notes { get; set; }
     public string? ImagePath { get; set; }
 
+    /// <summary>Pricing and loyalty segment (EX-FR-4.4).</summary>
+    public CustomerSegment Segment { get; set; } = CustomerSegment.Standard;
+
     // Navigation
     public ICollection<CustomerEmail> Emails { get; set; } = new List<CustomerEmail>();
     public ICollection<CustomerPhone> Phones { get; set; } = new List<CustomerPhone>();

@@ -16,6 +16,7 @@ public class CustomerDto
     public string? PrimaryPhone { get; set; }
     public string? Notes { get; set; }
     public string? ImagePath { get; set; }
+    public CustomerSegment Segment { get; set; } = CustomerSegment.Standard;
     public DateTime DateCreated { get; set; }
 }
 
@@ -41,6 +42,8 @@ public class CreateCustomerRequest
 
     [StringLength(500)]
     public string? Notes { get; set; }
+
+    public CustomerSegment Segment { get; set; } = CustomerSegment.Standard;
 }
 
 public class UpdateCustomerRequest
@@ -56,6 +59,7 @@ public class UpdateCustomerRequest
 
     public Gender? Gender { get; set; }
     public DateTime? DateOfBirth { get; set; }
+    public CustomerSegment? Segment { get; set; }
 
     [StringLength(500)]
     public string? Notes { get; set; }

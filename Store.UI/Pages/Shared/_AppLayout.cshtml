@@ -47,6 +47,7 @@
                 <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Orders" ? "active" : "")" href="/Orders">Purchase Orders</a>
                 <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Suppliers" ? "active" : "")" href="/Suppliers">Suppliers</a>
                 <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Loyalty" ? "active" : "")" href="/Loyalty">Loyalty</a>
+                <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Campaigns" ? "active" : "")" href="/Campaigns">Campaigns</a>
                 <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Profile" ? "active" : "")" href="/Profile">My Profile</a>
                 @if (hasOpsSection)
                 {
