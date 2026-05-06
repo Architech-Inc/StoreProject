@@ -100,6 +100,13 @@ public class StoreDbContext : DbContext
     public DbSet<WastageEntry> WastageEntries => Set<WastageEntry>();
     public DbSet<DiscountOverrideRequest> DiscountOverrideRequests => Set<DiscountOverrideRequest>();
 
+    // ---- Procurement ----
+    public DbSet<PurchaseOrder> PurchaseOrders => Set<PurchaseOrder>();
+    public DbSet<PurchaseOrderItem> PurchaseOrderItems => Set<PurchaseOrderItem>();
+
+    // ---- Cash Variance ----
+    public DbSet<CashVarianceRecord> CashVarianceRecords => Set<CashVarianceRecord>();
+
     // ---- Loyalty ----
     public DbSet<CustomerLoyaltyAccount> CustomerLoyaltyAccounts => Set<CustomerLoyaltyAccount>();
     public DbSet<LoyaltyTransaction> LoyaltyTransactions => Set<LoyaltyTransaction>();
@@ -254,6 +261,73 @@ public class StoreDbContext : DbContext
 
         modelBuilder.Entity<DiscountOverrideRequest>()
             .HasIndex(r => new { r.Status, r.DateCreated });
+
+        // PurchaseOrder relationships
+        modelBuilder.Entity<PurchaseOrder>()
+            .HasOne(p => p.Supplier)
+            .WithMany()
+            .HasForeignKey(p => p.SupplierId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<PurchaseOrder>()
+            .HasOne(p => p.Branch)
+            .WithMany()
+            .HasForeignKey(p => p.BranchId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<PurchaseOrder>()
+            .HasOne(p => p.RequestedByUser)
+            .WithMany()
+            .HasForeignKey(p => p.RequestedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<PurchaseOrder>()
+            .HasOne(p => p.ApprovedByUser)
+            .WithMany()
+            .HasForeignKey(p => p.ApprovedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<PurchaseOrder>()
+            .HasMany(p => p.Items)
+            .WithOne(i => i.PurchaseOrder)
+            .HasForeignKey(i => i.PurchaseOrderId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<PurchaseOrderItem>()
+            .HasOne(i => i.Item)
+            .WithMany()
+            .HasForeignKey(i => i.ItemId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<PurchaseOrder>()
+            .HasIndex(p => new { p.Status, p.DateCreated });
+
+        modelBuilder.Entity<PurchaseOrder>()
+            .HasIndex(p => p.ReferenceNumber)
+            .IsUnique()
+            .HasFilter("reference_number IS NOT NULL");
+
+        // CashVarianceRecord relationships
+        modelBuilder.Entity<CashVarianceRecord>()
+            .HasOne(v => v.CashierShift)
+            .WithMany()
+            .HasForeignKey(v => v.CashierShiftId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<CashVarianceRecord>()
+            .HasOne(v => v.RecordedByUser)
+            .WithMany()
+            .HasForeignKey(v => v.RecordedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<CashVarianceRecord>()
+            .HasOne(v => v.ReviewedByUser)
+            .WithMany()
+            .HasForeignKey(v => v.ReviewedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<CashVarianceRecord>()
+            .HasIndex(v => new { v.Status, v.DateCreated });
     }
 
     private static void ApplySnakeCaseNaming(ModelBuilder modelBuilder)

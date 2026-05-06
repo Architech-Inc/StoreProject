@@ -51,6 +51,8 @@ builder.Services.AddScoped<IBatchService, ApiBatchService>();
 builder.Services.AddScoped<IStockTransferService, ApiStockTransferService>();
 builder.Services.AddScoped<IWastageService, ApiWastageService>();
 builder.Services.AddScoped<IDiscountOverrideService, ApiDiscountOverrideService>();
+builder.Services.AddScoped<IPurchaseOrderService, ApiPurchaseOrderService>();
+builder.Services.AddScoped<ICashVarianceService, ApiCashVarianceService>();
 
 var app = builder.Build();
 

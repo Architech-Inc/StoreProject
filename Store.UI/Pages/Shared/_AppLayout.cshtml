@@ -61,6 +61,7 @@
                     <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "BatchTracking" ? "active" : "")" href="/BatchTracking">Batch &amp; Expiry</a>
                     <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "StockTransfers" ? "active" : "")" href="/StockTransfers">Stock Transfers</a>
                     <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Wastage" ? "active" : "")" href="/Wastage">Wastage Log</a>
+                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "PurchaseOrders" ? "active" : "")" href="/PurchaseOrders">Purchase Orders</a>
                     <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "AuditLog" ? "active" : "")" href="/AuditLog">Audit Log</a>
                 }
                 @if (canPricingRead)
@@ -74,6 +75,7 @@
                 {
                     <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "CashReports" ? "active" : "")" href="/CashReports">Cash &amp; Reports</a>
                     <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Reconciliation" ? "active" : "")" href="/Reconciliation">Day-End Reconciliation</a>
+                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "CashVariance" ? "active" : "")" href="/CashVariance">Cash Variance</a>
                 }
                 @if (canPaymentsRead)
                 {

@@ -131,6 +131,25 @@ public enum DiscountOverrideStatus
     Cancelled = 3
 }
 
+/// <summary>Lifecycle status of a purchase order (EX-FR-1.2).</summary>
+public enum PurchaseOrderStatus
+{
+    Draft = 0,
+    Submitted = 1,
+    Approved = 2,
+    PartiallyReceived = 3,
+    Received = 4,
+    Cancelled = 5
+}
+
+/// <summary>Status of a cash-variance record requiring manager review (EX-FR-5.2).</summary>
+public enum CashVarianceStatus
+{
+    Pending = 0,
+    Reviewed = 1,
+    Escalated = 2
+}
+
 public enum TaxApplicationType
 {
     Exclusive,
