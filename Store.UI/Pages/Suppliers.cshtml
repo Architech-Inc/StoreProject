@@ -1,145 +1,391 @@
 @page
 @model StoreUI.Pages.SuppliersModel
+@using Store.Models.Entities.Contacts
 @{
+    Layout = "_AppLayout";
     ViewData["Title"] = "Suppliers";
+    ViewData["ActivePage"] = "Suppliers";
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
 }
 
-<div class="ops-page">
-    <header>
-        <h1>Suppliers</h1>
-        <p>Manage suppliers for purchase orders and inventory procurement.</p>
-    </header>
+@if (TempData["StatusMessage"] is string msg)
+{
+    var isError = msg.StartsWith("Error:", StringComparison.OrdinalIgnoreCase);
+    <div class="alert @(isError ? "alert-danger" : "alert-success") alert-dismissible fade show" role="alert">
+        @msg
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
 
-    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
-    {
-        <div class="status @(Model.StatusMessage.StartsWith("Error") ? "error" : "ok")">
-            @Model.StatusMessage
-        </div>
-    }
-
-    <section class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-            <h2 style="margin:0;">Supplier List</h2>
-            <button type="button" onclick="openModal('createModal')">+ New Supplier</button>
-        </div>
-
-        @if (!Model.Suppliers.Any())
-        {
-            <p style="color:var(--ops-subtle);padding:12px 0;">No suppliers yet.</p>
-        }
-        else
-        {
-            <table>
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Registration #</th>
-                        <th>Notes</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var s in Model.Suppliers)
-                    {
-                        <tr>
-                            <td><strong>@s.Name</strong></td>
-                            <td>@(s.RegistrationNumber ?? "—")</td>
-                            <td>@(s.Notes ?? "—")</td>
-                            <td style="white-space:nowrap;">
-                                <button type="button"
-                                        onclick="openEdit('@s.SupplierId','@Html.Raw(s.Name.Replace("'","\\'"  ))','@Html.Raw((s.RegistrationNumber ?? "").Replace("'","\\'" ))','@Html.Raw((s.Notes ?? "").Replace("'","\\'" ))')">
-                                    Edit
-                                </button>
-                                <form method="post" asp-page-handler="Delete" asp-route-id="@s.SupplierId"
-                                      style="display:inline"
-                                      onsubmit="return confirm('Delete supplier @Html.Raw(s.Name.Replace("'","\\'" ))?')">
-                                    @Html.AntiForgeryToken()
-                                    <button type="submit" class="danger">Delete</button>
-                                </form>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        }
-    </section>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">Suppliers</h4>
+    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createModal">
+        + New Supplier
+    </button>
 </div>
 
-<!-- Create Modal -->
-<div id="createModal" class="modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="createModalTitle">
-    <div class="modal-content">
-        <h3 id="createModalTitle">New Supplier</h3>
+<!-- Suppliers List -->
+<div class="table-responsive">
+    <table class="table table-hover table-sm align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>Name</th>
+                <th>Registration #</th>
+                <th>Contacts</th>
+                <th>Locations</th>
+                <th>Created</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var s in Model.Suppliers)
+            {
+                <tr>
+                    <td>
+                        <strong>@s.Name</strong>
+                        @if (!string.IsNullOrWhiteSpace(s.Notes))
+                        {
+                            <br /><small class="text-muted">@s.Notes</small>
+                        }
+                    </td>
+                    <td>@(s.RegistrationNumber ?? "—")</td>
+                    <td>
+                        @if (s.Emails.Any() || s.Phones.Any())
+                        {
+                            @if (s.Emails.Any(e => e.IsPrimary))
+                            {
+                                var primaryEmail = s.Emails.First(e => e.IsPrimary);
+                                <div><i class="bi bi-envelope"></i> @primaryEmail.Email</div>
+                            }
+                            @if (s.Phones.Any(p => p.IsPrimary))
+                            {
+                                var primaryPhone = s.Phones.First(p => p.IsPrimary);
+                                <div><i class="bi bi-telephone"></i> @primaryPhone.PhoneNumber</div>
+                            }
+                            @if (s.Emails.Count > 1 || s.Phones.Count > 1)
+                            {
+                                <small class="text-muted">+@(s.Emails.Count + s.Phones.Count - 2) more</small>
+                            }
+                        }
+                        else
+                        {
+                            <span class="text-muted">—</span>
+                        }
+                    </td>
+                    <td>
+                        @if (s.Locations.Any(l => l.IsPrimary))
+                        {
+                            var primaryLoc = s.Locations.First(l => l.IsPrimary);
+                            <div>@primaryLoc.City, @primaryLoc.Country</div>
+                            @if (s.Locations.Count > 1)
+                            {
+                                <small class="text-muted">+@(s.Locations.Count - 1) more</small>
+                            }
+                        }
+                        else
+                        {
+                            <span class="text-muted">—</span>
+                        }
+                    </td>
+                    <td>@s.DateCreated.ToString("dd MMM yyyy")</td>
+                    <td>
+                        <div class="d-flex gap-1">
+                            <button class="btn btn-outline-secondary btn-sm"
+                                    data-bs-toggle="modal" data-bs-target="#editModal"
+                                    data-supplier='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(s))'>
+                                Edit
+                            </button>
+                            <form method="post" asp-page-handler="Delete">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="supplierId" value="@s.SupplierId" />
+                                <button class="btn btn-outline-danger btn-sm" type="submit"
+                                        onclick="return confirm('Delete supplier @s.Name?')">Delete</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+            }
+            @if (!Model.Suppliers.Any())
+            {
+                <tr><td colspan="6" class="text-center text-muted py-3">No suppliers found.</td></tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- ===== Create Supplier Modal ===== -->
+<div class="modal fade" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
         <form method="post" asp-page-handler="Create">
             @Html.AntiForgeryToken()
-            <div class="form-group">
-                <label for="Name">Name *</label>
-                <input id="Name" name="Name" type="text" required maxlength="200" />
-            </div>
-            <div class="form-group">
-                <label for="RegistrationNumber">Registration Number</label>
-                <input id="RegistrationNumber" name="RegistrationNumber" type="text" maxlength="100" />
-            </div>
-            <div class="form-group">
-                <label for="Notes">Notes</label>
-                <textarea id="Notes" name="Notes" rows="3" maxlength="1000"></textarea>
-            </div>
-            <div class="form-actions">
-                <button type="submit">Create</button>
-                <button type="button" onclick="closeModal('createModal')">Cancel</button>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createModalLabel">New Supplier</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Name <span class="text-danger">*</span></label>
+                            <input type="text" name="CreateName" class="form-control form-control-sm" required maxlength="200" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Registration Number</label>
+                            <input type="text" name="CreateRegistrationNumber" class="form-control form-control-sm" maxlength="100" />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Notes</label>
+                            <textarea name="CreateNotes" class="form-control form-control-sm" rows="2" maxlength="1000"></textarea>
+                        </div>
+                    </div>
+
+                    <hr />
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <strong>Contact Information</strong>
+                        <div>
+                            <button type="button" class="btn btn-outline-secondary btn-sm me-1" id="addEmailBtn">+ Email</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm me-1" id="addPhoneBtn">+ Phone</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="addLocationBtn">+ Address</button>
+                        </div>
+                    </div>
+
+                    <!-- Emails -->
+                    <div id="emailsSection" class="mb-3">
+                        <h6>Emails</h6>
+                        <div id="emailsContainer"></div>
+                    </div>
+
+                    <!-- Phones -->
+                    <div id="phonesSection" class="mb-3">
+                        <h6>Phones</h6>
+                        <div id="phonesContainer"></div>
+                    </div>
+
+                    <!-- Locations -->
+                    <div id="locationsSection" class="mb-3">
+                        <h6>Addresses</h6>
+                        <div id="locationsContainer"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Supplier</button>
+                </div>
             </div>
         </form>
     </div>
 </div>
 
-<!-- Edit Modal -->
-<div id="editModal" class="modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="editModalTitle">
-    <div class="modal-content">
-        <h3 id="editModalTitle">Edit Supplier</h3>
+<!-- ===== Edit Supplier Modal ===== -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
         <form method="post" asp-page-handler="Edit">
             @Html.AntiForgeryToken()
-            <input type="hidden" name="EditSupplierId" id="editSupplierId" />
-            <div class="form-group">
-                <label for="EditName">Name *</label>
-                <input id="EditName" name="EditName" type="text" required maxlength="200" />
-            </div>
-            <div class="form-group">
-                <label for="EditRegistrationNumber">Registration Number</label>
-                <input id="EditRegistrationNumber" name="EditRegistrationNumber" type="text" maxlength="100" />
-            </div>
-            <div class="form-group">
-                <label for="EditNotes">Notes</label>
-                <textarea id="EditNotes" name="EditNotes" rows="3" maxlength="1000"></textarea>
-            </div>
-            <div class="form-actions">
-                <button type="submit">Save</button>
-                <button type="button" onclick="closeModal('editModal')">Cancel</button>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editModalLabel">Edit Supplier</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="EditSupplierId" id="editSupplierId" />
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Name <span class="text-danger">*</span></label>
+                            <input type="text" name="EditName" id="editName" class="form-control form-control-sm" required maxlength="200" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Registration Number</label>
+                            <input type="text" name="EditRegistrationNumber" id="editRegistrationNumber" class="form-control form-control-sm" maxlength="100" />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Notes</label>
+                            <textarea name="EditNotes" id="editNotes" class="form-control form-control-sm" rows="2" maxlength="1000"></textarea>
+                        </div>
+                    </div>
+
+                    <hr />
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <strong>Contact Information</strong>
+                        <div>
+                            <button type="button" class="btn btn-outline-secondary btn-sm me-1" id="addEditEmailBtn">+ Email</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm me-1" id="addEditPhoneBtn">+ Phone</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="addEditLocationBtn">+ Address</button>
+                        </div>
+                    </div>
+
+                    <div id="editEmailsSection" class="mb-3">
+                        <h6>Emails</h6>
+                        <div id="editEmailsContainer"></div>
+                    </div>
+
+                    <div id="editPhonesSection" class="mb-3">
+                        <h6>Phones</h6>
+                        <div id="editPhonesContainer"></div>
+                    </div>
+
+                    <div id="editLocationsSection" class="mb-3">
+                        <h6>Addresses</h6>
+                        <div id="editLocationsContainer"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
             </div>
         </form>
     </div>
 </div>
 
 @section Scripts {
-    <script>
-        function openModal(id) {
-            document.getElementById(id).style.display = 'flex';
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add contact handlers
+    document.getElementById('addEmailBtn').addEventListener('click', () => addEmailField('Create'));
+    document.getElementById('addPhoneBtn').addEventListener('click', () => addPhoneField('Create'));
+    document.getElementById('addLocationBtn').addEventListener('click', () => addLocationField('Create'));
+    document.getElementById('addEditEmailBtn').addEventListener('click', () => addEmailField('Edit'));
+    document.getElementById('addEditPhoneBtn').addEventListener('click', () => addPhoneField('Edit'));
+    document.getElementById('addEditLocationBtn').addEventListener('click', () => addLocationField('Edit'));
+
+    // Edit modal population
+    const editModal = document.getElementById('editModal');
+    editModal.addEventListener('show.bs.modal', function(e) {
+        const btn = e.relatedTarget;
+        const supplier = JSON.parse(btn.dataset.supplier);
+
+        document.getElementById('editSupplierId').value = supplier.SupplierId;
+        document.getElementById('editName').value = supplier.Name;
+        document.getElementById('editRegistrationNumber').value = supplier.RegistrationNumber ?? '';
+        document.getElementById('editNotes').value = supplier.Notes ?? '';
+
+        clearEditContactFields();
+
+        if (Array.isArray(supplier.Emails)) {
+            supplier.Emails.forEach(email => addEmailField('Edit', email.Email, email.EmailType, email.IsPrimary));
         }
-        function closeModal(id) {
-            document.getElementById(id).style.display = 'none';
+        if (Array.isArray(supplier.Phones)) {
+            supplier.Phones.forEach(phone => addPhoneField('Edit', phone.PhoneNumber, phone.PhoneType, phone.IsPrimary));
         }
-        function openEdit(id, name, regNum, notes) {
-            document.getElementById('editSupplierId').value = id;
-            document.getElementById('EditName').value = name;
-            document.getElementById('EditRegistrationNumber').value = regNum;
-            document.getElementById('EditNotes').value = notes;
-            openModal('editModal');
+        if (Array.isArray(supplier.Locations)) {
+            supplier.Locations.forEach(location => addLocationField('Edit', location.AddressLine1, location.AddressLine2, location.City, location.State, location.PostalCode, location.Country, location.IsPrimary));
         }
-        // Close modal on backdrop click
-        document.querySelectorAll('.modal').forEach(m => {
-            m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });
-        });
-    </script>
+    });
+
+    editModal.addEventListener('hidden.bs.modal', function() {
+        clearEditContactFields();
+    });
+
+    // Create modal reset
+    const createModal = document.getElementById('createModal');
+    createModal.addEventListener('hidden.bs.modal', function() {
+        // Reset the form
+        const form = createModal.querySelector('form');
+        form.reset();
+        clearCreateContactFields();
+    });
+});
+
+function escapeHtml(text) {
+    return String(text || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }
+
+function clearEditContactFields() {
+    document.getElementById('editEmailsContainer').innerHTML = '';
+    document.getElementById('editPhonesContainer').innerHTML = '';
+    document.getElementById('editLocationsContainer').innerHTML = '';
+}
+
+function clearCreateContactFields() {
+    document.getElementById('emailsContainer').innerHTML = '';
+    document.getElementById('phonesContainer').innerHTML = '';
+    document.getElementById('locationsContainer').innerHTML = '';
+}
+
+function addEmailField(prefix, email = '', type = 'Work', isPrimary = false) {
+    const container = document.getElementById(prefix === 'Edit' ? 'editEmailsContainer' : 'emailsContainer');
+    const div = document.createElement('div');
+    div.className = 'input-group mb-2';
+    div.innerHTML = `
+        <input type="email" name="${prefix}Emails" class="form-control form-control-sm" placeholder="email@example.com" value="${escapeHtml(email)}" />
+        <select name="${prefix}EmailTypes" class="form-select form-select-sm">
+            @foreach (var typeOption in Model.EmailTypes) {
+                <option value="@((int)typeOption)">@typeOption</option>
+            }
+        </select>
+        <div class="input-group-text">
+            <input type="checkbox" name="${prefix}EmailPrimaries" class="form-check-input" />
+            <label class="form-check-label ms-1">Primary</label>
+        </div>
+        <button type="button" class="btn btn-outline-danger btn-sm" onclick="this.parentElement.remove()">×</button>`;
+    container.appendChild(div);
+    div.querySelector('select')?.value = String(type);
+    div.querySelector('input[type="checkbox"]')?.checked = Boolean(isPrimary);
+}
+
+function addPhoneField(prefix, phone = '', type = 'Work', isPrimary = false) {
+    const container = document.getElementById(prefix === 'Edit' ? 'editPhonesContainer' : 'phonesContainer');
+    const div = document.createElement('div');
+    div.className = 'input-group mb-2';
+    div.innerHTML = `
+        <input type="tel" name="${prefix}Phones" class="form-control form-control-sm" placeholder="+1234567890" value="${escapeHtml(phone)}" />
+        <select name="${prefix}PhoneTypes" class="form-select form-select-sm">
+            @foreach (var phoneOption in Model.PhoneTypes) {
+                <option value="@((int)phoneOption)">@phoneOption</option>
+            }
+        </select>
+        <div class="input-group-text">
+            <input type="checkbox" name="${prefix}PhonePrimaries" class="form-check-input" />
+            <label class="form-check-label ms-1">Primary</label>
+        </div>
+        <button type="button" class="btn btn-outline-danger btn-sm" onclick="this.parentElement.remove()">×</button>`;
+    container.appendChild(div);
+    div.querySelector('select')?.value = String(type);
+    div.querySelector('input[type="checkbox"]')?.checked = Boolean(isPrimary);
+}
+
+function addLocationField(prefix, address1 = '', address2 = '', city = '', state = '', postalCode = '', country = '', isPrimary = false) {
+    const container = document.getElementById(prefix === 'Edit' ? 'editLocationsContainer' : 'locationsContainer');
+    const div = document.createElement('div');
+    div.className = 'row g-2 mb-3 border rounded p-2';
+    div.innerHTML = `
+        <div class="col-md-6">
+            <input type="text" name="${prefix}AddressLines1" class="form-control form-control-sm" placeholder="Address Line 1" value="${escapeHtml(address1)}" />
+        </div>
+        <div class="col-md-6">
+            <input type="text" name="${prefix}AddressLines2" class="form-control form-control-sm" placeholder="Address Line 2" value="${escapeHtml(address2)}" />
+        </div>
+        <div class="col-md-4">
+            <input type="text" name="${prefix}Cities" class="form-control form-control-sm" placeholder="City" value="${escapeHtml(city)}" />
+        </div>
+        <div class="col-md-4">
+            <input type="text" name="${prefix}States" class="form-control form-control-sm" placeholder="State/Province" value="${escapeHtml(state)}" />
+        </div>
+        <div class="col-md-4">
+            <input type="text" name="${prefix}PostalCodes" class="form-control form-control-sm" placeholder="Postal Code" value="${escapeHtml(postalCode)}" />
+        </div>
+        <div class="col-md-6">
+            <input type="text" name="${prefix}Countries" class="form-control form-control-sm" placeholder="Country" value="${escapeHtml(country)}" />
+        </div>
+        <div class="col-md-5 d-flex align-items-center">
+            <div class="form-check">
+                <input type="checkbox" name="${prefix}LocationPrimaries" class="form-check-input" ${isPrimary ? 'checked' : ''} />
+                <label class="form-check-label">Primary Address</label>
+            </div>
+        </div>
+        <div class="col-md-1">
+            <button type="button" class="btn btn-outline-danger btn-sm" onclick="this.parentElement.parentElement.remove()">×</button>
+        </div>`;
+    container.appendChild(div);
+}
+</script>
+}
+

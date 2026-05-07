@@ -36,12 +36,3 @@ public interface ISalaryService
     Task<Salary> CreateAsync(string grade, decimal basicAmount, decimal? allowance, string? description, CancellationToken ct = default);
     Task<bool> DeleteAsync(int id, CancellationToken ct = default);
 }
-
-public interface ISupplierService
-{
-    Task<IEnumerable<Supplier>> GetAllAsync(CancellationToken ct = default);
-    Task<Supplier?> GetByIdAsync(Guid id, CancellationToken ct = default);
-    Task<Supplier> CreateAsync(string name, string? registrationNumber, string? notes = null, CancellationToken ct = default);
-    Task<Supplier?> UpdateAsync(Guid id, string name, string? registrationNumber, string? notes = null, CancellationToken ct = default);
-    Task<bool> DeleteAsync(Guid id, CancellationToken ct = default);
-}

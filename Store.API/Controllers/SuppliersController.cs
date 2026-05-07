@@ -2,98 +2,74 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Store.API.Contracts;
 using Store.Models.DTOs.Common;
-using Store.Models.DTOs.Suppliers;
+using Store.Models.DTOs.Operations;
+using Store.Models.DTOs.Procurement;
 using Store.Models.Interfaces.Services;
 
 namespace Store.API.Controllers;
 
+[Route("api/suppliers")]
 [ApiController]
-[Route("api/[controller]")]
 [Authorize]
 public class SuppliersController : ControllerBase
 {
     private readonly ISupplierService _supplierService;
 
     public SuppliersController(ISupplierService supplierService)
-    {
-        _supplierService = supplierService;
-    }
+        => _supplierService = supplierService;
 
     [HttpGet]
-    public async Task<IActionResult> GetAll(CancellationToken ct)
+    [Authorize(Policy = PermissionKeys.InventoryRead)]
+    public async Task<IActionResult> GetAll()
     {
-        var suppliers = await _supplierService.GetAllAsync(ct);
-        var dtos = suppliers.Select(s => new SupplierDto
-        {
-            SupplierId = s.SupplierId,
-            Name = s.Name,
-            RegistrationNumber = s.RegistrationNumber,
-            Notes = s.Notes
-        });
-        return Ok(ApiResponse<IEnumerable<SupplierDto>>.Ok(dtos));
+        var suppliers = await _supplierService.GetAllAsync();
+        return Ok(ApiResponse<List<SupplierDto>>.Ok(suppliers));
     }
 
     [HttpGet("{id:guid}")]
-    public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
+    [Authorize(Policy = PermissionKeys.InventoryRead)]
+    public async Task<IActionResult> GetById(Guid id)
     {
-        var supplier = await _supplierService.GetByIdAsync(id, ct);
+        var supplier = await _supplierService.GetByIdAsync(id);
         if (supplier is null)
-            return NotFound(ApiErrorResponse.From("not_found", "Supplier not found.", traceId: HttpContext.TraceIdentifier));
-
-        return Ok(ApiResponse<SupplierDto>.Ok(new SupplierDto
-        {
-            SupplierId = supplier.SupplierId,
-            Name = supplier.Name,
-            RegistrationNumber = supplier.RegistrationNumber,
-            Notes = supplier.Notes
-        }));
+            return NotFound(ApiErrorResponse.From("not_found", "Supplier not found",
+                traceId: HttpContext.TraceIdentifier));
+        return Ok(ApiResponse<SupplierDto>.Ok(supplier));
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin,Manager")]
-    public async Task<IActionResult> Create([FromBody] CreateSupplierRequest request, CancellationToken ct)
+    [Authorize(Policy = PermissionKeys.AdminBranches)]
+    public async Task<IActionResult> Create([FromBody] CreateSupplierRequest request)
     {
-        if (!ModelState.IsValid) return BadRequest(ModelState);
+        var userIdClaim = User.FindFirst("uid")?.Value;
+        if (!Guid.TryParse(userIdClaim, out var userId))
+            return Unauthorized();
 
-        var supplier = await _supplierService.CreateAsync(request.Name, request.RegistrationNumber, request.Notes, ct);
-        var dto = new SupplierDto
-        {
-            SupplierId = supplier.SupplierId,
-            Name = supplier.Name,
-            RegistrationNumber = supplier.RegistrationNumber,
-            Notes = supplier.Notes
-        };
+        var supplier = await _supplierService.CreateAsync(request, userId);
         return CreatedAtAction(nameof(GetById), new { id = supplier.SupplierId },
-            ApiResponse<SupplierDto>.Ok(dto, "Supplier created."));
+            ApiResponse<SupplierDto>.Ok(supplier));
     }
 
     [HttpPut("{id:guid}")]
-    [Authorize(Roles = "Admin,Manager")]
-    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateSupplierRequest request, CancellationToken ct)
+    [Authorize(Policy = PermissionKeys.AdminBranches)]
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateSupplierRequest request)
     {
-        if (!ModelState.IsValid) return BadRequest(ModelState);
-
-        var supplier = await _supplierService.UpdateAsync(id, request.Name, request.RegistrationNumber, request.Notes, ct);
+        var supplier = await _supplierService.UpdateAsync(id, request);
         if (supplier is null)
-            return NotFound(ApiErrorResponse.From("not_found", "Supplier not found.", traceId: HttpContext.TraceIdentifier));
-
-        return Ok(ApiResponse<SupplierDto>.Ok(new SupplierDto
-        {
-            SupplierId = supplier.SupplierId,
-            Name = supplier.Name,
-            RegistrationNumber = supplier.RegistrationNumber,
-            Notes = supplier.Notes
-        }));
+            return NotFound(ApiErrorResponse.From("not_found", "Supplier not found",
+                traceId: HttpContext.TraceIdentifier));
+        return Ok(ApiResponse<SupplierDto>.Ok(supplier));
     }
 
     [HttpDelete("{id:guid}")]
-    [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
+    [Authorize(Policy = PermissionKeys.AdminBranches)]
+    public async Task<IActionResult> Delete(Guid id)
     {
-        var deleted = await _supplierService.DeleteAsync(id, ct);
-        if (!deleted)
-            return NotFound(ApiErrorResponse.From("not_found", "Supplier not found.", traceId: HttpContext.TraceIdentifier));
-
-        return Ok(ApiResponse<object>.Ok(null!, "Supplier deleted."));
+        var success = await _supplierService.DeleteAsync(id);
+        if (!success)
+            return BadRequest(ApiErrorResponse.From("bad_request",
+                "Supplier not found or has associated orders",
+                traceId: HttpContext.TraceIdentifier));
+        return NoContent();
     }
 }

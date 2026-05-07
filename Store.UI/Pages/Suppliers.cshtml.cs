@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
-using Store.Models.DTOs.Common;
-using Store.Models.DTOs.Suppliers;
+using Store.Models.DTOs.Procurement;
+using Store.Models.Entities.Contacts;
+using Store.Models.Enums;
 using Store.Models.Interfaces.Services;
 using StoreUI.Services;
 
@@ -8,104 +9,237 @@ namespace StoreUI.Pages;
 
 public class SuppliersModel : SecurePageModel
 {
+    private readonly ISupplierService _supplierService;
     private readonly IApiClientService _apiClient;
 
-    public IReadOnlyList<SupplierDto> Suppliers { get; private set; } = Array.Empty<SupplierDto>();
+    public List<SupplierDto> Suppliers { get; private set; } = new();
 
-    // Create form
-    [BindProperty] public string Name { get; set; } = string.Empty;
-    [BindProperty] public string? RegistrationNumber { get; set; }
-    [BindProperty] public string? Notes { get; set; }
+    // ---- Create Supplier ----
+    [BindProperty] public Guid CreateSupplierId { get; set; }
+    [BindProperty] public string CreateName { get; set; } = string.Empty;
+    [BindProperty] public string? CreateRegistrationNumber { get; set; }
+    [BindProperty] public string? CreateNotes { get; set; }
 
-    // Edit form
+    // Contacts
+    [BindProperty] public List<string> CreateEmails { get; set; } = new();
+    [BindProperty] public List<EmailType> CreateEmailTypes { get; set; } = new();
+    [BindProperty] public List<bool> CreateEmailPrimaries { get; set; } = new();
+
+    [BindProperty] public List<string> CreatePhones { get; set; } = new();
+    [BindProperty] public List<PhoneType> CreatePhoneTypes { get; set; } = new();
+    [BindProperty] public List<bool> CreatePhonePrimaries { get; set; } = new();
+
+    [BindProperty] public List<string> CreateAddressLines1 { get; set; } = new();
+    [BindProperty] public List<string?> CreateAddressLines2 { get; set; } = new();
+    [BindProperty] public List<string> CreateCities { get; set; } = new();
+    [BindProperty] public List<string?> CreateStates { get; set; } = new();
+    [BindProperty] public List<string?> CreatePostalCodes { get; set; } = new();
+    [BindProperty] public List<string> CreateCountries { get; set; } = new();
+    [BindProperty] public List<bool> CreateLocationPrimaries { get; set; } = new();
+
+    // ---- Edit Supplier ----
     [BindProperty] public Guid EditSupplierId { get; set; }
     [BindProperty] public string EditName { get; set; } = string.Empty;
     [BindProperty] public string? EditRegistrationNumber { get; set; }
     [BindProperty] public string? EditNotes { get; set; }
 
+    [BindProperty] public List<string> EditEmails { get; set; } = new();
+    [BindProperty] public List<EmailType> EditEmailTypes { get; set; } = new();
+    [BindProperty] public List<bool> EditEmailPrimaries { get; set; } = new();
+
+    [BindProperty] public List<string> EditPhones { get; set; } = new();
+    [BindProperty] public List<PhoneType> EditPhoneTypes { get; set; } = new();
+    [BindProperty] public List<bool> EditPhonePrimaries { get; set; } = new();
+
+    [BindProperty] public List<string> EditAddressLines1 { get; set; } = new();
+    [BindProperty] public List<string?> EditAddressLines2 { get; set; } = new();
+    [BindProperty] public List<string> EditCities { get; set; } = new();
+    [BindProperty] public List<string?> EditStates { get; set; } = new();
+    [BindProperty] public List<string?> EditPostalCodes { get; set; } = new();
+    [BindProperty] public List<string> EditCountries { get; set; } = new();
+    [BindProperty] public List<bool> EditLocationPrimaries { get; set; } = new();
+
     [TempData] public string? StatusMessage { get; set; }
 
-    public SuppliersModel(IApiClientService apiClient)
+    public IEnumerable<EmailType> EmailTypes { get; } = Enum.GetValues<EmailType>();
+    public IEnumerable<PhoneType> PhoneTypes { get; } = Enum.GetValues<PhoneType>();
+
+    public SuppliersModel(ISupplierService supplierService, IApiClientService apiClient)
     {
+        _supplierService = supplierService;
         _apiClient = apiClient;
     }
 
-    public async Task<IActionResult> OnGetAsync(CancellationToken ct = default)
+    public async Task<IActionResult> OnGetAsync()
     {
-        if (!TryGetSecurityContext(out var token, out var permissions))
+        if (!TryGetSecurityContext(out var token, out _))
             return GoToLogin();
 
         _apiClient.SetToken(token);
-        await LoadDataAsync(ct);
+        Suppliers = await _supplierService.GetAllAsync();
+        ViewData["ActivePage"] = "Suppliers";
         return Page();
     }
 
-    private async Task LoadDataAsync(CancellationToken ct)
-    {
-        var result = await _apiClient.GetAsync<IEnumerable<SupplierDto>>("api/suppliers", ct);
-        Suppliers = result?.ToList() ?? new List<SupplierDto>();
-    }
-
-    public async Task<IActionResult> OnPostCreateAsync(CancellationToken ct = default)
+    public async Task<IActionResult> OnPostCreateAsync()
     {
         if (!TryGetSecurityContext(out var token, out _))
             return GoToLogin();
 
-        if (string.IsNullOrWhiteSpace(Name))
+        _apiClient.SetToken(token);
+
+        var emails = new List<CreateSupplierEmailRequest>();
+        for (int i = 0; i < CreateEmails.Count; i++)
         {
-            StatusMessage = "Error: Supplier name is required.";
-            _apiClient.SetToken(token);
-            await LoadDataAsync(ct);
-            return Page();
+            if (!string.IsNullOrWhiteSpace(CreateEmails[i]))
+            {
+                emails.Add(new CreateSupplierEmailRequest
+                {
+                    Email = CreateEmails[i],
+                    EmailType = CreateEmailTypes.ElementAtOrDefault(i),
+                    IsPrimary = CreateEmailPrimaries.ElementAtOrDefault(i)
+                });
+            }
         }
 
-        _apiClient.SetToken(token);
+        var phones = new List<CreateSupplierPhoneRequest>();
+        for (int i = 0; i < CreatePhones.Count; i++)
+        {
+            if (!string.IsNullOrWhiteSpace(CreatePhones[i]))
+            {
+                phones.Add(new CreateSupplierPhoneRequest
+                {
+                    PhoneNumber = CreatePhones[i],
+                    PhoneType = CreatePhoneTypes.ElementAtOrDefault(i),
+                    IsPrimary = CreatePhonePrimaries.ElementAtOrDefault(i)
+                });
+            }
+        }
+
+        var locations = new List<CreateSupplierLocationRequest>();
+        for (int i = 0; i < CreateAddressLines1.Count; i++)
+        {
+            if (!string.IsNullOrWhiteSpace(CreateAddressLines1[i]))
+            {
+                locations.Add(new CreateSupplierLocationRequest
+                {
+                    AddressLine1 = CreateAddressLines1[i],
+                    AddressLine2 = CreateAddressLines2.ElementAtOrDefault(i),
+                    City = CreateCities.ElementAtOrDefault(i) ?? string.Empty,
+                    State = CreateStates.ElementAtOrDefault(i),
+                    PostalCode = CreatePostalCodes.ElementAtOrDefault(i),
+                    Country = CreateCountries.ElementAtOrDefault(i) ?? string.Empty,
+                    IsPrimary = CreateLocationPrimaries.ElementAtOrDefault(i)
+                });
+            }
+        }
+
         var request = new CreateSupplierRequest
         {
-            Name = Name,
-            RegistrationNumber = RegistrationNumber,
-            Notes = Notes
+            Name = CreateName,
+            RegistrationNumber = CreateRegistrationNumber,
+            Notes = CreateNotes,
+            Emails = emails,
+            Phones = phones,
+            Locations = locations
         };
 
-        var ok = await _apiClient.PostAsync("api/suppliers", request, ct);
-        StatusMessage = ok ? "Supplier created successfully." : "Error: Failed to create supplier.";
+        try
+        {
+            await _supplierService.CreateAsync(request, Guid.Empty);
+            StatusMessage = "Supplier created successfully.";
+        }
+        catch
+        {
+            StatusMessage = "Error: Failed to create supplier.";
+        }
+
         return RedirectToPage();
     }
 
-    public async Task<IActionResult> OnPostEditAsync(CancellationToken ct = default)
+    public async Task<IActionResult> OnPostEditAsync()
     {
         if (!TryGetSecurityContext(out var token, out _))
             return GoToLogin();
 
-        if (string.IsNullOrWhiteSpace(EditName))
+        _apiClient.SetToken(token);
+
+        var emails = new List<CreateSupplierEmailRequest>();
+        for (int i = 0; i < EditEmails.Count; i++)
         {
-            StatusMessage = "Error: Supplier name is required.";
-            _apiClient.SetToken(token);
-            await LoadDataAsync(ct);
-            return Page();
+            if (!string.IsNullOrWhiteSpace(EditEmails[i]))
+            {
+                emails.Add(new CreateSupplierEmailRequest
+                {
+                    Email = EditEmails[i],
+                    EmailType = EditEmailTypes.ElementAtOrDefault(i),
+                    IsPrimary = EditEmailPrimaries.ElementAtOrDefault(i)
+                });
+            }
         }
 
-        _apiClient.SetToken(token);
+        var phones = new List<CreateSupplierPhoneRequest>();
+        for (int i = 0; i < EditPhones.Count; i++)
+        {
+            if (!string.IsNullOrWhiteSpace(EditPhones[i]))
+            {
+                phones.Add(new CreateSupplierPhoneRequest
+                {
+                    PhoneNumber = EditPhones[i],
+                    PhoneType = EditPhoneTypes.ElementAtOrDefault(i),
+                    IsPrimary = EditPhonePrimaries.ElementAtOrDefault(i)
+                });
+            }
+        }
+
+        var locations = new List<CreateSupplierLocationRequest>();
+        for (int i = 0; i < EditAddressLines1.Count; i++)
+        {
+            if (!string.IsNullOrWhiteSpace(EditAddressLines1[i]))
+            {
+                locations.Add(new CreateSupplierLocationRequest
+                {
+                    AddressLine1 = EditAddressLines1[i],
+                    AddressLine2 = EditAddressLines2.ElementAtOrDefault(i),
+                    City = EditCities.ElementAtOrDefault(i) ?? string.Empty,
+                    State = EditStates.ElementAtOrDefault(i),
+                    PostalCode = EditPostalCodes.ElementAtOrDefault(i),
+                    Country = EditCountries.ElementAtOrDefault(i) ?? string.Empty,
+                    IsPrimary = EditLocationPrimaries.ElementAtOrDefault(i)
+                });
+            }
+        }
+
         var request = new UpdateSupplierRequest
         {
             Name = EditName,
             RegistrationNumber = EditRegistrationNumber,
-            Notes = EditNotes
+            Notes = EditNotes,
+            Emails = emails,
+            Phones = phones,
+            Locations = locations
         };
 
-        var updated = await _apiClient.PutAsync<SupplierDto>($"api/suppliers/{EditSupplierId}", request, ct);
-        StatusMessage = updated is not null ? "Supplier updated." : "Error: Update failed.";
+        var result = await _supplierService.UpdateAsync(EditSupplierId, request);
+        StatusMessage = result is not null
+            ? "Supplier updated successfully."
+            : "Error: Supplier not found.";
+
         return RedirectToPage();
     }
 
-    public async Task<IActionResult> OnPostDeleteAsync(Guid id, CancellationToken ct = default)
+    public async Task<IActionResult> OnPostDeleteAsync(Guid supplierId)
     {
         if (!TryGetSecurityContext(out var token, out _))
             return GoToLogin();
 
         _apiClient.SetToken(token);
-        var ok = await _apiClient.DeleteAsync($"api/suppliers/{id}", ct);
-        StatusMessage = ok ? "Supplier deleted." : "Error: Delete failed.";
+
+        var success = await _supplierService.DeleteAsync(supplierId);
+        StatusMessage = success
+            ? "Supplier deleted successfully."
+            : "Error: Could not delete supplier (may have associated orders).";
+
         return RedirectToPage();
     }
 }
