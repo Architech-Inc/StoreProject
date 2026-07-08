@@ -49,6 +49,8 @@ public class CreateInvoiceRequest
 
     [Required, MinLength(1)]
     public IEnumerable<CreateSaleLineRequest> Lines { get; set; } = Enumerable.Empty<CreateSaleLineRequest>();
+
+    public string? CouponCode { get; set; }
 }
 
 public class CreateSaleLineRequest
@@ -80,4 +82,22 @@ public class InvoiceTenderDto
     public decimal Amount { get; set; }
     public string? Reference { get; set; }
     public DateTime DateCreated { get; set; }
+}
+
+public class RefundInvoiceRequest
+{
+    [Required, MinLength(1)]
+    public IEnumerable<RefundLineRequest> Lines { get; set; } = Enumerable.Empty<RefundLineRequest>();
+    
+    [Required]
+    public string ReasonCode { get; set; } = string.Empty;
+}
+
+public class RefundLineRequest
+{
+    [Required]
+    public Guid ItemId { get; set; }
+    
+    [Required, Range(1, int.MaxValue)]
+    public int Quantity { get; set; }
 }

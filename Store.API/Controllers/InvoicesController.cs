@@ -66,6 +66,29 @@ public class InvoicesController : ControllerBase
         return Ok(ApiResponse<object>.Ok(null!, "Invoice voided."));
     }
 
+    [HttpPost("{id:guid}/refund")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> Refund(Guid id, [FromBody] RefundInvoiceRequest request, CancellationToken ct)
+    {
+        var userIdClaim = User.FindFirst("uid")?.Value;
+        Guid.TryParse(userIdClaim, out var userId);
+
+        try
+        {
+            var invoice = await _invoiceService.RefundInvoiceAsync(id, request, userId == Guid.Empty ? null : userId, ct);
+            if (invoice is null) return NotFound(ApiResponse<object>.Fail("Invoice not found or not paid."));
+            return Ok(ApiResponse<InvoiceDto>.Ok(invoice, "Refund processed successfully."));
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Forbid();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ApiResponse<object>.Fail(ex.Message));
+        }
+    }
+
     [HttpPost("{id:guid}/tender")]
     [Authorize(Policy = PermissionKeys.CashWrite)]
     public async Task<IActionResult> AddTender(Guid id, [FromBody] AddTenderRequest request, CancellationToken ct)

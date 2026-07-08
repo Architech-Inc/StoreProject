@@ -9,10 +9,10 @@
     <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
 }
 
-<div class="ops-page">
-    <header>
-        <h1>Invoices</h1>
-        <p>Browse, inspect, and void sales invoices.</p>
+<div class="panel">
+    <header style="margin-bottom: var(--spacing-md);">
+        <h1 style="font-family: var(--fontFamily); font-size: var(--fontSize-heading-lg); font-weight: 600;">Invoices</h1>
+        <p style="color: var(--text-secondary);">Browse, inspect, and void sales invoices.</p>
     </header>
 
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
@@ -23,24 +23,24 @@
     }
 
     <!-- ── Filter bar ──────────────────────────────────────────── -->
-    <form method="get" class="filter-bar">
-        <input type="text" name="search" value="@Model.SearchTerm" placeholder="Customer or ref…" style="max-width:220px;" />
-        <select name="payType">
+    <form method="get" class="filter-bar" style="display: flex; gap: 8px; margin-bottom: 16px;">
+        <input type="text" name="search" value="@Model.SearchTerm" placeholder="Customer or ref…" style="max-width:220px;" class="input-text" />
+        <select name="payType" class="input-text">
             <option value="">All payment types</option>
             @foreach (var pt in Enum.GetValues<PaymentType>())
             {
                 <option value="@pt" selected="@(Model.PayTypeFilter == pt.ToString() ? "selected" : null)">@pt</option>
             }
         </select>
-        <button type="submit">Filter</button>
-        <a href="/Invoices">Clear</a>
+        <button type="submit" class="button-secondary">Filter</button>
+        <a href="/Invoices" class="button-command" style="align-self: center;">Clear</a>
     </form>
 
     <!-- ── Invoice table ──────────────────────────────────────── -->
-    <section class="card">
-        <h2 style="margin-top:0;">
+    <section class="card-resource">
+        <h2 style="font-size: var(--fontSize-heading-sm); margin-top:0;">
             Invoice List
-            <small style="font-weight:400;color:var(--ops-subtle);">@Model.TotalInvoices total</small>
+            <small style="font-weight:400;color:var(--text-secondary);">@Model.TotalInvoices total</small>
         </h2>
 
         @if (!Model.Invoices.Any())
@@ -50,18 +50,18 @@
         else
         {
             <div style="overflow-x:auto;">
-                <table>
-                    <thead>
+                <table class="table">
+                    <thead style="background-color: var(--surface);">
                         <tr>
-                            <th>Date</th>
-                            <th>Customer</th>
-                            <th>Processed by</th>
-                            <th>Payment</th>
-                            <th style="text-align:right;">Total (XAF)</th>
-                            <th style="text-align:right;">Tendered</th>
-                            <th style="text-align:right;">Outstanding</th>
-                            <th>Status</th>
-                            <th></th>
+                            <th style="padding: 0 8px;">Date</th>
+                            <th style="padding: 0 8px;">Customer</th>
+                            <th style="padding: 0 8px;">Processed by</th>
+                            <th style="padding: 0 8px;">Payment</th>
+                            <th style="text-align:right; padding: 0 8px;">Total (XAF)</th>
+                            <th style="text-align:right; padding: 0 8px;">Tendered</th>
+                            <th style="text-align:right; padding: 0 8px;">Outstanding</th>
+                            <th style="padding: 0 8px;">Status</th>
+                            <th style="padding: 0 8px;"></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -78,29 +78,29 @@
                                 <td>
                                     @if (inv.IsPaid)
                                     {
-                                        <span class="badge badge-green">Paid</span>
+                                        <span class="badge-success">Paid</span>
                                     }
                                     else if (inv.OutstandingBalance > 0)
                                     {
-                                        <span class="badge badge-yellow">Unpaid</span>
+                                        <span class="badge-critical" style="background-color: var(--accent-yellow); color: var(--text-primary);">Unpaid</span>
                                     }
                                     else
                                     {
-                                        <span class="badge badge-red">Voided</span>
+                                        <span class="badge-critical">Voided</span>
                                     }
                                 </td>
                                 <td style="display:flex;gap:4px;flex-wrap:nowrap;">
-                                    <button type="button" onclick="openDetail('@inv.InvoiceId')">Details</button>
+                                    <button type="button" class="button-command" onclick="openDetail('@inv.InvoiceId')">Details</button>
                                     @if (!inv.IsPaid && inv.OutstandingBalance > 0)
                                     {
-                                        <button type="button" class="btn-primary" onclick="openPay('@inv.InvoiceId', @inv.OutstandingBalance)">Pay</button>
+                                        <button type="button" class="button-primary" onclick="openPay('@inv.InvoiceId', @inv.OutstandingBalance)">Pay</button>
                                     }
                                     @if (inv.IsPaid)
                                     {
                                         <form method="post" asp-page-handler="Void" style="margin:0;">
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="invoiceId" value="@inv.InvoiceId" />
-                                            <button type="submit" class="danger" onclick="return confirm('Void invoice @inv.DateCreated.ToString("yyyy-MM-dd") for @inv.TotalAmount.ToString("N0") XAF?')">Void</button>
+                                            <button type="submit" class="button-command" style="color: var(--accent-red);" onclick="return confirm('Void invoice @inv.DateCreated.ToString("yyyy-MM-dd") for @inv.TotalAmount.ToString("N0") XAF?')">Void</button>
                                         </form>
                                     }
                                 </td>
@@ -162,16 +162,16 @@
             </div>
             <div class="form-group">
                 <label>Amount (XAF)</label>
-                <input type="number" id="payAmount" class="form-control" min="0.01" step="0.01" required />
+                <input type="number" id="payAmount" class="input-text" style="width: 100%;" min="0.01" step="0.01" required />
             </div>
             <div class="form-group">
                 <label>Reference (optional)</label>
-                <input type="text" id="payReference" class="form-control" />
+                <input type="text" id="payReference" class="input-text" style="width: 100%;" />
             </div>
-            <p id="payError" style="color:var(--ops-danger);margin:4px 0;"></p>
-            <div class="modal-actions">
-                <button type="button" onclick="closePay()">Cancel</button>
-                <button type="submit" id="payBtn" class="btn-primary">Record Payment</button>
+            <p id="payError" style="color:var(--accent-red);margin:4px 0;"></p>
+            <div class="modal-actions" style="margin-top: 16px;">
+                <button type="button" class="button-secondary" onclick="closePay()">Cancel</button>
+                <button type="submit" id="payBtn" class="button-primary">Record Payment</button>
             </div>
         </form>
     </div>

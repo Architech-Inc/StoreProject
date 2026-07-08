@@ -9,10 +9,10 @@
     <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
 }
 
-<div class="ops-page">
-    <header>
-        <h1>Discount Rules</h1>
-        <p>Manage item, category, and coupon-based discount rules.</p>
+<div class="panel">
+    <header style="margin-bottom: var(--spacing-md);">
+        <h1 style="font-family: var(--fontFamily); font-size: var(--fontSize-heading-lg); font-weight: 600;">Discount Rules</h1>
+        <p style="color: var(--text-secondary);">Manage item, category, and coupon-based discount rules.</p>
     </header>
 
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
@@ -25,36 +25,36 @@
         <label style="display:flex;align-items:center;gap:6px;font-size:.85rem;">
             <input type="checkbox" name="activeOnly" value="true" @(Model.FilterActiveOnly ? "checked" : "") /> Active only
         </label>
-        <button type="submit" class="btn-sm">Filter</button>
+        <button type="submit" class="button-secondary">Filter</button>
     </form>
 
-    <section class="card">
+    <section class="card-resource">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-            <h2 style="margin:0;">Discounts <small style="font-weight:400;color:var(--ops-subtle);">@Model.Discounts.Count total</small></h2>
-            <button type="button" onclick="openCreate()">+ New Discount</button>
+            <h2 style="font-size: var(--fontSize-heading-sm); margin:0;">Discounts <small style="font-weight:400;color:var(--text-secondary);">@Model.Discounts.Count total</small></h2>
+            <button type="button" class="button-primary" onclick="openCreate()">+ New Discount</button>
         </div>
 
         @if (!Model.Discounts.Any())
         {
-            <p style="color:var(--ops-subtle);padding:12px 0;">No discounts defined yet.</p>
+            <p style="color:var(--text-secondary);padding:12px 0;">No discounts defined yet.</p>
         }
         else
         {
             <div style="overflow-x:auto;">
-                <table>
-                    <thead>
+                <table class="table">
+                    <thead style="background-color: var(--surface);">
                         <tr>
-                            <th>Name</th>
-                            <th>Type</th>
-                            <th>Value</th>
-                            <th>Applies To</th>
-                            <th>Min Qty</th>
-                            <th>Segment</th>
-                            <th>Coupon</th>
-                            <th>Uses</th>
-                            <th>Valid</th>
-                            <th>Status</th>
-                            <th></th>
+                            <th style="padding: 0 8px;">Name</th>
+                            <th style="padding: 0 8px;">Type</th>
+                            <th style="padding: 0 8px;">Value</th>
+                            <th style="padding: 0 8px;">Applies To</th>
+                            <th style="padding: 0 8px;">Min Qty</th>
+                            <th style="padding: 0 8px;">Segment</th>
+                            <th style="padding: 0 8px;">Coupon</th>
+                            <th style="padding: 0 8px;">Uses</th>
+                            <th style="padding: 0 8px;">Valid</th>
+                            <th style="padding: 0 8px;">Status</th>
+                            <th style="padding: 0 8px;"></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -88,16 +88,16 @@
                                 </td>
                                 <td>
                                     @if (d.IsCurrentlyValid)
-                                    { <span class="badge badge-success">Active</span> }
+                                    { <span class="badge-success">Active</span> }
                                     else if (!d.IsActive)
-                                    { <span class="badge badge-neutral">Inactive</span> }
+                                    { <span class="badge-critical" style="background-color: var(--surface); color: var(--text-secondary);">Inactive</span> }
                                     else
-                                    { <span class="badge badge-warning">Expired</span> }
+                                    { <span class="badge-critical" style="background-color: var(--accent-yellow); color: var(--text-primary);">Expired</span> }
                                 </td>
-                                <td style="white-space:nowrap;">
-                                    <button type="button" class="btn-icon" title="Edit"
-                                        onclick="openEdit(@d.DiscountId, @Html.Raw(System.Text.Json.JsonSerializer.Serialize(d)))">✏️</button>
-                                    <button type="button" class="btn-icon btn-danger" title="Delete"
+                                <td style="white-space:nowrap; display: flex; gap: 4px;">
+                                    <button type="button" class="button-command" title="Edit"
+                                        onclick="openEdit(@d.DiscountId, @Html.Raw(System.Text.Json.JsonSerializer.Serialize(d)))">✏️ Edit</button>
+                                    <button type="button" class="button-command" style="color: var(--accent-red);" title="Delete"
                                         onclick="confirmDelete(@d.DiscountId, '@System.Web.HttpUtility.JavaScriptStringEncode(d.Name)')">🗑️</button>
                                 </td>
                             </tr>

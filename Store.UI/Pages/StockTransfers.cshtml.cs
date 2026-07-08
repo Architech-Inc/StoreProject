@@ -63,6 +63,12 @@ public class StockTransfersModel : SecurePageModel
         if (!TryGetSecurityContext(out var token, out _))
             return GoToLogin();
 
+        if (!ModelState.IsValid)
+        {
+            StatusMessage = "Error: Invalid input data. Please check your form values.";
+            return RedirectToPage();
+        }
+
         _apiClient.SetToken(token);
 
         var req = new CreateTransferRequest
@@ -73,8 +79,15 @@ public class StockTransfersModel : SecurePageModel
             Items = TransferItems
         };
 
-        var dto = await _transferService.CreateAsync(req, Guid.Empty);
-        StatusMessage = $"Transfer #{dto.StockTransferId} submitted.";
+        try
+        {
+            var dto = await _transferService.CreateAsync(req, Guid.Empty);
+            StatusMessage = $"Transfer #{dto.StockTransferId} submitted.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: {ex.Message}";
+        }
         return RedirectToPage();
     }
 

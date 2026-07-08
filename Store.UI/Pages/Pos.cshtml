@@ -100,6 +100,11 @@
                 </div>
 
                 <div class="field-row">
+                    <label for="couponCode">Coupon Code (optional)</label>
+                    <input type="text" id="couponCode" placeholder="Enter coupon code" />
+                </div>
+
+                <div class="field-row">
                     <div class="tender-head">
                         <label>Payment</label>
                         <button type="button" class="btn btn-secondary tender-add-btn" id="addTenderLineBtn">+ Add</button>
@@ -188,6 +193,7 @@
     const splitNoteRow = document.getElementById('splitNoteRow');
     const splitNoteText = document.getElementById('splitNoteText');
     const saleNotes = document.getElementById('saleNotes');
+    const couponCodeInput = document.getElementById('couponCode');
     const checkoutMessage = document.getElementById('checkoutMessage');
 
     const PAYMENT_LABELS = ['Cash', 'Card', 'Bank Transfer', 'Mobile Money', 'Cheque', 'Credit'];
@@ -536,6 +542,7 @@
         tenderLinesContainer.innerHTML = '';
         addTenderLine(0, 0);
         saleNotes.value = '';
+        couponCodeInput.value = '';
         customerSelect.value = '';
         renderCart();
         setMessage('Sale suspended. You can resume it from the list.');
@@ -645,6 +652,7 @@
 
         const payload = {
             customerId: customerSelect.value || null,
+            couponCode: couponCodeInput.value || null,
             paymentType: getDominantPaymentType(),
             amountTendered: tendered,
             notes: saleNotes.value || null,
@@ -687,6 +695,7 @@
             enqueueOfflineSale(payload, saleLines);
             cart.clear();
             saleNotes.value = '';
+            couponCodeInput.value = '';
             tenderLinesContainer.innerHTML = '';
             addTenderLine(0, 0);
             renderCart();

@@ -9,10 +9,10 @@
     <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
 }
 
-<div class="ops-page">
-    <header>
-        <h1>Stock Transfers</h1>
-        <p>Request, approve, dispatch, and receive inter-branch stock transfers.</p>
+<div class="panel">
+    <header style="margin-bottom: var(--spacing-md);">
+        <h1 style="font-family: var(--fontFamily); font-size: var(--fontSize-heading-lg); font-weight: 600;">Stock Transfers</h1>
+        <p style="color: var(--text-secondary);">Request, approve, dispatch, and receive inter-branch stock transfers.</p>
     </header>
 
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
@@ -22,7 +22,7 @@
 
     <!-- Filter bar -->
     <form method="get" style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
-        <select name="status" style="min-width:160px;">
+        <select name="status" class="input-text" style="min-width:160px;">
             <option value="" selected="@(Model.FilterStatus == null)">All Statuses</option>
             <option value="Requested" selected="@(Model.FilterStatus == "Requested")">Requested</option>
             <option value="Approved" selected="@(Model.FilterStatus == "Approved")">Approved</option>
@@ -30,33 +30,33 @@
             <option value="Received" selected="@(Model.FilterStatus == "Received")">Received</option>
             <option value="Cancelled" selected="@(Model.FilterStatus == "Cancelled")">Cancelled</option>
         </select>
-        <button type="submit" class="btn-sm">Filter</button>
+        <button type="submit" class="button-secondary">Filter</button>
     </form>
 
-    <section class="card">
+    <section class="card-resource">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-            <h2 style="margin:0;">Transfers <small style="font-weight:400;color:var(--ops-subtle);">@Model.Transfers.Count total</small></h2>
-            <button type="button" onclick="openCreate()">+ New Transfer</button>
+            <h2 style="font-size: var(--fontSize-heading-sm); margin:0;">Transfers <small style="font-weight:400;color:var(--text-secondary);">@Model.Transfers.Count total</small></h2>
+            <button type="button" class="button-primary" onclick="openCreate()">+ New Transfer</button>
         </div>
 
         @if (!Model.Transfers.Any())
         {
-            <p style="color:var(--ops-subtle);padding:12px 0;">No transfers found.</p>
+            <p style="color:var(--text-secondary);padding:12px 0;">No transfers found.</p>
         }
         else
         {
             <div style="overflow-x:auto;">
-                <table>
-                    <thead>
+                <table class="table">
+                    <thead style="background-color: var(--surface);">
                         <tr>
-                            <th>#</th>
-                            <th>From</th>
-                            <th>To</th>
-                            <th>Items</th>
-                            <th>Requested By</th>
-                            <th>Date</th>
-                            <th>Status</th>
-                            <th></th>
+                            <th style="padding: 0 8px;">#</th>
+                            <th style="padding: 0 8px;">From</th>
+                            <th style="padding: 0 8px;">To</th>
+                            <th style="padding: 0 8px;">Items</th>
+                            <th style="padding: 0 8px;">Requested By</th>
+                            <th style="padding: 0 8px;">Date</th>
+                            <th style="padding: 0 8px;">Status</th>
+                            <th style="padding: 0 8px;"></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -72,34 +72,35 @@
                                 <td>
                                     @{
                                         var badgeClass = t.Status switch {
-                                            "Requested" => "badge-warning",
-                                            "Approved" => "badge-info",
-                                            "Dispatched" => "badge-info",
+                                            "Requested" => "badge-critical\" style=\"background-color: var(--accent-yellow); color: var(--text-primary);",
+                                            "Approved" => "badge-success\" style=\"background-color: var(--primary);",
+                                            "Dispatched" => "badge-success\" style=\"background-color: var(--primary-light); color: var(--primary-dark);",
                                             "Received" => "badge-success",
-                                            "Cancelled" => "badge-danger",
-                                            _ => "badge-neutral"
+                                            "Cancelled" => "badge-critical",
+                                            _ => "badge-critical\" style=\"background-color: var(--surface); color: var(--text-secondary);"
                                         };
                                     }
-                                    <span class="badge @badgeClass">@t.Status</span>
+                                    <span class="badge @Html.Raw(badgeClass)">@t.Status</span>
                                 </td>
-                                <td style="white-space:nowrap;">
-                                    <button type="button" class="btn-sm" onclick="viewDetails(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(t)))">View</button>
+                                <td style="white-space:nowrap; display: flex; gap: 4px;">
+                                    @{ var transferJson = System.Text.Json.JsonSerializer.Serialize(t, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }); }
+                                    <button type="button" class="button-command" data-transfer="@transferJson" onclick="viewDetails(this)">View</button>
                                     @if (t.Status == "Requested")
                                     {
-                                        <button type="button" class="btn-sm" onclick="openApprove(@t.StockTransferId)">Approve</button>
-                                        <button type="button" class="btn-sm btn-danger" onclick="openReject(@t.StockTransferId)">Reject</button>
+                                        <button type="button" class="button-primary" onclick="openApprove(@t.StockTransferId)">Approve</button>
+                                        <button type="button" class="button-secondary" style="color: var(--accent-red);" onclick="openReject(@t.StockTransferId)">Reject</button>
                                     }
                                     @if (t.Status == "Approved")
                                     {
-                                        <button type="button" class="btn-sm" onclick="openDispatch(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(t)))">Dispatch</button>
+                                        <button type="button" class="button-primary" data-transfer="@transferJson" onclick="openDispatch(this)">Dispatch</button>
                                     }
                                     @if (t.Status == "Dispatched")
                                     {
-                                        <button type="button" class="btn-sm" onclick="openReceive(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(t)))">Receive</button>
+                                        <button type="button" class="button-primary" data-transfer="@transferJson" onclick="openReceive(this)">Receive</button>
                                     }
                                     @if (t.Status != "Received" && t.Status != "Cancelled")
                                     {
-                                        <button type="button" class="btn-icon btn-danger" title="Cancel" onclick="openCancel(@t.StockTransferId)">✕</button>
+                                        <button type="button" class="button-command" style="color: var(--accent-red);" title="Cancel" onclick="openCancel(@t.StockTransferId)">✕</button>
                                     }
                                 </td>
                             </tr>
@@ -287,7 +288,8 @@ function removeLine(btn) {
     if (document.querySelectorAll('.item-line').length > 1) line.remove();
 }
 
-function viewDetails(t) {
+function viewDetails(btn) {
+    const t = JSON.parse(btn.getAttribute('data-transfer'));
     let html = `<dl style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:.9rem;">
         <dt>From</dt><dd>${t.fromBranchName}</dd>
         <dt>To</dt><dd>${t.toBranchName}</dd>
@@ -318,7 +320,8 @@ function openReject(id) {
     document.getElementById('rejectModal').style.display = 'flex';
 }
 
-function openDispatch(t) {
+function openDispatch(btn) {
+    const t = JSON.parse(btn.getAttribute('data-transfer'));
     document.getElementById('dispatchTransferId').value = t.stockTransferId;
     document.getElementById('dispatchIdLabel').textContent = t.stockTransferId;
     let html = '';
@@ -332,7 +335,8 @@ function openDispatch(t) {
     document.getElementById('dispatchModal').style.display = 'flex';
 }
 
-function openReceive(t) {
+function openReceive(btn) {
+    const t = JSON.parse(btn.getAttribute('data-transfer'));
     document.getElementById('receiveTransferId').value = t.stockTransferId;
     document.getElementById('receiveIdLabel').textContent = t.stockTransferId;
     let html = '';

@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+
 using Store.Models.DTOs.Common;
+using Store.Models.DTOs.Discounts;
 using Store.Models.DTOs.Invoices;
 using Store.Models.Entities;
 using Store.Models.Enums;
@@ -12,8 +14,13 @@ namespace Store.DbServices.Services;
 public class InvoiceService : IInvoiceService
 {
     private readonly IUnitOfWork _uow;
+    private readonly IDiscountService _discountService;
 
-    public InvoiceService(IUnitOfWork uow) => _uow = uow;
+    public InvoiceService(IUnitOfWork uow, IDiscountService discountService)
+    {
+        _uow = uow;
+        _discountService = discountService;
+    }
 
     public async Task<InvoiceDto?> GetByIdAsync(Guid invoiceId, CancellationToken ct = default)
     {
@@ -59,7 +66,7 @@ public class InvoiceService : IInvoiceService
                 PaymentType = request.PaymentType,
                 AmountTendered = request.AmountTendered,
                 Notes = request.Notes?.Trim(),
-                IsPaid = true,
+                IsPaid = false,
                 TotalAmount = 0,
                 ChangeGiven = 0
             };
@@ -106,7 +113,27 @@ public class InvoiceService : IInvoiceService
                 _uow.Repository<Item>().Update(item);
             }
 
+            DiscountDto? appliedCoupon = null;
+            if (!string.IsNullOrWhiteSpace(request.CouponCode))
+            {
+                appliedCoupon = await _discountService.ValidateCouponAsync(request.CouponCode);
+                if (appliedCoupon == null)
+                    throw new InvalidOperationException($"Coupon '{request.CouponCode}' is invalid or expired.");
+            }
+
+            if (appliedCoupon != null)
+            {
+                if (appliedCoupon.DiscountType == "Percentage")
+                    total -= Math.Round(total * (appliedCoupon.Percentage / 100m), 2);
+                else if (appliedCoupon.DiscountType == "Fixed")
+                    total -= appliedCoupon.FixedAmount.GetValueOrDefault();
+                    
+                total = Math.Max(0, total);
+                await _discountService.IncrementUsageAsync(appliedCoupon.DiscountId);
+            }
+
             invoice.TotalAmount = total;
+            invoice.IsPaid = total > 0 && request.AmountTendered >= total;
             invoice.ChangeGiven = Math.Max(0, request.AmountTendered - total);
 
             await _uow.Repository<Invoice>().AddAsync(invoice, ct);
@@ -131,6 +158,13 @@ public class InvoiceService : IInvoiceService
         if (invoice is null) return false;
         if (!invoice.IsPaid) return false;  // already voided / not paid
 
+        if (actingUserId.HasValue && invoice.BranchId.HasValue)
+        {
+            var hasAccess = await _uow.Repository<UserBranchRole>().Query()
+                .AnyAsync(ubr => ubr.UserId == actingUserId.Value && ubr.BranchId == invoice.BranchId.Value, ct);
+            if (!hasAccess) throw new UnauthorizedAccessException("You do not have access to void invoices at this branch.");
+        }
+
         await _uow.BeginTransactionAsync(ct);
         try
         {
@@ -151,6 +185,69 @@ public class InvoiceService : IInvoiceService
             await _uow.SaveChangesAsync(ct);
             await _uow.CommitTransactionAsync(ct);
             return true;
+        }
+        catch
+        {
+            await _uow.RollbackTransactionAsync(ct);
+            throw;
+        }
+    }
+
+    public async Task<InvoiceDto?> RefundInvoiceAsync(Guid invoiceId, RefundInvoiceRequest request, Guid? actingUserId, CancellationToken ct = default)
+    {
+        var invoice = await _uow.Repository<Invoice>().Query()
+            .Include(i => i.Sales)
+            .FirstOrDefaultAsync(i => i.InvoiceId == invoiceId, ct);
+
+        if (invoice is null || !invoice.IsPaid) return null;
+
+        if (actingUserId.HasValue && invoice.BranchId.HasValue)
+        {
+            var hasAccess = await _uow.Repository<UserBranchRole>().Query()
+                .AnyAsync(ubr => ubr.UserId == actingUserId.Value && ubr.BranchId == invoice.BranchId.Value, ct);
+            if (!hasAccess) throw new UnauthorizedAccessException("You do not have access to refund invoices at this branch.");
+        }
+
+        await _uow.BeginTransactionAsync(ct);
+        try
+        {
+            foreach (var refundLine in request.Lines)
+            {
+                var sale = invoice.Sales.FirstOrDefault(s => s.ItemId == refundLine.ItemId);
+                if (sale is null || sale.Quantity < refundLine.Quantity)
+                    throw new InvalidOperationException($"Cannot refund quantity {refundLine.Quantity} for item {refundLine.ItemId}.");
+
+                var item = await _uow.Repository<Item>().GetByIdAsync(refundLine.ItemId, ct);
+                if (item is not null)
+                {
+                    item.InStock += refundLine.Quantity;
+                    _uow.Repository<Item>().Update(item);
+                }
+
+                // Add a negative sale line to reflect the refund
+                var negativeSale = new Sale
+                {
+                    SaleId = Guid.NewGuid(),
+                    InvoiceId = invoice.InvoiceId,
+                    ItemId = item!.ItemId,
+                    UserId = actingUserId,
+                    ItemName = $"{item.Name} (Refund - {request.ReasonCode})",
+                    UnitAbbreviation = item.Unit?.Abbreviation,
+                    UnitPrice = sale.UnitPrice,
+                    DiscountAmount = sale.DiscountAmount,
+                    Quantity = -refundLine.Quantity,
+                    LineTotal = -(Math.Round((sale.UnitPrice - (sale.DiscountAmount ?? 0)) * refundLine.Quantity, 2))
+                };
+
+                await _uow.Repository<Sale>().AddAsync(negativeSale, ct);
+                invoice.TotalAmount += negativeSale.LineTotal;
+            }
+
+            _uow.Repository<Invoice>().Update(invoice);
+            await _uow.SaveChangesAsync(ct);
+            await _uow.CommitTransactionAsync(ct);
+
+            return await GetByIdAsync(invoiceId, ct);
         }
         catch
         {

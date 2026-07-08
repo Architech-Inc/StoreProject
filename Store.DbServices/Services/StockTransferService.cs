@@ -77,6 +77,10 @@ public class StockTransferService : IStockTransferService
         if (transfer is null || transfer.Status != StockTransferStatus.Requested)
             return null;
 
+        var hasAccess = await _uow.Repository<UserBranchRole>().Query()
+            .AnyAsync(ubr => ubr.UserId == approvedByUserId && (ubr.BranchId == transfer.FromBranchId || ubr.BranchId == transfer.ToBranchId));
+        if (!hasAccess) throw new UnauthorizedAccessException("You do not have access to approve transfers for this branch.");
+
         transfer.Status = StockTransferStatus.Approved;
         transfer.ApprovedByUserId = approvedByUserId;
         transfer.ApprovedAt = DateTime.UtcNow;
@@ -112,6 +116,10 @@ public class StockTransferService : IStockTransferService
         if (transfer is null || transfer.Status != StockTransferStatus.Approved)
             return null;
 
+        var hasAccess = await _uow.Repository<UserBranchRole>().Query()
+            .AnyAsync(ubr => ubr.UserId == dispatchedByUserId && ubr.BranchId == transfer.FromBranchId);
+        if (!hasAccess) throw new UnauthorizedAccessException("You do not have access to dispatch transfers from this branch.");
+
         foreach (var line in request.Items)
         {
             var item = transfer.Items.FirstOrDefault(i => i.StockTransferItemId == line.StockTransferItemId);
@@ -136,6 +144,10 @@ public class StockTransferService : IStockTransferService
 
         if (transfer is null || transfer.Status != StockTransferStatus.Dispatched)
             return null;
+
+        var hasAccess = await _uow.Repository<UserBranchRole>().Query()
+            .AnyAsync(ubr => ubr.UserId == receivedByUserId && ubr.BranchId == transfer.ToBranchId);
+        if (!hasAccess) throw new UnauthorizedAccessException("You do not have access to receive transfers at this branch.");
 
         foreach (var line in request.Items)
         {

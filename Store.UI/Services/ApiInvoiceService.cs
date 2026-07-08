@@ -45,4 +45,10 @@ public class ApiInvoiceService : IInvoiceService
         var result = await _client.PostAsync<InvoiceTenderDto>($"/api/invoices/{invoiceId}/tender", request, ct);
         return result ?? throw new InvalidOperationException("Failed to record tender.");
     }
+
+    public async Task<InvoiceDto?> RefundInvoiceAsync(Guid invoiceId, RefundInvoiceRequest request, Guid? actingUserId, CancellationToken ct = default)
+    {
+        var result = await _client.PostAsync<InvoiceDto>($"/api/invoices/{invoiceId}/refund", request, ct);
+        return result ?? throw new InvalidOperationException("Failed to refund invoice.");
+    }
 }
