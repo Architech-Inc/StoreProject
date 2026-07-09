@@ -60,55 +60,58 @@ public class StoreOperationsService : IStoreOperationsService
             throw new InvalidOperationException("Goods receipt requires at least one line.");
         }
 
-        await _uow.BeginTransactionAsync(ct);
-        try
+        return await _uow.ExecuteStrategyAsync(async () =>
         {
-            foreach (var line in request.Lines)
+            await _uow.BeginTransactionAsync(ct);
+            try
             {
-                var item = await _uow.Repository<Item>().GetByIdAsync(line.ItemId, ct)
-                    ?? throw new InvalidOperationException($"Item '{line.ItemId}' not found.");
-
-                var before = item.InStock;
-                item.InStock += line.Quantity;
-                _uow.Repository<Item>().Update(item);
-
-                var movement = new StockMovement
+                foreach (var line in request.Lines)
                 {
-                    ItemId = item.ItemId,
-                    ItemsOrderId = request.ItemsOrderId,
-                    PerformedByUserId = actingUserId,
-                    MovementType = StockMovementType.Receive,
-                    QuantityDelta = line.Quantity,
-                    StockBefore = before,
-                    StockAfter = item.InStock,
-                    UnitCost = line.UnitCost ?? item.CostPrice,
-                    UnitPrice = item.UnitPrice,
-                    Reason = string.IsNullOrWhiteSpace(request.Notes) ? "Goods receipt" : request.Notes.Trim(),
-                    ReferenceCode = request.ReferenceCode
+                    var item = await _uow.Repository<Item>().GetByIdAsync(line.ItemId, ct)
+                        ?? throw new InvalidOperationException($"Item '{line.ItemId}' not found.");
+
+                    var before = item.InStock;
+                    item.InStock += line.Quantity;
+                    _uow.Repository<Item>().Update(item);
+
+                    var movement = new StockMovement
+                    {
+                        ItemId = item.ItemId,
+                        ItemsOrderId = request.ItemsOrderId,
+                        PerformedByUserId = actingUserId,
+                        MovementType = StockMovementType.Receive,
+                        QuantityDelta = line.Quantity,
+                        StockBefore = before,
+                        StockAfter = item.InStock,
+                        UnitCost = line.UnitCost ?? item.CostPrice,
+                        UnitPrice = item.UnitPrice,
+                        Reason = string.IsNullOrWhiteSpace(request.Notes) ? "Goods receipt" : request.Notes.Trim(),
+                        ReferenceCode = request.ReferenceCode
+                    };
+
+                    await _uow.Repository<StockMovement>().AddAsync(movement, ct);
+
+                    await AddChangeLogAsync(actingUserId, "Item", item.ItemId.ToString(), ChangeLogAction.Updated,
+                        null,
+                        $"Goods receipt +{line.Quantity}. Before={before}, After={item.InStock}, Ref={request.ReferenceCode}",
+                        ct);
+                }
+
+                await _uow.SaveChangesAsync(ct);
+                await _uow.CommitTransactionAsync(ct);
+
+                return new InventoryOperationResultDto
+                {
+                    Success = true,
+                    Message = "Goods receipt processed successfully."
                 };
-
-                await _uow.Repository<StockMovement>().AddAsync(movement, ct);
-
-                await AddChangeLogAsync(actingUserId, "Item", item.ItemId.ToString(), ChangeLogAction.Updated,
-                    null,
-                    $"Goods receipt +{line.Quantity}. Before={before}, After={item.InStock}, Ref={request.ReferenceCode}",
-                    ct);
             }
-
-            await _uow.SaveChangesAsync(ct);
-            await _uow.CommitTransactionAsync(ct);
-
-            return new InventoryOperationResultDto
+            catch
             {
-                Success = true,
-                Message = "Goods receipt processed successfully."
-            };
-        }
-        catch
-        {
-            await _uow.RollbackTransactionAsync(ct);
-            throw;
-        }
+                await _uow.RollbackTransactionAsync(ct);
+                throw;
+            }
+        });
     }
 
     public async Task<InventoryOperationResultDto> ProcessReturnAsync(StockReturnRequest request, Guid? actingUserId, CancellationToken ct = default)

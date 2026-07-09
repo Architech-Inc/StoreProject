@@ -51,6 +51,18 @@ public class UnitOfWork : IUnitOfWork
         _transaction = null;
     }
 
+    public async Task ExecuteStrategyAsync(Func<Task> operation)
+    {
+        var strategy = _context.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(operation);
+    }
+
+    public async Task<T> ExecuteStrategyAsync<T>(Func<Task<T>> operation)
+    {
+        var strategy = _context.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(operation);
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (_transaction is not null)

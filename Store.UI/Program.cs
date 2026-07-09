@@ -11,6 +11,7 @@ builder.Services.AddAntiforgery(options =>
     options.Cookie.HttpOnly = true;
     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
     options.Cookie.SameSite = SameSiteMode.Strict;
+    options.HeaderName = "RequestVerificationToken";
 });
 builder.Services.AddSession(options =>
 {

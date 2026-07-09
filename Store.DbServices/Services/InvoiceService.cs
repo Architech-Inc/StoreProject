@@ -55,98 +55,101 @@ public class InvoiceService : IInvoiceService
 
     public async Task<InvoiceDto> CreateInvoiceAsync(CreateInvoiceRequest request, Guid? actingUserId, CancellationToken ct = default)
     {
-        await _uow.BeginTransactionAsync(ct);
-        try
+        return await _uow.ExecuteStrategyAsync(async () =>
         {
-            var invoice = new Invoice
+            await _uow.BeginTransactionAsync(ct);
+            try
             {
-                InvoiceId = Guid.NewGuid(),
-                UserId = actingUserId,
-                CustomerId = request.CustomerId,
-                PaymentType = request.PaymentType,
-                AmountTendered = request.AmountTendered,
-                Notes = request.Notes?.Trim(),
-                IsPaid = false,
-                TotalAmount = 0,
-                ChangeGiven = 0
-            };
-
-            decimal total = 0;
-
-            foreach (var line in request.Lines)
-            {
-                var item = await _uow.Repository<Item>().Query()
-                    .Include(i => i.Unit)
-                    .Include(i => i.Discount)
-                    .FirstOrDefaultAsync(i => i.ItemId == line.ItemId, ct)
-                    ?? throw new InvalidOperationException($"Item {line.ItemId} not found.");
-
-                if (item.InStock < line.Quantity)
-                    throw new InvalidOperationException($"Insufficient stock for '{item.Name}'. Available: {item.InStock}.");
-
-                var discountAmount = item.Discount?.IsActive == true
-                    ? Math.Round(item.UnitPrice * (item.Discount.Percentage / 100m), 4)
-                    : 0m;
-
-                var effectivePrice = item.UnitPrice - discountAmount;
-                var lineTotal = Math.Round(effectivePrice * line.Quantity, 2);
-                total += lineTotal;
-
-                var sale = new Sale
+                var invoice = new Invoice
                 {
-                    SaleId = Guid.NewGuid(),
-                    InvoiceId = invoice.InvoiceId,
-                    ItemId = item.ItemId,
+                    InvoiceId = Guid.NewGuid(),
                     UserId = actingUserId,
-                    ItemName = item.Name,
-                    UnitAbbreviation = item.Unit?.Abbreviation,
-                    UnitPrice = item.UnitPrice,
-                    DiscountAmount = discountAmount,
-                    Quantity = line.Quantity,
-                    LineTotal = lineTotal
+                    CustomerId = request.CustomerId,
+                    PaymentType = request.PaymentType,
+                    AmountTendered = request.AmountTendered,
+                    Notes = request.Notes?.Trim(),
+                    IsPaid = false,
+                    TotalAmount = 0,
+                    ChangeGiven = 0
                 };
 
-                await _uow.Repository<Sale>().AddAsync(sale, ct);
+                decimal total = 0;
 
-                // Deduct stock
-                item.InStock -= line.Quantity;
-                _uow.Repository<Item>().Update(item);
+                foreach (var line in request.Lines)
+                {
+                    var item = await _uow.Repository<Item>().Query()
+                        .Include(i => i.Unit)
+                        .Include(i => i.Discount)
+                        .FirstOrDefaultAsync(i => i.ItemId == line.ItemId, ct)
+                        ?? throw new InvalidOperationException($"Item {line.ItemId} not found.");
+
+                    if (item.InStock < line.Quantity)
+                        throw new InvalidOperationException($"Insufficient stock for '{item.Name}'. Available: {item.InStock}.");
+
+                    var discountAmount = item.Discount?.IsActive == true
+                        ? Math.Round(item.UnitPrice * (item.Discount.Percentage / 100m), 4)
+                        : 0m;
+
+                    var effectivePrice = item.UnitPrice - discountAmount;
+                    var lineTotal = Math.Round(effectivePrice * line.Quantity, 2);
+                    total += lineTotal;
+
+                    var sale = new Sale
+                    {
+                        SaleId = Guid.NewGuid(),
+                        InvoiceId = invoice.InvoiceId,
+                        ItemId = item.ItemId,
+                        UserId = actingUserId,
+                        ItemName = item.Name,
+                        UnitAbbreviation = item.Unit?.Abbreviation,
+                        UnitPrice = item.UnitPrice,
+                        DiscountAmount = discountAmount,
+                        Quantity = line.Quantity,
+                        LineTotal = lineTotal
+                    };
+
+                    await _uow.Repository<Sale>().AddAsync(sale, ct);
+
+                    // Deduct stock
+                    item.InStock -= line.Quantity;
+                    _uow.Repository<Item>().Update(item);
+                }
+
+                DiscountDto? appliedCoupon = null;
+                if (!string.IsNullOrWhiteSpace(request.CouponCode))
+                {
+                    appliedCoupon = await _discountService.ValidateCouponAsync(request.CouponCode);
+                    if (appliedCoupon == null)
+                        throw new InvalidOperationException($"Coupon '{request.CouponCode}' is invalid or expired.");
+                }
+
+                if (appliedCoupon != null)
+                {
+                    if (appliedCoupon.DiscountType == "Percentage")
+                        total -= Math.Round(total * (appliedCoupon.Percentage / 100m), 2);
+                    else if (appliedCoupon.DiscountType == "Fixed")
+                        total -= appliedCoupon.FixedAmount.GetValueOrDefault();
+                        
+                    total = Math.Max(0, total);
+                    await _discountService.IncrementUsageAsync(appliedCoupon.DiscountId);
+                }
+
+                invoice.TotalAmount = total;
+                invoice.IsPaid = total > 0 && request.AmountTendered >= total;
+                invoice.ChangeGiven = Math.Max(0, request.AmountTendered - total);
+
+                await _uow.Repository<Invoice>().AddAsync(invoice, ct);
+                await _uow.SaveChangesAsync(ct);
+                await _uow.CommitTransactionAsync(ct);
+
+                return (await GetByIdAsync(invoice.InvoiceId, ct))!;
             }
-
-            DiscountDto? appliedCoupon = null;
-            if (!string.IsNullOrWhiteSpace(request.CouponCode))
+            catch
             {
-                appliedCoupon = await _discountService.ValidateCouponAsync(request.CouponCode);
-                if (appliedCoupon == null)
-                    throw new InvalidOperationException($"Coupon '{request.CouponCode}' is invalid or expired.");
+                await _uow.RollbackTransactionAsync(ct);
+                throw;
             }
-
-            if (appliedCoupon != null)
-            {
-                if (appliedCoupon.DiscountType == "Percentage")
-                    total -= Math.Round(total * (appliedCoupon.Percentage / 100m), 2);
-                else if (appliedCoupon.DiscountType == "Fixed")
-                    total -= appliedCoupon.FixedAmount.GetValueOrDefault();
-                    
-                total = Math.Max(0, total);
-                await _discountService.IncrementUsageAsync(appliedCoupon.DiscountId);
-            }
-
-            invoice.TotalAmount = total;
-            invoice.IsPaid = total > 0 && request.AmountTendered >= total;
-            invoice.ChangeGiven = Math.Max(0, request.AmountTendered - total);
-
-            await _uow.Repository<Invoice>().AddAsync(invoice, ct);
-            await _uow.SaveChangesAsync(ct);
-            await _uow.CommitTransactionAsync(ct);
-
-            return (await GetByIdAsync(invoice.InvoiceId, ct))!;
-        }
-        catch
-        {
-            await _uow.RollbackTransactionAsync(ct);
-            throw;
-        }
+        });
     }
 
     public async Task<bool> VoidInvoiceAsync(Guid invoiceId, Guid? actingUserId, CancellationToken ct = default)
@@ -165,32 +168,35 @@ public class InvoiceService : IInvoiceService
             if (!hasAccess) throw new UnauthorizedAccessException("You do not have access to void invoices at this branch.");
         }
 
-        await _uow.BeginTransactionAsync(ct);
-        try
+        return await _uow.ExecuteStrategyAsync(async () =>
         {
-            // Restore stock
-            foreach (var sale in invoice.Sales)
+            await _uow.BeginTransactionAsync(ct);
+            try
             {
-                var item = await _uow.Repository<Item>().GetByIdAsync(sale.ItemId, ct);
-                if (item is not null)
+                // Restore stock
+                foreach (var sale in invoice.Sales)
                 {
-                    item.InStock += sale.Quantity;
-                    _uow.Repository<Item>().Update(item);
+                    var item = await _uow.Repository<Item>().GetByIdAsync(sale.ItemId, ct);
+                    if (item is not null)
+                    {
+                        item.InStock += sale.Quantity;
+                        _uow.Repository<Item>().Update(item);
+                    }
                 }
+
+                invoice.IsPaid = false;
+                _uow.Repository<Invoice>().Update(invoice);
+
+                await _uow.SaveChangesAsync(ct);
+                await _uow.CommitTransactionAsync(ct);
+                return true;
             }
-
-            invoice.IsPaid = false;
-            _uow.Repository<Invoice>().Update(invoice);
-
-            await _uow.SaveChangesAsync(ct);
-            await _uow.CommitTransactionAsync(ct);
-            return true;
-        }
-        catch
-        {
-            await _uow.RollbackTransactionAsync(ct);
-            throw;
-        }
+            catch
+            {
+                await _uow.RollbackTransactionAsync(ct);
+                throw;
+            }
+        });
     }
 
     public async Task<InvoiceDto?> RefundInvoiceAsync(Guid invoiceId, RefundInvoiceRequest request, Guid? actingUserId, CancellationToken ct = default)
@@ -208,52 +214,55 @@ public class InvoiceService : IInvoiceService
             if (!hasAccess) throw new UnauthorizedAccessException("You do not have access to refund invoices at this branch.");
         }
 
-        await _uow.BeginTransactionAsync(ct);
-        try
+        return await _uow.ExecuteStrategyAsync(async () =>
         {
-            foreach (var refundLine in request.Lines)
+            await _uow.BeginTransactionAsync(ct);
+            try
             {
-                var sale = invoice.Sales.FirstOrDefault(s => s.ItemId == refundLine.ItemId);
-                if (sale is null || sale.Quantity < refundLine.Quantity)
-                    throw new InvalidOperationException($"Cannot refund quantity {refundLine.Quantity} for item {refundLine.ItemId}.");
-
-                var item = await _uow.Repository<Item>().GetByIdAsync(refundLine.ItemId, ct);
-                if (item is not null)
+                foreach (var refundLine in request.Lines)
                 {
-                    item.InStock += refundLine.Quantity;
-                    _uow.Repository<Item>().Update(item);
+                    var sale = invoice.Sales.FirstOrDefault(s => s.ItemId == refundLine.ItemId);
+                    if (sale is null || sale.Quantity < refundLine.Quantity)
+                        throw new InvalidOperationException($"Cannot refund quantity {refundLine.Quantity} for item {refundLine.ItemId}.");
+
+                    var item = await _uow.Repository<Item>().GetByIdAsync(refundLine.ItemId, ct);
+                    if (item is not null)
+                    {
+                        item.InStock += refundLine.Quantity;
+                        _uow.Repository<Item>().Update(item);
+                    }
+
+                    // Add a negative sale line to reflect the refund
+                    var negativeSale = new Sale
+                    {
+                        SaleId = Guid.NewGuid(),
+                        InvoiceId = invoice.InvoiceId,
+                        ItemId = item!.ItemId,
+                        UserId = actingUserId,
+                        ItemName = $"{item.Name} (Refund - {request.ReasonCode})",
+                        UnitAbbreviation = item.Unit?.Abbreviation,
+                        UnitPrice = sale.UnitPrice,
+                        DiscountAmount = sale.DiscountAmount,
+                        Quantity = -refundLine.Quantity,
+                        LineTotal = -(Math.Round((sale.UnitPrice - (sale.DiscountAmount ?? 0)) * refundLine.Quantity, 2))
+                    };
+
+                    await _uow.Repository<Sale>().AddAsync(negativeSale, ct);
+                    invoice.TotalAmount += negativeSale.LineTotal;
                 }
 
-                // Add a negative sale line to reflect the refund
-                var negativeSale = new Sale
-                {
-                    SaleId = Guid.NewGuid(),
-                    InvoiceId = invoice.InvoiceId,
-                    ItemId = item!.ItemId,
-                    UserId = actingUserId,
-                    ItemName = $"{item.Name} (Refund - {request.ReasonCode})",
-                    UnitAbbreviation = item.Unit?.Abbreviation,
-                    UnitPrice = sale.UnitPrice,
-                    DiscountAmount = sale.DiscountAmount,
-                    Quantity = -refundLine.Quantity,
-                    LineTotal = -(Math.Round((sale.UnitPrice - (sale.DiscountAmount ?? 0)) * refundLine.Quantity, 2))
-                };
+                _uow.Repository<Invoice>().Update(invoice);
+                await _uow.SaveChangesAsync(ct);
+                await _uow.CommitTransactionAsync(ct);
 
-                await _uow.Repository<Sale>().AddAsync(negativeSale, ct);
-                invoice.TotalAmount += negativeSale.LineTotal;
+                return await GetByIdAsync(invoiceId, ct);
             }
-
-            _uow.Repository<Invoice>().Update(invoice);
-            await _uow.SaveChangesAsync(ct);
-            await _uow.CommitTransactionAsync(ct);
-
-            return await GetByIdAsync(invoiceId, ct);
-        }
-        catch
-        {
-            await _uow.RollbackTransactionAsync(ct);
-            throw;
-        }
+            catch
+            {
+                await _uow.RollbackTransactionAsync(ct);
+                throw;
+            }
+        });
     }
 
     public async Task<InvoiceTenderDto> AddTenderAsync(Guid invoiceId, AddTenderRequest request, CancellationToken ct = default)

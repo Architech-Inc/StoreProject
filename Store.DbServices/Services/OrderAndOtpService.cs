@@ -96,34 +96,37 @@ public class OrderService : IOrderService
 
         if (order is null) return false;
 
-        await _uow.BeginTransactionAsync(ct);
-        try
+        return await _uow.ExecuteStrategyAsync(async () =>
         {
-            foreach (var line in order.Items)
+            await _uow.BeginTransactionAsync(ct);
+            try
             {
-                var item = await _uow.Repository<Item>().GetByIdAsync(line.ItemId, ct);
-                if (item is not null)
+                foreach (var line in order.Items)
                 {
-                    var toReceive = line.QuantityOrdered - line.QuantityReceived;
-                    item.InStock += toReceive;
-                    line.QuantityReceived = line.QuantityOrdered;
-                    _uow.Repository<Item>().Update(item);
-                    _uow.Repository<OrderItem>().Update(line);
+                    var item = await _uow.Repository<Item>().GetByIdAsync(line.ItemId, ct);
+                    if (item is not null)
+                    {
+                        var toReceive = line.QuantityOrdered - line.QuantityReceived;
+                        item.InStock += toReceive;
+                        line.QuantityReceived = line.QuantityOrdered;
+                        _uow.Repository<Item>().Update(item);
+                        _uow.Repository<OrderItem>().Update(line);
+                    }
                 }
+
+                order.Status = OrderStatus.Received;
+                _uow.Repository<ItemsOrder>().Update(order);
+
+                await _uow.SaveChangesAsync(ct);
+                await _uow.CommitTransactionAsync(ct);
+                return true;
             }
-
-            order.Status = OrderStatus.Received;
-            _uow.Repository<ItemsOrder>().Update(order);
-
-            await _uow.SaveChangesAsync(ct);
-            await _uow.CommitTransactionAsync(ct);
-            return true;
-        }
-        catch
-        {
-            await _uow.RollbackTransactionAsync(ct);
-            throw;
-        }
+            catch
+            {
+                await _uow.RollbackTransactionAsync(ct);
+                throw;
+            }
+        });
     }
 
     public async Task<bool> CancelOrderAsync(Guid orderId, CancellationToken ct = default)
