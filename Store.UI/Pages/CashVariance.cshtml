@@ -97,7 +97,7 @@
             }
             @if (!Model.Variances.Any())
             {
-                <tr><td colspan="11" class="text-center text-muted py-3">No variance records found.</td></tr>
+                <tr><td colspan="11" class="text-center text-muted py-3"><div class="empty-state"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg><h4>No Variance Records Found</h4><p>There are no records matching your criteria.</p></div></td></tr>
             }
         </tbody>
     </table>
@@ -194,3 +194,4 @@ reviewModal.addEventListener('show.bs.modal', function (e) {
 });
 </script>
 }
+

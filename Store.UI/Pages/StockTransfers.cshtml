@@ -17,7 +17,7 @@
 
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
     {
-        <div class="status @(Model.StatusMessage.StartsWith("Error") ? "error" : "ok")">@Model.StatusMessage</div>
+        <div class="status @(Model.StatusMessage.StartsWith("Error") ? "error" : "ok")" id="serverStatusMessage" style="display:none;">@Model.StatusMessage</div>
     }
 
     <!-- Filter bar -->
@@ -36,12 +36,18 @@
     <section class="card-resource">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
             <h2 style="font-size: var(--fontSize-heading-sm); margin:0;">Transfers <small style="font-weight:400;color:var(--text-secondary);">@Model.Transfers.Count total</small></h2>
-            <button type="button" class="button-primary" onclick="openCreate()">+ New Transfer</button>
+            <button type="button" class="button-primary" onclick="window.openBlade('createBlade')">+ New Transfer</button>
         </div>
 
         @if (!Model.Transfers.Any())
         {
-            <p style="color:var(--text-secondary);padding:12px 0;">No transfers found.</p>
+            <div class="empty-state">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                </svg>
+                <h4>No Transfers Found</h4>
+                <p>There are no stock transfers matching the current criteria. You can create a new transfer to get started.</p>
+            </div>
         }
         else
         {
@@ -112,12 +118,16 @@
     </section>
 </div>
 
-<!-- Create Transfer Modal -->
-<div id="createModal" class="modal-backdrop" style="display:none;" role="dialog" aria-modal="true">
-    <div class="modal" style="max-width:600px;">
+<!-- Create Transfer Blade -->
+<div id="createBladeOverlay" class="blade-overlay" data-blade-id="createBlade"></div>
+<div id="createBlade" class="blade" data-overlay-id="createBladeOverlay">
+    <div class="blade-header">
         <h3>New Stock Transfer</h3>
-        <form method="post" asp-page-handler="Create">
-            @Html.AntiForgeryToken()
+        <button type="button" class="btn-close" data-close-blade="createBlade">&times;</button>
+    </div>
+    <form method="post" asp-page-handler="Create" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+        @Html.AntiForgeryToken()
+        <div class="blade-body">
             <div class="form-grid">
                 <label>From Branch ID *
                     <input name="CreateFromBranchId" type="number" min="1" required />
@@ -129,9 +139,9 @@
                     <textarea name="CreateNotes" rows="2" maxlength="1000"></textarea>
                 </label>
             </div>
-            <h4 style="margin:12px 0 8px;">Items to Transfer</h4>
+            <h4 style="margin:16px 0 8px;">Items to Transfer</h4>
             <div id="itemLines">
-                <div class="item-line" style="display:grid;grid-template-columns:1fr 120px 1fr auto;gap:8px;margin-bottom:6px;align-items:end;">
+                <div class="item-line" style="display:grid;grid-template-columns:1fr 100px 1fr auto;gap:8px;margin-bottom:6px;align-items:end;">
                     <label style="display:flex;flex-direction:column;gap:3px;font-size:.83rem;">Item ID
                         <input name="TransferItems[0].ItemId" type="text" placeholder="Item GUID" required />
                     </label>
@@ -141,16 +151,16 @@
                     <label style="display:flex;flex-direction:column;gap:3px;font-size:.83rem;">Notes
                         <input name="TransferItems[0].Notes" type="text" maxlength="500" />
                     </label>
-                    <button type="button" onclick="removeLine(this)" style="align-self:end;padding:7px 10px;" title="Remove">✕</button>
+                    <button type="button" onclick="removeLine(this)" style="align-self:end;padding:7px 10px;" class="button-command danger" title="Remove">✕</button>
                 </div>
             </div>
-            <button type="button" onclick="addItemLine()" style="margin-top:6px;" class="btn-sm">+ Add Item</button>
-            <div class="modal-actions">
-                <button type="button" onclick="closeModal('createModal')">Cancel</button>
-                <button type="submit">Submit Transfer</button>
-            </div>
-        </form>
-    </div>
+            <button type="button" onclick="addItemLine()" style="margin-top:6px;" class="button-secondary btn-sm">+ Add Item</button>
+        </div>
+        <div class="blade-footer">
+            <button type="button" class="button-command" data-close-blade="createBlade">Cancel</button>
+            <button type="submit" class="button-primary">Submit Transfer</button>
+        </div>
+    </form>
 </div>
 
 <!-- View Details Modal -->
@@ -260,8 +270,15 @@
 <script>
 let itemLineCount = 1;
 
-function openCreate() { document.getElementById('createModal').style.display = 'flex'; }
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+document.addEventListener('DOMContentLoaded', () => {
+    const statusMsg = document.getElementById('serverStatusMessage');
+    if (statusMsg) {
+        const type = statusMsg.classList.contains('error') ? 'error' : 'success';
+        if (window.showToast) window.showToast(type, statusMsg.textContent);
+    }
+});
 
 function addItemLine() {
     const container = document.getElementById('itemLines');

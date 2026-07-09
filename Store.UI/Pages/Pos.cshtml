@@ -77,7 +77,13 @@
                 </div>
             </div>
 
-            <div id="cartEmpty" class="cart-empty">No items in cart.</div>
+            <div id="cartEmpty" class="empty-state">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                <h4>Cart is Empty</h4>
+                <p>Scan a barcode or select products from the catalog.</p>
+            </div>
             <table id="cartTable" class="cart-table" hidden>
                 <thead>
                     <tr>
@@ -154,17 +160,15 @@
     </div>
 </div>
 
-<div id="receiptModal" class="receipt-modal" hidden>
-    <div class="receipt-backdrop" data-close="receipt"></div>
-    <div class="receipt-dialog" role="dialog" aria-modal="true" aria-labelledby="receiptTitle">
-        <div class="receipt-head">
-            <h3 id="receiptTitle">Receipt</h3>
-            <button type="button" class="btn btn-secondary" id="receiptCloseBtn">Close</button>
-        </div>
-        <div id="receiptContent" class="receipt-content"></div>
-        <div class="receipt-actions">
-            <button type="button" class="btn btn-primary" id="receiptPrintBtn">Print</button>
-        </div>
+<div id="receiptBladeOverlay" class="blade-overlay" data-blade-id="receiptBlade"></div>
+<div id="receiptBlade" class="blade" data-overlay-id="receiptBladeOverlay">
+    <div class="blade-header">
+        <h3 id="receiptTitle">Receipt</h3>
+        <button type="button" class="btn-close" id="receiptCloseBtn">&times;</button>
+    </div>
+    <div id="receiptContent" class="blade-body receipt-content"></div>
+    <div class="blade-footer">
+        <button type="button" class="button-primary" id="receiptPrintBtn">Print</button>
     </div>
 </div>
 
@@ -182,7 +186,6 @@
     const cartEmpty = document.getElementById('cartEmpty');
     const subtotalText = document.getElementById('subtotalText');
     const changeText = document.getElementById('changeText');
-    const amountTenderedInput = document.getElementById('amountTendered');
     const customerSelect = document.getElementById('customerSelect');
     const checkoutForm = document.getElementById('checkoutForm');
     const checkoutBtn = document.getElementById('checkoutBtn');
@@ -273,7 +276,7 @@
     const suspendedSaleSelect = document.getElementById('suspendedSaleSelect');
     const resumeSaleBtn = document.getElementById('resumeSaleBtn');
     const deleteSuspendedBtn = document.getElementById('deleteSuspendedBtn');
-    const receiptModal = document.getElementById('receiptModal');
+    const receiptBlade = document.getElementById('receiptBlade');
     const receiptContent = document.getElementById('receiptContent');
     const receiptCloseBtn = document.getElementById('receiptCloseBtn');
     const receiptPrintBtn = document.getElementById('receiptPrintBtn');
@@ -470,6 +473,7 @@
     function setMessage(message, isError = false) {
         checkoutMessage.textContent = message;
         checkoutMessage.className = isError ? 'checkout-message error' : 'checkout-message ok';
+        if (window.showToast) window.showToast(isError ? 'error' : 'success', message);
     }
 
     function showReceipt(checkoutResult, saleLines) {
@@ -510,11 +514,11 @@
             </table>
         `;
 
-        receiptModal.hidden = false;
+        window.openBlade('receiptBlade');
     }
 
     function closeReceipt() {
-        receiptModal.hidden = true;
+        window.closeBlade('receiptBlade');
     }
 
     function suspendCurrentSale() {
@@ -817,14 +821,14 @@
     deleteSuspendedBtn.addEventListener('click', deleteSuspendedSale);
     receiptCloseBtn.addEventListener('click', closeReceipt);
     receiptPrintBtn.addEventListener('click', () => window.print());
-    receiptModal.addEventListener('click', (e) => {
+    receiptBlade.addEventListener('click', (e) => {
         const target = e.target;
         if (target.dataset.close === 'receipt') {
             closeReceipt();
         }
     });
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && !receiptModal.hidden) {
+        if (e.key === 'Escape' && receiptBlade.classList.contains('open')) {
             closeReceipt();
         }
     });

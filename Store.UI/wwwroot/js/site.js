@@ -56,4 +56,74 @@
             window.location.href = '/Login';
         });
     }
+
+    // --- Toasts ---
+    window.showToast = (type, message) => {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        
+        const icon = type === 'success' ? '✓' : '!';
+        
+        toast.innerHTML = `
+            <div class="toast-icon">${icon}</div>
+            <div class="toast-message">${message}</div>
+            <button class="toast-close" aria-label="Close">&times;</button>
+        `;
+
+        container.appendChild(toast);
+
+        requestAnimationFrame(() => {
+            toast.classList.add('show');
+        });
+
+        const dismiss = () => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        };
+
+        toast.querySelector('.toast-close').addEventListener('click', dismiss);
+        setTimeout(dismiss, 5000);
+    };
+
+    // --- Blades ---
+    window.openBlade = (id) => {
+        const blade = document.getElementById(id);
+        if (!blade) return;
+        const overlayId = blade.getAttribute('data-overlay-id');
+        if (overlayId) {
+            const overlay = document.getElementById(overlayId);
+            if (overlay) overlay.classList.add('open');
+        }
+        blade.classList.add('open');
+    };
+
+    window.closeBlade = (id) => {
+        const blade = document.getElementById(id);
+        if (!blade) return;
+        const overlayId = blade.getAttribute('data-overlay-id');
+        if (overlayId) {
+            const overlay = document.getElementById(overlayId);
+            if (overlay) overlay.classList.remove('open');
+        }
+        blade.classList.remove('open');
+    };
+
+    document.querySelectorAll('[data-close-blade]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const id = btn.getAttribute('data-close-blade');
+            window.closeBlade(id);
+        });
+    });
+
+    document.querySelectorAll('.blade-overlay').forEach(overlay => {
+        overlay.addEventListener('click', () => {
+            const bladeId = overlay.getAttribute('data-blade-id');
+            if (bladeId) window.closeBlade(bladeId);
+        });
+    });
+
 })();

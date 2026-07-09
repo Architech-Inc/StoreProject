@@ -32,14 +32,7 @@
     font-weight: 600;
 }
 
-.status {
-    padding: 12px 14px;
-    border: 1px solid var(--brand-border);
-    background: var(--brand-soft);
-    color: var(--brand-dark);
-    border-radius: var(--radius-md);
-    margin-bottom: 16px;
-}
+
 
 .grid-2,
 .grid-3 {
@@ -82,73 +75,7 @@ label {
     color: var(--ops-subtle);
 }
 
-input,
-select,
-button {
-    font: inherit;
-    padding: 8px 10px;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--ops-border);
-}
 
-input:focus,
-select:focus {
-    outline: none;
-    border-color: var(--ops-brand-2);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--ops-brand-2) 22%, transparent);
-}
-
-button {
-    border-color: transparent;
-    color: var(--surface);
-    background: var(--ops-brand);
-    font-weight: 600;
-    cursor: pointer;
-}
-
-button:hover,
-button:focus-visible {
-    background: var(--ops-brand-2);
-    outline: none;
-}
-
-button.toggle.on {
-    background: var(--ops-brand);
-}
-
-button.toggle.off {
-    background: #94a3b8;
-    color: #fff;
-}
-
-button.toggle.off:hover,
-button.toggle.off:focus-visible {
-    background: #64748b;
-}
-
-button.danger {
-    background: var(--ops-danger, #dc2626);
-}
-
-button.danger:hover,
-button.danger:focus-visible {
-    background: #b91c1c;
-}
-
-textarea {
-    font: inherit;
-    padding: 8px 10px;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--ops-border);
-    resize: vertical;
-    min-height: 64px;
-}
-
-textarea:focus {
-    outline: none;
-    border-color: var(--ops-brand-2);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--ops-brand-2) 22%, transparent);
-}
 
 /* ── tables ─────────────────────────────────── */
 table {
@@ -306,20 +233,7 @@ button.toggle.off {
     background: var(--ops-danger);
 }
 
-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.92rem;
-    background: var(--ops-paper);
-}
 
-th,
-td {
-    border-bottom: 1px solid var(--border-soft);
-    text-align: left;
-    padding: 8px;
-    vertical-align: top;
-}
 
 .preview-grid {
     display: grid;
@@ -332,11 +246,7 @@ td {
         padding: 14px;
     }
 
-    th,
-    td {
-        font-size: 0.82rem;
-        padding: 6px;
-    }
+    
 }
 
 /* ── KPI grid ───────────────────────────────── */
