@@ -1,0 +1,68 @@
+@using Microsoft.AspNetCore.Mvc.ViewEngines
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - ClexAn Foods</title>
+    
+    <!-- SEO Best Practices -->
+    <meta name="description" content="ClexAn Foods - Premium Store Management System. Manage inventory, points of sale, and operations with elegance and speed." />
+    
+    <!-- Icons -->
+    <link rel="icon" type="image/png" href="~/images/clarkstore.png" asp-append-version="true" />
+    <link rel="shortcut icon" type="image/png" href="~/images/clarkstore.png" asp-append-version="true" />
+    
+    <!-- Landing Page Specific CSS -->
+    <link rel="stylesheet" href="~/css/landing.css" asp-append-version="true" />
+    
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body class="landing-body">
+    <!-- Ambient Background Glows -->
+    <div class="landing-bg-glow"></div>
+    <div class="landing-bg-glow secondary"></div>
+
+    <!-- Transparent Navigation -->
+    <header class="landing-header">
+        <a href="/" class="brand-logo">
+            <img src="~/images/clarkstore.png" alt="ClexAn Foods Logo" />
+            <span>ClexAn Foods</span>
+        </a>
+        <nav class="landing-nav">
+            <a href="#features">Features</a>
+            <a href="#about">About</a>
+        </nav>
+        <div class="landing-actions">
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <a href="/Dashboard" class="btn-glass">
+                    Go to Dashboard
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </a>
+            }
+            else
+            {
+                <a href="/Login" class="btn-glass">
+                    Sign In
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
+                </a>
+            }
+        </div>
+    </header>
+
+    <main>
+        @RenderBody()
+    </main>
+
+    <footer class="landing-footer">
+        <p>&copy; @DateTime.Now.Year ClexAn Foods. All rights reserved.</p>
+        <div class="footer-links">
+            <a href="#">Privacy Policy</a>
+            <a href="#">Terms of Service</a>
+        </div>
+    </footer>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

@@ -1,0 +1,68 @@
+@page
+@model Store.UI.Pages.IndexModel
+@{
+    ViewData["Title"] = "Store Management System";
+    Layout = "_LandingLayout";
+}
+
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="hero-pill">Next-Gen Platform</div>
+    <h1 class="hero-title">Elevate Your Store Operations</h1>
+    <p class="hero-subtitle">Experience a fluid, real-time store management system. Unify your Point of Sale, Inventory, and Analytics into one premium platform.</p>
+    
+    <div class="hero-actions">
+        @if (User.Identity?.IsAuthenticated == true)
+        {
+            <a href="/Dashboard" class="btn-primary-glow">
+                Enter Workspace
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </a>
+        }
+        else
+        {
+            <a href="/Login" class="btn-primary-glow">
+                Get Started
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </a>
+        }
+        <a href="#features" class="btn-glass">Discover Features</a>
+    </div>
+</section>
+
+<!-- Features Grid -->
+<section id="features" class="features-section">
+    <div class="section-header">
+        <h2>Built for Scale & Speed</h2>
+        <p>Everything you need to run your retail locations smoothly and efficiently.</p>
+    </div>
+    
+    <div class="features-grid">
+        <!-- Feature 1 -->
+        <div class="feature-card">
+            <div class="feature-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+            </div>
+            <h3>Intelligent POS</h3>
+            <p>A lightning-fast point of sale system designed for high volume environments. Process transactions, manage discounts, and handle returns with ease.</p>
+        </div>
+
+        <!-- Feature 2 -->
+        <div class="feature-card">
+            <div class="feature-icon" style="color: #60a5fa; background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.05)); border-color: rgba(59, 130, 246, 0.3);">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+            </div>
+            <h3>Inventory Control</h3>
+            <p>Real-time stock tracking across multiple branches. Automate purchase orders, manage stock transfers, and minimize wastage.</p>
+        </div>
+
+        <!-- Feature 3 -->
+        <div class="feature-card">
+            <div class="feature-icon" style="color: #c084fc; background: linear-gradient(135deg, rgba(192, 132, 252, 0.2), rgba(192, 132, 252, 0.05)); border-color: rgba(192, 132, 252, 0.3);">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>
+            </div>
+            <h3>Live Analytics</h3>
+            <p>Make data-driven decisions with real-time dashboards. Track cash variances, promotion effectiveness, and store performance at a glance.</p>
+        </div>
+    </div>
+</section>
