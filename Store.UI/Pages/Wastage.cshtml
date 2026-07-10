@@ -3,6 +3,7 @@
 @{
     ViewData["Title"] = "Wastage Log";
     ViewData["ActivePage"] = "Wastage";
+    ViewData["PageDescription"] = "Record and track stock write-offs due to damage, expiry, theft, or spoilage.";
     Layout = "~/Pages/Shared/_AppLayout.cshtml";
 }
 
@@ -10,49 +11,48 @@
     <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
 }
 
-<div class="page-header d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1 class="page-title">Wastage Log</h1>
-        <p class="page-subtitle text-muted">Record and track stock write-offs due to damage, expiry, theft, or spoilage.</p>
-    </div>
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#recordModal">
-        <i class="bi bi-plus-circle me-1"></i> Record Wastage
-    </button>
-</div>
+<div class="ops-page">
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="status @(Model.StatusMessage.StartsWith("Error") ? "error" : "ok")">@Model.StatusMessage</div>
+    }
 
-
-
-<!-- Filter Bar -->
-<div class="card mb-4">
-    <div class="card-body py-2">
-        <form method="get" class="d-flex gap-2 align-items-center flex-wrap">
-            <label class="form-label mb-0 me-1">Type:</label>
-            <select name="wastageType" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
-                <option value="">All Types</option>
-                @foreach (var t in Model.WastageTypes)
-                {
-                    <option value="@t" selected="@(Model.FilterType == t.ToString())">@t</option>
-                }
-            </select>
+    <div class="filter-bar" style="margin-bottom: 24px; justify-content: space-between;">
+        <form method="get" class="filter-row">
+            <div class="filter-group">
+                <label>Filter by Type:</label>
+                <select name="wastageType" onchange="this.form.submit()">
+                    <option value="">All Types</option>
+                    @foreach (var t in Model.WastageTypes)
+                    {
+                        <option value="@t" selected="@(Model.FilterType == t.ToString())">@t</option>
+                    }
+                </select>
+            </div>
         </form>
+        <button class="button-primary" type="button" data-open-blade="recordBlade">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="margin-right:4px;">
+                <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"/>
+            </svg> Record Wastage
+        </button>
     </div>
-</div>
 
-<!-- Entries Table -->
-<div class="card">
-    <div class="card-body p-0">
+    <div class="card" style="padding:0; overflow:hidden;">
         @if (!Model.Entries.Any())
         {
-            <div class="empty-state text-center py-5">
-                <i class="bi bi-trash3 fs-1 text-muted"></i>
-                <div class="empty-state"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg><h4>No Wastage Entries Found</h4><p>There are no records matching your criteria.</p></div>
+            <div class="empty-state">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                <h4>No Wastage Entries Found</h4>
+                <p>There are no records matching your criteria.</p>
             </div>
         }
         else
         {
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light">
+            <div class="table-wrap" style="margin:0; border:none; border-radius:0;">
+                <table>
+                    <thead>
                         <tr>
                             <th>#</th>
                             <th>Item</th>
@@ -72,22 +72,23 @@
                             <tr>
                                 <td>@e.WastageEntryId</td>
                                 <td>@e.ItemName</td>
-                                <td><code>@e.ItemCode</code></td>
+                                <td><span style="font-family:monospace; background:var(--ops-surface-alt, #f1f5f9); padding:2px 4px; border-radius:4px;">@e.ItemCode</span></td>
                                 <td>
-                                    <span class="badge bg-warning text-dark">@e.WastageType</span>
+                                    <span class="badge badge-yellow">@e.WastageType</span>
                                 </td>
                                 <td>@e.Quantity</td>
                                 <td>@(e.ReferenceCode ?? "—")</td>
-                                <td class="text-truncate" style="max-width:200px">@(e.Notes ?? "—")</td>
+                                <td>
+                                    <div style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="@e.Notes">
+                                        @(e.Notes ?? "—")
+                                    </div>
+                                </td>
                                 <td>@e.RecordedByUser</td>
                                 <td>@e.DateCreated.ToLocalTime().ToString("dd MMM yyyy HH:mm")</td>
                                 <td>
-                                    <form method="post" asp-page-handler="Delete"
-                                          onsubmit="return confirm('Delete this wastage entry?')">
+                                    <form method="post" asp-page-handler="Delete" onsubmit="return confirm('Delete this wastage entry?')">
                                         <input type="hidden" name="DeleteEntryId" value="@e.WastageEntryId" />
-                                        <button type="submit" class="btn btn-sm btn-outline-danger">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
+                                        <button type="submit" class="button-command danger">Delete</button>
                                     </form>
                                 </td>
                             </tr>
@@ -99,52 +100,145 @@
     </div>
 </div>
 
-<!-- Record Wastage Modal -->
-<div class="modal fade" id="recordModal" tabindex="-1" aria-labelledby="recordModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form method="post" asp-page-handler="Record">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="recordModalLabel">Record Wastage</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<!-- Record Wastage Blade -->
+<div class="blade-overlay" id="recordBladeOverlay"></div>
+<div class="blade" id="recordBlade" data-overlay-id="recordBladeOverlay">
+    <div class="blade-header">
+        <h3 id="recordModalLabel">Record Wastage</h3>
+        <button type="button" class="btn-close" data-close-blade="recordBlade" aria-label="Close">×</button>
+    </div>
+    <div class="blade-body">
+        <form method="post" asp-page-handler="Record" id="recordForm">
+            @Html.AntiForgeryToken()
+            <div class="form-grid" style="grid-template-columns: 1fr;">
+                <div>
+                    <label>Search Item <span style="color:var(--ops-danger);">*</span></label>
+                    <div style="position:relative;">
+                        <input type="text" id="itemSearchInput" placeholder="Type name or barcode..." autocomplete="off" />
+                        <div id="itemDropdown" class="autocomplete-dropdown" style="display:none;"></div>
+                    </div>
+                    <input type="hidden" name="RecordItemId" id="RecordItemId" required />
+                    <small style="color:var(--ops-subtle); margin-top:4px;">Search and select the item</small>
                 </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Item ID <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="RecordItemId" placeholder="Paste item GUID"
-                               required pattern="[0-9a-fA-F\-]{36}" />
-                        <div class="form-text">Enter the item's unique identifier (GUID).</div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Wastage Type</label>
-                        <select class="form-select" name="RecordWastageType">
-                            @foreach (var t in Model.WastageTypes)
-                            {
-                                <option value="@((int)t)">@t</option>
-                            }
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Quantity <span class="text-danger">*</span></label>
-                        <input type="number" class="form-control" name="RecordQuantity" min="1" value="1" required />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Reference Code</label>
-                        <input type="text" class="form-control" name="RecordReferenceCode" maxlength="100"
-                               placeholder="e.g. WASTE-2024-001" />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Notes</label>
-                        <textarea class="form-control" name="RecordNotes" rows="2" maxlength="1000"
-                                  placeholder="Optional description"></textarea>
-                    </div>
+                <div>
+                    <label>Wastage Type</label>
+                    <select name="RecordWastageType">
+                        @foreach (var t in Model.WastageTypes)
+                        {
+                            <option value="@((int)t)">@t</option>
+                        }
+                    </select>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Record</button>
+                <div>
+                    <label>Quantity <span style="color:var(--ops-danger);">*</span></label>
+                    <input type="number" name="RecordQuantity" min="1" value="1" required />
                 </div>
-            </form>
-        </div>
+                <div>
+                    <label>Reference Code</label>
+                    <input type="text" name="RecordReferenceCode" maxlength="100" placeholder="e.g. WASTE-2024-001" />
+                </div>
+                <div>
+                    <label>Notes</label>
+                    <textarea name="RecordNotes" rows="3" maxlength="1000" placeholder="Optional description"></textarea>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="blade-footer">
+        <button type="button" class="button-secondary" data-close-blade="recordBlade">Cancel</button>
+        <button type="submit" form="recordForm" class="button-primary">Save Record</button>
     </div>
 </div>
+
+@section Scripts {
+    <style>
+        .autocomplete-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--ops-paper, var(--surface));
+            border: 1px solid var(--ops-border, var(--border));
+            border-radius: var(--radius-sm, 4px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            margin-top: 4px;
+        }
+        .autocomplete-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--ops-border, var(--border));
+        }
+        .autocomplete-item:last-child {
+            border-bottom: none;
+        }
+        .autocomplete-item:hover {
+            background: color-mix(in srgb, var(--ops-brand, var(--brand)) 10%, transparent);
+        }
+    </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const searchInput = document.getElementById('itemSearchInput');
+            const dropdown = document.getElementById('itemDropdown');
+            const hiddenId = document.getElementById('RecordItemId');
+            let timeout = null;
+
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value.trim();
+                clearTimeout(timeout);
+                
+                if (query.length < 2) {
+                    dropdown.style.display = 'none';
+                    return;
+                }
+
+                timeout = setTimeout(() => {
+                    fetch(`/Wastage?handler=SearchItems&q=${encodeURIComponent(query)}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            dropdown.innerHTML = '';
+                            if (data.length === 0) {
+                                dropdown.innerHTML = '<div class="autocomplete-item text-muted">No items found</div>';
+                            } else {
+                                data.forEach(item => {
+                                    const div = document.createElement('div');
+                                    div.className = 'autocomplete-item';
+                                    div.textContent = item.text;
+                                    div.addEventListener('click', () => {
+                                        searchInput.value = item.text;
+                                        hiddenId.value = item.id;
+                                        dropdown.style.display = 'none';
+                                    });
+                                    dropdown.appendChild(div);
+                                });
+                            }
+                            dropdown.style.display = 'block';
+                        })
+                        .catch(err => console.error(err));
+                }, 300);
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.style.display = 'none';
+                }
+            });
+            
+            // Blade open functionality for custom blade
+            const openBtn = document.querySelector('[data-open-blade="recordBlade"]');
+            const blade = document.getElementById('recordBlade');
+            const overlay = document.getElementById('recordBladeOverlay');
+            
+            if (openBtn && blade && overlay) {
+                openBtn.addEventListener('click', () => {
+                    blade.classList.add('open');
+                    overlay.classList.add('open');
+                });
+            }
+        });
+    </script>
+}
 

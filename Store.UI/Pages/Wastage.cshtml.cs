@@ -10,6 +10,7 @@ public class WastageModel : SecurePageModel
 {
     private readonly IWastageService _wastageService;
     private readonly IApiClientService _apiClient;
+    private readonly IItemService _itemService;
 
     public List<WastageEntryDto> Entries { get; private set; } = new();
     public string? FilterType { get; private set; }
@@ -26,10 +27,11 @@ public class WastageModel : SecurePageModel
 
     public IEnumerable<WastageType> WastageTypes { get; } = Enum.GetValues<WastageType>();
 
-    public WastageModel(IWastageService wastageService, IApiClientService apiClient)
+    public WastageModel(IWastageService wastageService, IApiClientService apiClient, IItemService itemService)
     {
         _wastageService = wastageService;
         _apiClient = apiClient;
+        _itemService = itemService;
     }
 
     public async Task<IActionResult> OnGetAsync([FromQuery] string? wastageType = null)
@@ -74,5 +76,23 @@ public class WastageModel : SecurePageModel
         var ok = await _wastageService.DeleteAsync(DeleteEntryId);
         StatusMessage = ok ? "Wastage entry deleted." : "Entry not found.";
         return RedirectToPage();
+    }
+
+    public async Task<IActionResult> OnGetSearchItemsAsync(string q)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return Unauthorized();
+
+        _apiClient.SetToken(token);
+        
+        var req = new Store.Models.DTOs.Common.PagedRequest 
+        { 
+            SearchTerm = q, 
+            PageSize = 20 
+        };
+        var result = await _itemService.GetAllAsync(req);
+        
+        var selectList = result.Items.Select(i => new { id = i.ItemId, text = $"{i.Name} ({i.Barcode})" });
+        return new JsonResult(selectList);
     }
 }
