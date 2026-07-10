@@ -24,6 +24,10 @@ public class ApiUserService : IUserService
     public async Task<PagedResult<UserDto>> GetAllAsync(PagedRequest request, CancellationToken ct = default)
     {
         var qs = $"?page={request.Page}&pageSize={request.PageSize}";
+        if (!string.IsNullOrWhiteSpace(request.SearchTerm))
+        {
+            qs += $"&searchTerm={Uri.EscapeDataString(request.SearchTerm)}";
+        }
         var result = await _client.GetAsync<PagedResult<UserDto>>($"/api/users{qs}", ct);
         return result ?? new PagedResult<UserDto>();
     }

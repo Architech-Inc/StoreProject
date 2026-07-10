@@ -10,9 +10,11 @@ namespace StoreUI.Pages;
 public class UsersModel : SecurePageModel
 {
     private readonly IUserService _userService;
+    private readonly IApiClientService _apiClient;
 
     public IReadOnlyList<UserDto> Users { get; private set; } = Array.Empty<UserDto>();
     public int TotalUsers { get; private set; }
+    public string? SearchQuery { get; private set; }
     public int PageNumber { get; private set; } = 1;
     public int PageSize { get; private set; } = 25;
     public int TotalPages => (int)Math.Ceiling((double)TotalUsers / PageSize);
@@ -26,17 +28,27 @@ public class UsersModel : SecurePageModel
 
     [TempData] public string? StatusMessage { get; set; }
 
-    public UsersModel(IUserService userService)
+    public UsersModel(IUserService userService, IApiClientService apiClient)
     {
         _userService = userService;
+        _apiClient = apiClient;
     }
 
-    public async Task<IActionResult> OnGetAsync(int page = 1, CancellationToken ct = default)
+    public async Task<IActionResult> OnGetAsync(string? search = null, int page = 1, CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out _, out _)) return GoToLogin();
+        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        _apiClient.SetToken(token);
 
         PageNumber = Math.Max(1, page);
-        var result = await _userService.GetAllAsync(new PagedRequest { Page = PageNumber, PageSize = PageSize }, ct);
+        SearchQuery = search;
+        
+        var request = new PagedRequest 
+        { 
+            Page = PageNumber, 
+            PageSize = PageSize,
+            SearchTerm = search
+        };
+        var result = await _userService.GetAllAsync(request, ct);
         Users = result.Items?.ToList() ?? new List<UserDto>();
         TotalUsers = result.TotalCount;
         return Page();
@@ -44,7 +56,8 @@ public class UsersModel : SecurePageModel
 
     public async Task<IActionResult> OnPostCreateAsync(CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out _, out _)) return GoToLogin();
+        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        _apiClient.SetToken(token);
 
         try
         {
@@ -85,7 +98,8 @@ public class UsersModel : SecurePageModel
 
     public async Task<IActionResult> OnPostSuspendAsync(Guid userId, CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out _, out _)) return GoToLogin();
+        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        _apiClient.SetToken(token);
 
         try
         {

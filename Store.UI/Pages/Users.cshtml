@@ -12,24 +12,42 @@
 
 <div class="ops-page">
 
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="status @(Model.StatusMessage.StartsWith("Error") ? "error" : "ok")">@Model.StatusMessage</div>
+    }
 
+    <div class="filter-bar" style="margin-bottom: 24px; justify-content: space-between;">
+        <form method="get" class="filter-row">
+            <div class="filter-group">
+                <label>Search Users:</label>
+                <div style="display:flex; gap:8px;">
+                    <input type="search" name="search" value="@Model.SearchQuery" placeholder="Username or email..." />
+                    <button type="submit" class="button-secondary">Search</button>
+                </div>
+            </div>
+        </form>
+        <button class="button-primary" type="button" data-open-blade="userBlade">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="margin-right:4px;">
+                <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"/>
+            </svg> New User
+        </button>
+    </div>
 
-    <section class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-            <h2 style="margin:0;">
-                User Accounts
-                <small style="font-weight:400;color:var(--ops-subtle);">@Model.TotalUsers total</small>
-            </h2>
-            <button type="button" onclick="openCreate()">+ New User</button>
-        </div>
-
+    <section class="card" style="padding:0; overflow:hidden;">
         @if (!Model.Users.Any())
         {
-            <div class="empty-state"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg><h4>No Users Found</h4><p>There are no records matching your criteria.</p></div>
+            <div class="empty-state">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                <h4>No Users Found</h4>
+                <p>There are no records matching your criteria.</p>
+            </div>
         }
         else
         {
-            <div style="overflow-x:auto;">
+            <div class="table-wrap" style="margin:0; border:none; border-radius:0;">
                 <table>
                     <thead>
                         <tr>
@@ -61,17 +79,18 @@
                                     }
                                 </td>
                                 <td>@u.DateCreated.ToString("yyyy-MM-dd")</td>
-                                <td style="display:flex;gap:4px;flex-wrap:nowrap;">
-                                    <button type="button" onclick="openEdit(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new { userId = u.UserId, username = u.Username, roleId = u.RoleId, status = u.Status.ToString() })))">Edit</button>
-                                    @if (u.Status == Store.Models.Enums.UserStatus.Active)
-                                    {
-                                        <form method="post" asp-page-handler="Suspend" style="margin:0;">
-                                            @Html.AntiForgeryToken()
-                                            <input type="hidden" name="userId" value="@u.UserId" />
-                                            <button type="submit" class="danger"
-                                                        onclick="@($"return confirm('Suspend account {u.Username.Replace("'", "\\'")}?')")">Suspend</button>
-                                        </form>
-                                    }
+                                <td>
+                                    <div style="display:flex; gap:4px; flex-wrap:nowrap;">
+                                        <button type="button" class="button-secondary" onclick="openEdit(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new { userId = u.UserId, username = u.Username, roleId = u.RoleId, status = u.Status.ToString() })))">Edit</button>
+                                        @if (u.Status == Store.Models.Enums.UserStatus.Active)
+                                        {
+                                            <form method="post" asp-page-handler="Suspend" style="margin:0;">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="userId" value="@u.UserId" />
+                                                <button type="submit" class="button-command danger" onclick="return confirm('Suspend account @u.Username.Replace("'", "\\'")?')">Suspend</button>
+                                            </form>
+                                        }
+                                    </div>
                                 </td>
                             </tr>
                         }
@@ -81,101 +100,131 @@
 
             @if (Model.TotalPages > 1)
             {
-                <nav class="pagination" aria-label="User pages">
-                    @if (Model.PageNumber > 1)
-                    {
-                        <a href="?page=@(Model.PageNumber - 1)">‹ Prev</a>
-                    }
-                    <span class="active">@Model.PageNumber / @Model.TotalPages</span>
-                    @if (Model.PageNumber < Model.TotalPages)
-                    {
-                        <a href="?page=@(Model.PageNumber + 1)">Next ›</a>
-                    }
-                </nav>
+                <div style="padding:16px;">
+                    <nav class="pagination" aria-label="User pages">
+                        @if (Model.PageNumber > 1)
+                        {
+                            <a href="?page=@(Model.PageNumber - 1)&search=@Uri.EscapeDataString(Model.SearchQuery ?? "")">‹ Prev</a>
+                        }
+                        <span class="active">@Model.PageNumber / @Model.TotalPages</span>
+                        @if (Model.PageNumber < Model.TotalPages)
+                        {
+                            <a href="?page=@(Model.PageNumber + 1)&search=@Uri.EscapeDataString(Model.SearchQuery ?? "")">Next ›</a>
+                        }
+                    </nav>
+                </div>
             }
         }
     </section>
 </div>
 
-<!-- ── Create User Modal ────────────────────────────────── -->
-<div class="modal-overlay" id="userModal" hidden>
-    <div class="modal" role="dialog" aria-labelledby="userModalTitle" aria-modal="true">
-        <div class="modal-head">
-            <h3 id="userModalTitle">New User</h3>
-            <button type="button" class="btn-close" onclick="closeModal()" aria-label="Close">×</button>
-        </div>
-        <form method="post" asp-page-handler="Create">
+<!-- ── Create/Edit User Blade ────────────────────────────────── -->
+<div class="blade-overlay" id="userBladeOverlay"></div>
+<div class="blade" id="userBlade" data-overlay-id="userBladeOverlay">
+    <div class="blade-header">
+        <h3 id="userBladeTitle">New User</h3>
+        <button type="button" class="btn-close" data-close-blade="userBlade" aria-label="Close">×</button>
+    </div>
+    <div class="blade-body">
+        <form method="post" asp-page-handler="Create" id="userForm">
             @Html.AntiForgeryToken()
             <input type="hidden" asp-for="EditUserId" id="editUserId" />
 
-            <label for="usernameField">Username *</label>
-            <input asp-for="NewUsername" id="usernameField" required minlength="3" maxlength="100" />
+            <div class="form-grid" style="grid-template-columns: 1fr;">
+                <div>
+                    <label for="usernameField">Username <span style="color:var(--ops-danger);">*</span></label>
+                    <input asp-for="NewUsername" id="usernameField" required minlength="3" maxlength="100" autocomplete="off" />
+                </div>
 
-            <div id="createFields">
-                <label for="emailField">Email *</label>
-                <input asp-for="NewEmail" id="emailField" type="email" />
+                <div id="createFields" class="form-grid" style="grid-template-columns: 1fr; gap: inherit;">
+                    <div>
+                        <label for="emailField">Email <span style="color:var(--ops-danger);">*</span></label>
+                        <input asp-for="NewEmail" id="emailField" type="email" />
+                    </div>
+                    <div>
+                        <label for="passwordField">Password <span style="color:var(--ops-danger);">*</span></label>
+                        <input asp-for="NewPassword" id="passwordField" type="password" minlength="8" maxlength="128" />
+                    </div>
+                </div>
 
-                <label for="passwordField">Password *</label>
-                <input asp-for="NewPassword" id="passwordField" type="password" minlength="8" maxlength="128" />
-            </div>
+                <div>
+                    <label for="roleField">Role <span style="color:var(--ops-danger);">*</span></label>
+                    <select asp-for="NewRoleId" id="roleField">
+                        <option value="1">Admin</option>
+                        <option value="2">Manager</option>
+                        <option value="3">Cashier</option>
+                    </select>
+                </div>
 
-            <label for="roleField">Role *</label>
-            <select asp-for="NewRoleId" id="roleField">
-                <option value="1">Admin</option>
-                <option value="2">Manager</option>
-                <option value="3">Cashier</option>
-            </select>
-
-            <div id="statusRow" style="display:none;">
-                <label for="statusField">Status</label>
-                <select asp-for="NewStatus" id="statusField">
-                    <option value="Active">Active</option>
-                    <option value="Suspended">Suspended</option>
-                </select>
-            </div>
-
-            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
-                <button type="button" class="button-command" onclick="closeModal()">Cancel</button>
-                <button type="submit" class="button-primary" id="submitBtn">Create User</button>
+                <div id="statusRow" style="display:none;">
+                    <label for="statusField">Status</label>
+                    <select asp-for="NewStatus" id="statusField">
+                        <option value="Active">Active</option>
+                        <option value="Suspended">Suspended</option>
+                    </select>
+                </div>
             </div>
         </form>
+    </div>
+    <div class="blade-footer">
+        <button type="button" class="button-secondary" data-close-blade="userBlade">Cancel</button>
+        <button type="submit" form="userForm" class="button-primary" id="submitBtn">Create User</button>
     </div>
 </div>
 
 @section Scripts {
     <script>
-        function openCreate() {
-            document.getElementById('userModalTitle').textContent = 'New User';
-            document.getElementById('editUserId').value = '';
-            document.getElementById('usernameField').value = '';
-            document.getElementById('emailField').value = '';
-            document.getElementById('passwordField').value = '';
-            document.getElementById('roleField').value = '3';
-            document.getElementById('createFields').style.display = '';
-            document.getElementById('statusRow').style.display = 'none';
-            document.getElementById('submitBtn').textContent = 'Create User';
-            document.getElementById('userModal').hidden = false;
-        }
+        document.addEventListener('DOMContentLoaded', () => {
+            const openNewBtn = document.querySelector('[data-open-blade="userBlade"]');
+            const blade = document.getElementById('userBlade');
+            const overlay = document.getElementById('userBladeOverlay');
+            
+            const emailField = document.getElementById('emailField');
+            const passwordField = document.getElementById('passwordField');
 
-        function openEdit(data) {
-            document.getElementById('userModalTitle').textContent = 'Edit User';
-            document.getElementById('editUserId').value = data.userId;
-            document.getElementById('usernameField').value = data.username;
-            document.getElementById('roleField').value = data.roleId;
-            document.getElementById('statusField').value = data.status;
-            document.getElementById('createFields').style.display = 'none';
-            document.getElementById('statusRow').style.display = '';
-            document.getElementById('submitBtn').textContent = 'Save Changes';
-            document.getElementById('userModal').hidden = false;
-        }
+            function openCreate() {
+                document.getElementById('userBladeTitle').textContent = 'New User';
+                document.getElementById('editUserId').value = '';
+                document.getElementById('usernameField').value = '';
+                emailField.value = '';
+                passwordField.value = '';
+                document.getElementById('roleField').value = '3';
+                
+                // Show create fields and require them
+                document.getElementById('createFields').style.display = '';
+                emailField.required = true;
+                passwordField.required = true;
+                
+                document.getElementById('statusRow').style.display = 'none';
+                document.getElementById('submitBtn').textContent = 'Create User';
+                
+                blade.classList.add('open');
+                overlay.classList.add('open');
+            }
 
-        function closeModal() {
-            document.getElementById('userModal').hidden = true;
-        }
+            if (openNewBtn && blade && overlay) {
+                openNewBtn.addEventListener('click', openCreate);
+            }
 
-        document.getElementById('userModal').addEventListener('click', function (e) {
-            if (e.target === this) closeModal();
+            // Expose openEdit to window so onclick can call it
+            window.openEdit = function(data) {
+                document.getElementById('userBladeTitle').textContent = 'Edit User';
+                document.getElementById('editUserId').value = data.userId;
+                document.getElementById('usernameField').value = data.username;
+                document.getElementById('roleField').value = data.roleId;
+                document.getElementById('statusField').value = data.status;
+                
+                // Hide create fields and remove required
+                document.getElementById('createFields').style.display = 'none';
+                emailField.required = false;
+                passwordField.required = false;
+                
+                document.getElementById('statusRow').style.display = '';
+                document.getElementById('submitBtn').textContent = 'Save Changes';
+                
+                blade.classList.add('open');
+                overlay.classList.add('open');
+            };
         });
     </script>
 }
-
