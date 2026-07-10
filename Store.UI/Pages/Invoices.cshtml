@@ -3,6 +3,7 @@
 @using Store.Models.Enums
 @{
     ViewData["Title"] = "Invoices";
+    ViewData["PageDescription"] = "Browse, inspect, and void sales invoices.";
 }
 
 @section Styles {
@@ -10,10 +11,7 @@
 }
 
 <div class="panel">
-    <header style="margin-bottom: var(--spacing-md);">
-        <h1 style="font-family: var(--fontFamily); font-size: var(--fontSize-heading-lg); font-weight: 600;">Invoices</h1>
-        <p style="color: var(--text-secondary);">Browse, inspect, and void sales invoices.</p>
-    </header>
+    
 
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
     {

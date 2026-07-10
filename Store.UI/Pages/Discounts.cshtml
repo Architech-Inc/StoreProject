@@ -3,6 +3,7 @@
 @{
     ViewData["Title"] = "Discount Rules";
     ViewData["ActivePage"] = "Discounts";
+    ViewData["PageDescription"] = "Manage item, category, and coupon-based discount rules.";
 }
 
 @section Styles {
@@ -10,10 +11,6 @@
 }
 
 <div class="panel">
-    <header style="margin-bottom: var(--spacing-md);">
-        <h1 style="font-family: var(--fontFamily); font-size: var(--fontSize-heading-lg); font-weight: 600;">Discount Rules</h1>
-        <p style="color: var(--text-secondary);">Manage item, category, and coupon-based discount rules.</p>
-    </header>
 
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
     {

@@ -2,6 +2,7 @@
 @model StoreUI.Pages.ProfileModel
 @{
     ViewData["Title"] = "My Profile";
+    ViewData["PageDescription"] = "View your account details and change your password.";
 }
 
 @section Styles {
@@ -9,10 +10,7 @@
 }
 
 <div class="ops-page">
-    <header>
-        <h1>My Profile</h1>
-        <p>View your account details and change your password.</p>
-    </header>
+    
 
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
     {

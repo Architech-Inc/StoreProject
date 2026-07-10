@@ -3,6 +3,8 @@
 @using Store.Models.Enums
 @{
     ViewData["Title"] = "Employees";
+    ViewData["ActivePage"] = "Employees";
+    ViewData["PageDescription"] = "Manage staff records, departments, and employment status.";
 }
 
 @section Styles {
@@ -10,10 +12,6 @@
 }
 
 <div class="ops-page">
-    <header>
-        <h1>Employees</h1>
-        <p>Manage staff records, departments, and employment status.</p>
-    </header>
 
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
     {

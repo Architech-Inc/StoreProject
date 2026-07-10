@@ -2,6 +2,8 @@
 @model StoreUI.Pages.LookupModel
 @{
     ViewData["Title"] = "Lookup Management";
+    ViewData["ActivePage"] = "Lookup";
+    ViewData["PageDescription"] = "Manage categories, measurement units, and departments used across the system.";
     var activeTab = ViewData["ActiveTab"] as string ?? "categories";
 }
 
@@ -10,10 +12,6 @@
 }
 
 <div class="ops-page">
-    <header>
-        <h1>Lookup Management</h1>
-        <p>Manage categories, measurement units, and departments used across the system.</p>
-    </header>
 
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
     {

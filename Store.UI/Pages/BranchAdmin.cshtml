@@ -2,6 +2,7 @@
 @model StoreUI.Pages.BranchAdminModel
 @{
     ViewData["Title"] = "Branch Management";
+    ViewData["PageDescription"] = "Create branches and assign users to branches with specific roles.";
 }
 
 @section Styles {
@@ -9,10 +10,7 @@
 }
 
 <div class="ops-page">
-    <header>
-        <h1>Branch Management</h1>
-        <p>Create branches and assign users to branches with specific roles.</p>
-    </header>
+    
 
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
     {

@@ -126,4 +126,24 @@
         });
     });
 
+    // App Shell Mobile Menu Toggle
+    const menuToggle = document.getElementById('menuToggle');
+    const appShell = document.getElementById('appShell');
+    
+    if (menuToggle && appShell) {
+        menuToggle.addEventListener('click', () => {
+            appShell.classList.toggle('sidebar-collapsed');
+            const isOpen = appShell.classList.contains('sidebar-collapsed');
+            menuToggle.setAttribute('aria-expanded', isOpen);
+        });
+
+        // Close sidebar when clicking outside (on the overlay)
+        appShell.addEventListener('click', (e) => {
+            if (e.target === appShell && appShell.classList.contains('sidebar-collapsed')) {
+                appShell.classList.remove('sidebar-collapsed');
+                menuToggle.setAttribute('aria-expanded', 'false');
+            }
+        });
+    }
+
 })();

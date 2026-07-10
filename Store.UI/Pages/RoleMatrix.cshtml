@@ -2,6 +2,7 @@
 @model StoreUI.Pages.RoleMatrixModel
 @{
     ViewData["Title"] = "Role Permission Matrix";
+    ViewData["PageDescription"] = "Fine-grained permission control for module and endpoint access.";
 }
 
 @section Styles {
@@ -9,10 +10,7 @@
 }
 
 <div class="ops-page">
-    <header>
-        <h1>Role Permission Matrix</h1>
-        <p>Fine-grained permission control for module and endpoint access.</p>
-    </header>
+    
 
     <nav class="page-jump" aria-label="Role matrix sections">
         <a href="#matrix-table">Permission Matrix</a>

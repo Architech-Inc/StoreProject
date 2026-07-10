@@ -2,6 +2,8 @@
 @model StoreUI.Pages.CustomersModel
 @{
     ViewData["Title"] = "Customers";
+    ViewData["ActivePage"] = "Customers";
+    ViewData["PageDescription"] = "Manage registered customer profiles and contact details.";
 }
 
 @section Styles {
@@ -9,10 +11,6 @@
 }
 
 <div class="ops-page">
-    <header>
-        <h1>Customers</h1>
-        <p>Manage registered customer profiles and contact details.</p>
-    </header>
 
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
     {

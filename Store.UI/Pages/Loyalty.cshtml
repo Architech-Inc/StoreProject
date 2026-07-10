@@ -2,6 +2,7 @@
 @model StoreUI.Pages.LoyaltyModel
 @{
     ViewData["Title"] = "Customer Loyalty";
+    ViewData["PageDescription"] = "View and manage customer loyalty points and tier status.";
 }
 
 @section Styles {
@@ -9,10 +10,7 @@
 }
 
 <div class="ops-page">
-    <header>
-        <h1>Customer Loyalty</h1>
-        <p>View and manage customer loyalty points and tier status.</p>
-    </header>
+    
 
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
     {

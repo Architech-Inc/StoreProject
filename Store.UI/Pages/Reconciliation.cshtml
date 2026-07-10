@@ -2,16 +2,14 @@
 @model StoreUI.Pages.ReconciliationModel
 @{
     ViewData["Title"] = "Day-End Reconciliation";
+    ViewData["PageDescription"] = "Review cashier shifts, variances, and payment channel summaries for a given day.";
 }
 @section Styles {
     <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
 }
 
 <div class="ops-page">
-    <header>
-        <h1>Day-End Reconciliation</h1>
-        <p>Review cashier shifts, variances, and payment channel summaries for a given day.</p>
-    </header>
+    
 
     @if (Model.ErrorMessage is not null)
     {

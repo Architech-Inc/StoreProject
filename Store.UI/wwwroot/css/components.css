@@ -45,6 +45,9 @@ button.danger:hover, button.danger:focus-visible { background: #b91c1c; }
 .button-command.danger { color: var(--ops-danger, #dc2626); }
 .button-command.danger:hover { background: color-mix(in srgb, var(--ops-danger, #dc2626) 10%, transparent); }
 
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 16px; }
+.form-grid > div { display: flex; flex-direction: column; gap: 4px; }
+
 /* ── Tables ─────────────────────────────────── */
 table {
     width: 100%; border-collapse: collapse; font-size: 0.9rem; background: var(--ops-paper, var(--surface));
@@ -56,9 +59,28 @@ th {
     font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ops-subtle, var(--text-secondary)); background: color-mix(in srgb, var(--ops-brand, var(--brand)) 6%, transparent);
 }
 tbody tr:hover { background: color-mix(in srgb, var(--ops-brand, var(--brand)) 4%, transparent); }
-@media (max-width: 700px) { th, td { font-size: 0.82rem; padding: 6px; } }
+@media (max-width: 700px) {
+    th, td { font-size: 0.82rem; padding: 6px; }
+    table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+        -webkit-overflow-scrolling: touch;
+    }
+}
 
-/* ── Status Banners & Badges ────────────────── */
+.table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: var(--radius-sm, 4px);
+    border: 1px solid var(--ops-border, var(--border));
+    background: var(--ops-paper, var(--surface));
+    margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.table-wrap table { border: none; }
+.table-wrap th, .table-wrap td { border-left: none; border-right: none; }/* ── Status Banners & Badges ────────────────── */
 .status { padding: 12px 14px; border: 1px solid var(--brand-border); background: var(--brand-soft); color: var(--brand-dark); border-radius: var(--radius-md, 6px); margin-bottom: 16px; }
 .status.ok { border-color: #22c55e; background: #f0fdf4; color: #15803d; }
 .status.error { border-color: var(--ops-danger, #dc2626); background: #fef2f2; color: #b91c1c; }

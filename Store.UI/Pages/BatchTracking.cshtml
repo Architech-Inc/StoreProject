@@ -3,6 +3,7 @@
 @{
     ViewData["Title"] = "Batch & Expiry Tracking";
     ViewData["ActivePage"] = "BatchTracking";
+    ViewData["PageDescription"] = "Monitor stock lot numbers, cost prices, and expiry dates. Receive alerts for expiring items.";
 }
 
 @section Styles {
@@ -10,10 +11,6 @@
 }
 
 <div class="ops-page">
-    <header>
-        <h1>Batch & Expiry Tracking</h1>
-        <p>Monitor stock lot numbers, cost prices, and expiry dates. Receive alerts for expiring items.</p>
-    </header>
 
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
     {

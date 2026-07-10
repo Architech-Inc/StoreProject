@@ -1,17 +1,10 @@
 @page
 @model StoreUI.Pages.DashboardModel
 @{
-    ViewData["Title"] = "Dashboard";
+    ViewData["Title"] = "Store Dashboard";
     ViewData["ActivePage"] = "Dashboard";
+    ViewData["PageDescription"] = "Realtime summary of sales, customers, and inventory health.";
 }
-
-<header class="topbar">
-    <button type="button" class="menu-toggle" id="menuToggle" aria-expanded="false" aria-controls="appSidebar">Menu</button>
-    <div>
-        <h1>Store Dashboard</h1>
-        <p>Realtime summary of sales, customers, and inventory health.</p>
-    </div>
-</header>
 
         @if (Model.HasLoadError)
         {

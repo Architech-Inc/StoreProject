@@ -3,6 +3,7 @@
 @{
     ViewData["Title"] = "Loyalty Campaigns";
     ViewData["ActivePage"] = "Campaigns";
+    ViewData["PageDescription"] = "Create and manage point multiplier and bonus campaigns for customer segments.";
 }
 
 @section Styles {
@@ -10,10 +11,6 @@
 }
 
 <div class="ops-page">
-    <header>
-        <h1>Loyalty Campaigns</h1>
-        <p>Create and manage point multiplier and bonus campaigns for customer segments.</p>
-    </header>
 
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
     {

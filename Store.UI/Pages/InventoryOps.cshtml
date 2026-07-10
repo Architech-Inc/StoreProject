@@ -2,6 +2,7 @@
 @model StoreUI.Pages.InventoryOpsModel
 @{
     ViewData["Title"] = "Inventory Operations";
+    ViewData["PageDescription"] = "Process GRN, returns, adjustments, and reorder monitoring.";
 }
 
 @section Styles {
@@ -9,10 +10,7 @@
 }
 
 <div class="ops-page">
-    <header>
-        <h1>Inventory Operations</h1>
-        <p>Process GRN, returns, adjustments, and reorder monitoring.</p>
-    </header>
+    
 
     <nav class="page-jump" aria-label="Inventory sections">
         <a href="#reorder">Reorder Suggestions</a>

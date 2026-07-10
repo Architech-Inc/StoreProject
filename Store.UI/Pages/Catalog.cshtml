@@ -2,6 +2,8 @@
 @model StoreUI.Pages.CatalogModel
 @{
     ViewData["Title"] = "Item Catalog";
+    ViewData["ActivePage"] = "Catalog";
+    ViewData["PageDescription"] = "Manage product and service records — prices, stock, and details.";
 }
 
 @section Styles {
@@ -9,10 +11,6 @@
 }
 
 <div class="ops-page">
-    <header>
-        <h1>Item Catalog</h1>
-        <p>Manage product and service records — prices, stock, and details.</p>
-    </header>
 
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
     {
