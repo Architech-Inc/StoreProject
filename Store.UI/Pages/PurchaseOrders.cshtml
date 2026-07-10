@@ -7,18 +7,11 @@
     ViewData["ActivePage"] = "PurchaseOrders";
 }
 
-@if (TempData["StatusMessage"] is string msg)
-{
-    var isError = msg.StartsWith("Error:", StringComparison.OrdinalIgnoreCase);
-    <div class="alert @(isError ? "alert-danger" : "alert-success") alert-dismissible fade show" role="alert">
-        @msg
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-}
+
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h4 class="mb-0">Purchase Orders</h4>
-    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createPoModal">
+    <button class="button-primary btn-sm" onclick="window.openBlade('createPoBlade')">
         + New Purchase Order
     </button>
 </div>
@@ -110,10 +103,8 @@
                             }
                             @if (po.Status == "Approved" || po.Status == "PartiallyReceived")
                             {
-                                <button class="btn btn-outline-success btn-sm"
-                                        data-bs-toggle="modal" data-bs-target="#receiveModal"
-                                        data-po-id="@po.PurchaseOrderId"
-                                        data-po-items="@System.Text.Json.JsonSerializer.Serialize(po.Items)">
+                                <button type="button" class="button-secondary btn-sm"
+                                        onclick="openReceiveBlade('@po.PurchaseOrderId', '@Html.Raw(System.Text.Json.JsonSerializer.Serialize(po.Items).Replace("\"", "&quot;").Replace("'", "\\'"))')">
                                     Receive
                                 </button>
                             }
@@ -129,18 +120,17 @@
     </table>
 </div>
 
-<!-- ===== Create PO Modal ===== -->
-<div class="modal fade" id="createPoModal" tabindex="-1" aria-labelledby="createPoModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl">
-        <form method="post" asp-page-handler="Create">
+<!-- ===== Create PO Blade ===== -->
+<div class="blade-overlay" id="createPoOverlay"></div>
+<div class="blade" id="createPoBlade" data-overlay-id="createPoOverlay">
+    <div class="blade-header">
+        <h3 id="createPoModalLabel">New Purchase Order</h3>
+        <button type="button" class="btn-close" data-close-blade aria-label="Close">×</button>
+    </div>
+    <div class="blade-body">
+        <form method="post" asp-page-handler="Create" id="createPoForm">
             @Html.AntiForgeryToken()
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="createPoModalLabel">New Purchase Order</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="row g-3">
+            <div style="display:flex;flex-direction:column;gap:12px;">
                         <div class="col-md-4">
                             <label class="form-label">Supplier ID <span class="text-danger">*</span></label>
                             <input type="text" name="CreateSupplierId" class="form-control form-control-sm"
@@ -189,27 +179,25 @@
                             </tr>
                         </tbody>
                     </table>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Create Purchase Order</button>
-                </div>
-            </div>
         </form>
+    </div>
+    <div class="blade-footer">
+        <button type="button" class="button-command" data-close-blade>Cancel</button>
+        <button type="button" class="button-primary" onclick="document.getElementById('createPoForm').submit()">Create Purchase Order</button>
     </div>
 </div>
 
-<!-- ===== Receive Goods Modal ===== -->
-<div class="modal fade" id="receiveModal" tabindex="-1" aria-labelledby="receiveModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <form method="post" asp-page-handler="Receive">
+<!-- ===== Receive Goods Blade ===== -->
+<div class="blade-overlay" id="receiveOverlay"></div>
+<div class="blade" id="receiveBlade" data-overlay-id="receiveOverlay">
+    <div class="blade-header">
+        <h3 id="receiveModalLabel">Receive Goods</h3>
+        <button type="button" class="btn-close" data-close-blade aria-label="Close">×</button>
+    </div>
+    <div class="blade-body">
+        <form method="post" asp-page-handler="Receive" id="receiveForm">
             @Html.AntiForgeryToken()
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="receiveModalLabel">Receive Goods</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
+            <div style="display:flex;flex-direction:column;gap:12px;">
                     <input type="hidden" name="ActionPurchaseOrderId" id="receivePoId" />
                     <table class="table table-sm" id="receiveItemsTable">
                         <thead class="table-light">
@@ -223,13 +211,12 @@
                         </thead>
                         <tbody id="receiveItemsBody"></tbody>
                     </table>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-success">Confirm Receipt</button>
-                </div>
             </div>
         </form>
+    </div>
+    <div class="blade-footer">
+        <button type="button" class="button-command" data-close-blade>Cancel</button>
+        <button type="button" class="button-primary" onclick="document.getElementById('receiveForm').submit()">Confirm Receipt</button>
     </div>
 </div>
 
@@ -254,13 +241,9 @@ document.addEventListener('click', function (e) {
     }
 });
 
-// Receive modal population
-const receiveModal = document.getElementById('receiveModal');
-receiveModal.addEventListener('show.bs.modal', function (e) {
-    const btn = e.relatedTarget;
-    const poId = btn.getAttribute('data-po-id');
-    const items = JSON.parse(btn.getAttribute('data-po-items'));
-
+// Receive blade population
+window.openReceiveBlade = function(poId, itemsJson) {
+    const items = JSON.parse(itemsJson);
     document.getElementById('receivePoId').value = poId;
     const tbody = document.getElementById('receiveItemsBody');
     tbody.innerHTML = '';
@@ -277,7 +260,9 @@ receiveModal.addEventListener('show.bs.modal', function (e) {
             <td><input type="hidden" name="ReceiveItemLineIds" value="${item.purchaseOrderItemId}" /></td>`;
         tbody.appendChild(row);
     });
-});
+    
+    window.openBlade('receiveBlade');
+};
 </script>
 }
 

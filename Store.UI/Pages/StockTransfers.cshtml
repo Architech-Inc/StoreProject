@@ -15,10 +15,7 @@
         <p style="color: var(--text-secondary);">Request, approve, dispatch, and receive inter-branch stock transfers.</p>
     </header>
 
-    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
-    {
-        <div class="status @(Model.StatusMessage.StartsWith("Error") ? "error" : "ok")" id="serverStatusMessage" style="display:none;">@Model.StatusMessage</div>
-    }
+
 
     <!-- Filter bar -->
     <form method="get" style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
@@ -164,103 +161,120 @@
 </div>
 
 <!-- View Details Modal -->
-<div id="viewModal" class="modal-backdrop" style="display:none;" role="dialog" aria-modal="true">
+<div id="viewModal" class="modal-overlay" hidden role="dialog" aria-modal="true">
     <div class="modal" style="max-width:600px;">
-        <h3>Transfer Details</h3>
-        <div id="viewContent"></div>
-        <div class="modal-actions">
-            <button type="button" onclick="closeModal('viewModal')">Close</button>
+        <div class="modal-head">
+            <h3>Transfer Details</h3>
+            <button type="button" class="btn-close" onclick="closeModal('viewModal')" aria-label="Close">×</button>
         </div>
+        <div id="viewContent"></div>
     </div>
 </div>
 
 <!-- Approve Modal -->
-<div id="approveModal" class="modal-backdrop" style="display:none;" role="dialog" aria-modal="true">
+<div id="approveModal" class="modal-overlay" hidden role="dialog" aria-modal="true">
     <div class="modal" style="max-width:420px;">
-        <h3>Approve Transfer #<span id="approveIdLabel"></span></h3>
+        <div class="modal-head">
+            <h3>Approve Transfer #<span id="approveIdLabel"></span></h3>
+            <button type="button" class="btn-close" onclick="closeModal('approveModal')" aria-label="Close">×</button>
+        </div>
         <form method="post" asp-page-handler="Approve">
             @Html.AntiForgeryToken()
             <input type="hidden" name="ActionTransferId" id="approveTransferId" />
             <label style="display:flex;flex-direction:column;gap:4px;margin-bottom:12px;">Notes
                 <textarea name="ApproveNotes" rows="2"></textarea>
             </label>
-            <div class="modal-actions">
-                <button type="button" onclick="closeModal('approveModal')">Cancel</button>
-                <button type="submit">Approve</button>
+            <div style="display:flex;justify-content:flex-end;gap:8px;">
+                <button type="button" class="button-command" onclick="closeModal('approveModal')">Cancel</button>
+                <button type="submit" class="button-primary">Approve</button>
             </div>
         </form>
     </div>
 </div>
 
 <!-- Reject Modal -->
-<div id="rejectModal" class="modal-backdrop" style="display:none;" role="dialog" aria-modal="true">
+<div id="rejectModal" class="modal-overlay" hidden role="dialog" aria-modal="true">
     <div class="modal" style="max-width:420px;">
-        <h3>Reject Transfer #<span id="rejectIdLabel"></span></h3>
+        <div class="modal-head">
+            <h3>Reject Transfer #<span id="rejectIdLabel"></span></h3>
+            <button type="button" class="btn-close" onclick="closeModal('rejectModal')" aria-label="Close">×</button>
+        </div>
         <form method="post" asp-page-handler="Reject">
             @Html.AntiForgeryToken()
             <input type="hidden" name="ActionTransferId" id="rejectTransferId" />
             <label style="display:flex;flex-direction:column;gap:4px;margin-bottom:12px;">Reason *
                 <textarea name="RejectReason" rows="2" required></textarea>
             </label>
-            <div class="modal-actions">
-                <button type="button" onclick="closeModal('rejectModal')">Cancel</button>
-                <button type="submit" class="btn-danger">Reject</button>
+            <div style="display:flex;justify-content:flex-end;gap:8px;">
+                <button type="button" class="button-command" onclick="closeModal('rejectModal')">Cancel</button>
+                <button type="submit" class="button-primary danger">Reject</button>
             </div>
         </form>
     </div>
 </div>
 
-<!-- Dispatch Modal -->
-<div id="dispatchModal" class="modal-backdrop" style="display:none;" role="dialog" aria-modal="true">
-    <div class="modal" style="max-width:560px;">
+<!-- Dispatch Blade -->
+<div class="blade-overlay" id="dispatchOverlay"></div>
+<div class="blade" id="dispatchBlade" data-overlay-id="dispatchOverlay">
+    <div class="blade-header">
         <h3>Dispatch Transfer #<span id="dispatchIdLabel"></span></h3>
-        <form method="post" asp-page-handler="Dispatch">
+        <button type="button" class="btn-close" data-close-blade aria-label="Close">×</button>
+    </div>
+    <div class="blade-body">
+        <form method="post" asp-page-handler="Dispatch" id="dispatchForm">
             @Html.AntiForgeryToken()
             <input type="hidden" name="ActionTransferId" id="dispatchTransferId" />
             <div id="dispatchItemLines"></div>
             <label style="display:flex;flex-direction:column;gap:4px;margin:12px 0;">Notes
                 <textarea name="DispatchNotes" rows="2"></textarea>
             </label>
-            <div class="modal-actions">
-                <button type="button" onclick="closeModal('dispatchModal')">Cancel</button>
-                <button type="submit">Mark Dispatched</button>
-            </div>
         </form>
+    </div>
+    <div class="blade-footer">
+        <button type="button" class="button-command" data-close-blade>Cancel</button>
+        <button type="button" class="button-primary" onclick="document.getElementById('dispatchForm').submit()">Mark Dispatched</button>
     </div>
 </div>
 
-<!-- Receive Modal -->
-<div id="receiveModal" class="modal-backdrop" style="display:none;" role="dialog" aria-modal="true">
-    <div class="modal" style="max-width:560px;">
+<!-- Receive Blade -->
+<div class="blade-overlay" id="receiveOverlay"></div>
+<div class="blade" id="receiveBlade" data-overlay-id="receiveOverlay">
+    <div class="blade-header">
         <h3>Receive Transfer #<span id="receiveIdLabel"></span></h3>
-        <form method="post" asp-page-handler="Receive">
+        <button type="button" class="btn-close" data-close-blade aria-label="Close">×</button>
+    </div>
+    <div class="blade-body">
+        <form method="post" asp-page-handler="Receive" id="receiveForm">
             @Html.AntiForgeryToken()
             <input type="hidden" name="ActionTransferId" id="receiveTransferId" />
             <div id="receiveItemLines"></div>
             <label style="display:flex;flex-direction:column;gap:4px;margin:12px 0;">Notes
                 <textarea name="ReceiveNotes" rows="2"></textarea>
             </label>
-            <div class="modal-actions">
-                <button type="button" onclick="closeModal('receiveModal')">Cancel</button>
-                <button type="submit">Confirm Received</button>
-            </div>
         </form>
+    </div>
+    <div class="blade-footer">
+        <button type="button" class="button-command" data-close-blade>Cancel</button>
+        <button type="button" class="button-primary" onclick="document.getElementById('receiveForm').submit()">Confirm Received</button>
     </div>
 </div>
 
 <!-- Cancel Modal -->
-<div id="cancelModal" class="modal-backdrop" style="display:none;" role="dialog" aria-modal="true">
+<div id="cancelModal" class="modal-overlay" hidden role="dialog" aria-modal="true">
     <div class="modal" style="max-width:420px;">
-        <h3>Cancel Transfer #<span id="cancelIdLabel"></span></h3>
+        <div class="modal-head">
+            <h3>Cancel Transfer #<span id="cancelIdLabel"></span></h3>
+            <button type="button" class="btn-close" onclick="closeModal('cancelModal')" aria-label="Close">×</button>
+        </div>
         <form method="post" asp-page-handler="Cancel">
             @Html.AntiForgeryToken()
             <input type="hidden" name="ActionTransferId" id="cancelTransferId" />
             <label style="display:flex;flex-direction:column;gap:4px;margin-bottom:12px;">Reason
                 <textarea name="CancelReason" rows="2"></textarea>
             </label>
-            <div class="modal-actions">
-                <button type="button" onclick="closeModal('cancelModal')">Cancel</button>
-                <button type="submit" class="btn-danger">Cancel Transfer</button>
+            <div style="display:flex;justify-content:flex-end;gap:8px;">
+                <button type="button" class="button-command" onclick="closeModal('cancelModal')">Close</button>
+                <button type="submit" class="button-primary danger">Cancel Transfer</button>
             </div>
         </form>
     </div>
@@ -270,15 +284,9 @@
 <script>
 let itemLineCount = 1;
 
-function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+function closeModal(id) { document.getElementById(id).hidden = true; }
 
-document.addEventListener('DOMContentLoaded', () => {
-    const statusMsg = document.getElementById('serverStatusMessage');
-    if (statusMsg) {
-        const type = statusMsg.classList.contains('error') ? 'error' : 'success';
-        if (window.showToast) window.showToast(type, statusMsg.textContent);
-    }
-});
+
 
 function addItemLine() {
     const container = document.getElementById('itemLines');
@@ -322,19 +330,19 @@ function viewDetails(btn) {
     }
     html += '</tbody></table>';
     document.getElementById('viewContent').innerHTML = html;
-    document.getElementById('viewModal').style.display = 'flex';
+    document.getElementById('viewModal').hidden = false;
 }
 
 function openApprove(id) {
     document.getElementById('approveTransferId').value = id;
     document.getElementById('approveIdLabel').textContent = id;
-    document.getElementById('approveModal').style.display = 'flex';
+    document.getElementById('approveModal').hidden = false;
 }
 
 function openReject(id) {
     document.getElementById('rejectTransferId').value = id;
     document.getElementById('rejectIdLabel').textContent = id;
-    document.getElementById('rejectModal').style.display = 'flex';
+    document.getElementById('rejectModal').hidden = false;
 }
 
 function openDispatch(btn) {
@@ -349,7 +357,7 @@ function openDispatch(btn) {
         </div>`;
     });
     document.getElementById('dispatchItemLines').innerHTML = html;
-    document.getElementById('dispatchModal').style.display = 'flex';
+    window.openBlade('dispatchBlade');
 }
 
 function openReceive(btn) {
@@ -364,13 +372,13 @@ function openReceive(btn) {
         </div>`;
     });
     document.getElementById('receiveItemLines').innerHTML = html;
-    document.getElementById('receiveModal').style.display = 'flex';
+    window.openBlade('receiveBlade');
 }
 
 function openCancel(id) {
     document.getElementById('cancelTransferId').value = id;
     document.getElementById('cancelIdLabel').textContent = id;
-    document.getElementById('cancelModal').style.display = 'flex';
+    document.getElementById('cancelModal').hidden = false;
 }
 </script>
 }

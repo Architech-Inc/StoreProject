@@ -111,12 +111,13 @@
 </div>
 
 <!-- Create Order Modal -->
-<div class="modal-overlay" id="createOrderModal" hidden>
-    <div class="modal" role="dialog" aria-labelledby="createOrderTitle" aria-modal="true" style="max-width:680px;width:95vw;">
-        <div class="modal-head">
-            <h3 id="createOrderTitle">New Purchase Order</h3>
-            <button type="button" class="btn-close" onclick="closeCreateModal()" aria-label="Close">×</button>
-        </div>
+<div class="blade-overlay" id="createOrderOverlay"></div>
+<div class="blade" id="createOrderBlade" data-overlay-id="createOrderOverlay">
+    <div class="blade-header">
+        <h3 id="createOrderTitle">New Purchase Order</h3>
+        <button type="button" class="btn-close" data-close-blade aria-label="Close">×</button>
+    </div>
+    <div class="blade-body">
         <form method="post" id="createOrderForm" asp-page-handler="Create">
             @Html.AntiForgeryToken()
             <input type="hidden" name="OrderLinesJson" id="orderLinesJson" />
@@ -130,28 +131,31 @@
             <div style="margin-top:12px;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
                     <strong>Order Lines</strong>
-                    <button type="button" onclick="addOrderLine()">+ Add Item</button>
+                    <button type="button" class="button-secondary btn-sm" onclick="addOrderLine()">+ Add Item</button>
                 </div>
                 <div id="orderLinesContainer"></div>
-                <p id="orderLinesError" style="color:var(--ops-red);display:none;">At least one order line is required.</p>
-            </div>
-
-            <div style="display:flex;gap:8px;margin-top:14px;">
-                <button type="button" onclick="submitOrderCreate()">Create Order</button>
-                <button type="button" onclick="closeCreateModal()">Cancel</button>
+                <p id="orderLinesError" style="color:var(--ops-danger);display:none;">At least one order line is required.</p>
             </div>
         </form>
     </div>
+    <div class="blade-footer">
+        <button type="button" class="button-command" data-close-blade>Cancel</button>
+        <button type="button" class="button-primary" onclick="submitOrderCreate()">Create Order</button>
+    </div>
 </div>
 
-<!-- Detail Modal -->
-<div class="modal-overlay" id="detailModal" hidden>
-    <div class="modal" role="dialog" aria-labelledby="detailModalTitle" aria-modal="true" style="max-width:680px;width:95vw;">
-        <div class="modal-head">
-            <h3 id="detailModalTitle">Order Detail</h3>
-            <button type="button" class="btn-close" onclick="closeDetailModal()" aria-label="Close">×</button>
-        </div>
-        <div id="detailContent" style="margin-top:8px;">Loading…</div>
+<!-- Detail Blade -->
+<div class="blade-overlay" id="detailOverlay"></div>
+<div class="blade" id="detailBlade" data-overlay-id="detailOverlay">
+    <div class="blade-header">
+        <h3 id="detailModalTitle">Order Detail</h3>
+        <button type="button" class="btn-close" data-close-blade aria-label="Close">×</button>
+    </div>
+    <div class="blade-body">
+        <div id="detailContent">Loading…</div>
+    </div>
+    <div class="blade-footer">
+        <button type="button" class="button-secondary" data-close-blade>Close</button>
     </div>
 </div>
 
@@ -166,16 +170,12 @@
         document.getElementById('orderLinesContainer').innerHTML = '';
         document.getElementById('orderLinesError').style.display = 'none';
         addOrderLine();
-        document.getElementById('createOrderModal').hidden = false;
+        window.openBlade('createOrderBlade');
     };
 
     window.closeCreateModal = function() {
-        document.getElementById('createOrderModal').hidden = true;
+        window.closeBlade('createOrderBlade');
     };
-
-    document.getElementById('createOrderModal').addEventListener('click', function(e) {
-        if (e.target === this) closeCreateModal();
-    });
 
     window.addOrderLine = function() {
         const container = document.getElementById('orderLinesContainer');
@@ -239,7 +239,7 @@
         const modal = document.getElementById('detailModal');
         const content = document.getElementById('detailContent');
         content.innerHTML = 'Loading…';
-        modal.hidden = false;
+        window.openBlade('detailBlade');
 
         try {
             const resp = await fetch(`/Orders?handler=Detail&id=${orderId}`);
@@ -281,12 +281,8 @@
     };
 
     window.closeDetailModal = function() {
-        document.getElementById('detailModal').hidden = true;
+        window.closeBlade('detailBlade');
     };
-
-    document.getElementById('detailModal').addEventListener('click', function(e) {
-        if (e.target === this) closeDetailModal();
-    });
 
     document.addEventListener('keydown', e => {
         if (e.key === 'Escape') {

@@ -110,9 +110,12 @@
 </div>
 
 <!-- Create Modal -->
-<div id="createModal" class="modal-backdrop" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="createTitle">
+<div id="createModal" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="createTitle">
     <div class="modal">
-        <h3 id="createTitle">New Discount Rule</h3>
+        <div class="modal-head">
+            <h3 id="createTitle">New Discount Rule</h3>
+            <button type="button" class="btn-close" onclick="closeModal('createModal')" aria-label="Close">×</button>
+        </div>
         <form method="post" asp-page-handler="Create">
             @Html.AntiForgeryToken()
             <div class="form-grid">
@@ -158,18 +161,21 @@
                     <input name="CreateIsActive" type="checkbox" checked value="true" /> Active
                 </label>
             </div>
-            <div class="modal-actions">
-                <button type="button" onclick="closeModal('createModal')">Cancel</button>
-                <button type="submit">Create</button>
+            <div style="display:flex;justify-content:flex-end;gap:8px;">
+                <button type="button" class="button-command" onclick="closeModal('createModal')">Cancel</button>
+                <button type="submit" class="button-primary">Create</button>
             </div>
         </form>
     </div>
 </div>
 
 <!-- Edit Modal -->
-<div id="editModal" class="modal-backdrop" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="editTitle">
+<div id="editModal" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="editTitle">
     <div class="modal">
-        <h3 id="editTitle">Edit Discount</h3>
+        <div class="modal-head">
+            <h3 id="editTitle">Edit Discount</h3>
+            <button type="button" class="btn-close" onclick="closeModal('editModal')" aria-label="Close">×</button>
+        </div>
         <form method="post" asp-page-handler="Edit">
             @Html.AntiForgeryToken()
             <input type="hidden" name="EditDiscountId" id="editId" />
@@ -217,25 +223,28 @@
                     <input id="editActive" name="EditIsActive" type="checkbox" value="true" /> Active
                 </label>
             </div>
-            <div class="modal-actions">
-                <button type="button" onclick="closeModal('editModal')">Cancel</button>
-                <button type="submit">Save</button>
+            <div style="display:flex;justify-content:flex-end;gap:8px;">
+                <button type="button" class="button-command" onclick="closeModal('editModal')">Cancel</button>
+                <button type="submit" class="button-primary">Save</button>
             </div>
         </form>
     </div>
 </div>
 
 <!-- Delete Confirm Modal -->
-<div id="deleteModal" class="modal-backdrop" style="display:none;" role="dialog" aria-modal="true">
+<div id="deleteModal" class="modal-overlay" hidden role="dialog" aria-modal="true">
     <div class="modal" style="max-width:420px;">
-        <h3>Delete Discount</h3>
+        <div class="modal-head">
+            <h3>Delete Discount</h3>
+            <button type="button" class="btn-close" onclick="closeModal('deleteModal')" aria-label="Close">×</button>
+        </div>
         <p>Delete <strong id="deleteNameLabel"></strong>? This cannot be undone.</p>
         <form method="post" asp-page-handler="Delete">
             @Html.AntiForgeryToken()
             <input type="hidden" name="DeleteDiscountId" id="deleteId" />
-            <div class="modal-actions">
-                <button type="button" onclick="closeModal('deleteModal')">Cancel</button>
-                <button type="submit" class="btn-danger">Delete</button>
+            <div style="display:flex;justify-content:flex-end;gap:8px;">
+                <button type="button" class="button-command" onclick="closeModal('deleteModal')">Cancel</button>
+                <button type="submit" class="button-primary danger">Delete</button>
             </div>
         </form>
     </div>
@@ -243,8 +252,8 @@
 
 @section Scripts {
 <script>
-function openCreate() { document.getElementById('createModal').style.display = 'flex'; }
-function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+function openCreate() { document.getElementById('createModal').hidden = false; }
+function closeModal(id) { document.getElementById(id).hidden = true; }
 
 function toggleValueField(sel, prefix) {
     const isFixed = sel.value === '1';

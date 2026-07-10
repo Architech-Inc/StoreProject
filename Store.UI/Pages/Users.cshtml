@@ -14,12 +14,7 @@
         <p>Manage system user accounts, roles, and account status.</p>
     </header>
 
-    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
-    {
-        <div class="status @(Model.StatusMessage.StartsWith("Error") || Model.StatusMessage.StartsWith("Failed") ? "error" : "ok")">
-            @Model.StatusMessage
-        </div>
-    }
+
 
     <section class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
@@ -141,9 +136,9 @@
                 </select>
             </div>
 
-            <div style="display:flex;gap:8px;margin-top:12px;">
-                <button type="submit" id="submitBtn">Create User</button>
-                <button type="button" onclick="closeModal()">Cancel</button>
+            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
+                <button type="button" class="button-command" onclick="closeModal()">Cancel</button>
+                <button type="submit" class="button-primary" id="submitBtn">Create User</button>
             </div>
         </form>
     </div>

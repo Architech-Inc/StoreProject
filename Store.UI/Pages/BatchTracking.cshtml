@@ -108,9 +108,12 @@
 </div>
 
 <!-- Create Modal -->
-<div id="createModal" class="modal-backdrop" style="display:none;" role="dialog" aria-modal="true">
+<div id="createModal" class="modal-overlay" hidden role="dialog" aria-modal="true">
     <div class="modal">
-        <h3>Record Batch</h3>
+        <div class="modal-head">
+            <h3>Record Batch</h3>
+            <button type="button" class="btn-close" onclick="closeModal('createModal')" aria-label="Close">×</button>
+        </div>
         <form method="post" asp-page-handler="Create">
             @Html.AntiForgeryToken()
             <div class="form-grid">
@@ -132,22 +135,25 @@
                 <label>Expiry Date
                     <input name="CreateExpiryDate" type="date" />
                 </label>
-                <label style="grid-column:1/-1;">Notes
+                <label>Notes
                     <textarea name="CreateNotes" rows="2" maxlength="500"></textarea>
                 </label>
             </div>
-            <div class="modal-actions">
-                <button type="button" onclick="closeModal('createModal')">Cancel</button>
-                <button type="submit">Record</button>
+            <div style="display:flex;justify-content:flex-end;gap:8px;">
+                <button type="button" class="button-command" onclick="closeModal('createModal')">Cancel</button>
+                <button type="submit" class="button-primary">Record</button>
             </div>
         </form>
     </div>
 </div>
 
 <!-- Edit Modal -->
-<div id="editModal" class="modal-backdrop" style="display:none;" role="dialog" aria-modal="true">
+<div id="editModal" class="modal-overlay" hidden role="dialog" aria-modal="true">
     <div class="modal">
-        <h3>Edit Batch</h3>
+        <div class="modal-head">
+            <h3>Edit Batch</h3>
+            <button type="button" class="btn-close" onclick="closeModal('editModal')" aria-label="Close">×</button>
+        </div>
         <form method="post" asp-page-handler="Edit">
             @Html.AntiForgeryToken()
             <input type="hidden" name="EditBatchId" id="editBatchId" />
@@ -168,25 +174,28 @@
                     <textarea id="editNotes" name="EditNotes" rows="2" maxlength="500"></textarea>
                 </label>
             </div>
-            <div class="modal-actions">
-                <button type="button" onclick="closeModal('editModal')">Cancel</button>
-                <button type="submit">Save</button>
+            <div style="display:flex;justify-content:flex-end;gap:8px;">
+                <button type="button" class="button-command" onclick="closeModal('editModal')">Cancel</button>
+                <button type="submit" class="button-primary">Save</button>
             </div>
         </form>
     </div>
 </div>
 
 <!-- Delete Confirm Modal -->
-<div id="deleteModal" class="modal-backdrop" style="display:none;" role="dialog" aria-modal="true">
+<div id="deleteModal" class="modal-overlay" hidden role="dialog" aria-modal="true">
     <div class="modal" style="max-width:420px;">
-        <h3>Delete Batch</h3>
+        <div class="modal-head">
+            <h3>Delete Batch</h3>
+            <button type="button" class="btn-close" onclick="closeModal('deleteModal')" aria-label="Close">×</button>
+        </div>
         <p>Delete batch <strong id="deleteLabel"></strong>? This cannot be undone.</p>
         <form method="post" asp-page-handler="Delete">
             @Html.AntiForgeryToken()
             <input type="hidden" name="DeleteBatchId" id="deleteBatchId" />
-            <div class="modal-actions">
-                <button type="button" onclick="closeModal('deleteModal')">Cancel</button>
-                <button type="submit" class="btn-danger">Delete</button>
+            <div style="display:flex;justify-content:flex-end;gap:8px;">
+                <button type="button" class="button-command" onclick="closeModal('deleteModal')">Cancel</button>
+                <button type="submit" class="button-primary danger">Delete</button>
             </div>
         </form>
     </div>
@@ -194,8 +203,8 @@
 
 @section Scripts {
 <script>
-function openCreate() { document.getElementById('createModal').style.display = 'flex'; }
-function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+function openCreate() { document.getElementById('createModal').hidden = false; }
+function closeModal(id) { document.getElementById(id).hidden = true; }
 
 function toDateInput(iso) {
     if (!iso) return '';
@@ -209,13 +218,13 @@ function openEdit(id, b) {
     document.getElementById('editCost').value = b.costPrice || '';
     document.getElementById('editExpiry').value = toDateInput(b.expiryDate);
     document.getElementById('editNotes').value = b.notes || '';
-    document.getElementById('editModal').style.display = 'flex';
+    document.getElementById('editModal').hidden = false;
 }
 
 function confirmDelete(id, num) {
     document.getElementById('deleteBatchId').value = id;
     document.getElementById('deleteLabel').textContent = num;
-    document.getElementById('deleteModal').style.display = 'flex';
+    document.getElementById('deleteModal').hidden = false;
 }
 </script>
 }

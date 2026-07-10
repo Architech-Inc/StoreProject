@@ -11,14 +11,7 @@
     <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
 }
 
-@if (TempData["StatusMessage"] is string msg)
-{
-    var isError = msg.StartsWith("Error:", StringComparison.OrdinalIgnoreCase);
-    <div class="alert @(isError ? "alert-danger" : "alert-success") alert-dismissible fade show" role="alert">
-        @msg
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-}
+
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h4 class="mb-0">Suppliers</h4>

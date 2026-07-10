@@ -138,9 +138,9 @@
             <label for="editNotes">Notes</label>
             <textarea asp-for="EditNotes" id="editNotes" rows="2"></textarea>
 
-            <div style="display:flex;gap:8px;margin-top:8px;">
-                <button type="submit">Save Changes</button>
-                <button type="button" onclick="closeEditModal()">Cancel</button>
+            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;">
+                <button type="button" class="button-command" onclick="closeEditModal()">Cancel</button>
+                <button type="submit" class="button-primary">Save Changes</button>
             </div>
         </form>
     </div>
@@ -189,9 +189,9 @@
             <label for="notes">Notes</label>
             <textarea asp-for="Notes" id="notes" rows="2" placeholder="Optional internal notes"></textarea>
 
-            <div style="display:flex;gap:8px;margin-top:8px;">
-                <button type="submit">Create Customer</button>
-                <button type="button" class="danger" onclick="closeModal()">Cancel</button>
+            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
+                <button type="button" class="button-command" onclick="closeModal()">Cancel</button>
+                <button type="submit" class="button-primary">Create Customer</button>
             </div>
         </form>
     </div>

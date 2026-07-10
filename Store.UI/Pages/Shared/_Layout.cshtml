@@ -17,6 +17,22 @@
     <div id="toast-container" class="toast-container" aria-live="polite"></div>
     
     <script src="~/js/site.js" asp-append-version="true"></script>
+    @if (TempData["StatusMessage"] is string successMsg)
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                window.showToast('success', '@Html.Raw(successMsg.Replace("'", "\\'").Replace("\n", "\\n").Replace("\r", ""))');
+            });
+        </script>
+    }
+    @if (TempData["ErrorMessage"] is string errorMsg)
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                window.showToast('error', '@Html.Raw(errorMsg.Replace("'", "\\'").Replace("\n", "\\n").Replace("\r", ""))');
+            });
+        </script>
+    }
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
