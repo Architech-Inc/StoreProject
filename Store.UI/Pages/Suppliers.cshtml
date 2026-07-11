@@ -11,17 +11,23 @@
     <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
 }
 
-
-
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h4 class="mb-0">Suppliers</h4>
-    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createModal">
-        + New Supplier
+<div class="filter-bar" style="margin-bottom: 24px; justify-content: space-between;">
+    <form method="get" class="filter-row">
+        <div class="filter-group">
+            <label>Search Suppliers:</label>
+            <div style="display:flex; gap:8px;">
+                <input type="search" name="search" class="form-control form-control-sm" placeholder="Search by name or reg #..." value="@Model.SearchQuery" />
+                <button type="submit" class="button-secondary">Search</button>
+            </div>
+        </div>
+    </form>
+    <button class="button-primary" onclick="openCreateBlade()">
+        <i class="bi bi-plus-lg"></i> New Supplier
     </button>
 </div>
 
 <!-- Suppliers List -->
-<div class="table-responsive">
+<div class="table-wrap">
     <table class="table table-hover table-sm align-middle">
         <thead class="table-light">
             <tr>
@@ -85,17 +91,17 @@
                     </td>
                     <td>@s.DateCreated.ToString("dd MMM yyyy")</td>
                     <td>
-                        <div class="d-flex gap-1">
-                            <button class="btn btn-outline-secondary btn-sm"
-                                    data-bs-toggle="modal" data-bs-target="#editModal"
+                        <div style="display:flex; gap:4px; flex-wrap:nowrap;">
+                            <button class="button-secondary"
+                                    onclick="openEditBlade(this)"
                                     data-supplier='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(s))'>
                                 Edit
                             </button>
-                            <form method="post" asp-page-handler="Delete">
+                            <form method="post" asp-page-handler="Delete" style="margin:0;">
                                 @Html.AntiForgeryToken()
                                 <input type="hidden" name="supplierId" value="@s.SupplierId" />
-                                <button class="btn btn-outline-danger btn-sm" type="submit"
-                                        onclick="return confirm('Delete supplier @s.Name?')">Delete</button>
+                                <button class="button-command danger" type="submit"
+                                        onclick="return confirm('Delete supplier @s.Name.Replace("'", "\\'")?')">Delete</button>
                             </form>
                         </div>
                     </td>
@@ -109,145 +115,135 @@
     </table>
 </div>
 
-<!-- ===== Create Supplier Modal ===== -->
-<div class="modal fade" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl">
-        <form method="post" asp-page-handler="Create">
+<!-- ===== Create Supplier Blade ===== -->
+<div class="blade" id="createBlade">
+    <div class="blade-header">
+        <h5 class="mb-0">New Supplier</h5>
+        <button type="button" class="btn-close" onclick="closeCreateBlade()"></button>
+    </div>
+    <div class="blade-body">
+        <form method="post" asp-page-handler="Create" id="createForm">
             @Html.AntiForgeryToken()
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="createModalLabel">New Supplier</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Name <span class="text-danger">*</span></label>
+                    <input type="text" name="CreateName" class="form-control form-control-sm" required maxlength="200" />
                 </div>
-                <div class="modal-body">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Name <span class="text-danger">*</span></label>
-                            <input type="text" name="CreateName" class="form-control form-control-sm" required maxlength="200" />
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Registration Number</label>
-                            <input type="text" name="CreateRegistrationNumber" class="form-control form-control-sm" maxlength="100" />
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">Notes</label>
-                            <textarea name="CreateNotes" class="form-control form-control-sm" rows="2" maxlength="1000"></textarea>
-                        </div>
-                    </div>
-
-                    <hr />
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <strong>Contact Information</strong>
-                        <div>
-                            <button type="button" class="btn btn-outline-secondary btn-sm me-1" id="addEmailBtn">+ Email</button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm me-1" id="addPhoneBtn">+ Phone</button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" id="addLocationBtn">+ Address</button>
-                        </div>
-                    </div>
-
-                    <!-- Emails -->
-                    <div id="emailsSection" class="mb-3">
-                        <h6>Emails</h6>
-                        <div id="emailsContainer"></div>
-                    </div>
-
-                    <!-- Phones -->
-                    <div id="phonesSection" class="mb-3">
-                        <h6>Phones</h6>
-                        <div id="phonesContainer"></div>
-                    </div>
-
-                    <!-- Locations -->
-                    <div id="locationsSection" class="mb-3">
-                        <h6>Addresses</h6>
-                        <div id="locationsContainer"></div>
-                    </div>
+                <div class="col-md-6">
+                    <label class="form-label">Registration Number</label>
+                    <input type="text" name="CreateRegistrationNumber" class="form-control form-control-sm" maxlength="100" />
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Create Supplier</button>
+                <div class="col-12">
+                    <label class="form-label">Notes</label>
+                    <textarea name="CreateNotes" class="form-control form-control-sm" rows="2" maxlength="1000"></textarea>
                 </div>
+            </div>
+
+            <hr />
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <strong>Contact Information</strong>
+                <div>
+                    <button type="button" class="btn btn-outline-secondary btn-sm me-1" id="addEmailBtn">+ Email</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm me-1" id="addPhoneBtn">+ Phone</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="addLocationBtn">+ Address</button>
+                </div>
+            </div>
+
+            <!-- Emails -->
+            <div id="emailsSection" class="mb-3">
+                <h6>Emails</h6>
+                <div id="emailsContainer"></div>
+            </div>
+
+            <!-- Phones -->
+            <div id="phonesSection" class="mb-3">
+                <h6>Phones</h6>
+                <div id="phonesContainer"></div>
+            </div>
+
+            <!-- Locations -->
+            <div id="locationsSection" class="mb-3">
+                <h6>Addresses</h6>
+                <div id="locationsContainer"></div>
             </div>
         </form>
     </div>
+    <div class="blade-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeCreateBlade()">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="document.getElementById('createForm').submit()">Create Supplier</button>
+    </div>
 </div>
 
-<!-- ===== Edit Supplier Modal ===== -->
-<div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <form method="post" asp-page-handler="Edit">
+<!-- ===== Edit Supplier Blade ===== -->
+<div class="blade" id="editBlade">
+    <div class="blade-header">
+        <h5 class="mb-0">Edit Supplier</h5>
+        <button type="button" class="btn-close" onclick="closeEditBlade()"></button>
+    </div>
+    <div class="blade-body">
+        <form method="post" asp-page-handler="Edit" id="editForm">
             @Html.AntiForgeryToken()
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="editModalLabel">Edit Supplier</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <input type="hidden" name="EditSupplierId" id="editSupplierId" />
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Name <span class="text-danger">*</span></label>
+                    <input type="text" name="EditName" id="editName" class="form-control form-control-sm" required maxlength="200" />
                 </div>
-                <div class="modal-body">
-                    <input type="hidden" name="EditSupplierId" id="editSupplierId" />
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Name <span class="text-danger">*</span></label>
-                            <input type="text" name="EditName" id="editName" class="form-control form-control-sm" required maxlength="200" />
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Registration Number</label>
-                            <input type="text" name="EditRegistrationNumber" id="editRegistrationNumber" class="form-control form-control-sm" maxlength="100" />
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">Notes</label>
-                            <textarea name="EditNotes" id="editNotes" class="form-control form-control-sm" rows="2" maxlength="1000"></textarea>
-                        </div>
-                    </div>
-
-                    <hr />
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <strong>Contact Information</strong>
-                        <div>
-                            <button type="button" class="btn btn-outline-secondary btn-sm me-1" id="addEditEmailBtn">+ Email</button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm me-1" id="addEditPhoneBtn">+ Phone</button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" id="addEditLocationBtn">+ Address</button>
-                        </div>
-                    </div>
-
-                    <div id="editEmailsSection" class="mb-3">
-                        <h6>Emails</h6>
-                        <div id="editEmailsContainer"></div>
-                    </div>
-
-                    <div id="editPhonesSection" class="mb-3">
-                        <h6>Phones</h6>
-                        <div id="editPhonesContainer"></div>
-                    </div>
-
-                    <div id="editLocationsSection" class="mb-3">
-                        <h6>Addresses</h6>
-                        <div id="editLocationsContainer"></div>
-                    </div>
+                <div class="col-md-6">
+                    <label class="form-label">Registration Number</label>
+                    <input type="text" name="EditRegistrationNumber" id="editRegistrationNumber" class="form-control form-control-sm" maxlength="100" />
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                <div class="col-12">
+                    <label class="form-label">Notes</label>
+                    <textarea name="EditNotes" id="editNotes" class="form-control form-control-sm" rows="2" maxlength="1000"></textarea>
                 </div>
             </div>
+
+            <hr />
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <strong>Contact Information</strong>
+                <div>
+                    <button type="button" class="btn btn-outline-secondary btn-sm me-1" id="addEditEmailBtn">+ Email</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm me-1" id="addEditPhoneBtn">+ Phone</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="addEditLocationBtn">+ Address</button>
+                </div>
+            </div>
+
+            <div id="editEmailsSection" class="mb-3">
+                <h6>Emails</h6>
+                <div id="editEmailsContainer"></div>
+            </div>
+
+            <div id="editPhonesSection" class="mb-3">
+                <h6>Phones</h6>
+                <div id="editPhonesContainer"></div>
+            </div>
+
+            <div id="editLocationsSection" class="mb-3">
+                <h6>Addresses</h6>
+                <div id="editLocationsContainer"></div>
+            </div>
         </form>
+    </div>
+    <div class="blade-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeEditBlade()">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="document.getElementById('editForm').submit()">Save Changes</button>
     </div>
 </div>
 
 @section Scripts {
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Add contact handlers
-    document.getElementById('addEmailBtn').addEventListener('click', () => addEmailField('Create'));
-    document.getElementById('addPhoneBtn').addEventListener('click', () => addPhoneField('Create'));
-    document.getElementById('addLocationBtn').addEventListener('click', () => addLocationField('Create'));
-    document.getElementById('addEditEmailBtn').addEventListener('click', () => addEmailField('Edit'));
-    document.getElementById('addEditPhoneBtn').addEventListener('click', () => addPhoneField('Edit'));
-    document.getElementById('addEditLocationBtn').addEventListener('click', () => addLocationField('Edit'));
+    function openCreateBlade() {
+        document.getElementById('createBlade').classList.add('open');
+        document.getElementById('createForm').reset();
+        clearCreateContactFields();
+    }
 
-    // Edit modal population
-    const editModal = document.getElementById('editModal');
-    editModal.addEventListener('show.bs.modal', function(e) {
-        const btn = e.relatedTarget;
+    function closeCreateBlade() {
+        document.getElementById('createBlade').classList.remove('open');
+    }
+
+    function openEditBlade(btn) {
         const supplier = JSON.parse(btn.dataset.supplier);
 
         document.getElementById('editSupplierId').value = supplier.SupplierId;
@@ -266,20 +262,29 @@ document.addEventListener('DOMContentLoaded', function() {
         if (Array.isArray(supplier.Locations)) {
             supplier.Locations.forEach(location => addLocationField('Edit', location.AddressLine1, location.AddressLine2, location.City, location.State, location.PostalCode, location.Country, location.IsPrimary));
         }
-    });
 
-    editModal.addEventListener('hidden.bs.modal', function() {
+        document.getElementById('editBlade').classList.add('open');
+    }
+
+    function closeEditBlade() {
+        document.getElementById('editBlade').classList.remove('open');
         clearEditContactFields();
-    });
+    }
 
-    // Create modal reset
-    const createModal = document.getElementById('createModal');
-    createModal.addEventListener('hidden.bs.modal', function() {
-        // Reset the form
-        const form = createModal.querySelector('form');
-        form.reset();
-        clearCreateContactFields();
-    });
+document.addEventListener('DOMContentLoaded', function() {
+    // Add contact handlers
+    document.getElementById('addEmailBtn').addEventListener('click', () => addEmailField('Create'));
+    document.getElementById('addPhoneBtn').addEventListener('click', () => addPhoneField('Create'));
+    document.getElementById('addLocationBtn').addEventListener('click', () => addLocationField('Create'));
+    document.getElementById('addEditEmailBtn').addEventListener('click', () => addEmailField('Edit'));
+    document.getElementById('addEditPhoneBtn').addEventListener('click', () => addPhoneField('Edit'));
+    document.getElementById('addEditLocationBtn').addEventListener('click', () => addLocationField('Edit'));
+    
+    // Assign to window to make available to inline onclick
+    window.openCreateBlade = openCreateBlade;
+    window.closeCreateBlade = closeCreateBlade;
+    window.openEditBlade = openEditBlade;
+    window.closeEditBlade = closeEditBlade;
 });
 
 function escapeHtml(text) {

@@ -13,6 +13,7 @@ public class SuppliersModel : SecurePageModel
     private readonly IApiClientService _apiClient;
 
     public List<SupplierDto> Suppliers { get; private set; } = new();
+    public string? SearchQuery { get; private set; }
 
     // ---- Create Supplier ----
     [BindProperty] public Guid CreateSupplierId { get; set; }
@@ -70,13 +71,24 @@ public class SuppliersModel : SecurePageModel
         _apiClient = apiClient;
     }
 
-    public async Task<IActionResult> OnGetAsync()
+    public async Task<IActionResult> OnGetAsync(string? search = null)
     {
         if (!TryGetSecurityContext(out var token, out _))
             return GoToLogin();
 
         _apiClient.SetToken(token);
         Suppliers = await _supplierService.GetAllAsync();
+        
+        SearchQuery = search;
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var s = search.ToLower();
+            Suppliers = Suppliers.Where(x => 
+                x.Name.ToLower().Contains(s) || 
+                (x.RegistrationNumber != null && x.RegistrationNumber.ToLower().Contains(s))
+            ).ToList();
+        }
+        
         ViewData["ActivePage"] = "Suppliers";
         return Page();
     }
