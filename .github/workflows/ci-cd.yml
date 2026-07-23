@@ -1,0 +1,95 @@
+name: StoreProject CI/CD Pipeline
+
+on:
+  push:
+    branches: [ master, develop ]
+  pull_request:
+    branches: [ master, develop ]
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  
+jobs:
+  build-and-test:
+    name: Build and Test
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Restore dependencies
+      run: dotnet restore StoreProject.sln
+      
+    - name: Build solution
+      run: dotnet build StoreProject.sln --configuration Release --no-restore
+
+  # ============================================
+  # Deploy to Contabo VPS (master branch only)
+  # ============================================
+  deploy-production:
+    name: Deploy to Production (Contabo VPS)
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    
+    steps:
+    - name: Deploy via SSH
+      uses: appleboy/ssh-action@v1.2.0
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: ${{ secrets.VPS_USERNAME }}
+        key: ${{ secrets.VPS_SSH_KEY }}
+        port: ${{ secrets.VPS_PORT }}
+        script_stop: true
+        script: |
+          set -e
+          
+          if [ ! -d "/opt/storeproject/.git" ]; then
+            echo "==> Initializing repository..."
+            sudo mkdir -p /opt/storeproject
+            sudo chown -R $USER:$USER /opt/storeproject
+            git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git /opt/storeproject
+          fi
+
+          echo "==> Navigating to project directory"
+          cd /opt/storeproject
+
+          echo "==> Pulling latest code from master"
+          git fetch https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git master
+          git reset --hard FETCH_HEAD
+
+          echo "==> Generating .env.production file from GitHub Secrets"
+          echo "MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}" > /opt/storeproject/.env.production
+          echo "MYSQL_DATABASE=store_db_v2" >> /opt/storeproject/.env.production
+          echo "MYSQL_USER=store_prod" >> /opt/storeproject/.env.production
+          echo "MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }}" >> /opt/storeproject/.env.production
+          echo "STORE_CONNECTION_STRING=${{ secrets.STORE_CONNECTION_STRING }}" >> /opt/storeproject/.env.production
+          echo "STORE_JWT_SECRET=${{ secrets.STORE_JWT_SECRET }}" >> /opt/storeproject/.env.production
+          echo "STORE_MOMO_CALLBACK_KEY=${{ secrets.STORE_MOMO_CALLBACK_KEY }}" >> /opt/storeproject/.env.production
+
+          echo "==> Building and deploying Docker containers"
+          docker compose -f docker-compose.prod.yml build --no-cache
+          docker compose -f docker-compose.prod.yml up -d
+
+          echo "==> Cleaning up old Docker images"
+          docker image prune -f
+
+          echo "==> Waiting for application to start..."
+          sleep 15
+
+          echo "==> Health check"
+          if curl -sf -H "Host: api.store.157.173.112.19.nip.io" http://localhost:18080/ > /dev/null 2>&1; then
+            echo "✅ Application is healthy!"
+          else
+            echo "⚠️ Health check failed — checking container logs..."
+            docker compose -f docker-compose.prod.yml logs --tail=50 store-api
+            exit 1
+          fi
+
+          echo "==> Deployment complete!"

@@ -1,0 +1,64 @@
+services:
+  store-mysql:
+    image: mysql:8.0
+    container_name: store-mysql
+    restart: always
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - store-mysql-data:/var/lib/mysql
+      - ./Database/migrations:/docker-entrypoint-initdb.d
+    networks:
+      - store-network
+
+  store-api:
+    build:
+      context: .
+      dockerfile: Store.API/Dockerfile
+    container_name: store-api
+    restart: always
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__Default=${STORE_CONNECTION_STRING}
+      - Jwt__Key=${STORE_JWT_SECRET}
+      - Payments__MoMoCallbackKey=${STORE_MOMO_CALLBACK_KEY}
+    depends_on:
+      - store-mysql
+    networks:
+      - store-network
+      - proxy-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy-network"
+      - "traefik.http.routers.storeapi.rule=Host(`api.store.157.173.112.19.nip.io`)"
+      - "traefik.http.services.storeapi.loadbalancer.server.port=8080"
+
+  store-ui:
+    build:
+      context: .
+      dockerfile: Store.UI/Dockerfile
+    container_name: store-ui
+    restart: always
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ApiSettings__BaseUrl=http://api.store.157.173.112.19.nip.io
+    networks:
+      - store-network
+      - proxy-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy-network"
+      - "traefik.http.routers.storeui.rule=Host(`store.157.173.112.19.nip.io`)"
+      - "traefik.http.services.storeui.loadbalancer.server.port=8080"
+
+volumes:
+  store-mysql-data:
+
+networks:
+  store-network:
+  proxy-network:
+    external: true
