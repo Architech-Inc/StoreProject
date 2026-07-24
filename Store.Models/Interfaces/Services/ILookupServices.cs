@@ -6,8 +6,8 @@ public interface ICategoryService
 {
     Task<IEnumerable<Category>> GetAllAsync(CancellationToken ct = default);
     Task<Category?> GetByIdAsync(int id, CancellationToken ct = default);
-    Task<Category> CreateAsync(string name, string? description, CancellationToken ct = default);
-    Task<Category?> UpdateAsync(int id, string name, string? description, CancellationToken ct = default);
+    Task<Category> CreateAsync(string name, string? description, string? imagePath = null, CancellationToken ct = default);
+    Task<Category?> UpdateAsync(int id, string name, string? description, string? imagePath = null, CancellationToken ct = default);
     Task<bool> DeleteAsync(int id, CancellationToken ct = default);
 }
 

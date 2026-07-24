@@ -12,6 +12,7 @@ public class CatalogModel : SecurePageModel
 {
     private readonly IItemService _itemService;
     private readonly IApiClientService _apiClient;
+    private readonly IFileService _fileService;
 
     public IReadOnlyList<ItemDto> Items { get; private set; } = Array.Empty<ItemDto>();
     public IReadOnlyList<Category> Categories { get; private set; } = Array.Empty<Category>();
@@ -31,13 +32,15 @@ public class CatalogModel : SecurePageModel
     [BindProperty] public string? ItemBarcode { get; set; }
     [BindProperty] public int? ItemCategoryId { get; set; }
     [BindProperty] public int? ItemUnitId { get; set; }
+    [BindProperty] public IFormFile? ImageUpload { get; set; }
 
     [TempData] public string? StatusMessage { get; set; }
 
-    public CatalogModel(IItemService itemService, IApiClientService apiClient)
+    public CatalogModel(IItemService itemService, IApiClientService apiClient, IFileService fileService)
     {
         _itemService = itemService;
         _apiClient = apiClient;
+        _fileService = fileService;
     }
 
     public async Task<IActionResult> OnGetAsync(int page = 1, CancellationToken ct = default)
@@ -68,6 +71,21 @@ public class CatalogModel : SecurePageModel
 
         _apiClient.SetToken(token);
 
+        string? imagePath = null;
+        if (ImageUpload != null && ImageUpload.Length > 0)
+        {
+            if (EditItemId.HasValue && EditItemId.Value != Guid.Empty)
+            {
+                var existingItem = await _itemService.GetByIdAsync(EditItemId.Value, ct);
+                if (existingItem != null && !string.IsNullOrWhiteSpace(existingItem.ImagePath))
+                {
+                    await _fileService.DeleteFileAsync(existingItem.ImagePath, ct);
+                }
+            }
+            using var stream = ImageUpload.OpenReadStream();
+            imagePath = await _fileService.UploadFileAsync(stream, ImageUpload.FileName, ImageUpload.ContentType, "items", ct);
+        }
+
         if (EditItemId.HasValue && EditItemId.Value != Guid.Empty)
         {
             var req = new UpdateItemRequest
@@ -79,7 +97,8 @@ public class CatalogModel : SecurePageModel
                 ReorderLevel = ItemReorderLevel,
                 Barcode      = ItemBarcode,
                 CategoryId   = ItemCategoryId,
-                UnitId       = ItemUnitId
+                UnitId       = ItemUnitId,
+                ImagePath    = imagePath
             };
             await _itemService.UpdateAsync(EditItemId.Value, req, ct);
             StatusMessage = "Item updated.";
@@ -97,7 +116,8 @@ public class CatalogModel : SecurePageModel
                 Barcode      = ItemBarcode,
                 CategoryId   = ItemCategoryId,
                 UnitId       = ItemUnitId,
-                Type         = ItemType.Product
+                Type         = ItemType.Product,
+                ImagePath    = imagePath
             };
             await _itemService.CreateAsync(req, ct);
             StatusMessage = "Item created.";

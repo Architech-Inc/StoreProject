@@ -86,7 +86,8 @@ public class ItemService : IItemService
             CategoryId = request.CategoryId,
             UnitId = request.UnitId,
             ManufacturerId = request.ManufacturerId,
-            IsActive = true
+            IsActive = true,
+            ImagePath = request.ImagePath?.Trim()
         };
 
         await _uow.Repository<Item>().AddAsync(item, ct);
@@ -113,6 +114,7 @@ public class ItemService : IItemService
         if (request.UnitId.HasValue) item.UnitId = request.UnitId;
         if (request.ManufacturerId.HasValue) item.ManufacturerId = request.ManufacturerId;
         if (request.IsActive.HasValue) item.IsActive = request.IsActive.Value;
+        if (request.ImagePath != null) item.ImagePath = request.ImagePath.Trim();
 
         _uow.Repository<Item>().Update(item);
         await _uow.SaveChangesAsync(ct);

@@ -79,7 +79,7 @@ public class InvoicesController : ControllerBase
             if (invoice is null) return NotFound(ApiResponse<object>.Fail("Invoice not found or not paid."));
             return Ok(ApiResponse<InvoiceDto>.Ok(invoice, "Refund processed successfully."));
         }
-        catch (UnauthorizedAccessException ex)
+        catch (UnauthorizedAccessException)
         {
             return Forbid();
         }

@@ -63,7 +63,8 @@ public class EmployeeService : IEmployeeService
             DateEmployed = request.DateEmployed,
             DepartmentId = request.DepartmentId,
             SalaryId = request.SalaryId,
-            Status = EmployeeStatus.Pending
+            Status = EmployeeStatus.Pending,
+            ImagePath = request.ImagePath?.Trim()
         };
 
         await _uow.Repository<Employee>().AddAsync(employee, ct);
@@ -87,6 +88,7 @@ public class EmployeeService : IEmployeeService
         if (request.DepartmentId.HasValue) employee.DepartmentId = request.DepartmentId;
         if (request.SalaryId.HasValue) employee.SalaryId = request.SalaryId;
         if (request.Status.HasValue) employee.Status = request.Status.Value;
+        if (request.ImagePath != null) employee.ImagePath = request.ImagePath.Trim();
 
         _uow.Repository<Employee>().Update(employee);
         await _uow.SaveChangesAsync(ct);

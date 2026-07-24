@@ -51,6 +51,7 @@
                 <table>
                     <thead>
                         <tr>
+                            <th>Avatar</th>
                             <th>Username</th>
                             <th>Role</th>
                             <th>Status</th>
@@ -62,6 +63,16 @@
                         @foreach (var u in Model.Users)
                         {
                             <tr>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(u.ImagePath))
+                                    {
+                                        <img src="@u.ImagePath" alt="Avatar" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" />
+                                    }
+                                    else
+                                    {
+                                        <div style="width:32px;height:32px;border-radius:50%;background-color:var(--ops-border);display:inline-block;"></div>
+                                    }
+                                </td>
                                 <td><strong>@u.Username</strong></td>
                                 <td>@(u.RoleName ?? u.RoleId.ToString())</td>
                                 <td>
@@ -126,7 +137,7 @@
         <button type="button" class="btn-close" data-close-blade="userBlade" aria-label="Close">×</button>
     </div>
     <div class="blade-body">
-        <form method="post" asp-page-handler="Create" id="userForm">
+        <form method="post" asp-page-handler="Create" id="userForm" enctype="multipart/form-data">
             @Html.AntiForgeryToken()
             <input type="hidden" asp-for="EditUserId" id="editUserId" />
 
@@ -162,6 +173,11 @@
                         <option value="Active">Active</option>
                         <option value="Suspended">Suspended</option>
                     </select>
+                </div>
+                
+                <div style="margin-top:16px;">
+                    <label for="imageUpload">Avatar</label>
+                    <input type="file" asp-for="ImageUpload" id="imageUpload" accept="image/*" />
                 </div>
             </div>
         </form>

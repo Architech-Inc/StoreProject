@@ -28,6 +28,7 @@ public class CreateUserRequest
 
     public int RoleId { get; set; } = 1;
     public Guid? EmployeeId { get; set; }
+    public string? ImagePath { get; set; }
 }
 
 public class UpdateUserRequest
@@ -37,6 +38,7 @@ public class UpdateUserRequest
 
     public int? RoleId { get; set; }
     public UserStatus? Status { get; set; }
+    public string? ImagePath { get; set; }
 }
 
 public class ChangePasswordRequest

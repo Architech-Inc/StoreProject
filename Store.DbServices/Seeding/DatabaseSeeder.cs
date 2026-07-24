@@ -32,13 +32,13 @@ public static class DatabaseSeeder
         if (!db.Categories.Any())
         {
             db.Categories.AddRange(
-                new Category { Name = "Beverges", Description = "Beverages", ImagePath = "img/planet-1l.png" },
-                new Category { Name = "Groceries", Description = "General groceries", ImagePath = "img/parle-g.png" },
+                new Category { Name = "Beverges", Description = "Beverages", ImagePath = "/files/legacy/planet-1l.png" },
+                new Category { Name = "Groceries", Description = "General groceries", ImagePath = "/files/legacy/parle-g.png" },
                 new Category { Name = "Alcohols", Description = "Alcoholic drinks" },
-                new Category { Name = "Vegitebles", Description = "Vegetables", ImagePath = "img/tomat-ss.png" },
+                new Category { Name = "Vegitebles", Description = "Vegetables", ImagePath = "/files/legacy/tomat-ss.png" },
                 new Category { Name = "Fish", Description = "Fish and seafood" },
                 new Category { Name = "Meat", Description = "Meat products" },
-                new Category { Name = "Detegents", Description = "Cleaning products", ImagePath = "img/omo-s.png" }
+                new Category { Name = "Detegents", Description = "Cleaning products", ImagePath = "/files/legacy/omo-s.png" }
             );
             await db.SaveChangesAsync(ct);
             logger.LogInformation("Seeded legacy categories.");
@@ -65,7 +65,7 @@ public static class DatabaseSeeder
                 RegistrationNumber = "CLX-001",
                 Website = "https://clexan.local",
                 Notes = "Seed manufacturer from legacy dataset",
-                ImagePath = "img/chinchin-pkg.png"
+                ImagePath = "/files/legacy/chinchin-pkg.png"
             });
             await db.SaveChangesAsync(ct);
             logger.LogInformation("Seeded default manufacturer.");
@@ -79,25 +79,25 @@ public static class DatabaseSeeder
 
             var items = new[]
             {
-                new { Name = "Chin-chin", Variant = "small", Price = 100m, Stock = 50, Img = "img/chinchin-pkg.png", Cat = "Groceries", Unit = "pack" },
-                new { Name = "Chin-chin", Variant = "medium", Price = 500m, Stock = 21, Img = "img/chinchin-p.png", Cat = "Groceries", Unit = "pack" },
-                new { Name = "Chin-chin", Variant = "large", Price = 1000m, Stock = 5, Img = "img/peanuts-g.png", Cat = "Groceries", Unit = "pack" },
-                new { Name = "Dough-nuts", Variant = "regular", Price = 100m, Stock = 44, Img = "img/doughnt.png", Cat = "Groceries", Unit = "retail" },
-                new { Name = "Pea nuts", Variant = "small", Price = 100m, Stock = 76, Img = "img/peanuts-fl.png", Cat = "Groceries", Unit = "pack" },
-                new { Name = "Pea nuts", Variant = "large", Price = 1300m, Stock = 10, Img = "img/peanuts-g.png", Cat = "Groceries", Unit = "pack" },
-                new { Name = "Eggs", Variant = "retail", Price = 100m, Stock = 90, Img = "img/egg-cr.png", Cat = "Groceries", Unit = "retail" },
-                new { Name = "Eggs", Variant = "tray", Price = 2200m, Stock = 4, Img = "img/eggs-tray.png", Cat = "Groceries", Unit = "tray" },
-                new { Name = "Maggi", Variant = "5-pieces", Price = 50m, Stock = 50, Img = "img/maggi-s-c.png", Cat = "Groceries", Unit = "pack" },
-                new { Name = "Salt", Variant = "small", Price = 50m, Stock = 100, Img = "img/salt.png", Cat = "Groceries", Unit = "pack" },
-                new { Name = "Sugar", Variant = "5-cube", Price = 25m, Stock = 300, Img = "img/sugar-c.png", Cat = "Groceries", Unit = "pack" },
-                new { Name = "Parle G", Variant = "small size", Price = 25m, Stock = 62, Img = "img/parle-g.png", Cat = "Groceries", Unit = "pack" },
-                new { Name = "Planet", Variant = "1.25l", Price = 500m, Stock = 12, Img = "img/planet-1l.png", Cat = "Beverges", Unit = "bottle" },
-                new { Name = "Sponge", Variant = "soft", Price = 50m, Stock = 13, Img = "img/sponge-1.png", Cat = "Detegents", Unit = "retail" },
-                new { Name = "Sponge", Variant = "small-strong", Price = 50m, Stock = 8, Img = "img/sponge-2.png", Cat = "Detegents", Unit = "retail" },
-                new { Name = "Tomatoes", Variant = "Sachet", Price = 100m, Stock = 42, Img = "img/tomat-ss.png", Cat = "Vegitebles", Unit = "sachet" },
-                new { Name = "Spagetti", Variant = "small-250", Price = 250m, Stock = 12, Img = "img/spagg-s.png", Cat = "Groceries", Unit = "pack" },
-                new { Name = "Omo", Variant = "local", Price = 50m, Stock = 30, Img = "img/omo-s.png", Cat = "Detegents", Unit = "pack" },
-                new { Name = "Top milk", Variant = "small", Price = 50m, Stock = 8, Img = "img/top-milk.png", Cat = "Beverges", Unit = "pack" }
+                new { Name = "Chin-chin", Variant = "small", Price = 100m, Stock = 50, Img = "/files/legacy/chinchin-pkg.png", Cat = "Groceries", Unit = "pack" },
+                new { Name = "Chin-chin", Variant = "medium", Price = 500m, Stock = 21, Img = "/files/legacy/chinchin-p.png", Cat = "Groceries", Unit = "pack" },
+                new { Name = "Chin-chin", Variant = "large", Price = 1000m, Stock = 5, Img = "/files/legacy/peanuts-g.png", Cat = "Groceries", Unit = "pack" },
+                new { Name = "Dough-nuts", Variant = "regular", Price = 100m, Stock = 44, Img = "/files/legacy/doughnt.png", Cat = "Groceries", Unit = "retail" },
+                new { Name = "Pea nuts", Variant = "small", Price = 100m, Stock = 76, Img = "/files/legacy/peanuts-fl.png", Cat = "Groceries", Unit = "pack" },
+                new { Name = "Pea nuts", Variant = "large", Price = 1300m, Stock = 10, Img = "/files/legacy/peanuts-g.png", Cat = "Groceries", Unit = "pack" },
+                new { Name = "Eggs", Variant = "retail", Price = 100m, Stock = 90, Img = "/files/legacy/egg-cr.png", Cat = "Groceries", Unit = "retail" },
+                new { Name = "Eggs", Variant = "tray", Price = 2200m, Stock = 4, Img = "/files/legacy/eggs-tray.png", Cat = "Groceries", Unit = "tray" },
+                new { Name = "Maggi", Variant = "5-pieces", Price = 50m, Stock = 50, Img = "/files/legacy/maggi-s-c.png", Cat = "Groceries", Unit = "pack" },
+                new { Name = "Salt", Variant = "small", Price = 50m, Stock = 100, Img = "/files/legacy/salt.png", Cat = "Groceries", Unit = "pack" },
+                new { Name = "Sugar", Variant = "5-cube", Price = 25m, Stock = 300, Img = "/files/legacy/sugar-c.png", Cat = "Groceries", Unit = "pack" },
+                new { Name = "Parle G", Variant = "small size", Price = 25m, Stock = 62, Img = "/files/legacy/parle-g.png", Cat = "Groceries", Unit = "pack" },
+                new { Name = "Planet", Variant = "1.25l", Price = 500m, Stock = 12, Img = "/files/legacy/planet-1l.png", Cat = "Beverges", Unit = "bottle" },
+                new { Name = "Sponge", Variant = "soft", Price = 50m, Stock = 13, Img = "/files/legacy/sponge-1.png", Cat = "Detegents", Unit = "retail" },
+                new { Name = "Sponge", Variant = "small-strong", Price = 50m, Stock = 8, Img = "/files/legacy/sponge-2.png", Cat = "Detegents", Unit = "retail" },
+                new { Name = "Tomatoes", Variant = "Sachet", Price = 100m, Stock = 42, Img = "/files/legacy/tomat-ss.png", Cat = "Vegitebles", Unit = "sachet" },
+                new { Name = "Spagetti", Variant = "small-250", Price = 250m, Stock = 12, Img = "/files/legacy/spagg-s.png", Cat = "Groceries", Unit = "pack" },
+                new { Name = "Omo", Variant = "local", Price = 50m, Stock = 30, Img = "/files/legacy/omo-s.png", Cat = "Detegents", Unit = "pack" },
+                new { Name = "Top milk", Variant = "small", Price = 50m, Stock = 8, Img = "/files/legacy/top-milk.png", Cat = "Beverges", Unit = "pack" }
             };
 
             foreach (var seed in items)

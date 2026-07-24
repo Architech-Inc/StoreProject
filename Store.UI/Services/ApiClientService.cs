@@ -101,6 +101,27 @@ public class ApiClientService : IApiClientService
         }
     }
 
+    public async Task<T?> PostMultipartAsync<T>(string endpoint, MultipartFormDataContent content, CancellationToken ct = default)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsync(endpoint, content, ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("POST Multipart {Endpoint} returned {StatusCode}", endpoint, response.StatusCode);
+                return default;
+            }
+
+            var responseContent = await response.Content.ReadAsStringAsync(ct);
+            return DeserializeResponse<T>(responseContent);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error calling POST Multipart {Endpoint}", endpoint);
+            return default;
+        }
+    }
+
     public async Task<T?> PutAsync<T>(string endpoint, object? data, CancellationToken ct = default)
     {
         try

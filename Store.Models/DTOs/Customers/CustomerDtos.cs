@@ -44,6 +44,7 @@ public class CreateCustomerRequest
     public string? Notes { get; set; }
 
     public CustomerSegment Segment { get; set; } = CustomerSegment.Standard;
+    public string? ImagePath { get; set; }
 }
 
 public class UpdateCustomerRequest
@@ -63,4 +64,6 @@ public class UpdateCustomerRequest
 
     [StringLength(500)]
     public string? Notes { get; set; }
+    
+    public string? ImagePath { get; set; }
 }

@@ -55,6 +55,7 @@ builder.Services.AddScoped<IDiscountOverrideService, ApiDiscountOverrideService>
 builder.Services.AddScoped<IPurchaseOrderService, ApiPurchaseOrderService>();
 builder.Services.AddScoped<ICashVarianceService, ApiCashVarianceService>();
 builder.Services.AddScoped<ISupplierService, ApiSupplierService>();
+builder.Services.AddScoped<IFileService, ApiFileService>();
 
 var app = builder.Build();
 
@@ -76,6 +77,17 @@ app.Use(async (context, next) =>
 app.UseHttpsRedirection();
 
 app.UseStaticFiles();
+
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/files", out var remainingPath))
+    {
+        var targetBase = app.Configuration["ApiSettings:BaseUrl"]?.TrimEnd('/') ?? "https://localhost:7112";
+        context.Response.Redirect($"{targetBase}/files{remainingPath}{context.Request.QueryString}");
+        return;
+    }
+    await next();
+});
 app.UseSession();
 
 app.UseRouting();

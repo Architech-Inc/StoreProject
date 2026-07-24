@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Store.Models.Entities;
+using Store.Models.Interfaces.Services;
 using StoreUI.Services;
 
 namespace StoreUI.Pages;
@@ -7,6 +8,7 @@ namespace StoreUI.Pages;
 public class LookupModel : SecurePageModel
 {
     private readonly IApiClientService _apiClient;
+    private readonly IFileService _fileService;
 
     public string ActiveTab { get; private set; } = "categories";
 
@@ -16,9 +18,12 @@ public class LookupModel : SecurePageModel
 
     [TempData] public string? StatusMessage { get; set; }
 
-    public LookupModel(IApiClientService apiClient)
+    [BindProperty] public IFormFile? CategoryImageUpload { get; set; }
+
+    public LookupModel(IApiClientService apiClient, IFileService fileService)
     {
         _apiClient = apiClient;
+        _fileService = fileService;
     }
 
     public async Task<IActionResult> OnGetAsync(string tab = "categories", CancellationToken ct = default)
@@ -49,10 +54,25 @@ public class LookupModel : SecurePageModel
         if (!TryGetSecurityContext(out _, out _)) return GoToLogin();
         try
         {
+            string? imagePath = null;
+            if (CategoryImageUpload != null && CategoryImageUpload.Length > 0)
+            {
+                if (id != 0)
+                {
+                    var existingCategory = await _apiClient.GetAsync<Category>($"/api/categories/{id}", ct);
+                    if (existingCategory != null && !string.IsNullOrWhiteSpace(existingCategory.ImagePath))
+                    {
+                        await _fileService.DeleteFileAsync(existingCategory.ImagePath, ct);
+                    }
+                }
+                using var stream = CategoryImageUpload.OpenReadStream();
+                imagePath = await _fileService.UploadFileAsync(stream, CategoryImageUpload.FileName, CategoryImageUpload.ContentType, "categories", ct);
+            }
+
             if (id == 0)
-                await _apiClient.PostAsync<Category>("/api/categories", new { name, description }, ct);
+                await _apiClient.PostAsync<Category>("/api/categories", new { name, description, imagePath }, ct);
             else
-                await _apiClient.PutAsync<Category>($"/api/categories/{id}", new { name, description }, ct);
+                await _apiClient.PutAsync<Category>($"/api/categories/{id}", new { name, description, imagePath }, ct);
 
             StatusMessage = id == 0 ? $"Category '{name}' created." : $"Category '{name}' updated.";
         }

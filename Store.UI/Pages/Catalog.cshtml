@@ -33,6 +33,7 @@
                 <table>
                     <thead>
                         <tr>
+                            <th>Photo</th>
                             <th>Name</th>
                             <th>Category</th>
                             <th>Unit</th>
@@ -48,6 +49,16 @@
                         @foreach (var item in Model.Items)
                         {
                             <tr>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(item.ImagePath))
+                                    {
+                                        <img src="@item.ImagePath" alt="Photo" style="width:32px;height:32px;border-radius:4px;object-fit:cover;" />
+                                    }
+                                    else
+                                    {
+                                        <div style="width:32px;height:32px;border-radius:4px;background-color:var(--ops-border);display:inline-block;"></div>
+                                    }
+                                </td>
                                 <td><strong>@item.Name</strong>@if (!string.IsNullOrWhiteSpace(item.Barcode)) { <small style="color:var(--ops-subtle);display:block;">@item.Barcode</small> }</td>
                                 <td>@(item.CategoryName ?? "—")</td>
                                 <td>@(item.UnitAbbreviation ?? "—")</td>
@@ -120,7 +131,7 @@
             <button type="button" class="btn-close" onclick="closeModal()" aria-label="Close">×</button>
         </div>
 
-        <form method="post" asp-page-handler="Save">
+        <form method="post" asp-page-handler="Save" enctype="multipart/form-data">
             @Html.AntiForgeryToken()
             <input type="hidden" asp-for="EditItemId" id="editItemId" />
 
@@ -162,6 +173,9 @@
                     <option value="@u.UnitId">@u.Name (@u.Abbreviation)</option>
                 }
             </select>
+
+            <label for="itemImage">Photo</label>
+            <input type="file" asp-for="ImageUpload" id="itemImage" accept="image/*" />
 
             <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;">
                 <button type="button" class="button-command" onclick="closeModal()">Cancel</button>

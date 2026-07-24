@@ -41,7 +41,8 @@ public class UserService : IUserService
             UserId = Guid.NewGuid(),
             Username = request.Username.Trim(),
             RoleId = request.RoleId,
-            Status = UserStatus.NotVerified
+            Status = UserStatus.NotVerified,
+            ImagePath = request.ImagePath?.Trim()
         };
 
         var passwordHash = BCrypt.Net.BCrypt.EnhancedHashPassword(request.Password, 12);
@@ -72,6 +73,7 @@ public class UserService : IUserService
 
         if (request.RoleId.HasValue) user.RoleId = request.RoleId.Value;
         if (request.Status.HasValue) user.Status = request.Status.Value;
+        if (request.ImagePath != null) user.ImagePath = request.ImagePath.Trim();
 
         _users.UpdateUser(user);
         await _users.SaveChangesAsync(ct);

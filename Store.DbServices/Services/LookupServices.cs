@@ -18,24 +18,25 @@ public class CategoryService : ICategoryService
     public async Task<Category?> GetByIdAsync(int id, CancellationToken ct = default) =>
         await _uow.Repository<Category>().GetByIdAsync(id, ct);
 
-    public async Task<Category> CreateAsync(string name, string? description, CancellationToken ct = default)
+    public async Task<Category> CreateAsync(string name, string? description, string? imagePath = null, CancellationToken ct = default)
     {
         if (await _uow.Repository<Category>().ExistsAsync(c => c.Name == name.Trim(), ct))
             throw new InvalidOperationException($"Category '{name}' already exists.");
 
-        var category = new Category { Name = name.Trim(), Description = description?.Trim() };
+        var category = new Category { Name = name.Trim(), Description = description?.Trim(), ImagePath = imagePath?.Trim() };
         await _uow.Repository<Category>().AddAsync(category, ct);
         await _uow.SaveChangesAsync(ct);
         return category;
     }
 
-    public async Task<Category?> UpdateAsync(int id, string name, string? description, CancellationToken ct = default)
+    public async Task<Category?> UpdateAsync(int id, string name, string? description, string? imagePath = null, CancellationToken ct = default)
     {
         var category = await _uow.Repository<Category>().GetByIdAsync(id, ct);
         if (category is null) return null;
 
         category.Name = name.Trim();
         category.Description = description?.Trim();
+        if (imagePath != null) category.ImagePath = imagePath.Trim();
         _uow.Repository<Category>().Update(category);
         await _uow.SaveChangesAsync(ct);
         return category;

@@ -12,6 +12,7 @@ public class EmployeesModel : SecurePageModel
 {
     private readonly IEmployeeService _employeeService;
     private readonly IApiClientService _apiClient;
+    private readonly IFileService _fileService;
 
     public IReadOnlyList<EmployeeDto> Employees { get; private set; } = Array.Empty<EmployeeDto>();
     public IReadOnlyList<Department> Departments { get; private set; } = Array.Empty<Department>();
@@ -30,13 +31,15 @@ public class EmployeesModel : SecurePageModel
     [BindProperty] public DateTime EmpDateEmployed { get; set; } = DateTime.Today;
     [BindProperty] public int? EmpDepartmentId { get; set; }
     [BindProperty] public string EmpStatus { get; set; } = "Active";
+    [BindProperty] public IFormFile? ImageUpload { get; set; }
 
     [TempData] public string? StatusMessage { get; set; }
 
-    public EmployeesModel(IEmployeeService employeeService, IApiClientService apiClient)
+    public EmployeesModel(IEmployeeService employeeService, IApiClientService apiClient, IFileService fileService)
     {
         _employeeService = employeeService;
         _apiClient = apiClient;
+        _fileService = fileService;
     }
 
     public async Task<IActionResult> OnGetAsync(int page = 1, CancellationToken ct = default)
@@ -60,6 +63,21 @@ public class EmployeesModel : SecurePageModel
         {
             Enum.TryParse<Gender>(EmpGender, out var gender);
 
+            string? imagePath = null;
+            if (ImageUpload != null && ImageUpload.Length > 0)
+            {
+                if (EditEmployeeId.HasValue && EditEmployeeId.Value != Guid.Empty)
+                {
+                    var existingEmployee = await _employeeService.GetByIdAsync(EditEmployeeId.Value, ct);
+                    if (existingEmployee != null && !string.IsNullOrWhiteSpace(existingEmployee.ImagePath))
+                    {
+                        await _fileService.DeleteFileAsync(existingEmployee.ImagePath, ct);
+                    }
+                }
+                using var stream = ImageUpload.OpenReadStream();
+                imagePath = await _fileService.UploadFileAsync(stream, ImageUpload.FileName, ImageUpload.ContentType, "employees", ct);
+            }
+
             if (EditEmployeeId.HasValue && EditEmployeeId.Value != Guid.Empty)
             {
                 Enum.TryParse<EmployeeStatus>(EmpStatus, out var status);
@@ -71,7 +89,8 @@ public class EmployeesModel : SecurePageModel
                     Gender = gender,
                     DateOfBirth = EmpDateOfBirth,
                     DepartmentId = EmpDepartmentId,
-                    Status = status
+                    Status = status,
+                    ImagePath = imagePath
                 };
                 var updated = await _employeeService.UpdateAsync(EditEmployeeId.Value, update, ct);
                 StatusMessage = updated is not null
@@ -88,7 +107,8 @@ public class EmployeesModel : SecurePageModel
                     Gender = gender,
                     DateOfBirth = EmpDateOfBirth,
                     DateEmployed = EmpDateEmployed,
-                    DepartmentId = EmpDepartmentId
+                    DepartmentId = EmpDepartmentId,
+                    ImagePath = imagePath
                 };
                 var created = await _employeeService.CreateAsync(create, ct);
                 StatusMessage = $"Employee '{created.FullName}' added.";

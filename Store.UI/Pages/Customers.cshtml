@@ -33,6 +33,7 @@
                 <table>
                     <thead>
                         <tr>
+                            <th>Photo</th>
                             <th>Name</th>
                             <th>Gender</th>
                             <th>Segment</th>
@@ -47,6 +48,16 @@
                         @foreach (var c in Model.Customers)
                         {
                             <tr>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(c.ImagePath))
+                                    {
+                                        <img src="@c.ImagePath" alt="Photo" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" />
+                                    }
+                                    else
+                                    {
+                                        <div style="width:32px;height:32px;border-radius:50%;background-color:var(--ops-border);display:inline-block;"></div>
+                                    }
+                                </td>
                                 <td><strong>@c.FullName</strong></td>
                                 <td>@c.Gender</td>
                                 <td>
@@ -106,7 +117,7 @@
             <button type="button" class="btn-close" onclick="closeEditModal()" aria-label="Close">×</button>
         </div>
 
-        <form method="post" asp-page-handler="Edit">
+        <form method="post" asp-page-handler="Edit" enctype="multipart/form-data">
             @Html.AntiForgeryToken()
             <input type="hidden" asp-for="EditCustomerId" id="editCustomerId" />
 
@@ -136,6 +147,9 @@
             <label for="editNotes">Notes</label>
             <textarea asp-for="EditNotes" id="editNotes" rows="2"></textarea>
 
+            <label for="editImageUpload">Photo</label>
+            <input type="file" asp-for="ImageUpload" id="editImageUpload" accept="image/*" />
+
             <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;">
                 <button type="button" class="button-command" onclick="closeEditModal()">Cancel</button>
                 <button type="submit" class="button-primary">Save Changes</button>
@@ -152,7 +166,7 @@
             <button type="button" class="btn-close" onclick="closeModal()" aria-label="Close">×</button>
         </div>
 
-        <form method="post" asp-page-handler="Create">
+        <form method="post" asp-page-handler="Create" enctype="multipart/form-data">
             @Html.AntiForgeryToken()
 
             <label for="firstName">First Name *</label>
@@ -186,6 +200,9 @@
 
             <label for="notes">Notes</label>
             <textarea asp-for="Notes" id="notes" rows="2" placeholder="Optional internal notes"></textarea>
+
+            <label for="createImageUpload">Photo</label>
+            <input type="file" asp-for="ImageUpload" id="createImageUpload" accept="image/*" />
 
             <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
                 <button type="button" class="button-command" onclick="closeModal()">Cancel</button>

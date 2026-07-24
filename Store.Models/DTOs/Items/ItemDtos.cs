@@ -49,6 +49,7 @@ public class CreateItemRequest
     public int? CategoryId { get; set; }
     public int? UnitId { get; set; }
     public Guid? ManufacturerId { get; set; }
+    public string? ImagePath { get; set; }
 }
 
 public class UpdateItemRequest
@@ -72,6 +73,7 @@ public class UpdateItemRequest
     public int? CategoryId { get; set; }
     public int? UnitId { get; set; }
     public Guid? ManufacturerId { get; set; }
+    public string? ImagePath { get; set; }
 }
 
 public class AdjustStockRequest

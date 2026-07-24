@@ -20,7 +20,27 @@
     }
 
     <section class="card" style="max-width:520px;">
-        <h2>Account Information</h2>
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
+            @if (!string.IsNullOrEmpty(Model.CurrentAvatarPath))
+            {
+                <img src="@Model.CurrentAvatarPath" alt="Avatar" style="width:64px;height:64px;border-radius:50%;object-fit:cover;" />
+            }
+            else
+            {
+                <div style="width:64px;height:64px;border-radius:50%;background-color:var(--ops-border);display:flex;align-items:center;justify-content:center;">
+                    <span style="color:var(--ops-subtle);">No Image</span>
+                </div>
+            }
+            <div>
+                <h2 style="margin:0;">Account Information</h2>
+                <form method="post" asp-page-handler="UploadAvatar" enctype="multipart/form-data" style="display:flex;gap:8px;align-items:center;margin-top:8px;">
+                    @Html.AntiForgeryToken()
+                    <input type="file" name="AvatarUpload" accept="image/*" required style="font-size:0.8rem;padding:4px;" />
+                    <button type="submit" class="button-primary" style="padding:4px 8px;font-size:0.8rem;">Upload</button>
+                </form>
+            </div>
+        </div>
+
         <table style="width:100%;">
             <tbody>
                 <tr>

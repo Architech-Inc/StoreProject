@@ -39,6 +39,7 @@
                 <table>
                     <thead>
                         <tr>
+                            <th>Photo</th>
                             <th>Full Name</th>
                             <th>Gender</th>
                             <th>Department</th>
@@ -51,6 +52,16 @@
                         @foreach (var e in Model.Employees)
                         {
                             <tr>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(e.ImagePath))
+                                    {
+                                        <img src="@e.ImagePath" alt="Photo" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" />
+                                    }
+                                    else
+                                    {
+                                        <div style="width:32px;height:32px;border-radius:50%;background-color:var(--ops-border);display:inline-block;"></div>
+                                    }
+                                </td>
                                 <td><strong>@e.FullName</strong></td>
                                 <td>@e.Gender</td>
                                 <td>@(e.DepartmentName ?? "—")</td>
@@ -115,7 +126,7 @@
             <h3 id="empModalTitle">New Employee</h3>
             <button type="button" class="btn-close" onclick="closeModal()" aria-label="Close">×</button>
         </div>
-        <form method="post" asp-page-handler="Save">
+        <form method="post" asp-page-handler="Save" enctype="multipart/form-data">
             @Html.AntiForgeryToken()
             <input type="hidden" asp-for="EditEmployeeId" id="editEmpId" />
 
@@ -163,6 +174,9 @@
                     <option value="OnLeave">On Leave</option>
                 </select>
             </div>
+            
+            <label for="empImage">Photo</label>
+            <input type="file" asp-for="ImageUpload" id="empImage" accept="image/*" />
 
             <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
                 <button type="button" class="button-command" onclick="closeModal()">Cancel</button>

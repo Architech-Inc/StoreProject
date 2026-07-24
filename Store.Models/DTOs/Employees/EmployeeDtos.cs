@@ -44,6 +44,7 @@ public class CreateEmployeeRequest
 
     public int? DepartmentId { get; set; }
     public int? SalaryId { get; set; }
+    public string? ImagePath { get; set; }
 }
 
 public class UpdateEmployeeRequest
@@ -62,4 +63,5 @@ public class UpdateEmployeeRequest
     public int? DepartmentId { get; set; }
     public int? SalaryId { get; set; }
     public EmployeeStatus? Status { get; set; }
+    public string? ImagePath { get; set; }
 }

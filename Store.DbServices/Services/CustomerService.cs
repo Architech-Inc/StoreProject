@@ -53,7 +53,8 @@ public class CustomerService : ICustomerService
             Gender = request.Gender,
             DateOfBirth = request.DateOfBirth,
             Notes = request.Notes?.Trim(),
-            Segment = request.Segment
+            Segment = request.Segment,
+            ImagePath = request.ImagePath?.Trim()
         };
 
         await _uow.Repository<Customer>().AddAsync(customer, ct);
@@ -76,6 +77,7 @@ public class CustomerService : ICustomerService
         if (request.DateOfBirth.HasValue) customer.DateOfBirth = request.DateOfBirth;
         if (request.Notes is not null) customer.Notes = request.Notes.Trim();
         if (request.Segment.HasValue) customer.Segment = request.Segment.Value;
+        if (request.ImagePath != null) customer.ImagePath = request.ImagePath.Trim();
 
         _uow.Repository<Customer>().Update(customer);
         await _uow.SaveChangesAsync(ct);

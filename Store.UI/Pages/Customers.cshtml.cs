@@ -11,6 +11,7 @@ public class CustomersModel : SecurePageModel
 {
     private readonly ICustomerService _customerService;
     private readonly IApiClientService _apiClient;
+    private readonly IFileService _fileService;
 
     public IReadOnlyList<CustomerDto> Customers { get; private set; } = Array.Empty<CustomerDto>();
     public int TotalCustomers { get; private set; }
@@ -26,6 +27,7 @@ public class CustomersModel : SecurePageModel
     [BindProperty] public string? Phone { get; set; }
     [BindProperty] public string? Email { get; set; }
     [BindProperty] public string? Notes { get; set; }
+    [BindProperty] public IFormFile? ImageUpload { get; set; }
 
     // Edit
     [BindProperty] public Guid EditCustomerId { get; set; }
@@ -38,10 +40,11 @@ public class CustomersModel : SecurePageModel
 
     [TempData] public string? StatusMessage { get; set; }
 
-    public CustomersModel(ICustomerService customerService, IApiClientService apiClient)
+    public CustomersModel(ICustomerService customerService, IApiClientService apiClient, IFileService fileService)
     {
         _customerService = customerService;
         _apiClient = apiClient;
+        _fileService = fileService;
     }
 
     public async Task<IActionResult> OnGetAsync(int page = 1, CancellationToken ct = default)
@@ -72,6 +75,13 @@ public class CustomersModel : SecurePageModel
 
         _apiClient.SetToken(token);
 
+        string? imagePath = null;
+        if (ImageUpload != null && ImageUpload.Length > 0)
+        {
+            using var stream = ImageUpload.OpenReadStream();
+            imagePath = await _fileService.UploadFileAsync(stream, ImageUpload.FileName, ImageUpload.ContentType, "customers", ct);
+        }
+
         var req = new CreateCustomerRequest
         {
             FirstName = FirstName,
@@ -81,7 +91,8 @@ public class CustomersModel : SecurePageModel
             Segment = Segment,
             Phone = Phone,
             Email = Email,
-            Notes = Notes
+            Notes = Notes,
+            ImagePath = imagePath
         };
 
         await _customerService.CreateAsync(req, ct);
@@ -109,6 +120,19 @@ public class CustomersModel : SecurePageModel
 
         _apiClient.SetToken(token);
 
+        string? imagePath = null;
+        if (ImageUpload != null && ImageUpload.Length > 0)
+        {
+            var existingCustomer = await _customerService.GetByIdAsync(EditCustomerId, ct);
+            if (existingCustomer != null && !string.IsNullOrWhiteSpace(existingCustomer.ImagePath))
+            {
+                await _fileService.DeleteFileAsync(existingCustomer.ImagePath, ct);
+            }
+
+            using var stream = ImageUpload.OpenReadStream();
+            imagePath = await _fileService.UploadFileAsync(stream, ImageUpload.FileName, ImageUpload.ContentType, "customers", ct);
+        }
+
         var req = new UpdateCustomerRequest
         {
             FirstName = EditFirstName.Trim(),
@@ -116,7 +140,8 @@ public class CustomersModel : SecurePageModel
             MiddleName = string.IsNullOrWhiteSpace(EditMiddleName) ? null : EditMiddleName.Trim(),
             Gender = EditGender,
             Segment = EditSegment,
-            Notes = string.IsNullOrWhiteSpace(EditNotes) ? null : EditNotes.Trim()
+            Notes = string.IsNullOrWhiteSpace(EditNotes) ? null : EditNotes.Trim(),
+            ImagePath = imagePath
         };
 
         await _customerService.UpdateAsync(EditCustomerId, req, ct);

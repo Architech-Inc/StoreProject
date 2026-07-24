@@ -11,12 +11,16 @@ using Store.API.Middleware;
 using Store.DbServices.Extensions;
 using Store.DbServices.Seeding;
 using Store.Models.DTOs.Operations;
+using Store.API.Infrastructure.Storage;
+using Microsoft.Extensions.FileProviders;
+using System.IO;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // ─── Database & Domain Services ──────────────────────────────────────────────
 builder.Services.AddStoreDbServices(builder.Configuration);
 builder.Services.AddArchitecture();
+builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
 
 // ─── JWT Authentication ───────────────────────────────────────────────────────
 var jwtKey = builder.Configuration["Jwt:Key"]
@@ -194,6 +198,23 @@ if (app.Environment.IsDevelopment())
 
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseHttpsRedirection();
+
+var uploadsPath = app.Configuration["FileStorage:BasePath"] ?? "./Uploads";
+if (!Path.IsPathRooted(uploadsPath))
+{
+    uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), uploadsPath);
+}
+if (!Directory.Exists(uploadsPath))
+{
+    Directory.CreateDirectory(uploadsPath);
+}
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(uploadsPath),
+    RequestPath = "/files"
+});
+
 app.UseCors("StorePolicy");
 app.UseRateLimiter();
 app.UseAuthentication();

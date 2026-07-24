@@ -19,6 +19,9 @@ public interface IApiClientService
     /// <summary>POST request where only success/failure is needed</summary>
     Task<bool> PostAsync(string endpoint, object? data, CancellationToken ct = default);
 
+    /// <summary>POST request with multipart form data</summary>
+    Task<T?> PostMultipartAsync<T>(string endpoint, MultipartFormDataContent content, CancellationToken ct = default);
+
     /// <summary>PUT request to API</summary>
     Task<T?> PutAsync<T>(string endpoint, object? data, CancellationToken ct = default);
 

@@ -29,17 +29,17 @@ public class CategoriesController : ControllerBase
 
     [HttpPost]
     [Authorize(Roles = "Admin,Manager")]
-    public async Task<IActionResult> Create([FromBody] CreateLookupRequest request, CancellationToken ct)
+    public async Task<IActionResult> Create([FromBody] CreateCategoryRequest request, CancellationToken ct)
     {
-        var category = await _categoryService.CreateAsync(request.Name, request.Description, ct);
+        var category = await _categoryService.CreateAsync(request.Name, request.Description, request.ImagePath, ct);
         return CreatedAtAction(nameof(GetById), new { id = category.CategoryId }, ApiResponse<Category>.Ok(category));
     }
 
     [HttpPut("{id:int}")]
     [Authorize(Roles = "Admin,Manager")]
-    public async Task<IActionResult> Update(int id, [FromBody] CreateLookupRequest request, CancellationToken ct)
+    public async Task<IActionResult> Update(int id, [FromBody] CreateCategoryRequest request, CancellationToken ct)
     {
-        var category = await _categoryService.UpdateAsync(id, request.Name, request.Description, ct);
+        var category = await _categoryService.UpdateAsync(id, request.Name, request.Description, request.ImagePath, ct);
         if (category is null) return NotFound(ApiResponse<object>.Fail("Category not found."));
         return Ok(ApiResponse<Category>.Ok(category));
     }
@@ -136,4 +136,5 @@ public class DepartmentsController : ControllerBase
 
 // Shared request DTOs for lookup controllers
 public record CreateLookupRequest(string Name, string? Description);
+public record CreateCategoryRequest(string Name, string? Description, string? ImagePath);
 public record CreateUnitRequest(string Name, string Abbreviation, string? Description);
