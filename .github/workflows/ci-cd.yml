@@ -64,14 +64,14 @@ jobs:
           git fetch https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git master
           git reset --hard FETCH_HEAD
 
-          echo "==> Generating .env.production file from GitHub Secrets"
-          echo "MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}" > /opt/storeproject/.env.production
-          echo "MYSQL_DATABASE=store_db_v2" >> /opt/storeproject/.env.production
-          echo "MYSQL_USER=store_prod" >> /opt/storeproject/.env.production
-          echo "MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }}" >> /opt/storeproject/.env.production
-          echo "STORE_CONNECTION_STRING=${{ secrets.STORE_CONNECTION_STRING }}" >> /opt/storeproject/.env.production
-          echo "STORE_JWT_SECRET=${{ secrets.STORE_JWT_SECRET }}" >> /opt/storeproject/.env.production
-          echo "STORE_MOMO_CALLBACK_KEY=${{ secrets.STORE_MOMO_CALLBACK_KEY }}" >> /opt/storeproject/.env.production
+          echo "==> Generating .env file from GitHub Secrets"
+          echo "MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}" > /opt/storeproject/.env
+          echo "MYSQL_DATABASE=store_db_v2" >> /opt/storeproject/.env
+          echo "MYSQL_USER=store_prod" >> /opt/storeproject/.env
+          echo "MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }}" >> /opt/storeproject/.env
+          echo "STORE_CONNECTION_STRING=${{ secrets.STORE_CONNECTION_STRING }}" >> /opt/storeproject/.env
+          echo "STORE_JWT_SECRET=${{ secrets.STORE_JWT_SECRET }}" >> /opt/storeproject/.env
+          echo "STORE_MOMO_CALLBACK_KEY=${{ secrets.STORE_MOMO_CALLBACK_KEY }}" >> /opt/storeproject/.env
 
           echo "==> Building and deploying Docker containers"
           docker compose -f docker-compose.prod.yml build --no-cache
