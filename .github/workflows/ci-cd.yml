@@ -88,7 +88,7 @@ jobs:
 
           set -x
           echo "==> Health check"
-          if curl -sf -H "Host: api.store.157.173.112.19.nip.io" http://localhost:18080/ > /dev/null 2>&1; then
+          if curl -sf -H "Host: api.store.157.173.112.19.nip.io" http://localhost:18080/health > /dev/null 2>&1; then
             echo "[OK] Application is healthy!"
           else
             echo "[WARN] Health check failed - checking container logs..."
