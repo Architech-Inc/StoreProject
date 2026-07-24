@@ -57,6 +57,9 @@ jobs:
             git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git /opt/storeproject
           fi
 
+          echo "==> Ensuring correct ownership..."
+          sudo chown -R $USER:$USER /opt/storeproject
+
           echo "==> Navigating to project directory"
           cd /opt/storeproject
 
