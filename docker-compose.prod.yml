@@ -26,6 +26,8 @@ services:
       - ConnectionStrings__Default=${STORE_CONNECTION_STRING}
       - Jwt__Key=${STORE_JWT_SECRET}
       - Payments__MoMoCallbackKey=${STORE_MOMO_CALLBACK_KEY}
+      - Cors__AllowedOrigins__0=http://store.157.173.112.19.nip.io
+      - Cors__AllowedOrigins__1=https://store.157.173.112.19.nip.io
     depends_on:
       - store-mysql
     networks:
