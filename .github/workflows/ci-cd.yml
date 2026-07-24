@@ -86,11 +86,12 @@ jobs:
           echo "==> Waiting for application to start..."
           sleep 15
 
+          set -x
           echo "==> Health check"
           if curl -sf -H "Host: api.store.157.173.112.19.nip.io" http://localhost:18080/ > /dev/null 2>&1; then
-            echo "✅ Application is healthy!"
+            echo "[OK] Application is healthy!"
           else
-            echo "⚠️ Health check failed — checking container logs..."
+            echo "[WARN] Health check failed - checking container logs..."
             docker compose -f docker-compose.prod.yml logs --tail=50 store-api
             exit 1
           fi
