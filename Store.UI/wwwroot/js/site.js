@@ -189,24 +189,26 @@
                     reader.onload = (event) => {
                         const modal = document.getElementById('globalCropModal');
                         const img = document.getElementById('cropperImage');
-                        img.src = event.target.result;
+                        
+                        if (currentCropper) {
+                            currentCropper.destroy();
+                            currentCropper = null;
+                        }
+                        
                         modal.hidden = false;
                         currentCropInput = input;
 
-                        if (currentCropper) {
-                            currentCropper.destroy();
-                        }
+                        img.onload = () => {
+                            const aspectRatio = input.dataset.cropAspectRatio ? parseFloat(input.dataset.cropAspectRatio) : 1;
+                            currentCropper = new Cropper(img, {
+                                aspectRatio: aspectRatio,
+                                viewMode: 1,
+                                autoCropArea: 0.8,
+                                background: false
+                            });
+                        };
                         
-                        // Default aspect ratio for avatars is 1:1. 
-                        // If it's for catalog, maybe they want 1:1 as well since it's a thumbnail.
-                        const aspectRatio = input.dataset.cropAspectRatio ? parseFloat(input.dataset.cropAspectRatio) : 1;
-
-                        currentCropper = new Cropper(img, {
-                            aspectRatio: aspectRatio,
-                            viewMode: 1,
-                            autoCropArea: 0.8,
-                            background: false
-                        });
+                        img.src = event.target.result;
                     };
                     reader.readAsDataURL(file);
                 }

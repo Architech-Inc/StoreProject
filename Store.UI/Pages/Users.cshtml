@@ -92,7 +92,7 @@
                                 <td>@u.DateCreated.ToString("yyyy-MM-dd")</td>
                                 <td>
                                     <div style="display:flex; gap:4px; flex-wrap:nowrap;">
-                                        <button type="button" class="button-secondary" onclick="openEdit(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new { userId = u.UserId, username = u.Username, roleId = u.RoleId, status = u.Status.ToString() })))">Edit</button>
+                                        <button type="button" class="button-secondary" onclick="openEdit(@System.Text.Json.JsonSerializer.Serialize(new { userId = u.UserId, username = u.Username, roleId = u.RoleId, status = u.Status.ToString() }))">Edit</button>
                                         @if (u.Status == Store.Models.Enums.UserStatus.Active)
                                         {
                                             <form method="post" asp-page-handler="Suspend" style="margin:0;">

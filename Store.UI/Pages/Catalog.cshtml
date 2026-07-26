@@ -90,7 +90,7 @@
                                     }
                                 </td>
                                 <td style="display:flex;gap:4px;flex-wrap:nowrap;">
-                                    <button type="button" onclick="openEdit(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new { itemId = item.ItemId, name = item.Name, description = item.Description, unitPrice = item.UnitPrice, costPrice = item.CostPrice, inStock = item.InStock, reorderLevel = item.ReorderLevel, barcode = item.Barcode, categoryId = item.CategoryId, unitId = item.UnitId })))">Edit</button>
+                                    <button type="button" onclick="openEdit(@System.Text.Json.JsonSerializer.Serialize(new { itemId = item.ItemId, name = item.Name, description = item.Description, unitPrice = item.UnitPrice, costPrice = item.CostPrice, inStock = item.InStock, reorderLevel = item.ReorderLevel, barcode = item.Barcode, categoryId = item.CategoryId, unitId = item.UnitId }))">Edit</button>
                                     @if (item.IsActive)
                                     {
                                         <form method="post" asp-page-handler="Deactivate" style="margin:0;">

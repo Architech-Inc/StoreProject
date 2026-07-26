@@ -25,6 +25,7 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/dashboard-modern.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/components.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" referrerpolicy="no-referrer" />
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
@@ -131,6 +132,25 @@
 
     <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
+    <!-- Global Crop Modal -->
+    <div class="modal-overlay" id="globalCropModal" hidden>
+        <div class="modal" role="dialog" aria-modal="true" style="max-width: 600px; width: 90%;">
+            <div class="modal-head">
+                <h3>Crop Thumbnail</h3>
+                <button type="button" class="btn-close" id="btnCancelCrop" aria-label="Close">×</button>
+            </div>
+            <div style="max-height: 60vh; overflow: hidden; background: #000; text-align: center; margin-bottom: 15px;">
+                <img id="cropperImage" src="" style="max-width: 100%; display: block;" />
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:8px;">
+                <button type="button" class="button-command" id="btnCancelCrop2">Cancel</button>
+                <button type="button" class="button-primary" id="btnApplyCrop">Apply Crop</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.1/dist/browser-image-compression.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js" referrerpolicy="no-referrer"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
     <script>

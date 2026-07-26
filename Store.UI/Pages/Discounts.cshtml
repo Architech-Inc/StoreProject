@@ -93,7 +93,7 @@
                                 </td>
                                 <td style="white-space:nowrap; display: flex; gap: 4px;">
                                     <button type="button" class="button-command" title="Edit"
-                                        onclick="openEdit(@d.DiscountId, @Html.Raw(System.Text.Json.JsonSerializer.Serialize(d)))">✏️ Edit</button>
+                                        onclick="openEdit(@d.DiscountId, @System.Text.Json.JsonSerializer.Serialize(d))">✏️ Edit</button>
                                     <button type="button" class="button-command" style="color: var(--accent-red);" title="Delete"
                                         onclick="confirmDelete(@d.DiscountId, '@System.Web.HttpUtility.JavaScriptStringEncode(d.Name)')">🗑️</button>
                                 </td>

@@ -91,7 +91,7 @@
                                 <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="@b.Notes">@b.Notes</td>
                                 <td style="white-space:nowrap;">
                                     <button type="button" class="btn-icon" title="Edit"
-                                        onclick="openEdit('@b.BatchId', @Html.Raw(System.Text.Json.JsonSerializer.Serialize(b)))">✏️</button>
+                                        onclick="openEdit('@b.BatchId', @System.Text.Json.JsonSerializer.Serialize(b))">✏️</button>
                                     <button type="button" class="btn-icon btn-danger" title="Delete"
                                         onclick="confirmDelete('@b.BatchId', '@System.Web.HttpUtility.JavaScriptStringEncode(b.BatchNumber)')">🗑️</button>
                                 </td>
