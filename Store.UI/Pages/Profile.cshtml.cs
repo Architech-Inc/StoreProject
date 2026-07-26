@@ -16,6 +16,7 @@ public class ProfileModel : SecurePageModel
     public string? CurrentRoleName { get; private set; }
     public string? CurrentStatus { get; private set; }
     public string? CurrentAvatarPath { get; private set; }
+    public string? CurrentFullAvatarPath { get; private set; }
     [TempData] public string? StatusMessage { get; set; }
 
     [BindProperty] public string? CurrentPassword { get; set; }
@@ -69,6 +70,7 @@ public class ProfileModel : SecurePageModel
                     CurrentRoleName = user.RoleName;
                     CurrentStatus = user.Status.ToString();
                     CurrentAvatarPath = user.ThumbnailUrl ?? user.FullImageUrl;
+                    CurrentFullAvatarPath = user.FullImageUrl ?? user.ThumbnailUrl;
                 }
             }
             catch (Exception ex)

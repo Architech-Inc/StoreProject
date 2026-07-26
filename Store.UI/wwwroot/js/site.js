@@ -317,4 +317,31 @@
         }
     });
 
+    // --- Global Image Viewer Utility ---
+    window.viewImage = (url) => {
+        if (!url) return;
+        const modal = document.getElementById('globalImageViewerModal');
+        const img = document.getElementById('globalImageViewerImage');
+        if (modal && img) {
+            img.src = url;
+            modal.hidden = false;
+        }
+    };
+
+    window.closeImageViewer = () => {
+        const modal = document.getElementById('globalImageViewerModal');
+        const img = document.getElementById('globalImageViewerImage');
+        if (modal && img) {
+            modal.hidden = true;
+            img.src = '';
+        }
+    };
+
+    // Close viewer when clicking on the overlay background
+    document.getElementById('globalImageViewerModal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'globalImageViewerModal') {
+            window.closeImageViewer();
+        }
+    });
+
 })();

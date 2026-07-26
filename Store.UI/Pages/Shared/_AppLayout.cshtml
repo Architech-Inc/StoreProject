@@ -149,6 +149,16 @@
         </div>
     </div>
 
+    <!-- Global Image Viewer Modal -->
+    <div class="modal-overlay" id="globalImageViewerModal" hidden style="z-index: 9999;">
+        <div class="modal" role="dialog" aria-modal="true" style="max-width: 90vw; width: max-content; background: transparent; box-shadow: none; padding: 0;">
+            <div style="position: relative; display: inline-block;">
+                <button type="button" class="btn-close" onclick="closeImageViewer()" aria-label="Close" style="position: absolute; top: -40px; right: 0; color: white; font-size: 2rem; background: transparent; border: none; cursor: pointer;">×</button>
+                <img id="globalImageViewerImage" src="" alt="Full view" style="max-width: 90vw; max-height: 90vh; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: block;" />
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.1/dist/browser-image-compression.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js" referrerpolicy="no-referrer"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>

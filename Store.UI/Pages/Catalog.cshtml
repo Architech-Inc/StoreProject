@@ -52,7 +52,7 @@
                                 <td>
                                     @if (!string.IsNullOrEmpty(item.ThumbnailUrl))
                                     {
-                                        <img src="@item.ThumbnailUrl" alt="Photo" style="width:32px;height:32px;border-radius:4px;object-fit:cover;" />
+                                        <img src="@item.ThumbnailUrl" alt="Photo" style="width:32px;height:32px;border-radius:4px;object-fit:cover;cursor:pointer;" onclick="viewImage('@(item.FullImageUrl ?? item.ThumbnailUrl)')" />
                                     }
                                     else
                                     {

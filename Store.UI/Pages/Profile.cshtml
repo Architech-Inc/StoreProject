@@ -23,7 +23,7 @@
         <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
             @if (!string.IsNullOrEmpty(Model.CurrentAvatarPath))
             {
-                <img src="@Model.CurrentAvatarPath" alt="Avatar" style="width:64px;height:64px;border-radius:50%;object-fit:cover;" />
+                <img src="@Model.CurrentAvatarPath" alt="Avatar" style="width:64px;height:64px;border-radius:50%;object-fit:cover;cursor:pointer;" onclick="viewImage('@Model.CurrentFullAvatarPath')" />
             }
             else
             {
