@@ -13,7 +13,8 @@ public class Customer : BaseEntity
     public Gender Gender { get; set; } = Gender.NotSpecified;
     public DateTime? DateOfBirth { get; set; }
     public string? Notes { get; set; }
-    public string? ImagePath { get; set; }
+    public string? ThumbnailUrl { get; set; }
+    public string? FullImageUrl { get; set; }
 
     /// <summary>Pricing and loyalty segment (EX-FR-4.4).</summary>
     public CustomerSegment Segment { get; set; } = CustomerSegment.Standard;

@@ -20,7 +20,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .HasMaxLength(50)
             .HasDefaultValue(UserStatus.NotVerified);
 
-        builder.Property(u => u.ImagePath).HasMaxLength(500);
+        builder.Property(u => u.ThumbnailUrl).HasMaxLength(500);
         builder.Property(u => u.DateCreated).IsRequired();
         builder.Property(u => u.LastModified).IsRequired();
 

@@ -34,8 +34,10 @@ public class ItemService : IItemService
             .Include(i => i.Category)
             .Include(i => i.Unit)
             .Include(i => i.Discount)
-            .Where(i => i.IsActive)
             .AsNoTracking();
+
+        if (!request.IncludeInactive)
+            query = query.Where(i => i.IsActive);
 
         if (!string.IsNullOrWhiteSpace(request.SearchTerm))
             query = query.Where(i => i.Name.Contains(request.SearchTerm) ||
@@ -87,7 +89,8 @@ public class ItemService : IItemService
             UnitId = request.UnitId,
             ManufacturerId = request.ManufacturerId,
             IsActive = true,
-            ImagePath = request.ImagePath?.Trim()
+            ThumbnailUrl = request.ThumbnailUrl?.Trim(),
+            FullImageUrl = request.FullImageUrl?.Trim()
         };
 
         await _uow.Repository<Item>().AddAsync(item, ct);
@@ -114,7 +117,8 @@ public class ItemService : IItemService
         if (request.UnitId.HasValue) item.UnitId = request.UnitId;
         if (request.ManufacturerId.HasValue) item.ManufacturerId = request.ManufacturerId;
         if (request.IsActive.HasValue) item.IsActive = request.IsActive.Value;
-        if (request.ImagePath != null) item.ImagePath = request.ImagePath.Trim();
+        if (request.ThumbnailUrl != null) item.ThumbnailUrl = request.ThumbnailUrl.Trim();
+        if (request.FullImageUrl != null) item.FullImageUrl = request.FullImageUrl.Trim();
 
         _uow.Repository<Item>().Update(item);
         await _uow.SaveChangesAsync(ct);
@@ -169,7 +173,8 @@ public class ItemService : IItemService
         UnitAbbreviation = i.Unit?.Abbreviation,
         ManufacturerId = i.ManufacturerId,
         ManufacturerName = i.Manufacturer?.Name,
-        ImagePath = i.ImagePath,
+        ThumbnailUrl = i.ThumbnailUrl,
+            FullImageUrl = i.FullImageUrl,
         DiscountPercentage = i.Discount?.IsActive == true ? i.Discount.Percentage : null,
         DateCreated = i.DateCreated
     };

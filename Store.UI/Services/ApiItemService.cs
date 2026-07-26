@@ -23,7 +23,7 @@ public class ApiItemService : IItemService
 
     public async Task<PagedResult<ItemDto>> GetAllAsync(PagedRequest request, CancellationToken ct = default)
     {
-        var qs = $"?page={request.Page}&pageSize={request.PageSize}";
+        var qs = $"?page={request.Page}&pageSize={request.PageSize}&includeInactive={request.IncludeInactive.ToString().ToLower()}";
         var result = await _client.GetAsync<PagedResult<ItemDto>>($"/api/items{qs}", ct);
         return result ?? new PagedResult<ItemDto>();
     }

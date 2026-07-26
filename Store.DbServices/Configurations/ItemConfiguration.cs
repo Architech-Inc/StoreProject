@@ -17,7 +17,7 @@ public class ItemConfiguration : IEntityTypeConfiguration<Item>
         builder.Property(i => i.UnitPrice).IsRequired().HasPrecision(18, 4);
         builder.Property(i => i.CostPrice).HasPrecision(18, 4);
         builder.Property(i => i.Barcode).HasMaxLength(100);
-        builder.Property(i => i.ImagePath).HasMaxLength(500);
+        builder.Property(i => i.ThumbnailUrl).HasMaxLength(500);
         builder.HasIndex(i => i.Barcode).IsUnique().HasFilter("barcode IS NOT NULL");
 
         builder.Property(i => i.Type)
@@ -63,7 +63,7 @@ public class CategoryConfiguration : IEntityTypeConfiguration<Category>
         builder.HasKey(c => c.CategoryId);
         builder.Property(c => c.Name).IsRequired().HasMaxLength(150);
         builder.Property(c => c.Description).HasMaxLength(500);
-        builder.Property(c => c.ImagePath).HasMaxLength(500);
+        builder.Property(c => c.ThumbnailUrl).HasMaxLength(500);
         builder.HasIndex(c => c.Name).IsUnique();
     }
 }

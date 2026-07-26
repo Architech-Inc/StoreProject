@@ -15,7 +15,8 @@ public class ItemDto
     public ItemType Type { get; set; }
     public string? Barcode { get; set; }
     public bool IsActive { get; set; }
-    public string? ImagePath { get; set; }
+    public string? ThumbnailUrl { get; set; }
+    public string? FullImageUrl { get; set; }
     public int? CategoryId { get; set; }
     public string? CategoryName { get; set; }
     public int? UnitId { get; set; }
@@ -49,7 +50,8 @@ public class CreateItemRequest
     public int? CategoryId { get; set; }
     public int? UnitId { get; set; }
     public Guid? ManufacturerId { get; set; }
-    public string? ImagePath { get; set; }
+    public string? ThumbnailUrl { get; set; }
+    public string? FullImageUrl { get; set; }
 }
 
 public class UpdateItemRequest
@@ -73,7 +75,8 @@ public class UpdateItemRequest
     public int? CategoryId { get; set; }
     public int? UnitId { get; set; }
     public Guid? ManufacturerId { get; set; }
-    public string? ImagePath { get; set; }
+    public string? ThumbnailUrl { get; set; }
+    public string? FullImageUrl { get; set; }
 }
 
 public class AdjustStockRequest

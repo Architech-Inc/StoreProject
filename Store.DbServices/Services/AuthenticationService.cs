@@ -118,7 +118,7 @@ public class AuthenticationService : IAuthenticationService
                 UserId = user.UserId,
                 Username = user.Username,
                 Role = user.Role.Name,
-                ImagePath = user.ImagePath
+                ThumbnailUrl = user.ThumbnailUrl
             }
         };
     }
@@ -206,7 +206,7 @@ public class AuthenticationService : IAuthenticationService
                 UserId = user.UserId,
                 Username = user.Username,
                 Role = user.Role.Name,
-                ImagePath = user.ImagePath
+                ThumbnailUrl = user.ThumbnailUrl
             }
         };
     }

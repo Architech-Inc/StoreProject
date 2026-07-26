@@ -146,4 +146,85 @@
         });
     }
 
+    // --- Image Compression Utility ---
+    window.compressImage = async (file, options = {}) => {
+        if (!window.imageCompression) {
+            console.warn('browser-image-compression library not loaded.');
+            return file;
+        }
+
+        const defaultOptions = {
+            maxSizeMB: 1,
+            maxWidthOrHeight: 1024,
+            useWebWorker: true,
+            fileType: 'image/webp',
+            initialQuality: 0.8
+        };
+
+        const mergedOptions = { ...defaultOptions, ...options };
+
+        try {
+            console.log(`Original file size: ${file.size / 1024 / 1024} MB`);
+            const compressedFile = await window.imageCompression(file, mergedOptions);
+            console.log(`Compressed file size: ${compressedFile.size / 1024 / 1024} MB`);
+            return compressedFile;
+        } catch (error) {
+            console.error('Error during image compression:', error);
+            // Return original file if compression fails
+            return file;
+        }
+    };
+
+    // --- Global Form Image Interceptor ---
+    document.addEventListener('submit', async (e) => {
+        const form = e.target;
+        if (form.dataset.compressed === "true") return; // already processed
+
+        const fileInputs = form.querySelectorAll('input[type="file"][accept*="image"]');
+        let hasFilesToCompress = false;
+        
+        fileInputs.forEach(input => {
+            if (input.files && input.files.length > 0) {
+                hasFilesToCompress = true;
+            }
+        });
+
+        if (hasFilesToCompress) {
+            e.preventDefault(); // stop normal submission
+
+            const submitBtn = form.querySelector('[type="submit"]');
+            const originalBtnText = submitBtn ? submitBtn.textContent : '';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Compressing...';
+            }
+
+            try {
+                for (let input of fileInputs) {
+                    if (input.files && input.files.length > 0) {
+                        const originalFile = input.files[0];
+                        const compressedFile = await window.compressImage(originalFile);
+                        
+                        const dataTransfer = new DataTransfer();
+                        let newFileName = originalFile.name.replace(/\.[^/.]+$/, "") + ".webp";
+                        dataTransfer.items.add(new File([compressedFile], newFileName, { type: compressedFile.type }));
+                        
+                        input.files = dataTransfer.files;
+                    }
+                }
+                
+                // Mark as processed and submit
+                form.dataset.compressed = "true";
+                form.submit();
+            } catch (err) {
+                console.error("Image compression failed during form submission", err);
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalBtnText;
+                }
+                window.showToast?.('error', 'Failed to compress image before uploading.');
+            }
+        }
+    });
+
 })();

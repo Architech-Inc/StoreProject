@@ -18,7 +18,8 @@ public class Employee : BaseEntity
     public string? PlaceOfBirth { get; set; }
     public DateTime DateEmployed { get; set; }
     public EmployeeStatus Status { get; set; } = EmployeeStatus.Pending;
-    public string? ImagePath { get; set; }
+    public string? ThumbnailUrl { get; set; }
+    public string? FullImageUrl { get; set; }
 
     // Navigation
     public Department? Department { get; set; }

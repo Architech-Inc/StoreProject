@@ -348,10 +348,9 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("varchar(500)")
                         .HasColumnName("description");
 
-                    b.Property<string>("ImagePath")
-                        .HasMaxLength(500)
-                        .HasColumnType("varchar(500)")
-                        .HasColumnName("image_path");
+                    b.Property<string>("FullImageUrl")
+                        .HasColumnType("longtext")
+                        .HasColumnName("full_image_url");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -362,6 +361,11 @@ namespace Store.DbServices.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("varchar(150)")
                         .HasColumnName("name");
+
+                    b.Property<string>("ThumbnailUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("thumbnail_url");
 
                     b.HasKey("CategoryId")
                         .HasName("pk_category");
@@ -1073,16 +1077,15 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("varchar(100)")
                         .HasColumnName("first_name");
 
+                    b.Property<string>("FullImageUrl")
+                        .HasColumnType("longtext")
+                        .HasColumnName("full_image_url");
+
                     b.Property<string>("Gender")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("varchar(20)")
                         .HasColumnName("gender");
-
-                    b.Property<string>("ImagePath")
-                        .HasMaxLength(500)
-                        .HasColumnType("varchar(500)")
-                        .HasColumnName("image_path");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -1107,6 +1110,11 @@ namespace Store.DbServices.Migrations
                     b.Property<int>("Segment")
                         .HasColumnType("int")
                         .HasColumnName("segment");
+
+                    b.Property<string>("ThumbnailUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("thumbnail_url");
 
                     b.HasKey("CustomerId")
                         .HasName("pk_customer");
@@ -1640,6 +1648,10 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("varchar(100)")
                         .HasColumnName("first_name");
 
+                    b.Property<string>("FullImageUrl")
+                        .HasColumnType("longtext")
+                        .HasColumnName("full_image_url");
+
                     b.Property<string>("Gender")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
@@ -1647,11 +1659,6 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("varchar(20)")
                         .HasDefaultValue("NotSpecified")
                         .HasColumnName("gender");
-
-                    b.Property<string>("ImagePath")
-                        .HasMaxLength(500)
-                        .HasColumnType("varchar(500)")
-                        .HasColumnName("image_path");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -1689,6 +1696,11 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("varchar(50)")
                         .HasDefaultValue("Pending")
                         .HasColumnName("status");
+
+                    b.Property<string>("ThumbnailUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("thumbnail_url");
 
                     b.HasKey("EmployeeId")
                         .HasName("pk_employee");
@@ -1984,10 +1996,9 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("varchar(2000)")
                         .HasColumnName("description");
 
-                    b.Property<string>("ImagePath")
-                        .HasMaxLength(500)
-                        .HasColumnType("varchar(500)")
-                        .HasColumnName("image_path");
+                    b.Property<string>("FullImageUrl")
+                        .HasColumnType("longtext")
+                        .HasColumnName("full_image_url");
 
                     b.Property<int>("InStock")
                         .HasColumnType("int")
@@ -2018,6 +2029,11 @@ namespace Store.DbServices.Migrations
                     b.Property<int?>("TaxProfileId")
                         .HasColumnType("int")
                         .HasColumnName("tax_profile_id");
+
+                    b.Property<string>("ThumbnailUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("thumbnail_url");
 
                     b.Property<string>("Type")
                         .IsRequired()
@@ -2456,10 +2472,9 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
-                    b.Property<string>("ImagePath")
-                        .HasMaxLength(500)
-                        .HasColumnType("varchar(500)")
-                        .HasColumnName("image_path");
+                    b.Property<string>("FullImageUrl")
+                        .HasColumnType("longtext")
+                        .HasColumnName("full_image_url");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -2480,6 +2495,11 @@ namespace Store.DbServices.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)")
                         .HasColumnName("registration_number");
+
+                    b.Property<string>("ThumbnailUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("thumbnail_url");
 
                     b.Property<string>("Website")
                         .HasMaxLength(300)
@@ -3422,10 +3442,9 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
-                    b.Property<string>("ImagePath")
-                        .HasMaxLength(500)
-                        .HasColumnType("varchar(500)")
-                        .HasColumnName("image_path");
+                    b.Property<string>("FullImageUrl")
+                        .HasColumnType("longtext")
+                        .HasColumnName("full_image_url");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -3446,6 +3465,11 @@ namespace Store.DbServices.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)")
                         .HasColumnName("registration_number");
+
+                    b.Property<string>("ThumbnailUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("thumbnail_url");
 
                     b.HasKey("SupplierId")
                         .HasName("pk_supplier");
@@ -3593,10 +3617,9 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("char(36)")
                         .HasColumnName("employee_id");
 
-                    b.Property<string>("ImagePath")
-                        .HasMaxLength(500)
-                        .HasColumnType("varchar(500)")
-                        .HasColumnName("image_path");
+                    b.Property<string>("FullImageUrl")
+                        .HasColumnType("longtext")
+                        .HasColumnName("full_image_url");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -3613,6 +3636,11 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("varchar(50)")
                         .HasDefaultValue("NotVerified")
                         .HasColumnName("status");
+
+                    b.Property<string>("ThumbnailUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("thumbnail_url");
 
                     b.Property<string>("Username")
                         .IsRequired()

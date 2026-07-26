@@ -28,7 +28,8 @@ public class LookupModel : SecurePageModel
 
     public async Task<IActionResult> OnGetAsync(string tab = "categories", CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out _, out _)) return GoToLogin();
+        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        _apiClient.SetToken(token);
 
         ActiveTab = tab is "categories" or "units" or "departments" ? tab : "categories";
 
@@ -51,28 +52,35 @@ public class LookupModel : SecurePageModel
     // ── Categories ───────────────────────────────────────────────
     public async Task<IActionResult> OnPostSaveCategoryAsync(int id, string name, string? description, CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out _, out _)) return GoToLogin();
+        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        _apiClient.SetToken(token);
         try
         {
-            string? imagePath = null;
+            string? thumbUrl = null;
+            string? fullUrl = null;
             if (CategoryImageUpload != null && CategoryImageUpload.Length > 0)
             {
                 if (id != 0)
                 {
                     var existingCategory = await _apiClient.GetAsync<Category>($"/api/categories/{id}", ct);
-                    if (existingCategory != null && !string.IsNullOrWhiteSpace(existingCategory.ImagePath))
+                    if (existingCategory != null)
                     {
-                        await _fileService.DeleteFileAsync(existingCategory.ImagePath, ct);
+                        if (!string.IsNullOrWhiteSpace(existingCategory.ThumbnailUrl))
+                            await _fileService.DeleteFileAsync(existingCategory.ThumbnailUrl, ct);
+                        if (!string.IsNullOrWhiteSpace(existingCategory.FullImageUrl))
+                            await _fileService.DeleteFileAsync(existingCategory.FullImageUrl, ct);
                     }
                 }
                 using var stream = CategoryImageUpload.OpenReadStream();
-                imagePath = await _fileService.UploadFileAsync(stream, CategoryImageUpload.FileName, CategoryImageUpload.ContentType, "categories", ct);
+                var uploadResult = await _fileService.UploadFileAsync(stream, CategoryImageUpload.FileName, CategoryImageUpload.ContentType, "categories", ct);
+                thumbUrl = uploadResult.ThumbnailUrl;
+                fullUrl = uploadResult.FullImageUrl;
             }
 
             if (id == 0)
-                await _apiClient.PostAsync<Category>("/api/categories", new { name, description, imagePath }, ct);
+                await _apiClient.PostAsync<Category>("/api/categories", new { name, description, thumbnailUrl = thumbUrl, fullImageUrl = fullUrl }, ct);
             else
-                await _apiClient.PutAsync<Category>($"/api/categories/{id}", new { name, description, imagePath }, ct);
+                await _apiClient.PutAsync<Category>($"/api/categories/{id}", new { name, description, thumbnailUrl = thumbUrl, fullImageUrl = fullUrl }, ct);
 
             StatusMessage = id == 0 ? $"Category '{name}' created." : $"Category '{name}' updated.";
         }
@@ -83,7 +91,8 @@ public class LookupModel : SecurePageModel
 
     public async Task<IActionResult> OnPostDeleteCategoryAsync(int id, CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out _, out _)) return GoToLogin();
+        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        _apiClient.SetToken(token);
         try
         {
             var ok = await _apiClient.DeleteAsync($"/api/categories/{id}", ct);
@@ -96,7 +105,8 @@ public class LookupModel : SecurePageModel
     // ── Units ────────────────────────────────────────────────────
     public async Task<IActionResult> OnPostSaveUnitAsync(int id, string name, string abbreviation, string? description, CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out _, out _)) return GoToLogin();
+        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        _apiClient.SetToken(token);
         try
         {
             if (id == 0)
@@ -112,7 +122,8 @@ public class LookupModel : SecurePageModel
 
     public async Task<IActionResult> OnPostDeleteUnitAsync(int id, CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out _, out _)) return GoToLogin();
+        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        _apiClient.SetToken(token);
         try
         {
             var ok = await _apiClient.DeleteAsync($"/api/units/{id}", ct);
@@ -125,7 +136,8 @@ public class LookupModel : SecurePageModel
     // ── Departments ──────────────────────────────────────────────
     public async Task<IActionResult> OnPostSaveDepartmentAsync(int id, string name, string? description, CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out _, out _)) return GoToLogin();
+        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        _apiClient.SetToken(token);
         try
         {
             if (id == 0)
@@ -141,7 +153,8 @@ public class LookupModel : SecurePageModel
 
     public async Task<IActionResult> OnPostDeleteDepartmentAsync(int id, CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out _, out _)) return GoToLogin();
+        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        _apiClient.SetToken(token);
         try
         {
             var ok = await _apiClient.DeleteAsync($"/api/departments/{id}", ct);

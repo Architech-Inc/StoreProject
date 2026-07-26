@@ -13,10 +13,12 @@ namespace Store.API.Controllers
     public class FilesController : ControllerBase
     {
         private readonly IFileStorageService _fileStorageService;
+        private readonly Store.API.Infrastructure.Processing.IImageProcessorService _imageProcessor;
 
-        public FilesController(IFileStorageService fileStorageService)
+        public FilesController(IFileStorageService fileStorageService, Store.API.Infrastructure.Processing.IImageProcessorService imageProcessor)
         {
             _fileStorageService = fileStorageService;
+            _imageProcessor = imageProcessor;
         }
 
         [HttpPost("upload")]
@@ -27,18 +29,23 @@ namespace Store.API.Controllers
                 return BadRequest(new { success = false, message = "No file uploaded." });
             }
 
-            // Optional: Add file size and extension validation here based on business rules
-
             try
             {
-                var relativePath = await _fileStorageService.SaveFileAsync(file, folder);
+                using var stream = file.OpenReadStream();
+                var (thumbStream, fullStream) = await _imageProcessor.ProcessImageAsync(stream);
+
+                var thumbPath = await _fileStorageService.SaveStreamAsync(thumbStream, file.FileName + ".webp", folder + "/thumb");
+                var fullPath = await _fileStorageService.SaveStreamAsync(fullStream, file.FileName + ".webp", folder + "/full");
                 
-                // Return the public URL path
-                return Ok(Store.Models.DTOs.Common.ApiResponse<object>.Ok(new { success = true, path = $"/files/{relativePath}" }));
+                return Ok(Store.Models.DTOs.Common.ApiResponse<object>.Ok(new 
+                { 
+                    success = true, 
+                    thumbnailUrl = $"/files/{thumbPath}",
+                    fullImageUrl = $"/files/{fullPath}"
+                }));
             }
             catch (Exception ex)
             {
-                // In production, log the exception and return a generic message
                 return StatusCode(500, new { success = false, message = "An error occurred while uploading the file.", details = ex.Message });
             }
         }

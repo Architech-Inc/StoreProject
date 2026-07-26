@@ -38,7 +38,7 @@ public class CustomerConfiguration : IEntityTypeConfiguration<Customer>
         builder.Property(c => c.MiddleName).HasMaxLength(100);
         builder.Property(c => c.LastName).IsRequired().HasMaxLength(100);
         builder.Property(c => c.Notes).HasMaxLength(1000);
-        builder.Property(c => c.ImagePath).HasMaxLength(500);
+        builder.Property(c => c.ThumbnailUrl).HasMaxLength(500);
         builder.Property(c => c.Gender).HasConversion<string>().HasMaxLength(20);
     }
 }
@@ -52,7 +52,7 @@ public class SupplierConfiguration : IEntityTypeConfiguration<Supplier>
         builder.Property(s => s.Name).IsRequired().HasMaxLength(200);
         builder.Property(s => s.RegistrationNumber).HasMaxLength(100);
         builder.Property(s => s.Notes).HasMaxLength(1000);
-        builder.Property(s => s.ImagePath).HasMaxLength(500);
+        builder.Property(s => s.ThumbnailUrl).HasMaxLength(500);
     }
 }
 
@@ -66,7 +66,7 @@ public class ManufacturerConfiguration : IEntityTypeConfiguration<Manufacturer>
         builder.Property(m => m.RegistrationNumber).HasMaxLength(100);
         builder.Property(m => m.Website).HasMaxLength(300);
         builder.Property(m => m.Notes).HasMaxLength(1000);
-        builder.Property(m => m.ImagePath).HasMaxLength(500);
+        builder.Property(m => m.ThumbnailUrl).HasMaxLength(500);
     }
 }
 

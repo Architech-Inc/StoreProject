@@ -19,7 +19,7 @@ namespace StoreUI.Services
             _logger = logger;
         }
 
-        public async Task<string?> UploadFileAsync(Stream fileStream, string fileName, string contentType, string folder, CancellationToken ct = default)
+        public async Task<(string? ThumbnailUrl, string? FullImageUrl)> UploadFileAsync(Stream fileStream, string fileName, string contentType, string folder, CancellationToken ct = default)
         {
             try
             {
@@ -30,21 +30,20 @@ namespace StoreUI.Services
                 
                 content.Add(fileContent, "file", fileName);
 
-                // Note: The API route is /api/files/upload?folder={folder}
                 var endpoint = $"/api/files/upload?folder={System.Uri.EscapeDataString(folder)}";
                 
                 var result = await _client.PostMultipartAsync<FileUploadResponse>(endpoint, content, ct);
                 
                 if (result != null && result.Success)
                 {
-                    return result.Path;
+                    return (result.ThumbnailUrl, result.FullImageUrl);
                 }
-                return null;
+                return (null, null);
             }
             catch (System.Exception ex)
             {
                 _logger.LogError(ex, "Failed to upload file {FileName}", fileName);
-                return null;
+                return (null, null);
             }
         }
 
@@ -54,11 +53,11 @@ namespace StoreUI.Services
             return await _client.DeleteAsync(endpoint, ct);
         }
 
-        // Helper class for deserializing the response
         private class FileUploadResponse
         {
             public bool Success { get; set; }
-            public string? Path { get; set; }
+            public string? ThumbnailUrl { get; set; }
+            public string? FullImageUrl { get; set; }
             public string? Message { get; set; }
         }
     }

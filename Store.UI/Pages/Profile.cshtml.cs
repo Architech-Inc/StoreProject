@@ -56,7 +56,7 @@ public class ProfileModel : SecurePageModel
                     CurrentUsername = user.Username;
                     CurrentRoleName = user.RoleName;
                     CurrentStatus = user.Status.ToString();
-                    CurrentAvatarPath = user.ImagePath;
+                    CurrentAvatarPath = user.ThumbnailUrl ?? user.FullImageUrl;
                 }
             }
             catch (Exception ex)
@@ -148,23 +148,30 @@ public class ProfileModel : SecurePageModel
 
         try
         {
-            string? relativePath = null;
+            string? thumbUrl = null;
+            string? fullUrl = null;
             if (AvatarUpload != null && AvatarUpload.Length > 0)
             {
                 // Delete the old avatar before uploading a new one
                 var user = await _userService.GetByIdAsync(userId, ct);
-                if (user != null && !string.IsNullOrWhiteSpace(user.ImagePath))
+                if (user != null)
                 {
-                    await _fileService.DeleteFileAsync(user.ImagePath, ct);
+                    if (!string.IsNullOrWhiteSpace(user.ThumbnailUrl))
+                        await _fileService.DeleteFileAsync(user.ThumbnailUrl, ct);
+                    if (!string.IsNullOrWhiteSpace(user.FullImageUrl))
+                        await _fileService.DeleteFileAsync(user.FullImageUrl, ct);
                 }
 
                 using var stream = AvatarUpload.OpenReadStream();
-                relativePath = await _fileService.UploadFileAsync(stream, AvatarUpload.FileName, AvatarUpload.ContentType, "users", ct);
+                var uploadResult = await _fileService.UploadFileAsync(stream, AvatarUpload.FileName, AvatarUpload.ContentType, "users", ct);
+                thumbUrl = uploadResult.ThumbnailUrl;
+                fullUrl = uploadResult.FullImageUrl;
             }
             
             await _userService.UpdateAsync(userId, new UpdateUserRequest
             {
-                ImagePath = relativePath
+                ThumbnailUrl = thumbUrl,
+                FullImageUrl = fullUrl
             }, ct);
 
             TempData["StatusMessage"] = "Avatar updated successfully.";

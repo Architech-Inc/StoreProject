@@ -31,7 +31,7 @@ public class CategoriesController : ControllerBase
     [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> Create([FromBody] CreateCategoryRequest request, CancellationToken ct)
     {
-        var category = await _categoryService.CreateAsync(request.Name, request.Description, request.ImagePath, ct);
+        var category = await _categoryService.CreateAsync(request.Name, request.Description, request.ThumbnailUrl, request.FullImageUrl, ct);
         return CreatedAtAction(nameof(GetById), new { id = category.CategoryId }, ApiResponse<Category>.Ok(category));
     }
 
@@ -39,7 +39,7 @@ public class CategoriesController : ControllerBase
     [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> Update(int id, [FromBody] CreateCategoryRequest request, CancellationToken ct)
     {
-        var category = await _categoryService.UpdateAsync(id, request.Name, request.Description, request.ImagePath, ct);
+        var category = await _categoryService.UpdateAsync(id, request.Name, request.Description, request.ThumbnailUrl, request.FullImageUrl, ct);
         if (category is null) return NotFound(ApiResponse<object>.Fail("Category not found."));
         return Ok(ApiResponse<Category>.Ok(category));
     }
@@ -136,5 +136,5 @@ public class DepartmentsController : ControllerBase
 
 // Shared request DTOs for lookup controllers
 public record CreateLookupRequest(string Name, string? Description);
-public record CreateCategoryRequest(string Name, string? Description, string? ImagePath);
+public record CreateCategoryRequest(string Name, string? Description, string? ThumbnailUrl, string? FullImageUrl);
 public record CreateUnitRequest(string Name, string Abbreviation, string? Description);

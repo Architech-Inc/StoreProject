@@ -64,19 +64,25 @@ public class UsersModel : SecurePageModel
 
         try
         {
-            string? imagePath = null;
+            string? thumbUrl = null;
+            string? fullUrl = null;
             if (ImageUpload != null && ImageUpload.Length > 0)
             {
                 if (EditUserId.HasValue && EditUserId.Value != Guid.Empty)
                 {
                     var existingUser = await _userService.GetByIdAsync(EditUserId.Value, ct);
-                    if (existingUser != null && !string.IsNullOrWhiteSpace(existingUser.ImagePath))
+                    if (existingUser != null)
                     {
-                        await _fileService.DeleteFileAsync(existingUser.ImagePath, ct);
+                        if (!string.IsNullOrWhiteSpace(existingUser.ThumbnailUrl))
+                            await _fileService.DeleteFileAsync(existingUser.ThumbnailUrl, ct);
+                        if (!string.IsNullOrWhiteSpace(existingUser.FullImageUrl))
+                            await _fileService.DeleteFileAsync(existingUser.FullImageUrl, ct);
                     }
                 }
                 using var stream = ImageUpload.OpenReadStream();
-                imagePath = await _fileService.UploadFileAsync(stream, ImageUpload.FileName, ImageUpload.ContentType, "users", ct);
+                var uploadResult = await _fileService.UploadFileAsync(stream, ImageUpload.FileName, ImageUpload.ContentType, "users", ct);
+                thumbUrl = uploadResult.ThumbnailUrl;
+                fullUrl = uploadResult.FullImageUrl;
             }
 
             if (EditUserId.HasValue && EditUserId.Value != Guid.Empty)
@@ -88,7 +94,8 @@ public class UsersModel : SecurePageModel
                     Username = NewUsername,
                     RoleId = NewRoleId,
                     Status = status,
-                    ImagePath = imagePath
+                    ThumbnailUrl = thumbUrl,
+                    FullImageUrl = fullUrl
                 };
                 var updated = await _userService.UpdateAsync(EditUserId.Value, update, ct);
                 StatusMessage = updated is not null ? $"User '{updated.Username}' updated." : "Error: User not found.";
@@ -102,7 +109,8 @@ public class UsersModel : SecurePageModel
                     Email = NewEmail,
                     Password = NewPassword,
                     RoleId = NewRoleId,
-                    ImagePath = imagePath
+                    ThumbnailUrl = thumbUrl,
+                    FullImageUrl = fullUrl
                 };
                 var created = await _userService.CreateAsync(create, ct);
                 StatusMessage = $"User '{created.Username}' created.";

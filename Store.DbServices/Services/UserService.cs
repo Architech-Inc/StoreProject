@@ -42,7 +42,8 @@ public class UserService : IUserService
             Username = request.Username.Trim(),
             RoleId = request.RoleId,
             Status = UserStatus.NotVerified,
-            ImagePath = request.ImagePath?.Trim()
+            ThumbnailUrl = request.ThumbnailUrl?.Trim(),
+            FullImageUrl = request.FullImageUrl?.Trim()
         };
 
         var passwordHash = BCrypt.Net.BCrypt.EnhancedHashPassword(request.Password, 12);
@@ -73,7 +74,8 @@ public class UserService : IUserService
 
         if (request.RoleId.HasValue) user.RoleId = request.RoleId.Value;
         if (request.Status.HasValue) user.Status = request.Status.Value;
-        if (request.ImagePath != null) user.ImagePath = request.ImagePath.Trim();
+        if (request.ThumbnailUrl != null) user.ThumbnailUrl = request.ThumbnailUrl.Trim();
+        if (request.FullImageUrl != null) user.FullImageUrl = request.FullImageUrl.Trim();
 
         _users.UpdateUser(user);
         await _users.SaveChangesAsync(ct);
@@ -117,7 +119,8 @@ public class UserService : IUserService
         RoleName = u.Role?.Name,
         EmployeeId = u.EmployeeId,
         Status = u.Status,
-        ImagePath = u.ImagePath,
+        ThumbnailUrl = u.ThumbnailUrl,
+            FullImageUrl = u.FullImageUrl,
         DateCreated = u.DateCreated
     };
 }

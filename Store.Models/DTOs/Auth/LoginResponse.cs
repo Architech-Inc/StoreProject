@@ -14,5 +14,6 @@ public class AuthenticatedUserDto
     public Guid UserId { get; set; }
     public string Username { get; set; } = string.Empty;
     public string Role { get; set; } = string.Empty;
-    public string? ImagePath { get; set; }
+    public string? ThumbnailUrl { get; set; }
+    public string? FullImageUrl { get; set; }
 }

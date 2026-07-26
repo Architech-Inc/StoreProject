@@ -33,4 +33,5 @@ public class PagedRequest
     public string? SearchTerm { get; set; }
     public string? SortBy { get; set; }
     public bool SortDescending { get; set; }
+    public bool IncludeInactive { get; set; }
 }

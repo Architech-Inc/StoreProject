@@ -67,5 +67,30 @@ namespace Store.API.Infrastructure.Storage
                 }
             }
         }
+
+        public async Task<string> SaveStreamAsync(Stream stream, string fileName, string subfolder)
+        {
+            if (stream == null || stream.Length == 0)
+            {
+                throw new ArgumentException("Stream is empty or null.", nameof(stream));
+            }
+
+            var directoryPath = Path.Combine(_basePath, subfolder);
+            if (!Directory.Exists(directoryPath))
+            {
+                Directory.CreateDirectory(directoryPath);
+            }
+
+            var extension = Path.GetExtension(fileName);
+            var uniqueFileName = $"{Guid.NewGuid()}{extension}";
+            var filePath = Path.Combine(directoryPath, uniqueFileName);
+
+            using (var fileStream = new FileStream(filePath, FileMode.Create))
+            {
+                await stream.CopyToAsync(fileStream);
+            }
+
+            return Path.Combine(subfolder, uniqueFileName).Replace("\\", "/");
+        }
     }
 }

@@ -47,7 +47,8 @@ public class SupplierService : ISupplierService
             Name = request.Name.Trim(),
             RegistrationNumber = request.RegistrationNumber?.Trim(),
             Notes = request.Notes?.Trim(),
-            ImagePath = request.ImagePath?.Trim()
+            ThumbnailUrl = request.ThumbnailUrl?.Trim(),
+            FullImageUrl = request.FullImageUrl?.Trim()
         };
 
         // Create emails
@@ -182,7 +183,8 @@ public class SupplierService : ISupplierService
             Name = supplier.Name,
             RegistrationNumber = supplier.RegistrationNumber,
             Notes = supplier.Notes,
-            ImagePath = supplier.ImagePath,
+            ThumbnailUrl = supplier.ThumbnailUrl,
+            FullImageUrl = supplier.FullImageUrl,
             DateCreated = supplier.DateCreated,
             Emails = supplier.Emails.Select(se => new SupplierEmailDto
             {

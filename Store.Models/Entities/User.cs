@@ -11,7 +11,8 @@ public class User : BaseEntity
     public int RoleId { get; set; }
     public string Username { get; set; } = string.Empty;
     public UserStatus Status { get; set; } = UserStatus.NotVerified;
-    public string? ImagePath { get; set; }
+    public string? ThumbnailUrl { get; set; }
+    public string? FullImageUrl { get; set; }
 
     // Navigation properties
     public Employee? Employee { get; set; }

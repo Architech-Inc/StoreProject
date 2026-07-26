@@ -9,7 +9,8 @@ public class Supplier : BaseEntity
     public string Name { get; set; } = string.Empty;
     public string? RegistrationNumber { get; set; }
     public string? Notes { get; set; }
-    public string? ImagePath { get; set; }
+    public string? ThumbnailUrl { get; set; }
+    public string? FullImageUrl { get; set; }
 
     // Navigation
     public ICollection<SupplierEmail> Emails { get; set; } = new List<SupplierEmail>();

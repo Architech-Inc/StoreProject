@@ -18,7 +18,8 @@ public class Item : BaseEntity
     public ItemType Type { get; set; } = ItemType.Product;
     public string? Barcode { get; set; }
     public bool IsActive { get; set; } = true;
-    public string? ImagePath { get; set; }
+    public string? ThumbnailUrl { get; set; }
+    public string? FullImageUrl { get; set; }
     public int? TaxProfileId { get; set; }
 
     // Navigation

@@ -31,8 +31,10 @@ public class EmployeeService : IEmployeeService
         var query = _uow.Repository<Employee>().Query()
             .Include(e => e.Department)
             .Include(e => e.Salary)
-            .Where(e => e.Status != EmployeeStatus.Fired)
             .AsNoTracking();
+
+        if (!request.IncludeInactive)
+            query = query.Where(e => e.Status != EmployeeStatus.Fired);
 
         if (!string.IsNullOrWhiteSpace(request.SearchTerm))
             query = query.Where(e => e.FirstName.Contains(request.SearchTerm) ||
@@ -64,7 +66,8 @@ public class EmployeeService : IEmployeeService
             DepartmentId = request.DepartmentId,
             SalaryId = request.SalaryId,
             Status = EmployeeStatus.Pending,
-            ImagePath = request.ImagePath?.Trim()
+            ThumbnailUrl = request.ThumbnailUrl?.Trim(),
+            FullImageUrl = request.FullImageUrl?.Trim()
         };
 
         await _uow.Repository<Employee>().AddAsync(employee, ct);
@@ -88,7 +91,8 @@ public class EmployeeService : IEmployeeService
         if (request.DepartmentId.HasValue) employee.DepartmentId = request.DepartmentId;
         if (request.SalaryId.HasValue) employee.SalaryId = request.SalaryId;
         if (request.Status.HasValue) employee.Status = request.Status.Value;
-        if (request.ImagePath != null) employee.ImagePath = request.ImagePath.Trim();
+        if (request.ThumbnailUrl != null) employee.ThumbnailUrl = request.ThumbnailUrl.Trim();
+        if (request.FullImageUrl != null) employee.FullImageUrl = request.FullImageUrl.Trim();
 
         _uow.Repository<Employee>().Update(employee);
         await _uow.SaveChangesAsync(ct);
@@ -124,7 +128,8 @@ public class EmployeeService : IEmployeeService
         DepartmentName = e.Department?.Name,
         SalaryId = e.SalaryId,
         SalaryGrade = e.Salary?.Grade,
-        ImagePath = e.ImagePath,
+        ThumbnailUrl = e.ThumbnailUrl,
+            FullImageUrl = e.FullImageUrl,
         DateCreated = e.DateCreated
     };
 }

@@ -51,7 +51,7 @@ public class CatalogModel : SecurePageModel
         _apiClient.SetToken(token);
         PageNumber = Math.Max(1, page);
 
-        var itemsTask = _itemService.GetAllAsync(new PagedRequest { Page = PageNumber, PageSize = PageSize }, ct);
+        var itemsTask = _itemService.GetAllAsync(new PagedRequest { Page = PageNumber, PageSize = PageSize, IncludeInactive = true }, ct);
         var catsTask  = _apiClient.GetAsync<List<Category>>("/api/categories", ct);
         var unitsTask = _apiClient.GetAsync<List<Unit>>("/api/units", ct);
 
@@ -71,19 +71,25 @@ public class CatalogModel : SecurePageModel
 
         _apiClient.SetToken(token);
 
-        string? imagePath = null;
+        string? thumbUrl = null;
+        string? fullUrl = null;
         if (ImageUpload != null && ImageUpload.Length > 0)
         {
             if (EditItemId.HasValue && EditItemId.Value != Guid.Empty)
             {
                 var existingItem = await _itemService.GetByIdAsync(EditItemId.Value, ct);
-                if (existingItem != null && !string.IsNullOrWhiteSpace(existingItem.ImagePath))
+                if (existingItem != null)
                 {
-                    await _fileService.DeleteFileAsync(existingItem.ImagePath, ct);
+                    if (!string.IsNullOrWhiteSpace(existingItem.ThumbnailUrl))
+                        await _fileService.DeleteFileAsync(existingItem.ThumbnailUrl, ct);
+                    if (!string.IsNullOrWhiteSpace(existingItem.FullImageUrl))
+                        await _fileService.DeleteFileAsync(existingItem.FullImageUrl, ct);
                 }
             }
             using var stream = ImageUpload.OpenReadStream();
-            imagePath = await _fileService.UploadFileAsync(stream, ImageUpload.FileName, ImageUpload.ContentType, "items", ct);
+            var uploadResult = await _fileService.UploadFileAsync(stream, ImageUpload.FileName, ImageUpload.ContentType, "items", ct);
+            thumbUrl = uploadResult.ThumbnailUrl;
+            fullUrl = uploadResult.FullImageUrl;
         }
 
         if (EditItemId.HasValue && EditItemId.Value != Guid.Empty)
@@ -98,7 +104,8 @@ public class CatalogModel : SecurePageModel
                 Barcode      = ItemBarcode,
                 CategoryId   = ItemCategoryId,
                 UnitId       = ItemUnitId,
-                ImagePath    = imagePath
+                ThumbnailUrl = thumbUrl,
+                FullImageUrl = fullUrl
             };
             await _itemService.UpdateAsync(EditItemId.Value, req, ct);
             StatusMessage = "Item updated.";
@@ -117,7 +124,8 @@ public class CatalogModel : SecurePageModel
                 CategoryId   = ItemCategoryId,
                 UnitId       = ItemUnitId,
                 Type         = ItemType.Product,
-                ImagePath    = imagePath
+                ThumbnailUrl = thumbUrl,
+                FullImageUrl = fullUrl
             };
             await _itemService.CreateAsync(req, ct);
             StatusMessage = "Item created.";

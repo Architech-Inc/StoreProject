@@ -19,7 +19,8 @@ public class EmployeeDto
     public string? SalaryGrade { get; set; }
     public EmployeeStatus Status { get; set; }
     public DateTime DateEmployed { get; set; }
-    public string? ImagePath { get; set; }
+    public string? ThumbnailUrl { get; set; }
+    public string? FullImageUrl { get; set; }
     public DateTime DateCreated { get; set; }
 }
 
@@ -44,7 +45,8 @@ public class CreateEmployeeRequest
 
     public int? DepartmentId { get; set; }
     public int? SalaryId { get; set; }
-    public string? ImagePath { get; set; }
+    public string? ThumbnailUrl { get; set; }
+    public string? FullImageUrl { get; set; }
 }
 
 public class UpdateEmployeeRequest
@@ -63,5 +65,6 @@ public class UpdateEmployeeRequest
     public int? DepartmentId { get; set; }
     public int? SalaryId { get; set; }
     public EmployeeStatus? Status { get; set; }
-    public string? ImagePath { get; set; }
+    public string? ThumbnailUrl { get; set; }
+    public string? FullImageUrl { get; set; }
 }

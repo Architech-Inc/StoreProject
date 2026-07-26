@@ -75,11 +75,14 @@ public class CustomersModel : SecurePageModel
 
         _apiClient.SetToken(token);
 
-        string? imagePath = null;
+        string? thumbUrl = null;
+        string? fullUrl = null;
         if (ImageUpload != null && ImageUpload.Length > 0)
         {
             using var stream = ImageUpload.OpenReadStream();
-            imagePath = await _fileService.UploadFileAsync(stream, ImageUpload.FileName, ImageUpload.ContentType, "customers", ct);
+            var uploadResult = await _fileService.UploadFileAsync(stream, ImageUpload.FileName, ImageUpload.ContentType, "customers", ct);
+            thumbUrl = uploadResult.ThumbnailUrl;
+            fullUrl = uploadResult.FullImageUrl;
         }
 
         var req = new CreateCustomerRequest
@@ -92,7 +95,8 @@ public class CustomersModel : SecurePageModel
             Phone = Phone,
             Email = Email,
             Notes = Notes,
-            ImagePath = imagePath
+            ThumbnailUrl = thumbUrl,
+            FullImageUrl = fullUrl
         };
 
         await _customerService.CreateAsync(req, ct);
@@ -120,17 +124,23 @@ public class CustomersModel : SecurePageModel
 
         _apiClient.SetToken(token);
 
-        string? imagePath = null;
+        string? thumbUrl = null;
+        string? fullUrl = null;
         if (ImageUpload != null && ImageUpload.Length > 0)
         {
             var existingCustomer = await _customerService.GetByIdAsync(EditCustomerId, ct);
-            if (existingCustomer != null && !string.IsNullOrWhiteSpace(existingCustomer.ImagePath))
+            if (existingCustomer != null)
             {
-                await _fileService.DeleteFileAsync(existingCustomer.ImagePath, ct);
+                if (!string.IsNullOrWhiteSpace(existingCustomer.ThumbnailUrl))
+                    await _fileService.DeleteFileAsync(existingCustomer.ThumbnailUrl, ct);
+                if (!string.IsNullOrWhiteSpace(existingCustomer.FullImageUrl))
+                    await _fileService.DeleteFileAsync(existingCustomer.FullImageUrl, ct);
             }
 
             using var stream = ImageUpload.OpenReadStream();
-            imagePath = await _fileService.UploadFileAsync(stream, ImageUpload.FileName, ImageUpload.ContentType, "customers", ct);
+            var uploadResult = await _fileService.UploadFileAsync(stream, ImageUpload.FileName, ImageUpload.ContentType, "customers", ct);
+            thumbUrl = uploadResult.ThumbnailUrl;
+            fullUrl = uploadResult.FullImageUrl;
         }
 
         var req = new UpdateCustomerRequest
@@ -141,7 +151,8 @@ public class CustomersModel : SecurePageModel
             Gender = EditGender,
             Segment = EditSegment,
             Notes = string.IsNullOrWhiteSpace(EditNotes) ? null : EditNotes.Trim(),
-            ImagePath = imagePath
+            ThumbnailUrl = thumbUrl,
+            FullImageUrl = fullUrl
         };
 
         await _customerService.UpdateAsync(EditCustomerId, req, ct);

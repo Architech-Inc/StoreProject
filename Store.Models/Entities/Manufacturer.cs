@@ -10,7 +10,8 @@ public class Manufacturer : BaseEntity
     public string? RegistrationNumber { get; set; }
     public string? Website { get; set; }
     public string? Notes { get; set; }
-    public string? ImagePath { get; set; }
+    public string? ThumbnailUrl { get; set; }
+    public string? FullImageUrl { get; set; }
 
     // Navigation
     public ICollection<ManufacturerEmail> Emails { get; set; } = new List<ManufacturerEmail>();

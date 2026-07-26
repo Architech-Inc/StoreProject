@@ -9,6 +9,7 @@ namespace StoreUI.Pages;
 public class InvoicesModel : SecurePageModel
 {
     private readonly IInvoiceService _invoiceService;
+    private readonly IApiClientService _apiClient;
 
     public IReadOnlyList<InvoiceDto> Invoices { get; private set; } = Array.Empty<InvoiceDto>();
     public int TotalInvoices { get; private set; }
@@ -21,14 +22,16 @@ public class InvoicesModel : SecurePageModel
 
     [TempData] public string? StatusMessage { get; set; }
 
-    public InvoicesModel(IInvoiceService invoiceService)
+    public InvoicesModel(IInvoiceService invoiceService, IApiClientService apiClient)
     {
         _invoiceService = invoiceService;
+        _apiClient = apiClient;
     }
 
     public async Task<IActionResult> OnGetAsync(int page = 1, string? search = null, string? payType = null, CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out _, out _)) return GoToLogin();
+        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        _apiClient.SetToken(token);
 
         PageNumber = Math.Max(1, page);
         SearchTerm = search ?? string.Empty;
@@ -62,7 +65,9 @@ public class InvoicesModel : SecurePageModel
     /// <summary>Returns invoice detail JSON for the detail modal.</summary>
     public async Task<IActionResult> OnGetDetailAsync(Guid id, CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out _, out _)) return Unauthorized();
+        if (!TryGetSecurityContext(out var token, out _)) return Unauthorized();
+        _apiClient.SetToken(token);
+        
         var invoice = await _invoiceService.GetByIdAsync(id, ct);
         if (invoice is null) return NotFound();
         return new JsonResult(invoice, new System.Text.Json.JsonSerializerOptions
@@ -73,7 +78,8 @@ public class InvoicesModel : SecurePageModel
 
     public async Task<IActionResult> OnPostVoidAsync(Guid invoiceId, CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out _, out _)) return GoToLogin();
+        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        _apiClient.SetToken(token);
 
         try
         {
@@ -90,7 +96,9 @@ public class InvoicesModel : SecurePageModel
 
     public async Task<IActionResult> OnPostAddTenderAsync([FromQuery] Guid invoiceId, [FromBody] AddTenderRequest request, CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out _, out _)) return Unauthorized();
+        if (!TryGetSecurityContext(out var token, out _)) return Unauthorized();
+        _apiClient.SetToken(token);
+        
         if (!ModelState.IsValid) return BadRequest(new { message = "Invalid request." });
 
         try

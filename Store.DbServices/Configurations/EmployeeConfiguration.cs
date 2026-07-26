@@ -17,7 +17,7 @@ public class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
         builder.Property(e => e.LastName).IsRequired().HasMaxLength(100);
         builder.Property(e => e.NidNumber).HasMaxLength(50);
         builder.Property(e => e.PlaceOfBirth).HasMaxLength(200);
-        builder.Property(e => e.ImagePath).HasMaxLength(500);
+        builder.Property(e => e.ThumbnailUrl).HasMaxLength(500);
 
         builder.Property(e => e.Status)
             .HasConversion<string>()

@@ -44,10 +44,11 @@ public class EmployeesModel : SecurePageModel
 
     public async Task<IActionResult> OnGetAsync(int page = 1, CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out _, out _)) return GoToLogin();
+        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        _apiClient.SetToken(token);
 
         PageNumber = Math.Max(1, page);
-        var result = await _employeeService.GetAllAsync(new PagedRequest { Page = PageNumber, PageSize = PageSize }, ct);
+        var result = await _employeeService.GetAllAsync(new PagedRequest { Page = PageNumber, PageSize = PageSize, IncludeInactive = true }, ct);
         Employees = result.Items?.ToList() ?? new List<EmployeeDto>();
         TotalEmployees = result.TotalCount;
 
@@ -57,25 +58,32 @@ public class EmployeesModel : SecurePageModel
 
     public async Task<IActionResult> OnPostSaveAsync(CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out _, out _)) return GoToLogin();
+        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        _apiClient.SetToken(token);
 
         try
         {
             Enum.TryParse<Gender>(EmpGender, out var gender);
 
-            string? imagePath = null;
+            string? thumbUrl = null;
+            string? fullUrl = null;
             if (ImageUpload != null && ImageUpload.Length > 0)
             {
                 if (EditEmployeeId.HasValue && EditEmployeeId.Value != Guid.Empty)
                 {
                     var existingEmployee = await _employeeService.GetByIdAsync(EditEmployeeId.Value, ct);
-                    if (existingEmployee != null && !string.IsNullOrWhiteSpace(existingEmployee.ImagePath))
+                    if (existingEmployee != null)
                     {
-                        await _fileService.DeleteFileAsync(existingEmployee.ImagePath, ct);
+                        if (!string.IsNullOrWhiteSpace(existingEmployee.ThumbnailUrl))
+                            await _fileService.DeleteFileAsync(existingEmployee.ThumbnailUrl, ct);
+                        if (!string.IsNullOrWhiteSpace(existingEmployee.FullImageUrl))
+                            await _fileService.DeleteFileAsync(existingEmployee.FullImageUrl, ct);
                     }
                 }
                 using var stream = ImageUpload.OpenReadStream();
-                imagePath = await _fileService.UploadFileAsync(stream, ImageUpload.FileName, ImageUpload.ContentType, "employees", ct);
+                var uploadResult = await _fileService.UploadFileAsync(stream, ImageUpload.FileName, ImageUpload.ContentType, "employees", ct);
+                thumbUrl = uploadResult.ThumbnailUrl;
+                fullUrl = uploadResult.FullImageUrl;
             }
 
             if (EditEmployeeId.HasValue && EditEmployeeId.Value != Guid.Empty)
@@ -90,7 +98,8 @@ public class EmployeesModel : SecurePageModel
                     DateOfBirth = EmpDateOfBirth,
                     DepartmentId = EmpDepartmentId,
                     Status = status,
-                    ImagePath = imagePath
+                    ThumbnailUrl = thumbUrl,
+                    FullImageUrl = fullUrl
                 };
                 var updated = await _employeeService.UpdateAsync(EditEmployeeId.Value, update, ct);
                 StatusMessage = updated is not null
@@ -108,7 +117,8 @@ public class EmployeesModel : SecurePageModel
                     DateOfBirth = EmpDateOfBirth,
                     DateEmployed = EmpDateEmployed,
                     DepartmentId = EmpDepartmentId,
-                    ImagePath = imagePath
+                    ThumbnailUrl = thumbUrl,
+                    FullImageUrl = fullUrl
                 };
                 var created = await _employeeService.CreateAsync(create, ct);
                 StatusMessage = $"Employee '{created.FullName}' added.";
@@ -124,7 +134,8 @@ public class EmployeesModel : SecurePageModel
 
     public async Task<IActionResult> OnPostRemoveAsync(Guid employeeId, CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out _, out _)) return GoToLogin();
+        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        _apiClient.SetToken(token);
 
         try
         {

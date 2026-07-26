@@ -15,7 +15,8 @@ public class CustomerDto
     public string? PrimaryEmail { get; set; }
     public string? PrimaryPhone { get; set; }
     public string? Notes { get; set; }
-    public string? ImagePath { get; set; }
+    public string? ThumbnailUrl { get; set; }
+    public string? FullImageUrl { get; set; }
     public CustomerSegment Segment { get; set; } = CustomerSegment.Standard;
     public DateTime DateCreated { get; set; }
 }
@@ -44,7 +45,8 @@ public class CreateCustomerRequest
     public string? Notes { get; set; }
 
     public CustomerSegment Segment { get; set; } = CustomerSegment.Standard;
-    public string? ImagePath { get; set; }
+    public string? ThumbnailUrl { get; set; }
+    public string? FullImageUrl { get; set; }
 }
 
 public class UpdateCustomerRequest
@@ -65,5 +67,6 @@ public class UpdateCustomerRequest
     [StringLength(500)]
     public string? Notes { get; set; }
     
-    public string? ImagePath { get; set; }
+    public string? ThumbnailUrl { get; set; }
+    public string? FullImageUrl { get; set; }
 }

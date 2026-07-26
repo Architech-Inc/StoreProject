@@ -32,13 +32,13 @@ public static class DatabaseSeeder
         if (!db.Categories.Any())
         {
             db.Categories.AddRange(
-                new Category { Name = "Beverges", Description = "Beverages", ImagePath = "/files/legacy/planet-1l.png" },
-                new Category { Name = "Groceries", Description = "General groceries", ImagePath = "/files/legacy/parle-g.png" },
+                new Category { Name = "Beverges", Description = "Beverages", ThumbnailUrl = "/files/legacy/planet-1l.png" },
+                new Category { Name = "Groceries", Description = "General groceries", ThumbnailUrl = "/files/legacy/parle-g.png" },
                 new Category { Name = "Alcohols", Description = "Alcoholic drinks" },
-                new Category { Name = "Vegitebles", Description = "Vegetables", ImagePath = "/files/legacy/tomat-ss.png" },
+                new Category { Name = "Vegitebles", Description = "Vegetables", ThumbnailUrl = "/files/legacy/tomat-ss.png" },
                 new Category { Name = "Fish", Description = "Fish and seafood" },
                 new Category { Name = "Meat", Description = "Meat products" },
-                new Category { Name = "Detegents", Description = "Cleaning products", ImagePath = "/files/legacy/omo-s.png" }
+                new Category { Name = "Detegents", Description = "Cleaning products", ThumbnailUrl = "/files/legacy/omo-s.png" }
             );
             await db.SaveChangesAsync(ct);
             logger.LogInformation("Seeded legacy categories.");
@@ -65,7 +65,7 @@ public static class DatabaseSeeder
                 RegistrationNumber = "CLX-001",
                 Website = "https://clexan.local",
                 Notes = "Seed manufacturer from legacy dataset",
-                ImagePath = "/files/legacy/chinchin-pkg.png"
+                ThumbnailUrl = "/files/legacy/chinchin-pkg.png"
             });
             await db.SaveChangesAsync(ct);
             logger.LogInformation("Seeded default manufacturer.");
@@ -113,7 +113,7 @@ public static class DatabaseSeeder
                     Type = ItemType.Product,
                     Barcode = $"SEED-{seed.Name[..Math.Min(seed.Name.Length, 3)].ToUpperInvariant()}-{seed.Stock.ToString(CultureInfo.InvariantCulture)}",
                     IsActive = true,
-                    ImagePath = seed.Img,
+                    ThumbnailUrl = seed.Img,
                     CategoryId = categories.GetValueOrDefault(seed.Cat),
                     UnitId = units.GetValueOrDefault(seed.Unit),
                     ManufacturerId = manufacturerId
@@ -273,7 +273,7 @@ public static class DatabaseSeeder
                         Status       = EmployeeStatus.Active,
                         DepartmentId = deptId,
                         Gender       = Gender.NotSpecified,
-                        ImagePath    = "img/user_default.png"
+                        ThumbnailUrl    = "img/user_default.png"
                     };
                     db.Employees.Add(emp);
                     await db.SaveChangesAsync(ct);
@@ -308,7 +308,7 @@ public static class DatabaseSeeder
                 Status       = EmployeeStatus.Active,
                 DepartmentId = deptId,
                 Gender       = Gender.NotSpecified,
-                ImagePath    = "img/user_default.png"
+                ThumbnailUrl    = "img/user_default.png"
             };
             db.Employees.Add(employee);
             await db.SaveChangesAsync(ct);
@@ -320,7 +320,7 @@ public static class DatabaseSeeder
                 RoleId     = roleId,
                 EmployeeId = employee.EmployeeId,
                 Status     = UserStatus.Active,
-                ImagePath  = "img/user_default.png"
+                ThumbnailUrl  = "img/user_default.png"
             };
             db.Users.Add(user);
             await db.SaveChangesAsync(ct);

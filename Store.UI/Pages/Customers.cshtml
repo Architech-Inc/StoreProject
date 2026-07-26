@@ -49,9 +49,9 @@
                         {
                             <tr>
                                 <td>
-                                    @if (!string.IsNullOrEmpty(c.ImagePath))
+                                    @if (!string.IsNullOrEmpty(c.ThumbnailUrl))
                                     {
-                                        <img src="@c.ImagePath" alt="Photo" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" />
+                                        <img src="@c.ThumbnailUrl" alt="Photo" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" />
                                     }
                                     else
                                     {

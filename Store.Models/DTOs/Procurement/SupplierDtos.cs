@@ -10,7 +10,8 @@ public class SupplierDto
     public string Name { get; set; } = string.Empty;
     public string? RegistrationNumber { get; set; }
     public string? Notes { get; set; }
-    public string? ImagePath { get; set; }
+    public string? ThumbnailUrl { get; set; }
+    public string? FullImageUrl { get; set; }
     public DateTime DateCreated { get; set; }
     public List<SupplierEmailDto> Emails { get; set; } = new();
     public List<SupplierPhoneDto> Phones { get; set; } = new();
@@ -59,7 +60,8 @@ public class CreateSupplierRequest
     [MaxLength(1000)]
     public string? Notes { get; set; }
 
-    public string? ImagePath { get; set; }
+    public string? ThumbnailUrl { get; set; }
+    public string? FullImageUrl { get; set; }
 
     public List<CreateSupplierEmailRequest> Emails { get; set; } = new();
     public List<CreateSupplierPhoneRequest> Phones { get; set; } = new();
@@ -118,7 +120,8 @@ public class UpdateSupplierRequest
     [MaxLength(1000)]
     public string? Notes { get; set; }
 
-    public string? ImagePath { get; set; }
+    public string? ThumbnailUrl { get; set; }
+    public string? FullImageUrl { get; set; }
 
     public List<CreateSupplierEmailRequest>? Emails { get; set; }
     public List<CreateSupplierPhoneRequest>? Phones { get; set; }
