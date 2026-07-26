@@ -89,4 +89,26 @@ public class UsersController : ControllerBase
 
         return Ok(ApiResponse<object>.Ok(null!, "Password changed."));
     }
+
+    [HttpPut("profile/avatar")]
+    public async Task<IActionResult> UpdateAvatar([FromBody] UpdateUserRequest request, CancellationToken ct)
+    {
+        var userIdClaim = User.FindFirst("uid")?.Value;
+        if (!Guid.TryParse(userIdClaim, out var userId))
+            return Unauthorized(ApiErrorResponse.From("unauthorized", "Unauthorized.", traceId: HttpContext.TraceIdentifier));
+
+        var updateRequest = new UpdateUserRequest
+        {
+            ThumbnailUrl = request.ThumbnailUrl,
+            FullImageUrl = request.FullImageUrl
+        };
+
+        var user = await _dispatcher.SendAsync(new UpdateUserCommand(userId, updateRequest), ct);
+        if (user is null)
+        {
+            return NotFound(ApiErrorResponse.From("not_found", "User not found.", traceId: HttpContext.TraceIdentifier));
+        }
+
+        return Ok(ApiResponse<UserDto>.Ok(user, "Avatar updated."));
+    }
 }

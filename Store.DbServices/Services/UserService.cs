@@ -83,6 +83,13 @@ public class UserService : IUserService
         return await GetByIdAsync(userId, ct);
     }
 
+    public Task<UserDto?> UpdateAvatarAsync(string? thumbUrl, string? fullUrl, CancellationToken ct = default)
+    {
+        // This is only called via the API controllers which use the mediator pattern and UpdateAsync.
+        // It's implemented here just to satisfy the IUserService interface for any direct DI usage.
+        throw new NotImplementedException("Use UpdateAsync instead for direct DB service calls.");
+    }
+
     public async Task<bool> DeleteAsync(Guid userId, CancellationToken ct = default)
     {
         var user = await _users.GetByIdForUpdateAsync(userId, ct);

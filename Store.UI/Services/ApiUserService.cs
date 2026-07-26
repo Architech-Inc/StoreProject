@@ -43,6 +43,16 @@ public class ApiUserService : IUserService
         return await _client.PutAsync<UserDto>($"/api/users/{userId}", request, ct);
     }
 
+    public async Task<UserDto?> UpdateAvatarAsync(string? thumbUrl, string? fullUrl, CancellationToken ct = default)
+    {
+        var request = new UpdateUserRequest
+        {
+            ThumbnailUrl = thumbUrl,
+            FullImageUrl = fullUrl
+        };
+        return await _client.PutAsync<UserDto>("/api/users/profile/avatar", request, ct);
+    }
+
     public async Task<bool> ChangePasswordAsync(Guid userId, ChangePasswordRequest request, CancellationToken ct = default)
     {
         var result = await _client.PostAsync<bool?>($"/api/users/{userId}/change-password", request, ct);

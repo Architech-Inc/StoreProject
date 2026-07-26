@@ -20,6 +20,11 @@ public class LookupModel : SecurePageModel
 
     [BindProperty] public IFormFile? CategoryImageUpload { get; set; }
 
+    [BindProperty] public int? CropX { get; set; }
+    [BindProperty] public int? CropY { get; set; }
+    [BindProperty] public int? CropW { get; set; }
+    [BindProperty] public int? CropH { get; set; }
+
     public LookupModel(IApiClientService apiClient, IFileService fileService)
     {
         _apiClient = apiClient;
@@ -72,7 +77,7 @@ public class LookupModel : SecurePageModel
                     }
                 }
                 using var stream = CategoryImageUpload.OpenReadStream();
-                var uploadResult = await _fileService.UploadFileAsync(stream, CategoryImageUpload.FileName, CategoryImageUpload.ContentType, "categories", ct);
+                var uploadResult = await _fileService.UploadFileAsync(stream, CategoryImageUpload.FileName, CategoryImageUpload.ContentType, "categories", CropX, CropY, CropW, CropH, ct);
                 thumbUrl = uploadResult.ThumbnailUrl;
                 fullUrl = uploadResult.FullImageUrl;
             }

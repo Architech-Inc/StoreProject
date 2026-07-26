@@ -34,6 +34,11 @@ public class CatalogModel : SecurePageModel
     [BindProperty] public int? ItemUnitId { get; set; }
     [BindProperty] public IFormFile? ImageUpload { get; set; }
 
+    [BindProperty] public int? CropX { get; set; }
+    [BindProperty] public int? CropY { get; set; }
+    [BindProperty] public int? CropW { get; set; }
+    [BindProperty] public int? CropH { get; set; }
+
     [TempData] public string? StatusMessage { get; set; }
 
     public CatalogModel(IItemService itemService, IApiClientService apiClient, IFileService fileService)
@@ -87,7 +92,7 @@ public class CatalogModel : SecurePageModel
                 }
             }
             using var stream = ImageUpload.OpenReadStream();
-            var uploadResult = await _fileService.UploadFileAsync(stream, ImageUpload.FileName, ImageUpload.ContentType, "items", ct);
+            var uploadResult = await _fileService.UploadFileAsync(stream, ImageUpload.FileName, ImageUpload.ContentType, "items", CropX, CropY, CropW, CropH, ct);
             thumbUrl = uploadResult.ThumbnailUrl;
             fullUrl = uploadResult.FullImageUrl;
         }

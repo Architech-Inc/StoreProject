@@ -22,7 +22,13 @@ namespace Store.API.Controllers
         }
 
         [HttpPost("upload")]
-        public async Task<IActionResult> UploadFile(IFormFile file, [FromQuery] string folder = "Misc")
+        public async Task<IActionResult> UploadFile(
+            IFormFile file, 
+            [FromQuery] string folder = "Misc",
+            [FromQuery] int? cropX = null,
+            [FromQuery] int? cropY = null,
+            [FromQuery] int? cropW = null,
+            [FromQuery] int? cropH = null)
         {
             if (file == null || file.Length == 0)
             {
@@ -31,8 +37,14 @@ namespace Store.API.Controllers
 
             try
             {
+                SixLabors.ImageSharp.Rectangle? cropArea = null;
+                if (cropX.HasValue && cropY.HasValue && cropW.HasValue && cropH.HasValue)
+                {
+                    cropArea = new SixLabors.ImageSharp.Rectangle(cropX.Value, cropY.Value, cropW.Value, cropH.Value);
+                }
+
                 using var stream = file.OpenReadStream();
-                var (thumbStream, fullStream) = await _imageProcessor.ProcessImageAsync(stream);
+                var (thumbStream, fullStream) = await _imageProcessor.ProcessImageAsync(stream, cropArea);
 
                 var thumbPath = await _fileStorageService.SaveStreamAsync(thumbStream, file.FileName + ".webp", folder + "/thumb");
                 var fullPath = await _fileStorageService.SaveStreamAsync(fullStream, file.FileName + ".webp", folder + "/full");

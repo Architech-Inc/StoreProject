@@ -175,6 +175,94 @@
         }
     };
 
+    // --- Image Cropping Utility ---
+    let currentCropper = null;
+    let currentCropInput = null;
+
+    document.addEventListener('change', (e) => {
+        if (e.target.matches('input[type="file"][data-crop="true"]')) {
+            const input = e.target;
+            if (input.files && input.files.length > 0) {
+                const file = input.files[0];
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const modal = document.getElementById('globalCropModal');
+                        const img = document.getElementById('cropperImage');
+                        img.src = event.target.result;
+                        modal.hidden = false;
+                        currentCropInput = input;
+
+                        if (currentCropper) {
+                            currentCropper.destroy();
+                        }
+                        
+                        // Default aspect ratio for avatars is 1:1. 
+                        // If it's for catalog, maybe they want 1:1 as well since it's a thumbnail.
+                        const aspectRatio = input.dataset.cropAspectRatio ? parseFloat(input.dataset.cropAspectRatio) : 1;
+
+                        currentCropper = new Cropper(img, {
+                            aspectRatio: aspectRatio,
+                            viewMode: 1,
+                            autoCropArea: 0.8,
+                            background: false
+                        });
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+        }
+    });
+
+    const closeCropModal = () => {
+        const modal = document.getElementById('globalCropModal');
+        if (modal) modal.hidden = true;
+        if (currentCropper) {
+            currentCropper.destroy();
+            currentCropper = null;
+        }
+        currentCropInput = null;
+    };
+
+    const applyCrop = () => {
+        if (currentCropper && currentCropInput) {
+            const data = currentCropper.getData(true);
+            const form = currentCropInput.closest('form');
+            if (form) {
+                const setHiddenInput = (name, value) => {
+                    let hidden = form.querySelector(`input[name="${name}"]`);
+                    if (!hidden) {
+                        hidden = document.createElement('input');
+                        hidden.type = 'hidden';
+                        hidden.name = name;
+                        form.appendChild(hidden);
+                    }
+                    hidden.value = value;
+                };
+
+                setHiddenInput('CropX', data.x);
+                setHiddenInput('CropY', data.y);
+                setHiddenInput('CropW', data.width);
+                setHiddenInput('CropH', data.height);
+            }
+            closeCropModal();
+        }
+    };
+
+    document.getElementById('btnCancelCrop')?.addEventListener('click', () => {
+        if (currentCropInput) {
+            currentCropInput.value = ''; // Reset file input
+        }
+        closeCropModal();
+    });
+    document.getElementById('btnCancelCrop2')?.addEventListener('click', () => {
+        if (currentCropInput) {
+            currentCropInput.value = ''; // Reset file input
+        }
+        closeCropModal();
+    });
+    document.getElementById('btnApplyCrop')?.addEventListener('click', applyCrop);
+
     // --- Global Form Image Interceptor ---
     document.addEventListener('submit', async (e) => {
         const form = e.target;

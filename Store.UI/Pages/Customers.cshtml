@@ -148,7 +148,7 @@
             <textarea asp-for="EditNotes" id="editNotes" rows="2"></textarea>
 
             <label for="editImageUpload">Photo</label>
-            <input type="file" asp-for="ImageUpload" id="editImageUpload" accept="image/*" />
+            <input type="file" asp-for="ImageUpload" id="editImageUpload" accept="image/*" data-crop="true" />
 
             <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;">
                 <button type="button" class="button-command" onclick="closeEditModal()">Cancel</button>
@@ -202,7 +202,7 @@
             <textarea asp-for="Notes" id="notes" rows="2" placeholder="Optional internal notes"></textarea>
 
             <label for="createImageUpload">Photo</label>
-            <input type="file" asp-for="ImageUpload" id="createImageUpload" accept="image/*" />
+            <input type="file" asp-for="ImageUpload" id="createImageUpload" accept="image/*" data-crop="true" />
 
             <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
                 <button type="button" class="button-command" onclick="closeModal()">Cancel</button>

@@ -28,6 +28,11 @@ public class UsersModel : SecurePageModel
     [BindProperty] public string NewStatus { get; set; } = "Active";
     [BindProperty] public IFormFile? ImageUpload { get; set; }
 
+    [BindProperty] public int? CropX { get; set; }
+    [BindProperty] public int? CropY { get; set; }
+    [BindProperty] public int? CropW { get; set; }
+    [BindProperty] public int? CropH { get; set; }
+
     [TempData] public string? StatusMessage { get; set; }
 
     public UsersModel(IUserService userService, IApiClientService apiClient, IFileService fileService)
@@ -80,7 +85,7 @@ public class UsersModel : SecurePageModel
                     }
                 }
                 using var stream = ImageUpload.OpenReadStream();
-                var uploadResult = await _fileService.UploadFileAsync(stream, ImageUpload.FileName, ImageUpload.ContentType, "users", ct);
+                var uploadResult = await _fileService.UploadFileAsync(stream, ImageUpload.FileName, ImageUpload.ContentType, "users", CropX, CropY, CropW, CropH, ct);
                 thumbUrl = uploadResult.ThumbnailUrl;
                 fullUrl = uploadResult.FullImageUrl;
             }

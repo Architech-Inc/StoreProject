@@ -29,6 +29,11 @@ public class CustomersModel : SecurePageModel
     [BindProperty] public string? Notes { get; set; }
     [BindProperty] public IFormFile? ImageUpload { get; set; }
 
+    [BindProperty] public int? CropX { get; set; }
+    [BindProperty] public int? CropY { get; set; }
+    [BindProperty] public int? CropW { get; set; }
+    [BindProperty] public int? CropH { get; set; }
+
     // Edit
     [BindProperty] public Guid EditCustomerId { get; set; }
     [BindProperty] public string EditFirstName { get; set; } = string.Empty;
@@ -80,7 +85,7 @@ public class CustomersModel : SecurePageModel
         if (ImageUpload != null && ImageUpload.Length > 0)
         {
             using var stream = ImageUpload.OpenReadStream();
-            var uploadResult = await _fileService.UploadFileAsync(stream, ImageUpload.FileName, ImageUpload.ContentType, "customers", ct);
+            var uploadResult = await _fileService.UploadFileAsync(stream, ImageUpload.FileName, ImageUpload.ContentType, "customers", CropX, CropY, CropW, CropH, ct);
             thumbUrl = uploadResult.ThumbnailUrl;
             fullUrl = uploadResult.FullImageUrl;
         }
@@ -138,7 +143,7 @@ public class CustomersModel : SecurePageModel
             }
 
             using var stream = ImageUpload.OpenReadStream();
-            var uploadResult = await _fileService.UploadFileAsync(stream, ImageUpload.FileName, ImageUpload.ContentType, "customers", ct);
+            var uploadResult = await _fileService.UploadFileAsync(stream, ImageUpload.FileName, ImageUpload.ContentType, "customers", CropX, CropY, CropW, CropH, ct);
             thumbUrl = uploadResult.ThumbnailUrl;
             fullUrl = uploadResult.FullImageUrl;
         }

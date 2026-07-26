@@ -19,7 +19,13 @@ namespace StoreUI.Services
             _logger = logger;
         }
 
-        public async Task<(string? ThumbnailUrl, string? FullImageUrl)> UploadFileAsync(Stream fileStream, string fileName, string contentType, string folder, CancellationToken ct = default)
+        public async Task<(string? ThumbnailUrl, string? FullImageUrl)> UploadFileAsync(
+            Stream fileStream, 
+            string fileName, 
+            string contentType, 
+            string folder, 
+            int? cropX = null, int? cropY = null, int? cropW = null, int? cropH = null,
+            CancellationToken ct = default)
         {
             try
             {
@@ -31,6 +37,11 @@ namespace StoreUI.Services
                 content.Add(fileContent, "file", fileName);
 
                 var endpoint = $"/api/files/upload?folder={System.Uri.EscapeDataString(folder)}";
+                
+                if (cropX.HasValue && cropY.HasValue && cropW.HasValue && cropH.HasValue)
+                {
+                    endpoint += $"&cropX={cropX.Value}&cropY={cropY.Value}&cropW={cropW.Value}&cropH={cropH.Value}";
+                }
                 
                 var result = await _client.PostMultipartAsync<FileUploadResponse>(endpoint, content, ct);
                 

@@ -175,7 +175,7 @@
             </select>
 
             <label for="itemImage">Photo</label>
-            <input type="file" asp-for="ImageUpload" id="itemImage" accept="image/*" />
+            <input type="file" asp-for="ImageUpload" id="itemImage" accept="image/*" data-crop="true" />
 
             <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;">
                 <button type="button" class="button-command" onclick="closeModal()">Cancel</button>

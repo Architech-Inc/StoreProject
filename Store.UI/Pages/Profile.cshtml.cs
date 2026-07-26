@@ -35,6 +35,18 @@ public class ProfileModel : SecurePageModel
         _logger = logger;
     }
 
+    [BindProperty]
+    public int? CropX { get; set; }
+    
+    [BindProperty]
+    public int? CropY { get; set; }
+    
+    [BindProperty]
+    public int? CropW { get; set; }
+    
+    [BindProperty]
+    public int? CropH { get; set; }
+
     public async Task<IActionResult> OnGetAsync(CancellationToken ct)
     {
         if (!TryGetSecurityContext(out var token, out _))
@@ -163,16 +175,12 @@ public class ProfileModel : SecurePageModel
                 }
 
                 using var stream = AvatarUpload.OpenReadStream();
-                var uploadResult = await _fileService.UploadFileAsync(stream, AvatarUpload.FileName, AvatarUpload.ContentType, "users", ct);
+                var uploadResult = await _fileService.UploadFileAsync(stream, AvatarUpload.FileName, AvatarUpload.ContentType, "users", CropX, CropY, CropW, CropH, ct);
                 thumbUrl = uploadResult.ThumbnailUrl;
                 fullUrl = uploadResult.FullImageUrl;
             }
             
-            await _userService.UpdateAsync(userId, new UpdateUserRequest
-            {
-                ThumbnailUrl = thumbUrl,
-                FullImageUrl = fullUrl
-            }, ct);
+            await _userService.UpdateAvatarAsync(thumbUrl, fullUrl, ct);
 
             TempData["StatusMessage"] = "Avatar updated successfully.";
         }

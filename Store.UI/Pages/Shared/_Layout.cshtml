@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/components.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" integrity="sha512-cyzxRvewl+FOKTtp/12e8x5a91zC6fQ2T4q5v5884x1kF88e8G+91O5Tzj+h6Q==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
@@ -16,7 +17,25 @@
     
     <div id="toast-container" class="toast-container" aria-live="polite"></div>
     
+    <!-- Global Crop Modal -->
+    <div class="modal-overlay" id="globalCropModal" hidden>
+        <div class="modal" role="dialog" aria-modal="true" style="max-width: 600px; width: 90%;">
+            <div class="modal-head">
+                <h3>Crop Thumbnail</h3>
+                <button type="button" class="btn-close" id="btnCancelCrop" aria-label="Close">×</button>
+            </div>
+            <div style="max-height: 60vh; overflow: hidden; background: #000; text-align: center; margin-bottom: 15px;">
+                <img id="cropperImage" src="" style="max-width: 100%; display: block;" />
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:8px;">
+                <button type="button" class="button-command" id="btnCancelCrop2">Cancel</button>
+                <button type="button" class="button-primary" id="btnApplyCrop">Apply Crop</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.1/dist/browser-image-compression.js" integrity="sha256-aXyA6Oq8fV3xY5v9lYv1O2Ue6n2fXjY2R0kU3e6yK8Y=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js" integrity="sha512-V1O0546L9m/j6L6q21c7v0z6Z4UfD46A=" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     @if (TempData["StatusMessage"] is string successMsg)
     {

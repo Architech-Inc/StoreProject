@@ -35,7 +35,7 @@
                 <h2 style="margin:0;">Account Information</h2>
                 <form method="post" asp-page-handler="UploadAvatar" enctype="multipart/form-data" style="display:flex;gap:8px;align-items:center;margin-top:8px;">
                     @Html.AntiForgeryToken()
-                    <input type="file" name="AvatarUpload" accept="image/*" required style="font-size:0.8rem;padding:4px;" />
+                    <input type="file" name="AvatarUpload" accept="image/*" data-crop="true" required style="font-size:0.8rem;padding:4px;" />
                     <button type="submit" class="button-primary" style="padding:4px 8px;font-size:0.8rem;">Upload</button>
                 </form>
             </div>
