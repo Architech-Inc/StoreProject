@@ -98,27 +98,19 @@
 
         <form method="post" asp-page-handler="Assign" class="form-grid">
             <div class="form-row">
-                <label asp-for="AssignUserId">User</label>
-                <select asp-for="AssignUserId" class="input" required>
-                    <option value="">— select user —</option>
-                    @foreach (var u in Model.AllUsers)
-                    {
-                        <option value="@u.UserId">@u.Username</option>
-                    }
-                </select>
+                <label>User <span class="req">*</span></label>
+                <div class="smart-lookup-wrap" data-url="?handler=SearchUsers" data-placeholder="Search user by username, email, name...">
+                    <input type="hidden" name="AssignUserId" id="AssignUserId" required />
+                </div>
             </div>
             <div class="form-row">
-                <label asp-for="AssignBranchId">Branch</label>
-                <select asp-for="AssignBranchId" class="input" required>
-                    <option value="">— select branch —</option>
-                    @foreach (var b in Model.Branches)
-                    {
-                        <option value="@b.BranchId">@b.Name (@b.Code)</option>
-                    }
-                </select>
+                <label>Branch <span class="req">*</span></label>
+                <div class="smart-lookup-wrap" data-url="?handler=SearchBranches" data-placeholder="Search branch by name or code...">
+                    <input type="hidden" name="AssignBranchId" id="AssignBranchId" required />
+                </div>
             </div>
             <div class="form-row">
-                <label asp-for="AssignRoleId">Role</label>
+                <label asp-for="AssignRoleId">Role <span class="req">*</span></label>
                 <select asp-for="AssignRoleId" class="input" required>
                     <option value="">— select role —</option>
                     @foreach (var r in Model.RoleMatrix)

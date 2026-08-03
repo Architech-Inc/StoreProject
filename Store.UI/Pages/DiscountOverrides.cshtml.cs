@@ -10,6 +10,8 @@ public class DiscountOverridesModel : SecurePageModel
 {
     private readonly IDiscountOverrideService _overrideService;
     private readonly IApiClientService _apiClient;
+    private readonly IInvoiceService _invoiceService;
+    private readonly IItemService _itemService;
 
     public List<DiscountOverrideDto> Overrides { get; private set; } = new();
     public string? FilterStatus { get; private set; }
@@ -33,10 +35,57 @@ public class DiscountOverridesModel : SecurePageModel
 
     public IEnumerable<DiscountType> DiscountTypes { get; } = Enum.GetValues<DiscountType>();
 
-    public DiscountOverridesModel(IDiscountOverrideService overrideService, IApiClientService apiClient)
+    public DiscountOverridesModel(
+        IDiscountOverrideService overrideService,
+        IApiClientService apiClient,
+        IInvoiceService invoiceService,
+        IItemService itemService)
     {
         _overrideService = overrideService;
         _apiClient = apiClient;
+        _invoiceService = invoiceService;
+        _itemService = itemService;
+    }
+
+    public async Task<IActionResult> OnGetSearchInvoicesAsync([FromQuery] string? q, CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return Unauthorized();
+
+        _apiClient.SetToken(token);
+        var result = await _invoiceService.GetAllAsync(new Store.Models.DTOs.Common.PagedRequest { Page = 1, PageSize = 15 }, ct);
+        var query = q?.Trim().ToLowerInvariant();
+        var items = result.Items
+            .Where(inv => string.IsNullOrEmpty(query) ||
+                          (inv.CustomerName?.ToLowerInvariant().Contains(query) == true) ||
+                          inv.InvoiceId.ToString().ToLowerInvariant().Contains(query))
+            .Select(inv => new
+            {
+                id = inv.InvoiceId.ToString(),
+                title = $"Invoice #{inv.InvoiceId.ToString()[..8]} - {inv.TotalAmount:N0} XAF",
+                sub = $"Customer: {inv.CustomerName ?? "Walk-in"} | Date: {inv.DateCreated:yyyy-MM-dd HH:mm}",
+                badge = inv.IsPaid ? "Paid" : "Pending"
+            });
+
+        return new JsonResult(items);
+    }
+
+    public async Task<IActionResult> OnGetSearchItemsAsync([FromQuery] string? q, CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return Unauthorized();
+
+        _apiClient.SetToken(token);
+        var result = await _itemService.GetAllAsync(new Store.Models.DTOs.Common.PagedRequest { Page = 1, PageSize = 15, SearchTerm = q?.Trim() }, ct);
+        var items = result.Items.Select(i => new
+        {
+            id = i.ItemId.ToString(),
+            title = i.Name,
+            sub = $"Barcode: {(string.IsNullOrEmpty(i.Barcode) ? "N/A" : i.Barcode)} | Price: {i.UnitPrice:N2} XAF",
+            badge = i.CategoryName ?? "Item"
+        });
+
+        return new JsonResult(items);
     }
 
     public async Task<IActionResult> OnGetAsync([FromQuery] string? status = null)

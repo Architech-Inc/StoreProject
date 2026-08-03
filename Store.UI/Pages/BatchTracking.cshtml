@@ -114,31 +114,40 @@
         <form method="post" asp-page-handler="Create">
             @Html.AntiForgeryToken()
             <div class="form-grid">
-                <label>Item ID *
-                    <input name="CreateItemId" type="text" required placeholder="Item GUID" />
-                </label>
-                <label>Batch Number *
+                <div>
+                    <label>Select Item *</label>
+                    <div class="smart-lookup-wrap" id="batchItemLookup" data-url="?handler=SearchItems" data-placeholder="Search item...">
+                        <input type="hidden" name="CreateItemId" id="createBatchItemId" required />
+                    </div>
+                </div>
+                <div>
+                    <label>Batch Number *</label>
                     <input name="CreateBatchNumber" maxlength="100" required placeholder="e.g. LOT-2025-001" />
-                </label>
-                <label>Quantity *
-                    <input name="CreateQuantity" type="number" min="1" required />
-                </label>
-                <label>Cost Price (GHS)
-                    <input name="CreateCostPrice" type="number" min="0" step="0.01" value="0" />
-                </label>
-                <label>Received Date
+                </div>
+                <div>
+                    <label>Quantity *</label>
+                    <input name="CreateQuantity" type="number" min="1" required value="1" />
+                </div>
+                <div>
+                    <label>Cost Price (GHS)</label>
+                    <input name="CreateCostPrice" id="createBatchCostPrice" type="number" min="0" step="0.01" value="0.00" />
+                </div>
+                <div>
+                    <label>Received Date</label>
                     <input name="CreateReceivedDate" type="date" value="@DateTime.Today.ToString("yyyy-MM-dd")" />
-                </label>
-                <label>Expiry Date
+                </div>
+                <div>
+                    <label>Expiry Date</label>
                     <input name="CreateExpiryDate" type="date" />
-                </label>
-                <label>Notes
-                    <textarea name="CreateNotes" rows="2" maxlength="500"></textarea>
-                </label>
+                </div>
+                <div style="grid-column:1/-1;">
+                    <label>Notes</label>
+                    <textarea name="CreateNotes" rows="2" maxlength="500" placeholder="Optional batch notes..."></textarea>
+                </div>
             </div>
-            <div style="display:flex;justify-content:flex-end;gap:8px;">
+            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
                 <button type="button" class="button-command" onclick="closeModal('createModal')">Cancel</button>
-                <button type="submit" class="button-primary">Record</button>
+                <button type="submit" class="button-primary">Save Batch</button>
             </div>
         </form>
     </div>
@@ -200,6 +209,22 @@
 
 @section Scripts {
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+    const wrap = document.getElementById('batchItemLookup');
+    if (wrap && window.SmartLookup) {
+        window.SmartLookup.attach(wrap, {
+            onSelect: function(item) {
+                if (item && item.cost !== undefined) {
+                    const costInput = document.getElementById('createBatchCostPrice');
+                    if (costInput) {
+                        costInput.value = item.cost.toFixed(2);
+                    }
+                }
+            }
+        });
+    }
+});
+
 function openCreate() { document.getElementById('createModal').hidden = false; }
 function closeModal(id) { document.getElementById(id).hidden = true; }
 

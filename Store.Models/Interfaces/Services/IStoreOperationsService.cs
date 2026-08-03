@@ -22,6 +22,7 @@ public interface IStoreOperationsService
     Task<CashierShiftDto> OpenShiftAsync(ShiftOpenRequest request, Guid actingUserId, CancellationToken ct = default);
     Task<CashierShiftDto?> GetActiveShiftAsync(Guid actingUserId, CancellationToken ct = default);
     Task<CashierShiftDto?> CloseShiftAsync(ShiftCloseRequest request, Guid actingUserId, CancellationToken ct = default);
+    Task<IReadOnlyList<CashierShiftDto>> GetShiftsAsync(int page = 1, int pageSize = 20, CancellationToken ct = default);
     Task<DailyZReportDto> GetDailyZReportAsync(DateTime dateUtc, CancellationToken ct = default);
     Task<DayEndReconciliationDto> GetDayEndReconciliationAsync(DateOnly date, CancellationToken ct = default);
 

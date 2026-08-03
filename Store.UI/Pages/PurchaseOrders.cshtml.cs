@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using Store.Models.DTOs.Common;
+using Store.Models.DTOs.Operations;
 using Store.Models.DTOs.Procurement;
 using Store.Models.Enums;
 using Store.Models.Interfaces.Services;
@@ -9,6 +11,8 @@ namespace StoreUI.Pages;
 public class PurchaseOrdersModel : SecurePageModel
 {
     private readonly IPurchaseOrderService _poService;
+    private readonly ISupplierService _supplierService;
+    private readonly IItemService _itemService;
     private readonly IApiClientService _apiClient;
 
     public List<PurchaseOrderDto> PurchaseOrders { get; private set; } = new();
@@ -37,10 +41,86 @@ public class PurchaseOrdersModel : SecurePageModel
 
     public IEnumerable<PurchaseOrderStatus> Statuses { get; } = Enum.GetValues<PurchaseOrderStatus>();
 
-    public PurchaseOrdersModel(IPurchaseOrderService poService, IApiClientService apiClient)
+    public PurchaseOrdersModel(
+        IPurchaseOrderService poService,
+        ISupplierService supplierService,
+        IItemService itemService,
+        IApiClientService apiClient)
     {
         _poService = poService;
+        _supplierService = supplierService;
+        _itemService = itemService;
         _apiClient = apiClient;
+    }
+
+    public async Task<IActionResult> OnGetSearchSuppliersAsync([FromQuery] string? q, CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return Unauthorized();
+
+        _apiClient.SetToken(token);
+        var suppliers = await _supplierService.GetAllAsync();
+        var search = q?.Trim() ?? string.Empty;
+        var filtered = suppliers
+            .Where(s => string.IsNullOrEmpty(search) ||
+                        s.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                        (s.RegistrationNumber != null && s.RegistrationNumber.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
+                        s.Emails.Any(e => e.Email.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
+                        s.Phones.Any(p => p.PhoneNumber.Contains(search, StringComparison.OrdinalIgnoreCase)))
+            .Take(15)
+            .Select(s => new
+            {
+                id = s.SupplierId.ToString(),
+                title = s.Name,
+                sub = $"Reg: {s.RegistrationNumber ?? "—"} | Phone: {s.Phones.FirstOrDefault()?.PhoneNumber ?? "—"}",
+                badge = s.Emails.FirstOrDefault()?.Email ?? "Supplier"
+            });
+
+        return new JsonResult(filtered);
+    }
+
+    public async Task<IActionResult> OnGetSearchBranchesAsync([FromQuery] string? q, CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return Unauthorized();
+
+        _apiClient.SetToken(token);
+        var branches = await _apiClient.GetAsync<List<BranchDto>>("api/admin/branches", ct) ?? new();
+        var search = q?.Trim() ?? string.Empty;
+        var filtered = branches
+            .Where(b => string.IsNullOrEmpty(search) ||
+                        b.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                        b.Code.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                        b.BranchId.ToString() == search)
+            .Take(15)
+            .Select(b => new
+            {
+                id = b.BranchId.ToString(),
+                title = b.Name,
+                sub = $"Code: {b.Code} | #{b.BranchId}",
+                badge = b.IsActive ? "Active" : "Inactive"
+            });
+
+        return new JsonResult(filtered);
+    }
+
+    public async Task<IActionResult> OnGetSearchItemsAsync([FromQuery] string? q, CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return Unauthorized();
+
+        _apiClient.SetToken(token);
+        var result = await _itemService.GetAllAsync(new PagedRequest { Page = 1, PageSize = 15, SearchTerm = q?.Trim() }, ct);
+        var items = result.Items.Select(i => new
+        {
+            id = i.ItemId.ToString(),
+            title = i.Name,
+            sub = $"Code: {(string.IsNullOrEmpty(i.Barcode) ? "N/A" : i.Barcode)} | Cost: ${i.CostPrice:N2}",
+            badge = i.CategoryName ?? "Item",
+            cost = i.CostPrice
+        });
+
+        return new JsonResult(items);
     }
 
     public async Task<IActionResult> OnGetAsync([FromQuery] string? status = null)

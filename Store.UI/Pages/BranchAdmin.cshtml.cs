@@ -51,6 +51,53 @@ public class BranchAdminModel : SecurePageModel
         return Page();
     }
 
+    public async Task<IActionResult> OnGetSearchUsersAsync([FromQuery] string? q, CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out var permissions))
+            return Unauthorized();
+
+        _apiClient.SetToken(token);
+        if (!HasPermission(permissions, PermissionKeys.AdminBranches))
+            return Forbid();
+
+        var result = await _userService.GetAllAsync(new PagedRequest { Page = 1, PageSize = 15, SearchTerm = q?.Trim() }, ct);
+        var users = result.Items.Select(u => new
+        {
+            id = u.UserId.ToString(),
+            title = u.Username,
+            sub = $"Role: {u.RoleName ?? "Standard"} | Status: {u.Status}",
+            badge = u.RoleName ?? "User"
+        });
+
+        return new JsonResult(users);
+    }
+
+    public async Task<IActionResult> OnGetSearchBranchesAsync([FromQuery] string? q, CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out var permissions))
+            return Unauthorized();
+
+        _apiClient.SetToken(token);
+        if (!HasPermission(permissions, PermissionKeys.AdminBranches))
+            return Forbid();
+
+        var branches = await _apiClient.GetAsync<List<BranchDto>>("/api/admin/branches", ct) ?? new List<BranchDto>();
+        var query = q?.Trim().ToLowerInvariant();
+        var results = branches
+            .Where(b => string.IsNullOrEmpty(query) ||
+                        b.Name.ToLowerInvariant().Contains(query) ||
+                        b.Code.ToLowerInvariant().Contains(query))
+            .Select(b => new
+            {
+                id = b.BranchId.ToString(),
+                title = $"{b.Name} ({b.Code})",
+                sub = b.Address ?? "No address specified",
+                badge = b.IsActive ? "Active" : "Inactive"
+            });
+
+        return new JsonResult(results);
+    }
+
     public async Task<IActionResult> OnPostUpsertBranchAsync(CancellationToken ct)
     {
         if (!TryGetSecurityContext(out var token, out var permissions))

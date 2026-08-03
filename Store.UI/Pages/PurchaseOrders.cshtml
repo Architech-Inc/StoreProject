@@ -130,88 +130,90 @@
     <div class="blade-body">
         <form method="post" asp-page-handler="Create" id="createPoForm">
             @Html.AntiForgeryToken()
-            <div style="display:flex;flex-direction:column;gap:12px;">
-                        <div class="col-md-4">
-                            <label class="form-label">Supplier ID <span class="text-danger">*</span></label>
-                            <input type="text" name="CreateSupplierId" class="form-control form-control-sm"
-                                   placeholder="Supplier GUID" required />
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Branch ID</label>
-                            <input type="number" name="CreateBranchId" class="form-control form-control-sm"
-                                   placeholder="Optional" />
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Reference Number</label>
-                            <input type="text" name="CreateReferenceNumber" class="form-control form-control-sm"
-                                   placeholder="e.g. PO-2024-001" />
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Expected Delivery</label>
-                            <input type="date" name="CreateExpectedDelivery" class="form-control form-control-sm" />
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">Notes</label>
-                            <textarea name="CreateNotes" class="form-control form-control-sm" rows="2"></textarea>
-                        </div>
+            <div class="form-grid">
+                <div>
+                    <label>Supplier <span class="text-danger">*</span></label>
+                    <div class="smart-lookup-wrap" data-url="?handler=SearchSuppliers" data-placeholder="Search supplier by name, email...">
+                        <input type="hidden" name="CreateSupplierId" required />
                     </div>
+                </div>
+                <div>
+                    <label>Branch (Optional)</label>
+                    <div class="smart-lookup-wrap" data-url="?handler=SearchBranches" data-placeholder="Search receiving branch...">
+                        <input type="hidden" name="CreateBranchId" />
+                    </div>
+                </div>
+                <div>
+                    <label>Reference Number</label>
+                    <input type="text" name="CreateReferenceNumber" placeholder="e.g. PO-2024-001" />
+                </div>
+                <div>
+                    <label>Expected Delivery</label>
+                    <input type="date" name="CreateExpectedDelivery" />
+                </div>
+                <div style="grid-column:1/-1;">
+                    <label>Notes</label>
+                    <textarea name="CreateNotes" rows="2" placeholder="Optional PO notes..."></textarea>
+                </div>
+            </div>
 
-                    <hr />
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <strong>Line Items</strong>
-                        <button type="button" class="btn btn-outline-secondary btn-sm" id="addLineBtn">+ Add Item</button>
-                    </div>
-                    <table class="table table-sm" id="lineItemsTable">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Item ID (GUID)</th>
-                                <th>Qty</th>
-                                <th>Unit Cost</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody id="lineItemsBody">
-                            <tr>
-                                <td><input type="text" name="CreateItemIds" class="form-control form-control-sm" placeholder="Item GUID" required /></td>
-                                <td><input type="number" name="CreateQuantities" class="form-control form-control-sm" value="1" min="1" required /></td>
-                                <td><input type="number" name="CreateUnitCosts" class="form-control form-control-sm" value="0.00" min="0" step="0.01" required /></td>
-                                <td><button type="button" class="btn btn-outline-danger btn-sm remove-line-btn">✕</button></td>
-                            </tr>
-                        </tbody>
-                    </table>
+            <hr style="margin: 16px 0; border: none; border-top: 1px solid var(--ops-border, var(--border));" />
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <strong>Line Items</strong>
+                <button type="button" class="button-secondary btn-sm" id="addLineBtn">+ Add Item</button>
+            </div>
+            <table class="table" id="lineItemsTable">
+                <thead>
+                    <tr>
+                        <th style="width:50%;">Item</th>
+                        <th style="width:20%;">Qty</th>
+                        <th style="width:25%;">Unit Cost ($)</th>
+                        <th style="width:5%;"></th>
+                    </tr>
+                </thead>
+                <tbody id="lineItemsBody">
+                    <tr class="po-item-row">
+                        <td>
+                            <div class="smart-lookup-wrap po-item-lookup" data-url="?handler=SearchItems" data-placeholder="Search item...">
+                                <input type="hidden" name="CreateItemIds" required />
+                            </div>
+                        </td>
+                        <td><input type="number" name="CreateQuantities" value="1" min="1" required style="width:100%;box-sizing:border-box;" /></td>
+                        <td><input type="number" name="CreateUnitCosts" value="0.00" min="0" step="0.01" required style="width:100%;box-sizing:border-box;" class="po-unit-cost" /></td>
+                        <td><button type="button" class="button-command danger remove-line-btn" style="padding:4px 8px;">✕</button></td>
+                    </tr>
+                </tbody>
+            </table>
         </form>
     </div>
     <div class="blade-footer">
         <button type="button" class="button-command" data-close-blade>Cancel</button>
-        <button type="button" class="button-primary" onclick="document.getElementById('createPoForm').submit()">Create Purchase Order</button>
+        <button type="button" class="button-primary" onclick="document.getElementById('createPoForm').submit()">Create Order</button>
     </div>
 </div>
 
-<!-- ===== Receive Goods Blade ===== -->
+<!-- ===== Receive Blade ===== -->
 <div class="blade-overlay" id="receiveOverlay"></div>
 <div class="blade" id="receiveBlade" data-overlay-id="receiveOverlay">
     <div class="blade-header">
-        <h3 id="receiveModalLabel">Receive Goods</h3>
+        <h3>Receive Purchase Order</h3>
         <button type="button" class="btn-close" data-close-blade aria-label="Close">×</button>
     </div>
     <div class="blade-body">
         <form method="post" asp-page-handler="Receive" id="receiveForm">
             @Html.AntiForgeryToken()
-            <div style="display:flex;flex-direction:column;gap:12px;">
-                    <input type="hidden" name="ActionPurchaseOrderId" id="receivePoId" />
-                    <table class="table table-sm" id="receiveItemsTable">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Item</th>
-                                <th>Ordered</th>
-                                <th>Already Received</th>
-                                <th>Receiving Now</th>
-                                <th><input type="hidden" class="hidden-id" /></th>
-                            </tr>
-                        </thead>
-                        <tbody id="receiveItemsBody"></tbody>
-                    </table>
-            </div>
+            <input type="hidden" name="ActionPurchaseOrderId" id="receivePoId" />
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Ordered</th>
+                        <th>Received</th>
+                        <th>Receiving Now</th>
+                    </tr>
+                </thead>
+                <tbody id="receiveItemsBody"></tbody>
+            </table>
         </form>
     </div>
     <div class="blade-footer">
@@ -222,16 +224,43 @@
 
 @section Scripts {
 <script>
+// Attach on-select callback for PO items to automatically set unit cost
+function attachPoItemLookup(wrap) {
+    if (!wrap || !window.SmartLookup) return;
+    window.SmartLookup.attach(wrap, {
+        onSelect: function(item, container) {
+            if (item && item.cost !== undefined) {
+                const row = container.closest('tr');
+                if (row) {
+                    const costInput = row.querySelector('.po-unit-cost');
+                    if (costInput && (!parseFloat(costInput.value) || parseFloat(costInput.value) === 0)) {
+                        costInput.value = item.cost.toFixed(2);
+                    }
+                }
+            }
+        }
+    });
+}
+
+document.querySelectorAll('.po-item-lookup').forEach(attachPoItemLookup);
+
 // Add line item row
 document.getElementById('addLineBtn').addEventListener('click', function () {
     const tbody = document.getElementById('lineItemsBody');
     const row = document.createElement('tr');
+    row.className = 'po-item-row';
     row.innerHTML = `
-        <td><input type="text" name="CreateItemIds" class="form-control form-control-sm" placeholder="Item GUID" required /></td>
-        <td><input type="number" name="CreateQuantities" class="form-control form-control-sm" value="1" min="1" required /></td>
-        <td><input type="number" name="CreateUnitCosts" class="form-control form-control-sm" value="0.00" min="0" step="0.01" required /></td>
-        <td><button type="button" class="btn btn-outline-danger btn-sm remove-line-btn">✕</button></td>`;
+        <td>
+            <div class="smart-lookup-wrap po-item-lookup" data-url="?handler=SearchItems" data-placeholder="Search item...">
+                <input type="hidden" name="CreateItemIds" required />
+            </div>
+        </td>
+        <td><input type="number" name="CreateQuantities" value="1" min="1" required style="width:100%;box-sizing:border-box;" /></td>
+        <td><input type="number" name="CreateUnitCosts" value="0.00" min="0" step="0.01" required style="width:100%;box-sizing:border-box;" class="po-unit-cost" /></td>
+        <td><button type="button" class="button-command danger remove-line-btn" style="padding:4px 8px;">✕</button></td>`;
     tbody.appendChild(row);
+    const wrap = row.querySelector('.po-item-lookup');
+    attachPoItemLookup(wrap);
 });
 
 document.addEventListener('click', function (e) {

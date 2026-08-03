@@ -114,9 +114,10 @@
             @Html.AntiForgeryToken()
             <div class="form-grid" style="grid-template-columns:1fr;">
                 <div>
-                    <label for="RecordShiftId">Cashier Shift ID <span class="req">*</span></label>
-                    <input id="RecordShiftId" type="text" name="RecordShiftId" required maxlength="36"
-                           pattern="[0-9a-fA-F\-]{36}" placeholder="Shift GUID" autocomplete="off" />
+                    <label>Select Cashier Shift <span class="req">*</span></label>
+                    <div class="smart-lookup-wrap" data-url="?handler=SearchShifts" data-placeholder="Search shift by ID, status, notes...">
+                        <input type="hidden" name="RecordShiftId" id="RecordShiftId" required />
+                    </div>
                 </div>
                 <div class="form-grid" style="grid-template-columns:1fr 1fr; gap:12px;">
                     <div>

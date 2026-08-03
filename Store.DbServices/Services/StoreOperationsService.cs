@@ -563,6 +563,18 @@ public class StoreOperationsService : IStoreOperationsService
         return MapShift(shift);
     }
 
+    public async Task<IReadOnlyList<CashierShiftDto>> GetShiftsAsync(int page = 1, int pageSize = 20, CancellationToken ct = default)
+    {
+        var shifts = await _uow.Repository<CashierShift>().Query()
+            .AsNoTracking()
+            .OrderByDescending(s => s.OpenedAtUtc)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+
+        return shifts.Select(MapShift).ToList();
+    }
+
     public async Task<DailyZReportDto> GetDailyZReportAsync(DateTime dateUtc, CancellationToken ct = default)
     {
         var from = dateUtc.Date;

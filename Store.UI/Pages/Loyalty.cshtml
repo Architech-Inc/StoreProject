@@ -22,12 +22,13 @@
     <!-- Customer lookup -->
     <section class="card">
         <h2>Look Up Customer Account</h2>
-        <form method="get">
+        <form method="get" id="lookupCustomerForm">
             <div style="display:flex;gap:8px;align-items:flex-end;">
                 <div class="form-group" style="flex:1;margin:0;">
-                    <label for="customerId">Customer ID</label>
-                    <input id="customerId" name="customerId" type="text" placeholder="Paste customer GUID..."
-                           value="@Model.CustomerId" />
+                    <label>Select Customer</label>
+                    <div class="smart-lookup-wrap" data-url="?handler=SearchCustomers" data-placeholder="Search customer by name, phone, email...">
+                        <input type="hidden" name="customerId" id="lookupCustomerId" value="@Model.CustomerId" />
+                    </div>
                 </div>
                 <button type="submit">Look Up</button>
             </div>
@@ -103,8 +104,10 @@
                 <form method="post" asp-page-handler="Earn">
                     @Html.AntiForgeryToken()
                     <div class="form-group">
-                        <label>Customer ID</label>
-                        <input name="EarnCustomerId" type="text" required value="@Model.CustomerId" />
+                        <label>Customer</label>
+                        <div class="smart-lookup-wrap" data-url="?handler=SearchCustomers" data-placeholder="Search customer...">
+                            <input type="hidden" name="EarnCustomerId" required value="@Model.CustomerId" />
+                        </div>
                     </div>
                     <div class="form-group">
                         <label>Points</label>
@@ -112,7 +115,7 @@
                     </div>
                     <div class="form-group">
                         <label>Note</label>
-                        <input name="EarnNote" type="text" />
+                        <input name="EarnNote" type="text" placeholder="Optional earn note..." />
                     </div>
                     <button type="submit">Earn Points</button>
                 </form>
@@ -124,8 +127,10 @@
                 <form method="post" asp-page-handler="Redeem">
                     @Html.AntiForgeryToken()
                     <div class="form-group">
-                        <label>Customer ID</label>
-                        <input name="RedeemCustomerId" type="text" required value="@Model.CustomerId" />
+                        <label>Customer</label>
+                        <div class="smart-lookup-wrap" data-url="?handler=SearchCustomers" data-placeholder="Search customer...">
+                            <input type="hidden" name="RedeemCustomerId" required value="@Model.CustomerId" />
+                        </div>
                     </div>
                     <div class="form-group">
                         <label>Points</label>
@@ -133,7 +138,7 @@
                     </div>
                     <div class="form-group">
                         <label>Note</label>
-                        <input name="RedeemNote" type="text" />
+                        <input name="RedeemNote" type="text" placeholder="Optional redemption note..." />
                     </div>
                     <button type="submit">Redeem Points</button>
                 </form>
@@ -145,8 +150,10 @@
                 <form method="post" asp-page-handler="Adjust">
                     @Html.AntiForgeryToken()
                     <div class="form-group">
-                        <label>Customer ID</label>
-                        <input name="AdjustCustomerId" type="text" required value="@Model.CustomerId" />
+                        <label>Customer</label>
+                        <div class="smart-lookup-wrap" data-url="?handler=SearchCustomers" data-placeholder="Search customer...">
+                            <input type="hidden" name="AdjustCustomerId" required value="@Model.CustomerId" />
+                        </div>
                     </div>
                     <div class="form-group">
                         <label>Points (negative to subtract)</label>
@@ -154,7 +161,7 @@
                     </div>
                     <div class="form-group">
                         <label>Note</label>
-                        <input name="AdjustNote" type="text" />
+                        <input name="AdjustNote" type="text" placeholder="Reason for adjustment..." />
                     </div>
                     <button type="submit">Apply Adjustment</button>
                 </form>

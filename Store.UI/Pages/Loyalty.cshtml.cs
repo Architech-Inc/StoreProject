@@ -1,11 +1,15 @@
 using Microsoft.AspNetCore.Mvc;
+using Store.Models.DTOs.Common;
+using Store.Models.DTOs.Customers;
 using Store.Models.DTOs.Loyalty;
+using Store.Models.Interfaces.Services;
 using StoreUI.Services;
 
 namespace StoreUI.Pages;
 
 public class LoyaltyModel : SecurePageModel
 {
+    private readonly ICustomerService _customerService;
     private readonly IApiClientService _apiClient;
 
     public LoyaltyAccountDto? Account { get; private set; }
@@ -32,9 +36,28 @@ public class LoyaltyModel : SecurePageModel
 
     [TempData] public string? StatusMessage { get; set; }
 
-    public LoyaltyModel(IApiClientService apiClient)
+    public LoyaltyModel(ICustomerService customerService, IApiClientService apiClient)
     {
+        _customerService = customerService;
         _apiClient = apiClient;
+    }
+
+    public async Task<IActionResult> OnGetSearchCustomersAsync([FromQuery] string? q, CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return Unauthorized();
+
+        _apiClient.SetToken(token);
+        var result = await _customerService.GetAllAsync(new PagedRequest { Page = 1, PageSize = 15, SearchTerm = q?.Trim() }, ct);
+        var items = result.Items.Select(c => new
+        {
+            id = c.CustomerId.ToString(),
+            title = c.FullName,
+            sub = $"Phone: {(string.IsNullOrEmpty(c.PrimaryPhone) ? "—" : c.PrimaryPhone)} | Email: {(string.IsNullOrEmpty(c.PrimaryEmail) ? "—" : c.PrimaryEmail)}",
+            badge = c.Segment.ToString()
+        });
+
+        return new JsonResult(items);
     }
 
     public async Task<IActionResult> OnGetAsync(CancellationToken ct = default)

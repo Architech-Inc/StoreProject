@@ -24,6 +24,10 @@ public class ApiInvoiceService : IInvoiceService
     public async Task<PagedResult<InvoiceDto>> GetAllAsync(PagedRequest request, CancellationToken ct = default)
     {
         var qs = $"?page={request.Page}&pageSize={request.PageSize}";
+        if (!string.IsNullOrWhiteSpace(request.SearchTerm))
+        {
+            qs += $"&searchTerm={Uri.EscapeDataString(request.SearchTerm)}";
+        }
         var result = await _client.GetAsync<PagedResult<InvoiceDto>>($"/api/invoices{qs}", ct);
         return result ?? new PagedResult<InvoiceDto>();
     }

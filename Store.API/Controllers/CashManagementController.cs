@@ -56,6 +56,14 @@ public class CashManagementController : ControllerBase
         return shift is null ? NotFound() : Ok(shift);
     }
 
+    [HttpGet("shifts")]
+    [Authorize(Policy = PermissionKeys.CashRead)]
+    public async Task<IActionResult> GetShifts([FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
+    {
+        var shifts = await _ops.GetShiftsAsync(page, pageSize, ct);
+        return Ok(shifts);
+    }
+
     [HttpGet("report/z")]
     [Authorize(Policy = PermissionKeys.ReportsRead)]
     public async Task<IActionResult> DailyZReport([FromQuery] DateTime? dateUtc, CancellationToken ct)

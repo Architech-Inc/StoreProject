@@ -136,14 +136,16 @@
             @Html.AntiForgeryToken()
             <div class="form-grid" style="grid-template-columns:1fr;">
                 <div>
-                    <label for="CreateInvoiceId">Invoice ID (optional)</label>
-                    <input id="CreateInvoiceId" type="text" name="CreateInvoiceId"
-                           placeholder="Paste invoice GUID" pattern="[0-9a-fA-F\-]{36}" />
+                    <label>Invoice (optional)</label>
+                    <div class="smart-lookup-wrap" data-url="?handler=SearchInvoices" data-placeholder="Search invoice by customer or ID...">
+                        <input type="hidden" name="CreateInvoiceId" id="CreateInvoiceId" />
+                    </div>
                 </div>
                 <div>
-                    <label for="CreateItemId">Item ID (optional)</label>
-                    <input id="CreateItemId" type="text" name="CreateItemId"
-                           placeholder="Paste item GUID" pattern="[0-9a-fA-F\-]{36}" />
+                    <label>Item (optional)</label>
+                    <div class="smart-lookup-wrap" data-url="?handler=SearchItems" data-placeholder="Search item by name or barcode...">
+                        <input type="hidden" name="CreateItemId" id="CreateItemId" />
+                    </div>
                 </div>
                 <div>
                     <label for="CreateOverrideType">Override Type</label>
@@ -156,7 +158,7 @@
                 </div>
                 <div>
                     <label for="CreateOverrideValue">Override Value <span class="req">*</span></label>
-                    <input id="CreateOverrideValue" type="number" name="CreateOverrideValue" step="0.01" min="0.01" required />
+                    <input id="CreateOverrideValue" type="number" name="CreateOverrideValue" step="0.01" min="0.01" required placeholder="e.g. 10 for 10%" />
                     <small class="help-text">Percentage: e.g. 10 for 10%. Fixed: deduction amount.</small>
                 </div>
                 <div>

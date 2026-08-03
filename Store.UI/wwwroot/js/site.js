@@ -413,4 +413,273 @@
         }
     });
 
+    // --- Smart Lookup Component Engine ---
+    window.SmartLookup = {
+        attach: function(container, options = {}) {
+            if (!container || container.dataset.smartLookupInitialized) return;
+            container.dataset.smartLookupInitialized = "true";
+
+            const hiddenInput = container.querySelector('input[type="hidden"]') || container.querySelector('[data-smart-hidden]');
+            let textInput = container.querySelector('.smart-lookup-input');
+            let clearBtn = container.querySelector('.smart-lookup-clear');
+            let dropdown = container.querySelector('.smart-lookup-dropdown');
+
+            if (!textInput) {
+                textInput = document.createElement('input');
+                textInput.type = 'text';
+                textInput.className = 'smart-lookup-input';
+                textInput.placeholder = options.placeholder || container.dataset.placeholder || 'Type to search...';
+                textInput.autocomplete = 'off';
+                container.appendChild(textInput);
+            }
+
+            if (!clearBtn) {
+                clearBtn = document.createElement('button');
+                clearBtn.type = 'button';
+                clearBtn.className = 'smart-lookup-clear';
+                clearBtn.innerHTML = '&times;';
+                clearBtn.title = 'Clear selection';
+                container.appendChild(clearBtn);
+            }
+
+            if (!dropdown) {
+                dropdown = document.createElement('div');
+                dropdown.className = 'smart-lookup-dropdown';
+                container.appendChild(dropdown);
+            }
+
+            const fetchUrl = options.url || container.dataset.url || '';
+            const minChars = options.minChars !== undefined ? options.minChars : (container.dataset.minChars ? parseInt(container.dataset.minChars, 10) : 1);
+            const onSelect = options.onSelect || (window[container.dataset.onSelect]);
+            const onClear = options.onClear || (window[container.dataset.onClear]);
+
+            let abortCtrl = null;
+            let debounceTimer = null;
+            let currentItems = [];
+            let activeIndex = -1;
+
+            const updateHasValue = () => {
+                if (hiddenInput && hiddenInput.value) {
+                    container.classList.add('has-value');
+                } else {
+                    container.classList.remove('has-value');
+                }
+            };
+            updateHasValue();
+
+            const closeDropdown = () => {
+                dropdown.classList.remove('show');
+                dropdown.innerHTML = '';
+                activeIndex = -1;
+            };
+
+            const highlightItem = (index) => {
+                const items = dropdown.querySelectorAll('.smart-lookup-item');
+                items.forEach((it, idx) => {
+                    if (idx === index) {
+                        it.classList.add('active');
+                        it.scrollIntoView({ block: 'nearest' });
+                    } else {
+                        it.classList.remove('active');
+                    }
+                });
+            };
+
+            const renderItems = (items) => {
+                currentItems = items || [];
+                activeIndex = -1;
+                dropdown.innerHTML = '';
+
+                if (!currentItems.length) {
+                    dropdown.innerHTML = '<div class="smart-lookup-empty">No matching results found</div>';
+                    dropdown.classList.add('show');
+                    return;
+                }
+
+                currentItems.forEach((item, index) => {
+                    const el = document.createElement('div');
+                    el.className = 'smart-lookup-item';
+                    el.dataset.index = index;
+
+                    const title = escapeHtml(item.title || item.name || item.fullName || item.label || item.id || '');
+                    const sub = escapeHtml(item.sub || item.subtitle || item.description || item.code || '');
+                    const badge = item.badge ? `<span class="smart-lookup-badge">${escapeHtml(item.badge)}</span>` : '';
+
+                    el.innerHTML = `
+                        <div class="smart-lookup-item-header">
+                            <span class="smart-lookup-item-title">${title}</span>
+                            ${badge}
+                        </div>
+                        ${sub ? `<div class="smart-lookup-item-sub">${sub}</div>` : ''}
+                    `;
+
+                    el.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        selectItem(item);
+                    });
+
+                    dropdown.appendChild(el);
+                });
+
+                dropdown.classList.add('show');
+            };
+
+            const selectItem = (item) => {
+                const val = item.id !== undefined ? item.id : (item.value !== undefined ? item.value : '');
+                const label = item.title || item.name || item.fullName || item.label || val;
+
+                if (hiddenInput) {
+                    hiddenInput.value = val;
+                    hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+
+                textInput.value = label;
+                updateHasValue();
+                closeDropdown();
+
+                if (typeof onSelect === 'function') {
+                    onSelect(item, container);
+                }
+            };
+
+            const clearSelection = () => {
+                if (hiddenInput) {
+                    hiddenInput.value = '';
+                    hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                textInput.value = '';
+                updateHasValue();
+                closeDropdown();
+
+                if (typeof onClear === 'function') {
+                    onClear(container);
+                }
+            };
+
+            clearBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                clearSelection();
+                textInput.focus();
+            });
+
+            textInput.addEventListener('input', (e) => {
+                const query = textInput.value.trim();
+
+                // If user edits text after selecting an item, invalidate previous ID
+                if (hiddenInput && hiddenInput.value && query !== textInput.dataset.selectedLabel) {
+                    hiddenInput.value = '';
+                    updateHasValue();
+                }
+
+                clearTimeout(debounceTimer);
+                if (query.length < minChars) {
+                    closeDropdown();
+                    return;
+                }
+
+                dropdown.innerHTML = `
+                    <div class="smart-lookup-loading">
+                        <div class="smart-lookup-spinner"></div>
+                        <span>Searching...</span>
+                    </div>
+                `;
+                dropdown.classList.add('show');
+
+                debounceTimer = setTimeout(async () => {
+                    if (abortCtrl) abortCtrl.abort();
+                    abortCtrl = new AbortController();
+
+                    try {
+                        let finalUrl = fetchUrl;
+                        if (!finalUrl) {
+                            const lookupType = container.dataset.lookupType || 'items';
+                            finalUrl = `?handler=Search${lookupType.charAt(0).toUpperCase() + lookupType.slice(1)}`;
+                        }
+
+                        const separator = finalUrl.includes('?') ? '&' : '?';
+                        const reqUrl = `${finalUrl}${separator}q=${encodeURIComponent(query)}`;
+
+                        const res = await fetch(reqUrl, {
+                            signal: abortCtrl.signal,
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                        });
+
+                        if (!res.ok) {
+                            dropdown.innerHTML = '<div class="smart-lookup-empty">Error searching. Please try again.</div>';
+                            return;
+                        }
+
+                        const data = await res.json();
+                        renderItems(Array.isArray(data) ? data : (data.items || []));
+                    } catch (err) {
+                        if (err.name !== 'AbortError') {
+                            console.error('Smart lookup search error:', err);
+                            dropdown.innerHTML = '<div class="smart-lookup-empty">Search failed.</div>';
+                        }
+                    }
+                }, 220);
+            });
+
+            textInput.addEventListener('keydown', (e) => {
+                if (!dropdown.classList.contains('show')) {
+                    if (e.key === 'ArrowDown') {
+                        textInput.dispatchEvent(new Event('input'));
+                    }
+                    return;
+                }
+
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (currentItems.length > 0) {
+                        activeIndex = (activeIndex + 1) % currentItems.length;
+                        highlightItem(activeIndex);
+                    }
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (currentItems.length > 0) {
+                        activeIndex = (activeIndex - 1 + currentItems.length) % currentItems.length;
+                        highlightItem(activeIndex);
+                    }
+                } else if (e.key === 'Enter') {
+                    if (activeIndex >= 0 && activeIndex < currentItems.length) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        selectItem(currentItems[activeIndex]);
+                    }
+                } else if (e.key === 'Escape') {
+                    closeDropdown();
+                }
+            });
+
+            // Re-open suggestions on focus if query has enough chars
+            textInput.addEventListener('focus', () => {
+                if (textInput.value.trim().length >= minChars && !dropdown.classList.contains('show')) {
+                    textInput.dispatchEvent(new Event('input'));
+                }
+            });
+        },
+
+        initAll: function(root = document) {
+            root.querySelectorAll('.smart-lookup-wrap, [data-smart-lookup]').forEach(el => {
+                window.SmartLookup.attach(el);
+            });
+        }
+    };
+
+    // Close all open dropdowns on outside click
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.smart-lookup-wrap')) {
+            document.querySelectorAll('.smart-lookup-dropdown.show').forEach(d => d.classList.remove('show'));
+        }
+    });
+
+    // Auto-init on page load
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => window.SmartLookup.initAll());
+    } else {
+        window.SmartLookup.initAll();
+    }
+
 })();
+

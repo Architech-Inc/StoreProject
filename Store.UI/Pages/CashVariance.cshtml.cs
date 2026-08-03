@@ -55,6 +55,30 @@ public class CashVarianceModel : SecurePageModel
         return Page();
     }
 
+    public async Task<IActionResult> OnGetSearchShiftsAsync([FromQuery] string? q, CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return Unauthorized();
+
+        _apiClient.SetToken(token);
+        var shifts = await _apiClient.GetAsync<List<Store.Models.DTOs.Operations.CashierShiftDto>>("/api/cash/shifts?page=1&pageSize=20", ct) ?? new();
+        var query = q?.Trim().ToLowerInvariant();
+        var results = shifts
+            .Where(s => string.IsNullOrEmpty(query) ||
+                        s.CashierShiftId.ToString().ToLowerInvariant().Contains(query) ||
+                        s.Status.ToString().ToLowerInvariant().Contains(query) ||
+                        (s.Notes?.ToLowerInvariant().Contains(query) ?? false))
+            .Select(s => new
+            {
+                id = s.CashierShiftId.ToString(),
+                title = $"Shift #{s.CashierShiftId.ToString()[..8]} ({s.OpenedAtUtc:yyyy-MM-dd HH:mm})",
+                sub = $"Float: {s.OpeningFloat:N2} | Closed: {(s.ClosedAtUtc.HasValue ? s.ClosedAtUtc.Value.ToString("HH:mm") : "Open")} | {(s.Notes ?? "")}",
+                badge = s.Status.ToString()
+            });
+
+        return new JsonResult(results);
+    }
+
     public async Task<IActionResult> OnPostRecordAsync()
     {
         if (!TryGetSecurityContext(out var token, out _))

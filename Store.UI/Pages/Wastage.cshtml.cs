@@ -78,7 +78,7 @@ public class WastageModel : SecurePageModel
         return RedirectToPage();
     }
 
-    public async Task<IActionResult> OnGetSearchItemsAsync(string q)
+    public async Task<IActionResult> OnGetSearchItemsAsync(string? q, CancellationToken ct = default)
     {
         if (!TryGetSecurityContext(out var token, out _))
             return Unauthorized();
@@ -87,12 +87,18 @@ public class WastageModel : SecurePageModel
         
         var req = new Store.Models.DTOs.Common.PagedRequest 
         { 
-            SearchTerm = q, 
-            PageSize = 20 
+            SearchTerm = q?.Trim(), 
+            PageSize = 15 
         };
-        var result = await _itemService.GetAllAsync(req);
+        var result = await _itemService.GetAllAsync(req, ct);
         
-        var selectList = result.Items.Select(i => new { id = i.ItemId, text = $"{i.Name} ({i.Barcode})" });
+        var selectList = result.Items.Select(i => new
+        {
+            id = i.ItemId.ToString(),
+            title = i.Name,
+            sub = $"Barcode: {(string.IsNullOrEmpty(i.Barcode) ? "N/A" : i.Barcode)} | Stock: {i.InStock}",
+            badge = i.CategoryName ?? "Item"
+        });
         return new JsonResult(selectList);
     }
 }

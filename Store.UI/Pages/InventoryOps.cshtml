@@ -50,20 +50,16 @@
             <article class="card">
                 <h2>Goods Receipt</h2>
                 <form method="post" asp-page-handler="Receive">
-                    <label>Item</label>
-                    <select asp-for="ReceiveItemId" required>
-                        <option value="">Select item</option>
-                        @foreach (var item in Model.Items)
-                        {
-                            <option value="@item.ItemId">@item.Name</option>
-                        }
-                    </select>
-                    <label>Quantity</label>
+                    <label>Select Item *</label>
+                    <div class="smart-lookup-wrap" data-url="?handler=SearchItems" data-placeholder="Search item...">
+                        <input type="hidden" asp-for="ReceiveItemId" required />
+                    </div>
+                    <label>Quantity *</label>
                     <input asp-for="ReceiveQuantity" type="number" min="1" required />
                     <label>Unit Cost</label>
-                    <input asp-for="ReceiveUnitCost" type="number" step="0.01" min="0" />
+                    <input asp-for="ReceiveUnitCost" type="number" step="0.01" min="0" placeholder="Optional unit cost" />
                     <label>Reference</label>
-                    <input asp-for="ReceiveReference" />
+                    <input asp-for="ReceiveReference" placeholder="e.g. GRN-001" />
                     <button type="submit">Post GRN</button>
                 </form>
             </article>
@@ -71,18 +67,14 @@
             <article class="card">
                 <h2>Stock Return</h2>
                 <form method="post" asp-page-handler="Return">
-                    <label>Item</label>
-                    <select asp-for="ReturnItemId" required>
-                        <option value="">Select item</option>
-                        @foreach (var item in Model.Items)
-                        {
-                            <option value="@item.ItemId">@item.Name</option>
-                        }
-                    </select>
-                    <label>Quantity</label>
+                    <label>Select Item *</label>
+                    <div class="smart-lookup-wrap" data-url="?handler=SearchItems" data-placeholder="Search item...">
+                        <input type="hidden" asp-for="ReturnItemId" required />
+                    </div>
+                    <label>Quantity *</label>
                     <input asp-for="ReturnQuantity" type="number" min="1" required />
-                    <label>Reason</label>
-                    <input asp-for="ReturnReason" required />
+                    <label>Reason *</label>
+                    <input asp-for="ReturnReason" required placeholder="Reason for return" />
                     <button type="submit">Apply Return</button>
                 </form>
             </article>
@@ -90,19 +82,15 @@
             <article class="card">
                 <h2>Stock Adjustment</h2>
                 <form method="post" asp-page-handler="Adjust">
-                    <label>Item</label>
-                    <select asp-for="AdjustItemId" required>
-                        <option value="">Select item</option>
-                        @foreach (var item in Model.Items)
-                        {
-                            <option value="@item.ItemId">@item.Name</option>
-                        }
-                    </select>
-                    <label>Quantity Delta</label>
-                    <input asp-for="QuantityDelta" type="number" required />
-                    <label>Reason</label>
-                    <input asp-for="AdjustmentReason" required />
-                    <button type="submit">Apply Adjustment</button>
+                    <label>Select Item *</label>
+                    <div class="smart-lookup-wrap" data-url="?handler=SearchItems" data-placeholder="Search item...">
+                        <input type="hidden" asp-for="AdjustItemId" required />
+                    </div>
+                    <label>Delta (+/-) *</label>
+                    <input asp-for="QuantityDelta" type="number" required placeholder="e.g. -5 or 10" />
+                    <label>Reason *</label>
+                    <input asp-for="AdjustmentReason" required placeholder="e.g. Audit variance" />
+                    <button type="submit">Post Adjustment</button>
                 </form>
             </article>
         </section>

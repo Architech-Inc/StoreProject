@@ -24,6 +24,10 @@ public class ApiCustomerService : ICustomerService
     public async Task<PagedResult<CustomerDto>> GetAllAsync(PagedRequest request, CancellationToken ct = default)
     {
         var qs = $"?page={request.Page}&pageSize={request.PageSize}";
+        if (!string.IsNullOrWhiteSpace(request.SearchTerm))
+        {
+            qs += $"&searchTerm={Uri.EscapeDataString(request.SearchTerm)}";
+        }
         var result = await _client.GetAsync<PagedResult<CustomerDto>>($"/api/customers{qs}", ct);
         return result ?? new PagedResult<CustomerDto>();
     }

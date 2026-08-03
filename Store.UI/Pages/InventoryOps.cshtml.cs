@@ -59,6 +59,25 @@ public class InventoryOpsModel : SecurePageModel
         return Page();
     }
 
+    public async Task<IActionResult> OnGetSearchItemsAsync([FromQuery] string? q, CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return Unauthorized();
+
+        _apiClient.SetToken(token);
+        var result = await _itemService.GetAllAsync(new PagedRequest { Page = 1, PageSize = 15, SearchTerm = q?.Trim() }, ct);
+        var items = result.Items.Select(i => new
+        {
+            id = i.ItemId.ToString(),
+            title = i.Name,
+            sub = $"Barcode: {(string.IsNullOrEmpty(i.Barcode) ? "N/A" : i.Barcode)} | Stock: {i.InStock} | Cost: {i.CostPrice:N2} XAF",
+            badge = i.CategoryName ?? "Item",
+            cost = i.CostPrice
+        });
+
+        return new JsonResult(items);
+    }
+
     public async Task<IActionResult> OnPostReceiveAsync(CancellationToken ct)
     {
         return await HandleWriteAsync(async () =>

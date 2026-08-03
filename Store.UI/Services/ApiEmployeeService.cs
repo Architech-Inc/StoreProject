@@ -24,6 +24,10 @@ public class ApiEmployeeService : IEmployeeService
     public async Task<PagedResult<EmployeeDto>> GetAllAsync(PagedRequest request, CancellationToken ct = default)
     {
         var qs = $"?page={request.Page}&pageSize={request.PageSize}&includeInactive={request.IncludeInactive.ToString().ToLower()}";
+        if (!string.IsNullOrWhiteSpace(request.SearchTerm))
+        {
+            qs += $"&searchTerm={Uri.EscapeDataString(request.SearchTerm)}";
+        }
         var result = await _client.GetAsync<PagedResult<EmployeeDto>>($"/api/employees{qs}", ct);
         return result ?? new PagedResult<EmployeeDto>();
     }

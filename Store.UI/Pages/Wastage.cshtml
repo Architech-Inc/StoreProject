@@ -112,13 +112,10 @@
             @Html.AntiForgeryToken()
             <div class="form-grid" style="grid-template-columns: 1fr;">
                 <div>
-                    <label>Search Item <span style="color:var(--ops-danger);">*</span></label>
-                    <div style="position:relative;">
-                        <input type="text" id="itemSearchInput" placeholder="Type name or barcode..." autocomplete="off" />
-                        <div id="itemDropdown" class="autocomplete-dropdown" style="display:none;"></div>
+                    <label>Select Item <span style="color:var(--ops-danger);">*</span></label>
+                    <div class="smart-lookup-wrap" data-url="?handler=SearchItems" data-placeholder="Search item by name or barcode...">
+                        <input type="hidden" name="RecordItemId" id="RecordItemId" required />
                     </div>
-                    <input type="hidden" name="RecordItemId" id="RecordItemId" required />
-                    <small style="color:var(--ops-subtle); margin-top:4px;">Search and select the item</small>
                 </div>
                 <div>
                     <label>Wastage Type</label>
@@ -151,82 +148,8 @@
 </div>
 
 @section Scripts {
-    <style>
-        .autocomplete-dropdown {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: var(--ops-paper, var(--surface));
-            border: 1px solid var(--ops-border, var(--border));
-            border-radius: var(--radius-sm, 4px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            max-height: 200px;
-            overflow-y: auto;
-            z-index: 1000;
-            margin-top: 4px;
-        }
-        .autocomplete-item {
-            padding: 8px 12px;
-            cursor: pointer;
-            border-bottom: 1px solid var(--ops-border, var(--border));
-        }
-        .autocomplete-item:last-child {
-            border-bottom: none;
-        }
-        .autocomplete-item:hover {
-            background: color-mix(in srgb, var(--ops-brand, var(--brand)) 10%, transparent);
-        }
-    </style>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const searchInput = document.getElementById('itemSearchInput');
-            const dropdown = document.getElementById('itemDropdown');
-            const hiddenId = document.getElementById('RecordItemId');
-            let timeout = null;
-
-            searchInput.addEventListener('input', (e) => {
-                const query = e.target.value.trim();
-                clearTimeout(timeout);
-                
-                if (query.length < 2) {
-                    dropdown.style.display = 'none';
-                    return;
-                }
-
-                timeout = setTimeout(() => {
-                    fetch(`/Wastage?handler=SearchItems&q=${encodeURIComponent(query)}`)
-                        .then(res => res.json())
-                        .then(data => {
-                            dropdown.innerHTML = '';
-                            if (data.length === 0) {
-                                dropdown.innerHTML = '<div class="autocomplete-item text-muted">No items found</div>';
-                            } else {
-                                data.forEach(item => {
-                                    const div = document.createElement('div');
-                                    div.className = 'autocomplete-item';
-                                    div.textContent = item.text;
-                                    div.addEventListener('click', () => {
-                                        searchInput.value = item.text;
-                                        hiddenId.value = item.id;
-                                        dropdown.style.display = 'none';
-                                    });
-                                    dropdown.appendChild(div);
-                                });
-                            }
-                            dropdown.style.display = 'block';
-                        })
-                        .catch(err => console.error(err));
-                }, 300);
-            });
-
-            // Close dropdown when clicking outside
-            document.addEventListener('click', (e) => {
-                if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
-                    dropdown.style.display = 'none';
-                }
-            });
-            
             // Blade open functionality for custom blade
             const openBtn = document.querySelector('[data-open-blade="recordBlade"]');
             const blade = document.getElementById('recordBlade');

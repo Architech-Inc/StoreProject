@@ -70,6 +70,24 @@ public class PricingOpsModel : SecurePageModel
         return Page();
     }
 
+    public async Task<IActionResult> OnGetSearchItemsAsync([FromQuery] string? q, CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return Unauthorized();
+
+        _apiClient.SetToken(token);
+        var result = await _itemService.GetAllAsync(new PagedRequest { Page = 1, PageSize = 15, SearchTerm = q?.Trim() }, ct);
+        var items = result.Items.Select(i => new
+        {
+            id = i.ItemId.ToString(),
+            title = i.Name,
+            sub = $"Barcode: {(string.IsNullOrEmpty(i.Barcode) ? "N/A" : i.Barcode)} | Price: {i.UnitPrice:N2} XAF",
+            badge = i.CategoryName ?? "Item"
+        });
+
+        return new JsonResult(items);
+    }
+
     public async Task<IActionResult> OnPostTaxAsync(CancellationToken ct)
     {
         return await HandleWriteAsync(async () =>

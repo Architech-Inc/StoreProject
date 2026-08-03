@@ -124,29 +124,40 @@
         @Html.AntiForgeryToken()
         <div class="blade-body">
             <div class="form-grid">
-                <label>From Branch ID *
-                    <input name="CreateFromBranchId" type="number" min="1" required />
-                </label>
-                <label>To Branch ID *
-                    <input name="CreateToBranchId" type="number" min="1" required />
-                </label>
+                <div>
+                    <label>From Branch *</label>
+                    <div class="smart-lookup-wrap" data-url="?handler=SearchBranches" data-placeholder="Search origin branch...">
+                        <input type="hidden" name="CreateFromBranchId" required />
+                    </div>
+                </div>
+                <div>
+                    <label>To Branch *</label>
+                    <div class="smart-lookup-wrap" data-url="?handler=SearchBranches" data-placeholder="Search destination branch...">
+                        <input type="hidden" name="CreateToBranchId" required />
+                    </div>
+                </div>
                 <label style="grid-column:1/-1;">Notes
-                    <textarea name="CreateNotes" rows="2" maxlength="1000"></textarea>
+                    <textarea name="CreateNotes" rows="2" maxlength="1000" placeholder="Optional transfer notes..."></textarea>
                 </label>
             </div>
             <h4 style="margin:16px 0 8px;">Items to Transfer</h4>
             <div id="itemLines">
-                <div class="item-line" style="display:grid;grid-template-columns:1fr 100px 1fr auto;gap:8px;margin-bottom:6px;align-items:end;">
-                    <label style="display:flex;flex-direction:column;gap:3px;font-size:.83rem;">Item ID
-                        <input name="TransferItems[0].ItemId" type="text" placeholder="Item GUID" required />
-                    </label>
-                    <label style="display:flex;flex-direction:column;gap:3px;font-size:.83rem;">Qty
-                        <input name="TransferItems[0].RequestedQuantity" type="number" min="1" required />
-                    </label>
-                    <label style="display:flex;flex-direction:column;gap:3px;font-size:.83rem;">Notes
-                        <input name="TransferItems[0].Notes" type="text" maxlength="500" />
-                    </label>
-                    <button type="button" onclick="removeLine(this)" style="align-self:end;padding:7px 10px;" class="button-command danger" title="Remove">✕</button>
+                <div class="item-line" style="display:grid;grid-template-columns:1.5fr 100px 1fr auto;gap:8px;margin-bottom:8px;align-items:end;">
+                    <div>
+                        <label style="font-size:.83rem;margin-bottom:3px;display:block;">Select Item *</label>
+                        <div class="smart-lookup-wrap" data-url="?handler=SearchItems" data-placeholder="Type item name or barcode...">
+                            <input type="hidden" name="TransferItems[0].ItemId" required />
+                        </div>
+                    </div>
+                    <div>
+                        <label style="font-size:.83rem;margin-bottom:3px;display:block;">Qty *</label>
+                        <input name="TransferItems[0].RequestedQuantity" type="number" min="1" value="1" required style="width:100%;box-sizing:border-box;" />
+                    </div>
+                    <div>
+                        <label style="font-size:.83rem;margin-bottom:3px;display:block;">Notes</label>
+                        <input name="TransferItems[0].Notes" type="text" maxlength="500" placeholder="Optional line notes" style="width:100%;box-sizing:border-box;" />
+                    </div>
+                    <button type="button" onclick="removeLine(this)" style="padding:7px 10px;height:38px;" class="button-command danger" title="Remove">✕</button>
                 </div>
             </div>
             <button type="button" onclick="addItemLine()" style="margin-top:6px;" class="button-secondary btn-sm">+ Add Item</button>
@@ -290,20 +301,29 @@ function addItemLine() {
     const container = document.getElementById('itemLines');
     const div = document.createElement('div');
     div.className = 'item-line';
-    div.style = 'display:grid;grid-template-columns:1fr 120px 1fr auto;gap:8px;margin-bottom:6px;align-items:end;';
+    div.style = 'display:grid;grid-template-columns:1.5fr 100px 1fr auto;gap:8px;margin-bottom:8px;align-items:end;';
     const idx = itemLineCount++;
     div.innerHTML = `
-        <label style="display:flex;flex-direction:column;gap:3px;font-size:.83rem;">Item ID
-            <input name="TransferItems[${idx}].ItemId" type="text" placeholder="Item GUID" required />
-        </label>
-        <label style="display:flex;flex-direction:column;gap:3px;font-size:.83rem;">Qty
-            <input name="TransferItems[${idx}].RequestedQuantity" type="number" min="1" required />
-        </label>
-        <label style="display:flex;flex-direction:column;gap:3px;font-size:.83rem;">Notes
-            <input name="TransferItems[${idx}].Notes" type="text" maxlength="500" />
-        </label>
-        <button type="button" onclick="removeLine(this)" style="align-self:end;padding:7px 10px;" title="Remove">✕</button>`;
+        <div>
+            <label style="font-size:.83rem;margin-bottom:3px;display:block;">Select Item *</label>
+            <div class="smart-lookup-wrap" data-url="?handler=SearchItems" data-placeholder="Type item name or barcode...">
+                <input type="hidden" name="TransferItems[${idx}].ItemId" required />
+            </div>
+        </div>
+        <div>
+            <label style="font-size:.83rem;margin-bottom:3px;display:block;">Qty *</label>
+            <input name="TransferItems[${idx}].RequestedQuantity" type="number" min="1" value="1" required style="width:100%;box-sizing:border-box;" />
+        </div>
+        <div>
+            <label style="font-size:.83rem;margin-bottom:3px;display:block;">Notes</label>
+            <input name="TransferItems[${idx}].Notes" type="text" maxlength="500" placeholder="Optional line notes" style="width:100%;box-sizing:border-box;" />
+        </div>
+        <button type="button" onclick="removeLine(this)" style="padding:7px 10px;height:38px;" class="button-command danger" title="Remove">✕</button>`;
     container.appendChild(div);
+    const wrap = div.querySelector('.smart-lookup-wrap');
+    if (wrap && window.SmartLookup) {
+        window.SmartLookup.attach(wrap);
+    }
 }
 
 function removeLine(btn) {

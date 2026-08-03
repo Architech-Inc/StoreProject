@@ -46,26 +46,18 @@
             </article>
 
             <article class="card">
-                <h2>Bundle Rule</h2>
+                <h2>Bundle &amp; BOGO Rule</h2>
                 <form method="post" asp-page-handler="Bundle">
-                    <label>Name</label>
-                    <input asp-for="BundleName" required />
-                    <label>Trigger Item</label>
-                    <select asp-for="BundleTriggerItemId" required>
-                        <option value="">Select item</option>
-                        @foreach (var item in Model.Items)
-                        {
-                            <option value="@item.ItemId">@item.Name</option>
-                        }
-                    </select>
-                    <label>Reward Item</label>
-                    <select asp-for="BundleRewardItemId" required>
-                        <option value="">Select item</option>
-                        @foreach (var item in Model.Items)
-                        {
-                            <option value="@item.ItemId">@item.Name</option>
-                        }
-                    </select>
+                    <label>Rule Name *</label>
+                    <input asp-for="BundleName" required placeholder="e.g. Buy 2 Shirts Get 1 Tie 50% Off" />
+                    <label>Trigger Item *</label>
+                    <div class="smart-lookup-wrap" data-url="?handler=SearchItems" data-placeholder="Search trigger item...">
+                        <input type="hidden" asp-for="BundleTriggerItemId" required />
+                    </div>
+                    <label>Reward Item *</label>
+                    <div class="smart-lookup-wrap" data-url="?handler=SearchItems" data-placeholder="Search reward item...">
+                        <input type="hidden" asp-for="BundleRewardItemId" required />
+                    </div>
                     <label>Trigger Qty</label>
                     <input asp-for="BundleTriggerQty" type="number" min="1" required />
                     <label>Reward Qty</label>
@@ -79,22 +71,18 @@
             <article class="card">
                 <h2>Segment Pricing</h2>
                 <form method="post" asp-page-handler="Segment">
-                    <label>Item</label>
-                    <select asp-for="SegmentItemId" required>
-                        <option value="">Select item</option>
-                        @foreach (var item in Model.Items)
-                        {
-                            <option value="@item.ItemId">@item.Name</option>
-                        }
-                    </select>
+                    <label>Select Item *</label>
+                    <div class="smart-lookup-wrap" data-url="?handler=SearchItems" data-placeholder="Search item...">
+                        <input type="hidden" asp-for="SegmentItemId" required />
+                    </div>
                     <label>Segment</label>
                     <select asp-for="Segment">
                         <option value="Standard">Standard</option>
                         <option value="Wholesale">Wholesale</option>
                         <option value="Vip">Vip</option>
                     </select>
-                    <label>Override Price</label>
-                    <input asp-for="SegmentPrice" type="number" step="0.01" min="0" required />
+                    <label>Override Price *</label>
+                    <input asp-for="SegmentPrice" type="number" step="0.01" min="0" required placeholder="0.00" />
                     <button type="submit">Save Segment Price</button>
                 </form>
             </article>
@@ -103,21 +91,26 @@
 
     <section class="card" id="preview">
         <h2>Pricing Preview</h2>
-        <form method="post" asp-page-handler="Preview" class="inline-form">
-            <select asp-for="PreviewItemId" required>
-                <option value="">Select item</option>
-                @foreach (var item in Model.Items)
-                {
-                    <option value="@item.ItemId">@item.Name</option>
-                }
-            </select>
-            <input asp-for="PreviewQty" type="number" min="1" required />
-            <select asp-for="PreviewSegment">
-                <option value="Standard">Standard</option>
-                <option value="Wholesale">Wholesale</option>
-                <option value="Vip">Vip</option>
-            </select>
-            <button type="submit">Preview Total</button>
+        <form method="post" asp-page-handler="Preview" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+            <div style="flex:2;min-width:220px;">
+                <label style="font-size:0.83rem;margin-bottom:4px;display:block;">Select Item</label>
+                <div class="smart-lookup-wrap" data-url="?handler=SearchItems" data-placeholder="Search item to test...">
+                    <input type="hidden" asp-for="PreviewItemId" required />
+                </div>
+            </div>
+            <div style="flex:1;min-width:100px;">
+                <label style="font-size:0.83rem;margin-bottom:4px;display:block;">Qty</label>
+                <input asp-for="PreviewQty" type="number" min="1" required style="width:100%;box-sizing:border-box;" />
+            </div>
+            <div style="flex:1;min-width:120px;">
+                <label style="font-size:0.83rem;margin-bottom:4px;display:block;">Segment</label>
+                <select asp-for="PreviewSegment" style="width:100%;box-sizing:border-box;">
+                    <option value="Standard">Standard</option>
+                    <option value="Wholesale">Wholesale</option>
+                    <option value="Vip">Vip</option>
+                </select>
+            </div>
+            <button type="submit" class="button-primary">Preview Total</button>
         </form>
 
         @if (Model.Preview is not null)

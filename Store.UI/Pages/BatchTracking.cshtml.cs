@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Inventory;
 using Store.Models.Interfaces.Services;
 using StoreUI.Services;
@@ -8,6 +9,7 @@ namespace StoreUI.Pages;
 public class BatchTrackingModel : SecurePageModel
 {
     private readonly IBatchService _batchService;
+    private readonly IItemService _itemService;
     private readonly IApiClientService _apiClient;
 
     public List<BatchDto> Batches { get; private set; } = new();
@@ -36,10 +38,33 @@ public class BatchTrackingModel : SecurePageModel
 
     [TempData] public string? StatusMessage { get; set; }
 
-    public BatchTrackingModel(IBatchService batchService, IApiClientService apiClient)
+    public BatchTrackingModel(
+        IBatchService batchService,
+        IItemService itemService,
+        IApiClientService apiClient)
     {
         _batchService = batchService;
+        _itemService = itemService;
         _apiClient = apiClient;
+    }
+
+    public async Task<IActionResult> OnGetSearchItemsAsync([FromQuery] string? q, CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return Unauthorized();
+
+        _apiClient.SetToken(token);
+        var result = await _itemService.GetAllAsync(new PagedRequest { Page = 1, PageSize = 15, SearchTerm = q?.Trim() }, ct);
+        var items = result.Items.Select(i => new
+        {
+            id = i.ItemId.ToString(),
+            title = i.Name,
+            sub = $"Barcode: {(string.IsNullOrEmpty(i.Barcode) ? "N/A" : i.Barcode)} | Cost: ${i.CostPrice:N2}",
+            badge = i.CategoryName ?? "Item",
+            cost = i.CostPrice
+        });
+
+        return new JsonResult(items);
     }
 
     public async Task<IActionResult> OnGetAsync([FromQuery] string? expiryStatus = null)

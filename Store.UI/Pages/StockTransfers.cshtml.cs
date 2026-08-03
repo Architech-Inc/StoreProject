@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using Store.Models.DTOs.Common;
+using Store.Models.DTOs.Operations;
 using Store.Models.DTOs.Transfers;
 using Store.Models.Interfaces.Services;
 using StoreUI.Services;
@@ -8,6 +10,7 @@ namespace StoreUI.Pages;
 public class StockTransfersModel : SecurePageModel
 {
     private readonly IStockTransferService _transferService;
+    private readonly IItemService _itemService;
     private readonly IApiClientService _apiClient;
 
     public List<StockTransferDto> Transfers { get; private set; } = new();
@@ -41,9 +44,13 @@ public class StockTransfersModel : SecurePageModel
 
     [TempData] public string? StatusMessage { get; set; }
 
-    public StockTransfersModel(IStockTransferService transferService, IApiClientService apiClient)
+    public StockTransfersModel(
+        IStockTransferService transferService,
+        IItemService itemService,
+        IApiClientService apiClient)
     {
         _transferService = transferService;
+        _itemService = itemService;
         _apiClient = apiClient;
     }
 
@@ -56,6 +63,49 @@ public class StockTransfersModel : SecurePageModel
         FilterStatus = status;
         Transfers = await _transferService.GetAllAsync(status: status);
         return Page();
+    }
+
+    public async Task<IActionResult> OnGetSearchItemsAsync([FromQuery] string? q, CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return Unauthorized();
+
+        _apiClient.SetToken(token);
+        var result = await _itemService.GetAllAsync(new PagedRequest { Page = 1, PageSize = 15, SearchTerm = q?.Trim() }, ct);
+        var items = result.Items.Select(i => new
+        {
+            id = i.ItemId.ToString(),
+            title = i.Name,
+            sub = $"Barcode: {(string.IsNullOrEmpty(i.Barcode) ? "N/A" : i.Barcode)} | Unit: {(string.IsNullOrEmpty(i.UnitAbbreviation) ? "Unit" : i.UnitAbbreviation)}",
+            badge = i.CategoryName ?? "Item"
+        });
+
+        return new JsonResult(items);
+    }
+
+    public async Task<IActionResult> OnGetSearchBranchesAsync([FromQuery] string? q, CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return Unauthorized();
+
+        _apiClient.SetToken(token);
+        var branches = await _apiClient.GetAsync<List<BranchDto>>("api/admin/branches", ct) ?? new();
+        var search = q?.Trim() ?? string.Empty;
+        var filtered = branches
+            .Where(b => string.IsNullOrEmpty(search) ||
+                        b.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                        b.Code.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                        b.BranchId.ToString() == search)
+            .Take(15)
+            .Select(b => new
+            {
+                id = b.BranchId.ToString(),
+                title = b.Name,
+                sub = $"Code: {b.Code} | #{b.BranchId}",
+                badge = b.IsActive ? "Active" : "Inactive"
+            });
+
+        return new JsonResult(filtered);
     }
 
     public async Task<IActionResult> OnPostCreateAsync()
