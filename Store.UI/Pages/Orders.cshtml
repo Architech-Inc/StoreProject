@@ -4,8 +4,10 @@
 @using StoreUI.Pages
 @using System.Text.Json
 @{
-    ViewData["Title"] = "Purchase Orders";
-    ViewData["PageDescription"] = "Create, receive, and track purchase orders for inventory restocking.";
+    // Legacy simple order flow — full procurement workflow lives at /PurchaseOrders
+    ViewData["Title"] = "Stock Orders";
+    ViewData["ActivePage"] = "Orders";
+    ViewData["PageDescription"] = "Legacy stock order flow. Prefer Purchase Orders under Operations for full procurement.";
 
     var itemsJson = JsonSerializer.Serialize(Model.Items.Select(i => new
     {

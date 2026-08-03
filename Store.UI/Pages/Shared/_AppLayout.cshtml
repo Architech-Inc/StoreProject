@@ -46,7 +46,6 @@
                 <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Catalog" ? "active" : "")" href="/Catalog">Item Catalog</a>
                 <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Customers" ? "active" : "")" href="/Customers">Customers</a>
                 <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Invoices" ? "active" : "")" href="/Invoices">Invoices</a>
-                <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Orders" ? "active" : "")" href="/Orders">Purchase Orders</a>
                 <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Suppliers" ? "active" : "")" href="/Suppliers">Suppliers</a>
                 <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Loyalty" ? "active" : "")" href="/Loyalty">Loyalty</a>
                 <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Campaigns" ? "active" : "")" href="/Campaigns">Campaigns</a>
@@ -120,6 +119,18 @@
                 </div>
             </header>
             <div class="app-content">
+                @{
+                    // Prefer TempData, fall back to ViewData for pages that set StatusMessage as a property
+                    var toastMsg = TempData["StatusMessage"] as string
+                                   ?? ViewData["StatusMessage"] as string;
+                }
+                @if (!string.IsNullOrWhiteSpace(toastMsg))
+                {
+                    var isError = toastMsg.StartsWith("Error", StringComparison.OrdinalIgnoreCase);
+                    <div hidden
+                         data-toast-message="@toastMsg"
+                         data-toast-type="@(isError ? "error" : "success")"></div>
+                }
                 @RenderBody()
             </div>
         </main>

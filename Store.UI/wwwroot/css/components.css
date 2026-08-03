@@ -101,12 +101,28 @@ tbody tr:hover { background: color-mix(in srgb, var(--ops-brand, var(--brand)) 4
 .pagination a:hover { background: color-mix(in srgb, var(--ops-brand, var(--brand)) 10%, transparent); }
 .pagination .active { background: var(--ops-brand, var(--brand)); color: #fff; border-color: transparent; }
 
-/* ── Modals (Legacy) ────────────────────────── */
-.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; z-index: 200; }
-.modal-overlay[hidden] { display: none; }
+/* ── Modals ─────────────────────────────────── */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 16px; }
+.modal-overlay[hidden] { display: none !important; }
 .modal { background: var(--ops-paper, var(--surface)); border-radius: var(--radius-lg, 12px); padding: 24px; width: min(460px, 92vw); max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
-.modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-.modal-head h3 { margin: 0; }
+.modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 12px; }
+.modal-head h3 { margin: 0; font-size: 1.15rem; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+.modal .form-grid { display: grid; gap: 12px; }
+.modal label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; color: var(--ops-ink, var(--text-primary)); }
+.modal .req { color: var(--ops-danger, #dc2626); }
+.modal .help-text { display: block; margin-top: 4px; font-size: 0.78rem; color: var(--ops-subtle, #64748b); }
+.modal input, .modal select, .modal textarea {
+    width: 100%; font: inherit; padding: 8px 10px; border-radius: var(--radius-sm, 6px);
+    border: 1px solid var(--ops-border, var(--border)); background: var(--ops-paper, var(--surface));
+    color: var(--ops-ink, var(--text-primary));
+}
+.modal input:focus, .modal select:focus, .modal textarea:focus {
+    outline: none; border-color: var(--ops-brand, var(--brand));
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--ops-brand, var(--brand)) 22%, transparent);
+}
+.text-danger { color: var(--ops-danger, #dc2626); }
+.text-success { color: #15803d; }
 
 /* ── Blades (New) ───────────────────────────── */
 .blade-overlay {

@@ -53,7 +53,8 @@ namespace Store.API.Infrastructure.Storage
         {
             if (string.IsNullOrWhiteSpace(relativePath)) return;
 
-            var fullPath = Path.Combine(_basePath, relativePath.Replace("/", Path.DirectorySeparatorChar.ToString()));
+            var fullPath = ResolveSafePath(relativePath);
+            if (fullPath is null) return;
 
             if (File.Exists(fullPath))
             {
@@ -66,6 +67,29 @@ namespace Store.API.Infrastructure.Storage
                     _logger.LogError(ex, "Failed to delete file at {Path}", fullPath);
                 }
             }
+        }
+
+        private string? ResolveSafePath(string relativePath)
+        {
+            var normalized = relativePath.Replace('\\', '/').TrimStart('/');
+            if (normalized.Contains("..", StringComparison.Ordinal) || Path.IsPathRooted(normalized))
+            {
+                _logger.LogWarning("Rejected unsafe relative path: {Path}", relativePath);
+                return null;
+            }
+
+            var combined = Path.GetFullPath(Path.Combine(_basePath, normalized.Replace('/', Path.DirectorySeparatorChar)));
+            var root = Path.GetFullPath(_basePath)
+                .TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+
+            if (!combined.StartsWith(root, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(combined, Path.GetFullPath(_basePath), StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogWarning("Rejected path traversal attempt: {Path}", relativePath);
+                return null;
+            }
+
+            return combined;
         }
 
         public async Task<string> SaveStreamAsync(Stream stream, string fileName, string subfolder)

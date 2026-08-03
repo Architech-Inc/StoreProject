@@ -1,34 +1,81 @@
 (() => {
-    // Modal open/close via data attributes
-    const openTiles = document.querySelectorAll('[data-open-modal]');
-    const closeButtons = document.querySelectorAll('[data-close-modal]');
-    const allModals = document.querySelectorAll('.modalView');
+    // --- Escape HTML for toast messages (XSS-safe) ---
+    const escapeHtml = (text) => String(text ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 
-    const closeAll = () => {
-        allModals.forEach(m => m.classList.remove('show'));
+    // --- Unified modal system (legacy .modalView + .modal-overlay) ---
+    const closeAllModals = () => {
+        document.querySelectorAll('.modalView.show').forEach(m => m.classList.remove('show'));
+        document.querySelectorAll('.modal-overlay:not([hidden])').forEach(m => {
+            // Keep global crop/viewer open state managed separately unless explicitly closed
+            if (m.id === 'globalCropModal' || m.id === 'globalImageViewerModal') return;
+            m.hidden = true;
+        });
     };
 
-    openTiles.forEach(tile => {
-        tile.addEventListener('click', e => {
+    window.openModal = (id) => {
+        if (!id) return;
+        const target = document.getElementById(id);
+        if (!target) return;
+        if (target.classList.contains('modal-overlay')) {
+            target.hidden = false;
+        } else {
+            closeAllModals();
+            target.classList.add('show');
+        }
+    };
+
+    window.closeModal = (id) => {
+        if (!id) {
+            closeAllModals();
+            return;
+        }
+        const target = document.getElementById(id);
+        if (!target) return;
+        if (target.classList.contains('modal-overlay')) {
+            target.hidden = true;
+        } else {
+            target.classList.remove('show');
+        }
+    };
+
+    document.addEventListener('click', (e) => {
+        const openBtn = e.target.closest('[data-open-modal]');
+        if (openBtn) {
             e.preventDefault();
-            const id = tile.getAttribute('data-open-modal');
-            closeAll();
-            if (id) {
-                const target = document.getElementById(id);
-                if (target) target.classList.add('show');
-            }
-        });
+            const id = openBtn.getAttribute('data-open-modal');
+            window.openModal(id);
+            return;
+        }
+
+        const closeBtn = e.target.closest('[data-close-modal]');
+        if (closeBtn) {
+            e.preventDefault();
+            const id = closeBtn.getAttribute('data-close-modal');
+            window.closeModal(id || undefined);
+            return;
+        }
+
+        // Click on overlay background closes modal
+        if (e.target.classList?.contains('modal-overlay') &&
+            e.target.id !== 'globalCropModal' &&
+            e.target.id !== 'globalImageViewerModal') {
+            e.target.hidden = true;
+        }
     });
 
-    closeButtons.forEach(btn => {
-        btn.addEventListener('click', closeAll);
-    });
-
-    // Click outside modal content closes it
-    allModals.forEach(modal => {
-        modal.addEventListener('click', e => {
-            if (e.target === modal) closeAll();
-        });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeAllModals();
+            // Close any open blades
+            document.querySelectorAll('.blade.open').forEach(blade => {
+                window.closeBlade?.(blade.id);
+            });
+        }
     });
 
     // Stack panel toggle via headerMenu button
@@ -62,15 +109,17 @@
         const container = document.getElementById('toast-container');
         if (!container) return;
 
+        const safeType = type === 'error' ? 'error' : 'success';
         const toast = document.createElement('div');
-        toast.className = `toast toast-${type}`;
-        
-        const icon = type === 'success' ? '✓' : '!';
-        
+        toast.className = `toast toast-${safeType}`;
+        toast.setAttribute('role', 'status');
+
+        const icon = safeType === 'success' ? '✓' : '!';
+
         toast.innerHTML = `
-            <div class="toast-icon">${icon}</div>
-            <div class="toast-message">${message}</div>
-            <button class="toast-close" aria-label="Close">&times;</button>
+            <div class="toast-icon" aria-hidden="true">${icon}</div>
+            <div class="toast-message">${escapeHtml(message)}</div>
+            <button type="button" class="toast-close" aria-label="Close">&times;</button>
         `;
 
         container.appendChild(toast);
@@ -84,9 +133,18 @@
             setTimeout(() => toast.remove(), 300);
         };
 
-        toast.querySelector('.toast-close').addEventListener('click', dismiss);
+        toast.querySelector('.toast-close')?.addEventListener('click', dismiss);
         setTimeout(dismiss, 5000);
     };
+
+    // Auto-surface server TempData / status banners as toasts
+    document.querySelectorAll('[data-toast-message]').forEach(el => {
+        const msg = el.getAttribute('data-toast-message');
+        if (!msg) return;
+        const type = el.getAttribute('data-toast-type') === 'error' ? 'error' : 'success';
+        window.showToast(type, msg);
+        el.remove();
+    });
 
     // --- Blades ---
     window.openBlade = (id) => {
@@ -97,6 +155,8 @@
             const overlay = document.getElementById(overlayId);
             if (overlay) overlay.classList.add('open');
         }
+        // Also support overlay linked via data-blade-id
+        document.querySelectorAll(`.blade-overlay[data-blade-id="${id}"]`).forEach(o => o.classList.add('open'));
         blade.classList.add('open');
     };
 
@@ -108,22 +168,31 @@
             const overlay = document.getElementById(overlayId);
             if (overlay) overlay.classList.remove('open');
         }
+        document.querySelectorAll(`.blade-overlay[data-blade-id="${id}"]`).forEach(o => o.classList.remove('open'));
         blade.classList.remove('open');
     };
 
-    document.querySelectorAll('[data-close-blade]').forEach(btn => {
-        btn.addEventListener('click', (e) => {
+    document.addEventListener('click', (e) => {
+        const openBladeBtn = e.target.closest('[data-open-blade]');
+        if (openBladeBtn) {
             e.preventDefault();
-            const id = btn.getAttribute('data-close-blade');
-            window.closeBlade(id);
-        });
-    });
+            window.openBlade(openBladeBtn.getAttribute('data-open-blade'));
+            return;
+        }
 
-    document.querySelectorAll('.blade-overlay').forEach(overlay => {
-        overlay.addEventListener('click', () => {
-            const bladeId = overlay.getAttribute('data-blade-id');
+        const closeBladeBtn = e.target.closest('[data-close-blade]');
+        if (closeBladeBtn) {
+            e.preventDefault();
+            window.closeBlade(closeBladeBtn.getAttribute('data-close-blade'));
+            return;
+        }
+
+        const overlay = e.target.closest('.blade-overlay');
+        if (overlay && e.target === overlay) {
+            const bladeId = overlay.getAttribute('data-blade-id')
+                || document.querySelector(`.blade[data-overlay-id="${overlay.id}"]`)?.id;
             if (bladeId) window.closeBlade(bladeId);
-        });
+        }
     });
 
     // App Shell Mobile Menu Toggle

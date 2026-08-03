@@ -5,174 +5,175 @@
     Layout = "_AppLayout";
     ViewData["Title"] = "Cash Variance";
     ViewData["ActivePage"] = "CashVariance";
+    ViewData["PageDescription"] = "Record and review cash count variances by shift.";
 }
 
+@section Styles {
+    <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
+}
 
-
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h4 class="mb-0">Cash Variance</h4>
-    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#recordModal">
-        + Record Variance
-    </button>
-</div>
-
-<!-- Filter bar -->
-<form method="get" class="row g-2 mb-3">
-    <div class="col-auto">
-        <select name="status" class="form-select form-select-sm">
-            <option value="">All Statuses</option>
-            @foreach (var s in Enum.GetValues<CashVarianceStatus>())
-            {
-                <option value="@s" selected="@(Model.FilterStatus == s.ToString())">@s</option>
-            }
-        </select>
+<div class="ops-page">
+    <div class="filter-bar" style="justify-content: space-between;">
+        <form method="get" class="filter-row">
+            <div class="filter-group">
+                <label for="statusFilter">Status</label>
+                <select id="statusFilter" name="status" onchange="this.form.submit()">
+                    <option value="">All Statuses</option>
+                    @foreach (var s in Enum.GetValues<CashVarianceStatus>())
+                    {
+                        <option value="@s" selected="@(Model.FilterStatus == s.ToString())">@s</option>
+                    }
+                </select>
+            </div>
+        </form>
+        <button type="button" class="button-primary" data-open-modal="recordVarianceModal">+ Record Variance</button>
     </div>
-    <div class="col-auto">
-        <button class="btn btn-secondary btn-sm" type="submit">Filter</button>
-    </div>
-</form>
 
-<!-- Variance Table -->
-<div class="table-responsive">
-    <table class="table table-hover table-sm align-middle">
-        <thead class="table-light">
-            <tr>
-                <th>#</th>
-                <th>Shift ID</th>
-                <th>Expected</th>
-                <th>Actual</th>
-                <th>Variance</th>
-                <th>Reason</th>
-                <th>Status</th>
-                <th>Recorded By</th>
-                <th>Reviewed By</th>
-                <th>Created</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var v in Model.Variances)
-            {
-                var variance = v.ActualAmount - v.ExpectedAmount;
-                <tr>
-                    <td>@v.CashVarianceRecordId</td>
-                    <td class="text-muted" style="font-size:.75rem;">@v.CashierShiftId.ToString()[..8]…</td>
-                    <td>@v.ExpectedAmount.ToString("N2")</td>
-                    <td>@v.ActualAmount.ToString("N2")</td>
-                    <td class="@(variance < 0 ? "text-danger" : "text-success") fw-semibold">
-                        @(variance >= 0 ? "+" : "")@variance.ToString("N2")
-                    </td>
-                    <td>@(v.ReasonCode ?? "—")</td>
-                    <td>
-                        <span class="badge @(v.Status switch {
-                            "Pending" => "bg-warning text-dark",
-                            "Reviewed" => "bg-success",
-                            "Escalated" => "bg-danger",
-                            _ => "bg-secondary" })">
-                            @v.Status
-                        </span>
-                    </td>
-                    <td>@v.RecordedByUser</td>
-                    <td>@(v.ReviewedByUser ?? "—")</td>
-                    <td>@v.DateCreated.ToString("dd MMM yyyy")</td>
-                    <td>
-                        @if (v.Status == "Pending")
+    <div class="card" style="padding:0; overflow:hidden;">
+        @if (!Model.Variances.Any())
+        {
+            <div class="empty-state">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <h4>No Variance Records Found</h4>
+                <p>There are no records matching your criteria.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-wrap" style="margin:0; border:none; border-radius:0;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Shift ID</th>
+                            <th>Expected</th>
+                            <th>Actual</th>
+                            <th>Variance</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                            <th>Recorded By</th>
+                            <th>Reviewed By</th>
+                            <th>Created</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var v in Model.Variances)
                         {
-                            <button class="btn btn-outline-primary btn-sm"
-                                    data-bs-toggle="modal" data-bs-target="#reviewModal"
-                                    data-variance-id="@v.CashVarianceRecordId"
-                                    data-notes="@v.Notes">
-                                Review
-                            </button>
+                            var variance = v.ActualAmount - v.ExpectedAmount;
+                            var badgeClass = v.Status switch
+                            {
+                                "Pending" => "badge-yellow",
+                                "Reviewed" => "badge-green",
+                                "Escalated" => "badge-red",
+                                _ => "badge-gray"
+                            };
+                            <tr>
+                                <td>@v.CashVarianceRecordId</td>
+                                <td><code title="@v.CashierShiftId">@v.CashierShiftId.ToString()[..8]…</code></td>
+                                <td>@v.ExpectedAmount.ToString("N2")</td>
+                                <td>@v.ActualAmount.ToString("N2")</td>
+                                <td class="@(variance < 0 ? "text-danger" : "text-success")">
+                                    @(variance >= 0 ? "+" : "")@variance.ToString("N2")
+                                </td>
+                                <td>@(v.ReasonCode ?? "—")</td>
+                                <td><span class="badge @badgeClass">@v.Status</span></td>
+                                <td>@v.RecordedByUser</td>
+                                <td>@(v.ReviewedByUser ?? "—")</td>
+                                <td>@v.DateCreated.ToString("dd MMM yyyy")</td>
+                                <td>
+                                    @if (v.Status == "Pending")
+                                    {
+                                        <button type="button"
+                                                class="button-command"
+                                                data-open-modal="reviewVarianceModal"
+                                                data-variance-id="@v.CashVarianceRecordId">
+                                            Review
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
                         }
-                    </td>
-                </tr>
-            }
-            @if (!Model.Variances.Any())
-            {
-                <tr><td colspan="11" class="text-center text-muted py-3"><div class="empty-state"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg><h4>No Variance Records Found</h4><p>There are no records matching your criteria.</p></div></td></tr>
-            }
-        </tbody>
-    </table>
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
 </div>
 
-<!-- ===== Record Variance Modal ===== -->
-<div class="modal fade" id="recordModal" tabindex="-1" aria-labelledby="recordModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+<!-- Record Variance Modal -->
+<div class="modal-overlay" id="recordVarianceModal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="recordVarianceTitle" style="width:min(520px,92vw);">
+        <div class="modal-head">
+            <h3 id="recordVarianceTitle">Record Cash Variance</h3>
+            <button type="button" class="btn-close" data-close-modal="recordVarianceModal" aria-label="Close">×</button>
+        </div>
         <form method="post" asp-page-handler="Record">
             @Html.AntiForgeryToken()
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="recordModalLabel">Record Cash Variance</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="form-grid" style="grid-template-columns:1fr;">
+                <div>
+                    <label for="RecordShiftId">Cashier Shift ID <span class="req">*</span></label>
+                    <input id="RecordShiftId" type="text" name="RecordShiftId" required maxlength="36"
+                           pattern="[0-9a-fA-F\-]{36}" placeholder="Shift GUID" autocomplete="off" />
                 </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Cashier Shift ID <span class="text-danger">*</span></label>
-                        <input type="text" name="RecordShiftId" class="form-control form-control-sm"
-                               placeholder="Shift GUID" required />
+                <div class="form-grid" style="grid-template-columns:1fr 1fr; gap:12px;">
+                    <div>
+                        <label for="RecordExpected">Expected Amount</label>
+                        <input id="RecordExpected" type="number" name="RecordExpected" step="0.01" value="0.00" required />
                     </div>
-                    <div class="row g-2 mb-3">
-                        <div class="col">
-                            <label class="form-label">Expected Amount</label>
-                            <input type="number" name="RecordExpected" class="form-control form-control-sm"
-                                   step="0.01" value="0.00" required />
-                        </div>
-                        <div class="col">
-                            <label class="form-label">Actual Amount</label>
-                            <input type="number" name="RecordActual" class="form-control form-control-sm"
-                                   step="0.01" value="0.00" required />
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Reason Code</label>
-                        <input type="text" name="RecordReasonCode" class="form-control form-control-sm"
-                               placeholder="e.g. COUNTING_ERROR" maxlength="100" />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Notes</label>
-                        <textarea name="RecordNotes" class="form-control form-control-sm" rows="2" maxlength="2000"></textarea>
+                    <div>
+                        <label for="RecordActual">Actual Amount</label>
+                        <input id="RecordActual" type="number" name="RecordActual" step="0.01" value="0.00" required />
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Record Variance</button>
+                <div>
+                    <label for="RecordReasonCode">Reason Code</label>
+                    <input id="RecordReasonCode" type="text" name="RecordReasonCode" maxlength="100"
+                           placeholder="e.g. COUNTING_ERROR" />
                 </div>
+                <div>
+                    <label for="RecordNotes">Notes</label>
+                    <textarea id="RecordNotes" name="RecordNotes" rows="2" maxlength="2000"></textarea>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="button-command" data-close-modal="recordVarianceModal">Cancel</button>
+                <button type="submit" class="button-primary">Record Variance</button>
             </div>
         </form>
     </div>
 </div>
 
-<!-- ===== Review Modal ===== -->
-<div class="modal fade" id="reviewModal" tabindex="-1" aria-labelledby="reviewModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+<!-- Review Variance Modal -->
+<div class="modal-overlay" id="reviewVarianceModal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="reviewVarianceTitle" style="width:min(480px,92vw);">
+        <div class="modal-head">
+            <h3 id="reviewVarianceTitle">Review Variance</h3>
+            <button type="button" class="btn-close" data-close-modal="reviewVarianceModal" aria-label="Close">×</button>
+        </div>
         <form method="post" asp-page-handler="Review">
             @Html.AntiForgeryToken()
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="reviewModalLabel">Review Variance</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <input type="hidden" name="ReviewVarianceId" id="reviewVarianceId" />
+            <div class="form-grid" style="grid-template-columns:1fr;">
+                <div>
+                    <label for="ReviewStatus">Decision <span class="req">*</span></label>
+                    <select id="ReviewStatus" name="ReviewStatus" required>
+                        @foreach (var s in Model.ReviewableStatuses)
+                        {
+                            <option value="@((int)s)">@s</option>
+                        }
+                    </select>
                 </div>
-                <div class="modal-body">
-                    <input type="hidden" name="ReviewVarianceId" id="reviewVarianceId" />
-                    <div class="mb-3">
-                        <label class="form-label">Decision <span class="text-danger">*</span></label>
-                        <select name="ReviewStatus" class="form-select form-select-sm" required>
-                            @foreach (var s in Model.ReviewableStatuses)
-                            {
-                                <option value="@((int)s)">@s</option>
-                            }
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Review Notes</label>
-                        <textarea name="ReviewNotes" class="form-control form-control-sm" rows="3" maxlength="2000"></textarea>
-                    </div>
+                <div>
+                    <label for="ReviewNotes">Review Notes</label>
+                    <textarea id="ReviewNotes" name="ReviewNotes" rows="3" maxlength="2000"></textarea>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Submit Review</button>
-                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="button-command" data-close-modal="reviewVarianceModal">Cancel</button>
+                <button type="submit" class="button-primary">Submit Review</button>
             </div>
         </form>
     </div>
@@ -180,11 +181,14 @@
 
 @section Scripts {
 <script>
-const reviewModal = document.getElementById('reviewModal');
-reviewModal.addEventListener('show.bs.modal', function (e) {
-    const btn = e.relatedTarget;
-    document.getElementById('reviewVarianceId').value = btn.getAttribute('data-variance-id');
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('[data-open-modal="reviewVarianceModal"]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-variance-id') || '';
+            const input = document.getElementById('reviewVarianceId');
+            if (input) input.value = id;
+        });
+    });
 });
 </script>
 }
-
