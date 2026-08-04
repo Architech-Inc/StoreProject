@@ -28,6 +28,18 @@ public class ApiItemService : IItemService
         {
             qs += $"&searchTerm={Uri.EscapeDataString(request.SearchTerm)}";
         }
+        if (request.CategoryId.HasValue)
+        {
+            qs += $"&categoryId={request.CategoryId.Value}";
+        }
+        if (!string.IsNullOrWhiteSpace(request.StockStatus))
+        {
+            qs += $"&stockStatus={Uri.EscapeDataString(request.StockStatus)}";
+        }
+        if (!string.IsNullOrWhiteSpace(request.SortBy))
+        {
+            qs += $"&sortBy={Uri.EscapeDataString(request.SortBy)}";
+        }
         var result = await _client.GetAsync<PagedResult<ItemDto>>($"/api/items{qs}", ct);
         return result ?? new PagedResult<ItemDto>();
     }

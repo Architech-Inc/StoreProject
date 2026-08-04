@@ -89,7 +89,7 @@ public class LoyaltyModel : SecurePageModel
         var ok = await _apiClient.PostAsync("api/loyalty/earn",
             new EarnPointsRequest { CustomerId = EarnCustomerId, Points = EarnPoints, Note = EarnNote }, ct);
         StatusMessage = ok ? $"Earned {EarnPoints} points." : "Error: Could not earn points.";
-        return RedirectToPage(new { customerId = EarnCustomerId });
+        return RedirectToPage("/Loyalty", new { customerId = EarnCustomerId });
     }
 
     public async Task<IActionResult> OnPostRedeemAsync(CancellationToken ct = default)
@@ -100,7 +100,7 @@ public class LoyaltyModel : SecurePageModel
         var ok = await _apiClient.PostAsync("api/loyalty/redeem",
             new RedeemPointsRequest { CustomerId = RedeemCustomerId, Points = RedeemPoints, Note = RedeemNote }, ct);
         StatusMessage = ok ? $"Redeemed {RedeemPoints} points." : "Error: Could not redeem points (check balance).";
-        return RedirectToPage(new { customerId = RedeemCustomerId });
+        return RedirectToPage("/Loyalty", new { customerId = RedeemCustomerId });
     }
 
     public async Task<IActionResult> OnPostAdjustAsync(CancellationToken ct = default)
@@ -111,6 +111,6 @@ public class LoyaltyModel : SecurePageModel
         var ok = await _apiClient.PostAsync("api/loyalty/adjust",
             new AdjustPointsRequest { CustomerId = AdjustCustomerId, Points = AdjustPoints, Note = AdjustNote }, ct);
         StatusMessage = ok ? "Points adjusted." : "Error: Adjustment failed.";
-        return RedirectToPage(new { customerId = AdjustCustomerId });
+        return RedirectToPage("/Loyalty", new { customerId = AdjustCustomerId });
     }
 }

@@ -28,7 +28,7 @@ public class LoginModel : PageModel
     {
         var token = HttpContext.Session.GetString("access_token");
         if (!string.IsNullOrEmpty(token))
-            return RedirectToPage("Dashboard");
+            return RedirectToPage("/Dashboard");
 
         return Page();
     }
@@ -57,6 +57,6 @@ public class LoginModel : PageModel
             HttpContext.Session.SetString("refresh_token", response.RefreshToken);
 
         _logger.LogInformation("User {Username} logged in successfully", Username);
-        return RedirectToPage("Dashboard");
+        return RedirectToPage("/Dashboard");
     }
 }

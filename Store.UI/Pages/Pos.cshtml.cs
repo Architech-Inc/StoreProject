@@ -43,7 +43,7 @@ public class PosModel : PageModel
         var token = HttpContext.Session.GetString("access_token");
         if (string.IsNullOrWhiteSpace(token))
         {
-            return RedirectToPage("Login");
+            return RedirectToPage("/Login");
         }
 
         _apiClient.SetToken(token);
@@ -145,7 +145,7 @@ public class PosModel : PageModel
     {
         HttpContext.Session.Remove("access_token");
         HttpContext.Session.Remove("refresh_token");
-        return RedirectToPage("Login");
+        return RedirectToPage("/Login");
     }
 
     public sealed class PosCheckoutRequest

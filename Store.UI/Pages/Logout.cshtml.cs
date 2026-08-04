@@ -9,13 +9,13 @@ public class LogoutModel : PageModel
     {
         HttpContext.Session.Remove("access_token");
         HttpContext.Session.Remove("refresh_token");
-        return RedirectToPage("Login");
+        return RedirectToPage("/Login");
     }
 
     public IActionResult OnPost()
     {
         HttpContext.Session.Remove("access_token");
         HttpContext.Session.Remove("refresh_token");
-        return RedirectToPage("Login");
+        return RedirectToPage("/Login");
     }
 }

@@ -86,7 +86,7 @@ public class CashReportsModel : SecurePageModel
         }
 
         await operation();
-        return RedirectToPage(new { ReportDateUtc = ReportDateUtc.ToString("yyyy-MM-dd") });
+        return RedirectToPage("/CashReports", new { ReportDateUtc = ReportDateUtc.ToString("yyyy-MM-dd") });
     }
 
     private async Task LoadAsync(CancellationToken ct)

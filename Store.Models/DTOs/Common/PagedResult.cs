@@ -34,4 +34,6 @@ public class PagedRequest
     public string? SortBy { get; set; }
     public bool SortDescending { get; set; }
     public bool IncludeInactive { get; set; }
+    public int? CategoryId { get; set; }
+    public string? StockStatus { get; set; } // "all" | "low_stock" | "out_of_stock" | "in_stock"
 }

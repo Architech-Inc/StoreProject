@@ -91,7 +91,7 @@ public class LookupModel : SecurePageModel
         }
         catch (Exception ex) { StatusMessage = $"Error: {ex.Message}"; }
 
-        return RedirectToPage(new { tab = "categories" });
+        return RedirectToPage("/Lookup", new { tab = "categories" });
     }
 
     public async Task<IActionResult> OnPostDeleteCategoryAsync(int id, CancellationToken ct = default)
@@ -104,7 +104,7 @@ public class LookupModel : SecurePageModel
             StatusMessage = ok ? "Category deleted." : "Error: Could not delete category.";
         }
         catch (Exception ex) { StatusMessage = $"Error: {ex.Message}"; }
-        return RedirectToPage(new { tab = "categories" });
+        return RedirectToPage("/Lookup", new { tab = "categories" });
     }
 
     // ── Units ────────────────────────────────────────────────────
@@ -122,7 +122,7 @@ public class LookupModel : SecurePageModel
             StatusMessage = id == 0 ? $"Unit '{name}' created." : $"Unit '{name}' updated.";
         }
         catch (Exception ex) { StatusMessage = $"Error: {ex.Message}"; }
-        return RedirectToPage(new { tab = "units" });
+        return RedirectToPage("/Lookup", new { tab = "units" });
     }
 
     public async Task<IActionResult> OnPostDeleteUnitAsync(int id, CancellationToken ct = default)
@@ -135,7 +135,7 @@ public class LookupModel : SecurePageModel
             StatusMessage = ok ? "Unit deleted." : "Error: Could not delete unit.";
         }
         catch (Exception ex) { StatusMessage = $"Error: {ex.Message}"; }
-        return RedirectToPage(new { tab = "units" });
+        return RedirectToPage("/Lookup", new { tab = "units" });
     }
 
     // ── Departments ──────────────────────────────────────────────
@@ -153,7 +153,7 @@ public class LookupModel : SecurePageModel
             StatusMessage = id == 0 ? $"Department '{name}' created." : $"Department '{name}' updated.";
         }
         catch (Exception ex) { StatusMessage = $"Error: {ex.Message}"; }
-        return RedirectToPage(new { tab = "departments" });
+        return RedirectToPage("/Lookup", new { tab = "departments" });
     }
 
     public async Task<IActionResult> OnPostDeleteDepartmentAsync(int id, CancellationToken ct = default)
@@ -166,6 +166,6 @@ public class LookupModel : SecurePageModel
             StatusMessage = ok ? "Department deleted." : "Error: Could not delete department.";
         }
         catch (Exception ex) { StatusMessage = $"Error: {ex.Message}"; }
-        return RedirectToPage(new { tab = "departments" });
+        return RedirectToPage("/Lookup", new { tab = "departments" });
     }
 }

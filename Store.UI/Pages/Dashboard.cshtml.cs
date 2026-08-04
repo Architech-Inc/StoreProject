@@ -112,6 +112,6 @@ public class DashboardModel : SecurePageModel
     {
         HttpContext.Session.Remove("access_token");
         HttpContext.Session.Remove("refresh_token");
-        return RedirectToPage("Login");
+        return RedirectToPage("/Login");
     }
 }

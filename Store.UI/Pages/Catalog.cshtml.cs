@@ -22,6 +22,20 @@ public class CatalogModel : SecurePageModel
     public int PageSize { get; private set; } = 25;
     public int TotalPages => (int)Math.Ceiling((double)TotalItems / PageSize);
 
+    // KPI Metrics
+    public int TotalSkus { get; private set; }
+    public int LowStockCount { get; private set; }
+    public int OutOfStockCount { get; private set; }
+    public decimal TotalInventoryCostValue { get; private set; }
+    public decimal TotalInventoryRetailValue { get; private set; }
+
+    // Search and Filter parameters
+    [BindProperty(SupportsGet = true)] public string? Search { get; set; }
+    [BindProperty(SupportsGet = true)] public int? CategoryId { get; set; }
+    [BindProperty(SupportsGet = true)] public string? StockStatus { get; set; } = "all";
+    [BindProperty(SupportsGet = true)] public string? SortBy { get; set; } = "name";
+    [BindProperty(SupportsGet = true)] public string ViewMode { get; set; } = "table";
+
     [BindProperty] public Guid? EditItemId { get; set; }
     [BindProperty] public string ItemName { get; set; } = string.Empty;
     [BindProperty] public string? ItemDescription { get; set; }
@@ -32,6 +46,7 @@ public class CatalogModel : SecurePageModel
     [BindProperty] public string? ItemBarcode { get; set; }
     [BindProperty] public int? ItemCategoryId { get; set; }
     [BindProperty] public int? ItemUnitId { get; set; }
+    [BindProperty] public ItemType ItemType { get; set; } = ItemType.Product;
     [BindProperty] public IFormFile? ImageUpload { get; set; }
 
     [BindProperty] public int? CropX { get; set; }
@@ -56,7 +71,19 @@ public class CatalogModel : SecurePageModel
         _apiClient.SetToken(token);
         PageNumber = Math.Max(1, page);
 
-        var itemsTask = _itemService.GetAllAsync(new PagedRequest { Page = PageNumber, PageSize = PageSize, IncludeInactive = true }, ct);
+        var pagedReq = new PagedRequest
+        {
+            Page = PageNumber,
+            PageSize = PageSize,
+            IncludeInactive = true,
+            SearchTerm = Search,
+            CategoryId = CategoryId,
+            StockStatus = StockStatus,
+            SortBy = SortBy
+        };
+
+        var itemsTask = _itemService.GetAllAsync(pagedReq, ct);
+        var allItemsTask = _itemService.GetAllAsync(new PagedRequest { Page = 1, PageSize = 1000, IncludeInactive = true }, ct);
         var catsTask  = _apiClient.GetAsync<List<Category>>("/api/categories", ct);
         var unitsTask = _apiClient.GetAsync<List<Unit>>("/api/units", ct);
 
@@ -65,6 +92,14 @@ public class CatalogModel : SecurePageModel
         TotalItems = result.TotalCount;
         Categories = (await catsTask)  ?? new();
         Units      = (await unitsTask) ?? new();
+
+        var allItemsResult = await allItemsTask;
+        var allList = allItemsResult?.Items ?? Enumerable.Empty<ItemDto>();
+        TotalSkus = allList.Count(i => i.IsActive);
+        LowStockCount = allList.Count(i => i.IsActive && i.InStock > 0 && i.ReorderLevel.HasValue && i.InStock <= i.ReorderLevel.Value);
+        OutOfStockCount = allList.Count(i => i.IsActive && i.InStock <= 0);
+        TotalInventoryCostValue = allList.Where(i => i.IsActive).Sum(i => (i.CostPrice ?? i.UnitPrice) * i.InStock);
+        TotalInventoryRetailValue = allList.Where(i => i.IsActive).Sum(i => i.UnitPrice * i.InStock);
 
         return Page();
     }
@@ -109,11 +144,12 @@ public class CatalogModel : SecurePageModel
                 Barcode      = ItemBarcode,
                 CategoryId   = ItemCategoryId,
                 UnitId       = ItemUnitId,
+                Type         = ItemType,
                 ThumbnailUrl = thumbUrl,
                 FullImageUrl = fullUrl
             };
             await _itemService.UpdateAsync(EditItemId.Value, req, ct);
-            StatusMessage = "Item updated.";
+            StatusMessage = "Item updated successfully.";
         }
         else
         {
@@ -128,15 +164,43 @@ public class CatalogModel : SecurePageModel
                 Barcode      = ItemBarcode,
                 CategoryId   = ItemCategoryId,
                 UnitId       = ItemUnitId,
-                Type         = ItemType.Product,
+                Type         = ItemType,
                 ThumbnailUrl = thumbUrl,
                 FullImageUrl = fullUrl
             };
             await _itemService.CreateAsync(req, ct);
-            StatusMessage = "Item created.";
+            StatusMessage = "Item created successfully.";
         }
 
-        return RedirectToPage();
+        return RedirectToPage("/Catalog", new { page = PageNumber, search = Search, categoryId = CategoryId, stockStatus = StockStatus, sortBy = SortBy, viewMode = ViewMode });
+    }
+
+    public async Task<IActionResult> OnPostAdjustStockAsync(Guid itemId, int adjustmentQuantity, string? reason, CancellationToken ct)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return GoToLogin();
+
+        _apiClient.SetToken(token);
+        var success = await _itemService.AdjustStockAsync(itemId, new AdjustStockRequest
+        {
+            ItemId = itemId,
+            AdjustmentQuantity = adjustmentQuantity,
+            Reason = reason ?? "Manual catalog adjustment"
+        }, ct);
+
+        StatusMessage = success ? $"Stock adjusted by {adjustmentQuantity:+0;-0;0} units." : "Failed to adjust stock.";
+        return RedirectToPage("/Catalog", new { page = PageNumber, search = Search, categoryId = CategoryId, stockStatus = StockStatus, sortBy = SortBy, viewMode = ViewMode });
+    }
+
+    public async Task<IActionResult> OnPostToggleStatusAsync(Guid itemId, bool makeActive, CancellationToken ct)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return GoToLogin();
+
+        _apiClient.SetToken(token);
+        await _itemService.UpdateAsync(itemId, new UpdateItemRequest { IsActive = makeActive }, ct);
+        StatusMessage = makeActive ? "Item activated." : "Item deactivated.";
+        return RedirectToPage("/Catalog", new { page = PageNumber, search = Search, categoryId = CategoryId, stockStatus = StockStatus, sortBy = SortBy, viewMode = ViewMode });
     }
 
     public async Task<IActionResult> OnPostDeactivateAsync(Guid itemId, CancellationToken ct)
@@ -147,7 +211,7 @@ public class CatalogModel : SecurePageModel
         _apiClient.SetToken(token);
         await _itemService.UpdateAsync(itemId, new UpdateItemRequest { IsActive = false }, ct);
         StatusMessage = "Item deactivated.";
-        return RedirectToPage();
+        return RedirectToPage("/Catalog", new { page = PageNumber, search = Search, categoryId = CategoryId, stockStatus = StockStatus, sortBy = SortBy, viewMode = ViewMode });
     }
 
     public async Task<IActionResult> OnPostDeleteAsync(Guid itemId, CancellationToken ct)
@@ -158,6 +222,6 @@ public class CatalogModel : SecurePageModel
         _apiClient.SetToken(token);
         await _itemService.DeleteAsync(itemId, ct);
         StatusMessage = "Item deleted.";
-        return RedirectToPage();
+        return RedirectToPage("/Catalog", new { page = PageNumber, search = Search, categoryId = CategoryId, stockStatus = StockStatus, sortBy = SortBy, viewMode = ViewMode });
     }
 }

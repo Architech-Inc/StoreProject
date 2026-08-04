@@ -36,16 +36,45 @@ public class ItemService : IItemService
             .Include(i => i.Discount)
             .AsNoTracking();
 
-        if (!request.IncludeInactive)
+        if (!request.IncludeInactive && request.StockStatus != "inactive")
             query = query.Where(i => i.IsActive);
+        else if (request.StockStatus == "inactive")
+            query = query.Where(i => !i.IsActive);
+
+        if (request.CategoryId.HasValue && request.CategoryId.Value > 0)
+            query = query.Where(i => i.CategoryId == request.CategoryId.Value);
+
+        if (!string.IsNullOrWhiteSpace(request.StockStatus))
+        {
+            if (request.StockStatus == "low_stock")
+                query = query.Where(i => i.InStock > 0 && i.ReorderLevel.HasValue && i.InStock <= i.ReorderLevel.Value);
+            else if (request.StockStatus == "out_of_stock")
+                query = query.Where(i => i.InStock <= 0);
+            else if (request.StockStatus == "in_stock")
+                query = query.Where(i => i.InStock > 0);
+        }
 
         if (!string.IsNullOrWhiteSpace(request.SearchTerm))
-            query = query.Where(i => i.Name.Contains(request.SearchTerm) ||
-                                     (i.Barcode != null && i.Barcode.Contains(request.SearchTerm)));
+        {
+            var term = request.SearchTerm.Trim();
+            query = query.Where(i => i.Name.Contains(term) ||
+                                     (i.Barcode != null && i.Barcode.Contains(term)) ||
+                                     (i.Description != null && i.Description.Contains(term)));
+        }
 
         var total = await query.CountAsync(ct);
-        var items = await query
-            .OrderBy(i => i.Name)
+
+        IOrderedQueryable<Item> orderedQuery = request.SortBy switch
+        {
+            "price_asc" => query.OrderBy(i => i.UnitPrice),
+            "price_desc" => query.OrderByDescending(i => i.UnitPrice),
+            "stock_asc" => query.OrderBy(i => i.InStock),
+            "stock_desc" => query.OrderByDescending(i => i.InStock),
+            "created" => query.OrderByDescending(i => i.DateCreated),
+            _ => query.OrderBy(i => i.Name)
+        };
+
+        var items = await orderedQuery
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
             .Select(i => MapToDto(i))

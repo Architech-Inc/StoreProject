@@ -18,7 +18,7 @@ public abstract class SecurePageModel : PageModel
         return permissions.Contains(permissionKey);
     }
 
-    protected RedirectToPageResult GoToLogin() => RedirectToPage("Login");
+    protected RedirectToPageResult GoToLogin() => RedirectToPage("/Login");
 
-    protected IActionResult AccessDenied() => RedirectToPage("AccessDenied");
+    protected IActionResult AccessDenied() => RedirectToPage("/AccessDenied");
 }

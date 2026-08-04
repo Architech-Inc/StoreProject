@@ -589,7 +589,7 @@ tbody tr:hover { background: color-mix(in srgb, var(--ops-brand, var(--brand)) 4
     position: fixed;
     bottom: 22px;
     right: 22px;
-    z-index: 9999;
+    z-index: 900;
     font-family: inherit;
 }
 .scanner-fab-btn {
