@@ -303,8 +303,8 @@ public class ScannerController : ControllerBase
                 Details = new Dictionary<string, string>
                 {
                     ["Registration"] = matchedSupplier.RegistrationNumber ?? "N/A",
-                    ["Phones"] = matchedSupplier.Phones != null && matchedSupplier.Phones.Any() ? string.Join(", ", matchedSupplier.Phones) : "N/A",
-                    ["Emails"] = matchedSupplier.Emails != null && matchedSupplier.Emails.Any() ? string.Join(", ", matchedSupplier.Emails) : "N/A"
+                    ["Phones"] = matchedSupplier.Phones != null && matchedSupplier.Phones.Any() ? string.Join(", ", matchedSupplier.Phones.Select(p => p.PhoneNumber)) : "N/A",
+                    ["Emails"] = matchedSupplier.Emails != null && matchedSupplier.Emails.Any() ? string.Join(", ", matchedSupplier.Emails.Select(e => e.Email)) : "N/A"
                 },
                 Actions = new List<ScanActionDto>
                 {

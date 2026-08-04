@@ -1,390 +1,1763 @@
 @page
 @model StoreUI.Pages.SuppliersModel
-@using Store.Models.Entities.Contacts
+@using Store.Models.Enums
 @{
-    Layout = "_AppLayout";
-    ViewData["Title"] = "Suppliers";
+    ViewData["Title"] = "Supplier 360 Hub & Procurement";
     ViewData["ActivePage"] = "Suppliers";
+    ViewData["PageDescription"] = "Vendor Directory, 360 Profiles, Purchase Order histories, and Supply Chain Contacts.";
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
+    <style>
+        /* Supplier 360 Hub Modern Theme & Styles */
+        .supplier-container {
+            max-width: 1440px;
+            margin: 0 auto;
+            color: var(--text-primary);
+        }
+
+        /* KPI Banner */
+        .supplier-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .supplier-kpi-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg, 12px);
+            padding: 18px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.05));
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .supplier-kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,0.08));
+        }
+
+        .supplier-kpi-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .supplier-kpi-icon.blue { background: rgba(59, 130, 246, 0.12); color: #2563eb; }
+        .supplier-kpi-icon.teal { background: rgba(20, 184, 166, 0.12); color: #0d9488; }
+        .supplier-kpi-icon.purple { background: rgba(139, 92, 246, 0.12); color: #7c3aed; }
+        .supplier-kpi-icon.amber { background: rgba(245, 158, 11, 0.12); color: #d97706; }
+        .supplier-kpi-icon.green { background: rgba(16, 185, 129, 0.12); color: #059669; }
+
+        .supplier-kpi-val {
+            font-size: 1.45rem;
+            font-weight: 700;
+            line-height: 1.2;
+            color: var(--text-primary);
+        }
+
+        .supplier-kpi-lbl {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        /* Toolbar & Controls */
+        .supplier-toolbar {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg, 12px);
+            padding: 16px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .supplier-filter-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .supplier-search-box {
+            position: relative;
+            min-width: 260px;
+            flex-grow: 1;
+        }
+
+        .supplier-search-box input {
+            width: 100%;
+            padding: 9px 12px 9px 36px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--canvas);
+            color: var(--text-primary);
+            font-size: 0.92rem;
+        }
+
+        .supplier-search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            pointer-events: none;
+        }
+
+        .supplier-select {
+            padding: 9px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--canvas);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+
+        .supplier-view-toggle {
+            display: flex;
+            background: var(--canvas);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 2px;
+        }
+
+        .supplier-view-btn {
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.15s ease;
+        }
+
+        .supplier-view-btn.active {
+            background: var(--surface);
+            color: var(--accent-primary, #3b82f6);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        /* Supplier Grid Cards */
+        .supplier-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .supplier-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg, 12px);
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+            position: relative;
+        }
+
+        .supplier-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md, 0 6px 16px rgba(0,0,0,0.06));
+            border-color: var(--accent-primary, #3b82f6);
+        }
+
+        .supplier-card-header {
+            display: flex;
+            gap: 14px;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .supplier-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #1e293b, #334155);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .supplier-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .supplier-info {
+            flex-grow: 1;
+            min-width: 0;
+        }
+
+        .supplier-name {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0 0 2px 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .supplier-reg-pill {
+            display: inline-block;
+            font-size: 0.75rem;
+            font-family: monospace;
+            padding: 2px 6px;
+            background: rgba(148, 163, 184, 0.12);
+            color: var(--text-secondary);
+            border-radius: 4px;
+            margin-bottom: 4px;
+        }
+
+        .supplier-card-body {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            padding: 10px 0;
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 14px;
+        }
+
+        .supplier-contact-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .supplier-contact-row svg {
+            width: 15px;
+            height: 15px;
+            flex-shrink: 0;
+            color: var(--text-muted, #94a3b8);
+        }
+
+        .supplier-card-actions {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* Cohesive Button System */
+        .supplier-btn-primary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            background: var(--brand, #10b981);
+            color: #ffffff !important;
+            border: 1px solid var(--brand, #10b981);
+            font-size: 0.88rem;
+            font-weight: 600;
+            line-height: 1;
+            text-decoration: none !important;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(16, 185, 129, 0.2);
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+
+        .supplier-btn-primary:hover {
+            background: var(--brand-dark, #059669);
+            border-color: var(--brand-dark, #059669);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.28);
+            color: #ffffff !important;
+            text-decoration: none !important;
+        }
+
+        .supplier-btn-primary svg {
+            width: 15px;
+            height: 15px;
+            stroke: currentColor;
+            flex-shrink: 0;
+        }
+
+        .supplier-btn-secondary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            background: var(--surface);
+            color: var(--text-primary) !important;
+            border: 1px solid var(--border);
+            font-size: 0.88rem;
+            font-weight: 600;
+            line-height: 1;
+            text-decoration: none !important;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+
+        .supplier-btn-secondary:hover {
+            background: var(--canvas);
+            border-color: var(--border-hover, #94a3b8);
+            color: var(--text-primary) !important;
+            text-decoration: none !important;
+        }
+
+        .supplier-btn-secondary svg {
+            width: 15px;
+            height: 15px;
+            stroke: currentColor;
+            flex-shrink: 0;
+        }
+
+        .supplier-btn-danger {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            background: #ef4444;
+            color: #ffffff !important;
+            border: 1px solid #ef4444;
+            font-size: 0.88rem;
+            font-weight: 600;
+            line-height: 1;
+            cursor: pointer;
+            text-decoration: none !important;
+            box-shadow: 0 2px 6px rgba(239, 68, 68, 0.2);
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+
+        .supplier-btn-danger:hover {
+            background: #dc2626;
+            border-color: #dc2626;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);
+            color: #ffffff !important;
+            text-decoration: none !important;
+        }
+
+        .supplier-btn-danger svg {
+            width: 15px;
+            height: 15px;
+            stroke: currentColor;
+            flex-shrink: 0;
+        }
+
+        .supplier-btn-sm {
+            padding: 5px 10px;
+            font-size: 0.8rem;
+            border-radius: 6px;
+            gap: 4px;
+        }
+
+        .supplier-btn-sm svg {
+            width: 13px;
+            height: 13px;
+        }
+
+        .supplier-btn-icon {
+            padding: 6px 8px;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text-secondary) !important;
+            text-decoration: none !important;
+            transition: all 0.15s ease;
+            cursor: pointer;
+        }
+
+        .supplier-btn-icon:hover {
+            background: var(--canvas);
+            color: var(--brand, #10b981) !important;
+            border-color: var(--brand, #10b981);
+        }
+
+        .supplier-btn-icon svg {
+            width: 15px;
+            height: 15px;
+            stroke: currentColor;
+        }
+
+        /* Slide-Over 360 Drawer */
+        .supplier-drawer-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(2px);
+            z-index: 1040;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.25s ease, visibility 0.25s ease;
+        }
+
+        .supplier-drawer-backdrop.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .supplier-drawer {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            max-width: 580px;
+            background: var(--surface);
+            border-left: 1px solid var(--border);
+            box-shadow: -4px 0 24px rgba(0, 0, 0, 0.18);
+            z-index: 1050;
+            transform: translateX(100%);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .supplier-drawer.active {
+            transform: translateX(0);
+        }
+
+        .supplier-drawer-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            background: var(--surface);
+            position: relative;
+        }
+
+        .supplier-drawer-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: background 0.15s;
+        }
+
+        .supplier-drawer-close:hover {
+            background: var(--canvas);
+            color: var(--text-primary);
+        }
+
+        .supplier-drawer-body {
+            padding: 20px 24px;
+            overflow-y: auto;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .supplier-drawer-footer {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border);
+            background: var(--surface);
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        /* 360 Action Strip */
+        .supplier-quick-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .supplier-quick-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            text-decoration: none;
+            border: 1px solid var(--border);
+            background: var(--canvas);
+            color: var(--text-primary);
+            transition: all 0.15s ease;
+        }
+
+        .supplier-quick-btn:hover {
+            background: var(--surface);
+            border-color: var(--accent-primary, #3b82f6);
+            color: var(--accent-primary, #3b82f6);
+        }
+
+        .supplier-quick-btn.whatsapp {
+            background: rgba(37, 211, 102, 0.1);
+            border-color: rgba(37, 211, 102, 0.3);
+            color: #15803d;
+        }
+
+        .supplier-quick-btn.whatsapp:hover {
+            background: #25d366;
+            color: #fff;
+        }
+
+        .supplier-quick-btn svg {
+            width: 14px;
+            height: 14px;
+            fill: currentColor;
+        }
+
+        /* 360 Tabs */
+        .supplier-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            gap: 4px;
+        }
+
+        .supplier-tab-btn {
+            background: transparent;
+            border: none;
+            padding: 8px 14px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.15s ease;
+        }
+
+        .supplier-tab-btn.active {
+            color: var(--accent-primary, #3b82f6);
+            border-bottom-color: var(--accent-primary, #3b82f6);
+        }
+
+        .supplier-tab-pane {
+            display: none;
+        }
+
+        .supplier-tab-pane.active {
+            display: block;
+        }
+
+        /* Identity Barcode Card */
+        .supplier-pass-card {
+            background: linear-gradient(135deg, #0f172a, #1e293b);
+            border-radius: 12px;
+            padding: 20px;
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .supplier-pass-barcode {
+            background: #fff;
+            padding: 12px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .supplier-pass-barcode svg {
+            width: 100%;
+            height: 55px;
+        }
+
+        .supplier-pass-code {
+            color: #0f172a;
+            font-family: monospace;
+            font-size: 0.85rem;
+            font-weight: 700;
+            margin-top: 4px;
+        }
+
+        /* Modal Styles */
+        .modal-custom {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(2px);
+            z-index: 1060;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .modal-custom.active {
+            display: flex;
+        }
+
+        .modal-custom-dialog {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg, 12px);
+            width: 100%;
+            max-width: 680px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .modal-custom-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-custom-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+
+        .modal-custom-footer {
+            padding: 14px 20px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .contact-row-item {
+            background: var(--canvas);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            position: relative;
+        }
+
+        .btn-remove-row {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: none;
+            border: none;
+            color: #ef4444;
+            cursor: pointer;
+            font-size: 1.1rem;
+        }
+
+        /* Image Cropper Preview */
+        .image-preview-container {
+            width: 90px;
+            height: 90px;
+            border-radius: 12px;
+            border: 2px dashed var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+            background: var(--canvas);
+            cursor: pointer;
+        }
+
+        .image-preview-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+    </style>
 }
 
-<div class="filter-bar" style="margin-bottom: 24px; justify-content: space-between;">
-    <form method="get" class="filter-row">
-        <div class="filter-group">
-            <label>Search Suppliers:</label>
-            <div style="display:flex; gap:8px;">
-                <input type="search" name="search" class="form-control form-control-sm" placeholder="Search by name or reg #..." value="@Model.SearchQuery" />
-                <button type="submit" class="button-secondary">Search</button>
+<div class="supplier-container">
+    @if (!string.IsNullOrEmpty(Model.StatusMessage))
+    {
+        var isError = Model.StatusMessage.StartsWith("Error", StringComparison.OrdinalIgnoreCase);
+        <div class="alert @(isError ? "alert-danger" : "alert-success")" style="margin-bottom: 20px;">
+            <i class="bi @(isError ? "bi-exclamation-triangle-fill" : "bi-check-circle-fill")" style="margin-right: 8px;"></i>
+            @Model.StatusMessage
+        </div>
+    }
+
+    <!-- KPI Banner -->
+    <div class="supplier-kpi-grid">
+        <div class="supplier-kpi-card">
+            <div class="supplier-kpi-icon blue">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <div>
+                <div class="supplier-kpi-val">@Model.Metrics.TotalSuppliers</div>
+                <div class="supplier-kpi-lbl">Total Suppliers</div>
             </div>
         </div>
-    </form>
-    <button class="button-primary" onclick="openCreateBlade()">
-        <i class="bi bi-plus-lg"></i> New Supplier
-    </button>
-</div>
+        <div class="supplier-kpi-card">
+            <div class="supplier-kpi-icon green">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            </div>
+            <div>
+                <div class="supplier-kpi-val">@Model.Metrics.ActiveSuppliers</div>
+                <div class="supplier-kpi-lbl">Active Partners</div>
+            </div>
+        </div>
+        <div class="supplier-kpi-card">
+            <div class="supplier-kpi-icon purple">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </div>
+            <div>
+                <div class="supplier-kpi-val">@Model.Metrics.TotalProcurementSpend.ToString("N0") <small style="font-size:0.8rem;">XAF</small></div>
+                <div class="supplier-kpi-lbl">Procurement Spend</div>
+            </div>
+        </div>
+        <div class="supplier-kpi-card">
+            <div class="supplier-kpi-icon amber">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+            </div>
+            <div>
+                <div class="supplier-kpi-val">@Model.Metrics.OpenPurchaseOrdersCount</div>
+                <div class="supplier-kpi-lbl">Open Purchase Orders</div>
+            </div>
+        </div>
+        <div class="supplier-kpi-card">
+            <div class="supplier-kpi-icon teal">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <div>
+                <div class="supplier-kpi-val">@Model.Metrics.PendingDeliveriesCount</div>
+                <div class="supplier-kpi-lbl">Due Deliveries (3d)</div>
+            </div>
+        </div>
+    </div>
 
-<!-- Suppliers List -->
-<div class="table-wrap">
-    <table class="table table-hover table-sm align-middle">
-        <thead class="table-light">
-            <tr>
-                <th>Name</th>
-                <th>Registration #</th>
-                <th>Contacts</th>
-                <th>Locations</th>
-                <th>Created</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
+    <!-- Toolbar & Filter Controls -->
+    <div class="supplier-toolbar">
+        <form method="get" id="filterForm" class="supplier-filter-group" style="flex-grow: 1;">
+            <div class="supplier-search-box">
+                <svg class="supplier-search-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="search" name="Search" value="@Model.Search" placeholder="Search suppliers by name, reg #, phone..." onchange="this.form.submit()" />
+            </div>
+
+            @if (Model.AvailableCities.Any())
+            {
+                <select name="CityFilter" class="supplier-select" onchange="this.form.submit()">
+                    <option value="">All Cities</option>
+                    @foreach (var city in Model.AvailableCities)
+                    {
+                        <option value="@city" selected="@(Model.CityFilter == city)">@city</option>
+                    }
+                </select>
+            }
+
+            @if (Model.AvailableCountries.Any())
+            {
+                <select name="CountryFilter" class="supplier-select" onchange="this.form.submit()">
+                    <option value="">All Countries</option>
+                    @foreach (var c in Model.AvailableCountries)
+                    {
+                        <option value="@c" selected="@(Model.CountryFilter == c)">@c</option>
+                    }
+                </select>
+            }
+
+            <select name="SortBy" class="supplier-select" onchange="this.form.submit()">
+                <option value="name_asc" selected="@(Model.SortBy == "name_asc")">Name (A-Z)</option>
+                <option value="name_desc" selected="@(Model.SortBy == "name_desc")">Name (Z-A)</option>
+                <option value="date_desc" selected="@(Model.SortBy == "date_desc")">Newest First</option>
+                <option value="date_asc" selected="@(Model.SortBy == "date_asc")">Oldest First</option>
+            </select>
+
+            <input type="hidden" name="ViewMode" id="viewModeInput" value="@Model.ViewMode" />
+        </form>
+
+        <div style="display:flex; gap:10px; align-items:center;">
+            <div class="supplier-view-toggle">
+                <button type="button" class="supplier-view-btn @(Model.ViewMode == "grid" ? "active" : "")" onclick="setViewMode('grid')">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                    Grid
+                </button>
+                <button type="button" class="supplier-view-btn @(Model.ViewMode == "table" ? "active" : "")" onclick="setViewMode('table')">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                    Table
+                </button>
+            </div>
+
+            <a asp-page-handler="ExportCsv"
+               asp-route-search="@Model.Search"
+               asp-route-cityFilter="@Model.CityFilter"
+               asp-route-countryFilter="@Model.CountryFilter"
+               asp-route-sortBy="@Model.SortBy"
+               class="supplier-btn-secondary"
+               title="Export filtered list to CSV">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Export CSV
+            </a>
+
+            <button type="button" class="supplier-btn-primary" onclick="openCreateModal()">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                New Supplier
+            </button>
+        </div>
+    </div>
+
+    <!-- Content Area: Grid or Table View -->
+    @if (!Model.Suppliers.Any())
+    {
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:48px 24px; text-align:center;">
+            <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--text-secondary); margin-bottom:12px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <h3 style="margin-bottom:6px;">No suppliers found</h3>
+            <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:18px;">Try adjusting your search criteria or register a new vendor partner.</p>
+            <button type="button" class="supplier-btn-primary" onclick="openCreateModal()">Register Supplier</button>
+        </div>
+    }
+    else if (Model.ViewMode == "table")
+    {
+        <div class="table-wrap">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th style="width: 50px;"></th>
+                        <th>Supplier Name</th>
+                        <th>Registration #</th>
+                        <th>Primary Phone</th>
+                        <th>Primary Email</th>
+                        <th>Location</th>
+                        <th>Registered</th>
+                        <th style="text-align: right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var s in Model.Suppliers)
+                    {
+                        var primaryPhone = s.Phones.FirstOrDefault(p => p.IsPrimary)?.PhoneNumber ?? s.Phones.FirstOrDefault()?.PhoneNumber;
+                        var primaryEmail = s.Emails.FirstOrDefault(e => e.IsPrimary)?.Email ?? s.Emails.FirstOrDefault()?.Email;
+                        var primaryLoc = s.Locations.FirstOrDefault(l => l.IsPrimary) ?? s.Locations.FirstOrDefault();
+                        var locParts = new[] { primaryLoc?.City, primaryLoc?.Country }.Where(x => !string.IsNullOrWhiteSpace(x));
+                        var locText = locParts.Any() ? string.Join(", ", locParts) : "—";
+                        var initials = string.Join("", s.Name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(w => w[0]));
+
+                        <tr>
+                            <td>
+                                <div class="supplier-avatar" style="width:36px; height:36px; font-size:0.85rem;">
+                                    @if (!string.IsNullOrEmpty(s.ThumbnailUrl))
+                                    {
+                                        <img src="@s.ThumbnailUrl" alt="@s.Name" />
+                                    }
+                                    else
+                                    {
+                                        <span>@initials</span>
+                                    }
+                                </div>
+                            </td>
+                            <td>
+                                <a href="javascript:void(0)" onclick="openSupplierDrawer('@s.SupplierId')" style="font-weight:700; color:var(--text-primary); text-decoration:none;">
+                                    @s.Name
+                                </a>
+                                @if (!string.IsNullOrWhiteSpace(s.Notes))
+                                {
+                                    <div style="font-size:0.75rem; color:var(--text-secondary); max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">@s.Notes</div>
+                                }
+                            </td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(s.RegistrationNumber))
+                                {
+                                    <span class="supplier-reg-pill">@s.RegistrationNumber</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+                            <td>@(primaryPhone ?? "—")</td>
+                            <td>@(primaryEmail ?? "—")</td>
+                            <td>@locText</td>
+                            <td>@s.DateCreated.ToString("dd MMM yyyy")</td>
+                            <td style="text-align: right;">
+                                <div style="display:inline-flex; gap:6px; justify-content:flex-end; align-items:center;">
+                                    <button class="supplier-btn-secondary supplier-btn-sm" onclick="openSupplierDrawer('@s.SupplierId')" title="View 360 Hub">
+                                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                                        360
+                                    </button>
+                                    <a href="/PurchaseOrders?supplierId=@s.SupplierId" class="supplier-btn-secondary supplier-btn-sm" title="Create Purchase Order">
+                                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                                        PO
+                                    </a>
+                                    <button type="button" class="supplier-btn-secondary supplier-btn-sm" onclick="populateEditModal(this)" data-supplier='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(s))' title="Edit Supplier">
+                                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                        Edit
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <!-- Grid View -->
+        <div class="supplier-grid">
             @foreach (var s in Model.Suppliers)
             {
-                <tr>
-                    <td>
-                        <strong>@s.Name</strong>
-                        @if (!string.IsNullOrWhiteSpace(s.Notes))
-                        {
-                            <br /><small class="text-muted">@s.Notes</small>
-                        }
-                    </td>
-                    <td>@(s.RegistrationNumber ?? "—")</td>
-                    <td>
-                        @if (s.Emails.Any() || s.Phones.Any())
-                        {
-                            @if (s.Emails.Any(e => e.IsPrimary))
-                            {
-                                var primaryEmail = s.Emails.First(e => e.IsPrimary);
-                                <div><i class="bi bi-envelope"></i> @primaryEmail.Email</div>
-                            }
-                            @if (s.Phones.Any(p => p.IsPrimary))
-                            {
-                                var primaryPhone = s.Phones.First(p => p.IsPrimary);
-                                <div><i class="bi bi-telephone"></i> @primaryPhone.PhoneNumber</div>
-                            }
-                            @if (s.Emails.Count > 1 || s.Phones.Count > 1)
-                            {
-                                <small class="text-muted">+@(s.Emails.Count + s.Phones.Count - 2) more</small>
-                            }
-                        }
-                        else
-                        {
-                            <span class="text-muted">—</span>
-                        }
-                    </td>
-                    <td>
-                        @if (s.Locations.Any(l => l.IsPrimary))
-                        {
-                            var primaryLoc = s.Locations.First(l => l.IsPrimary);
-                            <div>@primaryLoc.City, @primaryLoc.Country</div>
-                            @if (s.Locations.Count > 1)
-                            {
-                                <small class="text-muted">+@(s.Locations.Count - 1) more</small>
-                            }
-                        }
-                        else
-                        {
-                            <span class="text-muted">—</span>
-                        }
-                    </td>
-                    <td>@s.DateCreated.ToString("dd MMM yyyy")</td>
-                    <td>
-                        <div style="display:flex; gap:4px; flex-wrap:nowrap;">
-                            <button class="button-secondary"
-                                    onclick="openEditBlade(this)"
-                                    data-supplier='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(s))'>
-                                Edit
-                            </button>
-                            <form method="post" asp-page-handler="Delete" style="margin:0;">
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" name="supplierId" value="@s.SupplierId" />
-                                <button class="button-command danger" type="submit"
-                                        onclick="return confirm('Delete supplier @s.Name.Replace("'", "\\'")?')">Delete</button>
-                            </form>
+                var primaryPhone = s.Phones.FirstOrDefault(p => p.IsPrimary)?.PhoneNumber ?? s.Phones.FirstOrDefault()?.PhoneNumber;
+                var primaryEmail = s.Emails.FirstOrDefault(e => e.IsPrimary)?.Email ?? s.Emails.FirstOrDefault()?.Email;
+                var primaryLoc = s.Locations.FirstOrDefault(l => l.IsPrimary) ?? s.Locations.FirstOrDefault();
+                var locParts = new[] { primaryLoc?.City, primaryLoc?.Country }.Where(x => !string.IsNullOrWhiteSpace(x));
+                var locText = locParts.Any() ? string.Join(", ", locParts) : null;
+                var initials = string.Join("", s.Name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(w => w[0]));
+
+                <div class="supplier-card">
+                    <div>
+                        <div class="supplier-card-header">
+                            <div class="supplier-avatar">
+                                @if (!string.IsNullOrEmpty(s.ThumbnailUrl))
+                                {
+                                    <img src="@s.ThumbnailUrl" alt="@s.Name" />
+                                }
+                                else
+                                {
+                                    <span>@initials</span>
+                                }
+                            </div>
+                            <div class="supplier-info">
+                                <a href="javascript:void(0)" onclick="openSupplierDrawer('@s.SupplierId')" class="supplier-name" title="@s.Name">
+                                    @s.Name
+                                </a>
+                                @if (!string.IsNullOrEmpty(s.RegistrationNumber))
+                                {
+                                    <div class="supplier-reg-pill">REG: @s.RegistrationNumber</div>
+                                }
+                            </div>
                         </div>
-                    </td>
-                </tr>
+
+                        <div class="supplier-card-body">
+                            @if (!string.IsNullOrEmpty(primaryPhone))
+                            {
+                                <div class="supplier-contact-row" title="Phone">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                                    <span>@primaryPhone</span>
+                                </div>
+                            }
+                            @if (!string.IsNullOrEmpty(primaryEmail))
+                            {
+                                <div class="supplier-contact-row" title="Email">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                                    <span>@primaryEmail</span>
+                                </div>
+                            }
+                            @if (!string.IsNullOrEmpty(locText))
+                            {
+                                <div class="supplier-contact-row" title="Location">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                    <span>@locText</span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="supplier-card-actions">
+                        <button type="button" class="supplier-btn-secondary supplier-btn-sm" onclick="openSupplierDrawer('@s.SupplierId')">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                            Supplier 360
+                        </button>
+                        <div style="display:flex; gap:6px;">
+                            <a href="/PurchaseOrders?supplierId=@s.SupplierId" class="supplier-btn-icon" title="New Purchase Order">
+                                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                            </a>
+                            <button type="button" class="supplier-btn-icon" onclick="populateEditModal(this)" data-supplier='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(s))' title="Edit Supplier">
+                                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
             }
-            @if (!Model.Suppliers.Any())
-            {
-                <tr><td colspan="6" class="text-center text-muted py-3"><div class="empty-state"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg><h4>No Suppliers Found</h4><p>There are no records matching your criteria.</p></div></td></tr>
-            }
-        </tbody>
-    </table>
+        </div>
+    }
 </div>
 
-<!-- ===== Create Supplier Blade ===== -->
-<div class="blade" id="createBlade">
-    <div class="blade-header">
-        <h5 class="mb-0">New Supplier</h5>
-        <button type="button" class="btn-close" onclick="closeCreateBlade()"></button>
+<!-- ========================================== -->
+<!-- SLIDE-OVER 360 DRAWER                      -->
+<!-- ========================================== -->
+<div class="supplier-drawer-backdrop" id="supplierDrawerBackdrop" onclick="closeSupplierDrawer()"></div>
+<div class="supplier-drawer" id="supplierDrawer">
+    <div class="supplier-drawer-header">
+        <div style="display:flex; gap:14px; align-items:center;">
+            <div class="supplier-avatar" id="drawerAvatarWrap" style="width:52px; height:52px; font-size:1.15rem;">
+                <span id="drawerAvatarInitials">SU</span>
+            </div>
+            <div>
+                <h3 id="drawerSupplierName" style="margin:0 0 4px 0; font-size:1.25rem;">Supplier Name</h3>
+                <div id="drawerSupplierReg" class="supplier-reg-pill">REG: —</div>
+            </div>
+        </div>
+        <button class="supplier-drawer-close" onclick="closeSupplierDrawer()">&times;</button>
     </div>
-    <div class="blade-body">
-        <form method="post" asp-page-handler="Create" id="createForm">
-            @Html.AntiForgeryToken()
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label">Name <span class="text-danger">*</span></label>
-                    <input type="text" name="CreateName" class="form-control form-control-sm" required maxlength="200" />
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Registration Number</label>
-                    <input type="text" name="CreateRegistrationNumber" class="form-control form-control-sm" maxlength="100" />
-                </div>
-                <div class="col-12">
-                    <label class="form-label">Notes</label>
-                    <textarea name="CreateNotes" class="form-control form-control-sm" rows="2" maxlength="1000"></textarea>
-                </div>
-            </div>
 
-            <hr />
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <strong>Contact Information</strong>
+    <div class="supplier-drawer-body">
+        <!-- 1-Click Action Strip -->
+        <div class="supplier-quick-actions" id="drawerQuickActions">
+            <!-- Dynamically populated -->
+        </div>
+
+        <!-- Supplier KPI Metrics Strip -->
+        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; background:var(--canvas); padding:14px; border-radius:10px; border:1px solid var(--border);">
+            <div style="text-align:center;">
+                <div style="font-size:0.75rem; color:var(--text-secondary); font-weight:600; text-transform:uppercase;">Total Spend</div>
+                <div id="drawerTotalSpend" style="font-size:1.1rem; font-weight:700; color:var(--text-primary); margin-top:2px;">0 XAF</div>
+            </div>
+            <div style="text-align:center; border-left:1px solid var(--border); border-right:1px solid var(--border);">
+                <div style="font-size:0.75rem; color:var(--text-secondary); font-weight:600; text-transform:uppercase;">Total Orders</div>
+                <div id="drawerTotalOrders" style="font-size:1.1rem; font-weight:700; color:var(--text-primary); margin-top:2px;">0</div>
+            </div>
+            <div style="text-align:center;">
+                <div style="font-size:0.75rem; color:var(--text-secondary); font-weight:600; text-transform:uppercase;">Open POs</div>
+                <div id="drawerOpenOrders" style="font-size:1.1rem; font-weight:700; color:#d97706; margin-top:2px;">0</div>
+            </div>
+        </div>
+
+        <!-- Tabbed Sections -->
+        <div class="supplier-tabs">
+            <button class="supplier-tab-btn active" onclick="switchDrawerTab('ordersTab', this)">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                Purchase Orders
+            </button>
+            <button class="supplier-tab-btn" onclick="switchDrawerTab('productsTab', this)">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                Supplied Items
+            </button>
+            <button class="supplier-tab-btn" onclick="switchDrawerTab('contactsTab', this)">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                Contacts & Locations
+            </button>
+            <button class="supplier-tab-btn" onclick="switchDrawerTab('passTab', this)">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="7" y1="8" x2="7.01" y2="8"/><line x1="11" y1="8" x2="17" y2="8"/><line x1="7" y1="12" x2="7.01" y2="12"/><line x1="11" y1="12" x2="17" y2="12"/></svg>
+                Vendor ID Pass
+            </button>
+        </div>
+
+        <!-- Tab 1: Orders -->
+        <div id="ordersTab" class="supplier-tab-pane active">
+            <div id="drawerOrdersList" style="display:flex; flex-direction:column; gap:8px;">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+
+        <!-- Tab 2: Supplied Items -->
+        <div id="productsTab" class="supplier-tab-pane">
+            <div id="drawerProductsList" style="display:flex; flex-direction:column; gap:8px;">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+
+        <!-- Tab 3: Contacts & Locations -->
+        <div id="contactsTab" class="supplier-tab-pane">
+            <div style="display:flex; flex-direction:column; gap:16px;">
                 <div>
-                    <button type="button" class="btn btn-outline-secondary btn-sm me-1" id="addEmailBtn">+ Email</button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm me-1" id="addPhoneBtn">+ Phone</button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm" id="addLocationBtn">+ Address</button>
+                    <h5 style="font-size:0.88rem; font-weight:700; margin-bottom:8px;">Email Addresses</h5>
+                    <div id="drawerEmailsList" style="display:flex; flex-direction:column; gap:6px;"></div>
+                </div>
+                <div>
+                    <h5 style="font-size:0.88rem; font-weight:700; margin-bottom:8px;">Phone Numbers</h5>
+                    <div id="drawerPhonesList" style="display:flex; flex-direction:column; gap:6px;"></div>
+                </div>
+                <div>
+                    <h5 style="font-size:0.88rem; font-weight:700; margin-bottom:8px;">Physical Locations</h5>
+                    <div id="drawerLocationsList" style="display:flex; flex-direction:column; gap:6px;"></div>
+                </div>
+                <div>
+                    <h5 style="font-size:0.88rem; font-weight:700; margin-bottom:4px;">Vendor Notes</h5>
+                    <p id="drawerNotes" style="font-size:0.85rem; color:var(--text-secondary); background:var(--canvas); padding:10px 12px; border-radius:8px; border:1px solid var(--border);"></p>
                 </div>
             </div>
+        </div>
 
-            <!-- Emails -->
-            <div id="emailsSection" class="mb-3">
-                <h6>Emails</h6>
-                <div id="emailsContainer"></div>
+        <!-- Tab 4: Vendor ID Pass & Barcode -->
+        <div id="passTab" class="supplier-tab-pane">
+            <div class="supplier-pass-card">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <div style="font-size:0.75rem; color:#94a3b8; letter-spacing:1px; text-transform:uppercase; font-weight:600;">Authorized Vendor Pass</div>
+                        <div id="passSupplierName" style="font-size:1.15rem; font-weight:700; margin-top:2px;">Supplier Name</div>
+                    </div>
+                    <span class="badge badge-green" style="font-size:0.75rem;">ACTIVE PARTNER</span>
+                </div>
+
+                <div class="supplier-pass-barcode">
+                    <svg id="vendorBarcodeSvg"></svg>
+                    <div id="vendorBarcodeText" class="supplier-pass-code">SUPP-00000000</div>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:#94a3b8;">
+                    <span>Created: <strong id="passDateCreated" style="color:#fff;">—</strong></span>
+                    <button type="button" onclick="window.print()" class="button-secondary" style="padding:4px 10px; font-size:0.75rem; background:rgba(255,255,255,0.1); color:#fff; border-color:rgba(255,255,255,0.2);">
+                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                        Print Badge
+                    </button>
+                </div>
             </div>
+        </div>
+    </div>
 
-            <!-- Phones -->
-            <div id="phonesSection" class="mb-3">
-                <h6>Phones</h6>
-                <div id="phonesContainer"></div>
+    <div class="supplier-drawer-footer">
+        <form method="post" asp-page-handler="Delete" id="drawerDeleteForm" onsubmit="return confirm('Are you sure you want to delete this supplier?');" style="margin:0; margin-right:auto;">
+            <input type="hidden" name="supplierId" id="drawerDeleteId" value="" />
+            <button type="submit" class="supplier-btn-danger">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                Delete
+            </button>
+        </form>
+        <button type="button" class="supplier-btn-secondary" onclick="editFromDrawer()">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Edit
+        </button>
+        <a href="#" id="drawerPoBtn" class="supplier-btn-primary">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+            Create Purchase Order
+        </a>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- CREATE SUPPLIER MODAL                      -->
+<!-- ========================================== -->
+<div class="modal-custom" id="createModal">
+    <div class="modal-custom-dialog">
+        <form method="post" asp-page-handler="Create" enctype="multipart/form-data">
+            <div class="modal-custom-header">
+                <h4 style="margin:0; font-size:1.15rem;">Register New Supplier</h4>
+                <button type="button" class="supplier-drawer-close" onclick="closeCreateModal()">&times;</button>
             </div>
+            <div class="modal-custom-body">
+                <!-- Avatar & Basic Details -->
+                <div style="display:flex; gap:16px; align-items:flex-start; margin-bottom:16px;">
+                    <div>
+                        <label class="form-label" style="font-size:0.8rem;">Logo / Avatar</label>
+                        <label for="createImageInput" class="image-preview-container" id="createPreviewBox">
+                            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--text-secondary);"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                        </label>
+                        <input type="file" id="createImageInput" name="CreateImageUpload" accept="image/*" style="display:none;" onchange="previewImage(this, 'createPreviewBox')" />
+                    </div>
+                    <div style="flex-grow:1;">
+                        <div class="form-group" style="margin-bottom:12px;">
+                            <label class="form-label">Supplier / Company Name *</label>
+                            <input type="text" asp-for="CreateName" class="form-control" required placeholder="e.g. SABC Distribution" />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Registration / Tax ID</label>
+                            <input type="text" asp-for="CreateRegistrationNumber" class="form-control" placeholder="e.g. RC-2023-B-891" />
+                        </div>
+                    </div>
+                </div>
 
-            <!-- Locations -->
-            <div id="locationsSection" class="mb-3">
-                <h6>Addresses</h6>
-                <div id="locationsContainer"></div>
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label class="form-label">Internal Notes / Payment Terms</label>
+                    <textarea asp-for="CreateNotes" class="form-control" rows="2" placeholder="e.g. Net 30 days, preferred delivery on Tuesdays"></textarea>
+                </div>
+
+                <!-- Contact Details -->
+                <div style="border-top:1px solid var(--border); padding-top:16px; margin-top:16px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <h5 style="margin:0; font-size:0.9rem;">Email Addresses</h5>
+                        <button type="button" class="supplier-btn-secondary supplier-btn-sm" onclick="addContactRow('createEmailContainer', 'email')">+ Add Email</button>
+                    </div>
+                    <div id="createEmailContainer">
+                        <div class="contact-row-item">
+                            <div style="display:grid; grid-template-columns: 2fr 1fr auto; gap:8px; align-items:center;">
+                                <input type="email" name="CreateEmails" class="form-control" placeholder="email@vendor.com" />
+                                <select name="CreateEmailTypes" class="supplier-select">
+                                    <option value="Work">Work</option>
+                                    <option value="Personal">Personal</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                                <label style="display:flex; align-items:center; gap:4px; font-size:0.8rem; margin:0;">
+                                    <input type="checkbox" name="CreateEmailPrimaries" value="true" checked /> Primary
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="border-top:1px solid var(--border); padding-top:16px; margin-top:16px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <h5 style="margin:0; font-size:0.9rem;">Phone Numbers</h5>
+                        <button type="button" class="supplier-btn-secondary supplier-btn-sm" onclick="addContactRow('createPhoneContainer', 'phone')">+ Add Phone</button>
+                    </div>
+                    <div id="createPhoneContainer">
+                        <div class="contact-row-item">
+                            <div style="display:grid; grid-template-columns: 2fr 1fr auto; gap:8px; align-items:center;">
+                                <input type="tel" name="CreatePhones" class="form-control" placeholder="+237 600000000" />
+                                <select name="CreatePhoneTypes" class="supplier-select">
+                                    <option value="Work">Work</option>
+                                    <option value="Mobile">Mobile</option>
+                                    <option value="Home">Home</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                                <label style="display:flex; align-items:center; gap:4px; font-size:0.8rem; margin:0;">
+                                    <input type="checkbox" name="CreatePhonePrimaries" value="true" checked /> Primary
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="border-top:1px solid var(--border); padding-top:16px; margin-top:16px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <h5 style="margin:0; font-size:0.9rem;">Physical Address</h5>
+                        <button type="button" class="supplier-btn-secondary supplier-btn-sm" onclick="addContactRow('createLocationContainer', 'location')">+ Add Location</button>
+                    </div>
+                    <div id="createLocationContainer">
+                        <div class="contact-row-item">
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:8px;">
+                                <input type="text" name="CreateAddressLines1" class="form-control" placeholder="Street Address" />
+                                <input type="text" name="CreateAddressLines2" class="form-control" placeholder="Apt / Suite / Bldg" />
+                            </div>
+                            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr auto; gap:8px; align-items:center;">
+                                <input type="text" name="CreateCities" class="form-control" placeholder="City" />
+                                <input type="text" name="CreateStates" class="form-control" placeholder="State/Region" />
+                                <input type="text" name="CreateCountries" class="form-control" placeholder="Country" value="Cameroon" />
+                                <label style="display:flex; align-items:center; gap:4px; font-size:0.8rem; margin:0;">
+                                    <input type="checkbox" name="CreateLocationPrimaries" value="true" checked /> Primary
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-custom-footer">
+                <button type="button" class="supplier-btn-secondary" onclick="closeCreateModal()">Cancel</button>
+                <button type="submit" class="supplier-btn-primary">Create Supplier</button>
             </div>
         </form>
     </div>
-    <div class="blade-footer">
-        <button type="button" class="btn btn-secondary" onclick="closeCreateBlade()">Cancel</button>
-        <button type="button" class="btn btn-primary" onclick="document.getElementById('createForm').submit()">Create Supplier</button>
-    </div>
 </div>
 
-<!-- ===== Edit Supplier Blade ===== -->
-<div class="blade" id="editBlade">
-    <div class="blade-header">
-        <h5 class="mb-0">Edit Supplier</h5>
-        <button type="button" class="btn-close" onclick="closeEditBlade()"></button>
-    </div>
-    <div class="blade-body">
-        <form method="post" asp-page-handler="Edit" id="editForm">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="EditSupplierId" id="editSupplierId" />
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label">Name <span class="text-danger">*</span></label>
-                    <input type="text" name="EditName" id="editName" class="form-control form-control-sm" required maxlength="200" />
+<!-- ========================================== -->
+<!-- EDIT SUPPLIER MODAL                        -->
+<!-- ========================================== -->
+<div class="modal-custom" id="editModal">
+    <div class="modal-custom-dialog">
+        <form method="post" asp-page-handler="Edit" enctype="multipart/form-data">
+            <input type="hidden" asp-for="EditSupplierId" id="editSupplierId" />
+            <div class="modal-custom-header">
+                <h4 style="margin:0; font-size:1.15rem;">Edit Supplier Profile</h4>
+                <button type="button" class="supplier-drawer-close" onclick="closeEditModal()">&times;</button>
+            </div>
+            <div class="modal-custom-body">
+                <!-- Avatar & Basic Details -->
+                <div style="display:flex; gap:16px; align-items:flex-start; margin-bottom:16px;">
+                    <div>
+                        <label class="form-label" style="font-size:0.8rem;">Logo / Avatar</label>
+                        <label for="editImageInput" class="image-preview-container" id="editPreviewBox">
+                            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--text-secondary);"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                        </label>
+                        <input type="file" id="editImageInput" name="EditImageUpload" accept="image/*" style="display:none;" onchange="previewImage(this, 'editPreviewBox')" />
+                    </div>
+                    <div style="flex-grow:1;">
+                        <div class="form-group" style="margin-bottom:12px;">
+                            <label class="form-label">Supplier / Company Name *</label>
+                            <input type="text" asp-for="EditName" id="editName" class="form-control" required />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Registration / Tax ID</label>
+                            <input type="text" asp-for="EditRegistrationNumber" id="editRegistrationNumber" class="form-control" />
+                        </div>
+                    </div>
                 </div>
-                <div class="col-md-6">
-                    <label class="form-label">Registration Number</label>
-                    <input type="text" name="EditRegistrationNumber" id="editRegistrationNumber" class="form-control form-control-sm" maxlength="100" />
+
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label class="form-label">Internal Notes / Payment Terms</label>
+                    <textarea asp-for="EditNotes" id="editNotes" class="form-control" rows="2"></textarea>
                 </div>
-                <div class="col-12">
-                    <label class="form-label">Notes</label>
-                    <textarea name="EditNotes" id="editNotes" class="form-control form-control-sm" rows="2" maxlength="1000"></textarea>
+
+                <!-- Contacts -->
+                <div style="border-top:1px solid var(--border); padding-top:16px; margin-top:16px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <h5 style="margin:0; font-size:0.9rem;">Email Addresses</h5>
+                        <button type="button" class="supplier-btn-secondary supplier-btn-sm" onclick="addContactRow('editEmailContainer', 'email')">+ Add Email</button>
+                    </div>
+                    <div id="editEmailContainer"></div>
+                </div>
+
+                <div style="border-top:1px solid var(--border); padding-top:16px; margin-top:16px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <h5 style="margin:0; font-size:0.9rem;">Phone Numbers</h5>
+                        <button type="button" class="supplier-btn-secondary supplier-btn-sm" onclick="addContactRow('editPhoneContainer', 'phone')">+ Add Phone</button>
+                    </div>
+                    <div id="editPhoneContainer"></div>
+                </div>
+
+                <div style="border-top:1px solid var(--border); padding-top:16px; margin-top:16px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <h5 style="margin:0; font-size:0.9rem;">Physical Address</h5>
+                        <button type="button" class="supplier-btn-secondary supplier-btn-sm" onclick="addContactRow('editLocationContainer', 'location')">+ Add Location</button>
+                    </div>
+                    <div id="editLocationContainer"></div>
                 </div>
             </div>
-
-            <hr />
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <strong>Contact Information</strong>
-                <div>
-                    <button type="button" class="btn btn-outline-secondary btn-sm me-1" id="addEditEmailBtn">+ Email</button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm me-1" id="addEditPhoneBtn">+ Phone</button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm" id="addEditLocationBtn">+ Address</button>
-                </div>
-            </div>
-
-            <div id="editEmailsSection" class="mb-3">
-                <h6>Emails</h6>
-                <div id="editEmailsContainer"></div>
-            </div>
-
-            <div id="editPhonesSection" class="mb-3">
-                <h6>Phones</h6>
-                <div id="editPhonesContainer"></div>
-            </div>
-
-            <div id="editLocationsSection" class="mb-3">
-                <h6>Addresses</h6>
-                <div id="editLocationsContainer"></div>
+            <div class="modal-custom-footer">
+                <button type="button" class="supplier-btn-secondary" onclick="closeEditModal()">Cancel</button>
+                <button type="submit" class="supplier-btn-primary">Save Changes</button>
             </div>
         </form>
-    </div>
-    <div class="blade-footer">
-        <button type="button" class="btn btn-secondary" onclick="closeEditBlade()">Cancel</button>
-        <button type="button" class="btn btn-primary" onclick="document.getElementById('editForm').submit()">Save Changes</button>
     </div>
 </div>
 
 @section Scripts {
 <script>
-    function openCreateBlade() {
-        document.getElementById('createBlade').classList.add('open');
-        document.getElementById('createForm').reset();
-        clearCreateContactFields();
+    let currentProfile = null;
+
+    function setViewMode(mode) {
+        document.getElementById('viewModeInput').value = mode;
+        document.getElementById('filterForm').submit();
     }
 
-    function closeCreateBlade() {
-        document.getElementById('createBlade').classList.remove('open');
+    function openCreateModal() {
+        document.getElementById('createModal').classList.add('active');
     }
 
-    function openEditBlade(btn) {
-        const supplier = JSON.parse(btn.dataset.supplier);
+    function closeCreateModal() {
+        document.getElementById('createModal').classList.remove('active');
+    }
 
-        document.getElementById('editSupplierId').value = supplier.SupplierId;
-        document.getElementById('editName').value = supplier.Name;
-        document.getElementById('editRegistrationNumber').value = supplier.RegistrationNumber ?? '';
-        document.getElementById('editNotes').value = supplier.Notes ?? '';
+    function openEditModal() {
+        document.getElementById('editModal').classList.add('active');
+    }
 
-        clearEditContactFields();
+    function closeEditModal() {
+        document.getElementById('editModal').classList.remove('active');
+    }
 
-        if (Array.isArray(supplier.Emails)) {
-            supplier.Emails.forEach(email => addEmailField('Edit', email.Email, email.EmailType, email.IsPrimary));
+    function previewImage(input, previewBoxId) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById(previewBoxId).innerHTML = `<img src="${e.target.result}" alt="Preview" />`;
+            };
+            reader.readAsDataURL(input.files[0]);
         }
-        if (Array.isArray(supplier.Phones)) {
-            supplier.Phones.forEach(phone => addPhoneField('Edit', phone.PhoneNumber, phone.PhoneType, phone.IsPrimary));
-        }
-        if (Array.isArray(supplier.Locations)) {
-            supplier.Locations.forEach(location => addLocationField('Edit', location.AddressLine1, location.AddressLine2, location.City, location.State, location.PostalCode, location.Country, location.IsPrimary));
-        }
-
-        document.getElementById('editBlade').classList.add('open');
     }
 
-    function closeEditBlade() {
-        document.getElementById('editBlade').classList.remove('open');
-        clearEditContactFields();
+    function addContactRow(containerId, type) {
+        const container = document.getElementById(containerId);
+        const div = document.createElement('div');
+        div.className = 'contact-row-item';
+
+        const isEdit = containerId.startsWith('edit');
+        const prefix = isEdit ? 'Edit' : 'Create';
+
+        if (type === 'email') {
+            div.innerHTML = `
+                <button type="button" class="btn-remove-row" onclick="this.closest('.contact-row-item').remove()">&times;</button>
+                <div style="display:grid; grid-template-columns: 2fr 1fr auto; gap:8px; align-items:center; padding-right:20px;">
+                    <input type="email" name="${prefix}Emails" class="form-control" placeholder="email@vendor.com" />
+                    <select name="${prefix}EmailTypes" class="supplier-select">
+                        <option value="Work">Work</option>
+                        <option value="Personal">Personal</option>
+                        <option value="Other">Other</option>
+                    </select>
+                    <label style="display:flex; align-items:center; gap:4px; font-size:0.8rem; margin:0;">
+                        <input type="checkbox" name="${prefix}EmailPrimaries" value="true" /> Primary
+                    </label>
+                </div>
+            `;
+        } else if (type === 'phone') {
+            div.innerHTML = `
+                <button type="button" class="btn-remove-row" onclick="this.closest('.contact-row-item').remove()">&times;</button>
+                <div style="display:grid; grid-template-columns: 2fr 1fr auto; gap:8px; align-items:center; padding-right:20px;">
+                    <input type="tel" name="${prefix}Phones" class="form-control" placeholder="+237 600000000" />
+                    <select name="${prefix}PhoneTypes" class="supplier-select">
+                        <option value="Work">Work</option>
+                        <option value="Mobile">Mobile</option>
+                        <option value="Home">Home</option>
+                        <option value="Other">Other</option>
+                    </select>
+                    <label style="display:flex; align-items:center; gap:4px; font-size:0.8rem; margin:0;">
+                        <input type="checkbox" name="${prefix}PhonePrimaries" value="true" /> Primary
+                    </label>
+                </div>
+            `;
+        } else if (type === 'location') {
+            div.innerHTML = `
+                <button type="button" class="btn-remove-row" onclick="this.closest('.contact-row-item').remove()">&times;</button>
+                <div style="padding-right:20px;">
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:8px;">
+                        <input type="text" name="${prefix}AddressLines1" class="form-control" placeholder="Street Address" />
+                        <input type="text" name="${prefix}AddressLines2" class="form-control" placeholder="Apt / Suite / Bldg" />
+                    </div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr 1fr auto; gap:8px; align-items:center;">
+                        <input type="text" name="${prefix}Cities" class="form-control" placeholder="City" />
+                        <input type="text" name="${prefix}States" class="form-control" placeholder="State/Region" />
+                        <input type="text" name="${prefix}Countries" class="form-control" placeholder="Country" value="Cameroon" />
+                        <label style="display:flex; align-items:center; gap:4px; font-size:0.8rem; margin:0;">
+                            <input type="checkbox" name="${prefix}LocationPrimaries" value="true" /> Primary
+                        </label>
+                    </div>
+                </div>
+            `;
+        }
+        container.appendChild(div);
     }
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Add contact handlers
-    document.getElementById('addEmailBtn').addEventListener('click', () => addEmailField('Create'));
-    document.getElementById('addPhoneBtn').addEventListener('click', () => addPhoneField('Create'));
-    document.getElementById('addLocationBtn').addEventListener('click', () => addLocationField('Create'));
-    document.getElementById('addEditEmailBtn').addEventListener('click', () => addEmailField('Edit'));
-    document.getElementById('addEditPhoneBtn').addEventListener('click', () => addPhoneField('Edit'));
-    document.getElementById('addEditLocationBtn').addEventListener('click', () => addLocationField('Edit'));
-    
-    // Assign to window to make available to inline onclick
-    window.openCreateBlade = openCreateBlade;
-    window.closeCreateBlade = closeCreateBlade;
-    window.openEditBlade = openEditBlade;
-    window.closeEditBlade = closeEditBlade;
-});
+    function populateEditModal(btn) {
+        const s = JSON.parse(btn.getAttribute('data-supplier'));
+        populateEditModalWithData(s);
+    }
 
-function escapeHtml(text) {
-    return String(text || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-}
+    function populateEditModalWithData(s) {
+        document.getElementById('editSupplierId').value = s.SupplierId || s.supplierId;
+        document.getElementById('editName').value = s.Name || s.name || '';
+        document.getElementById('editRegistrationNumber').value = s.RegistrationNumber || s.registrationNumber || '';
+        document.getElementById('editNotes').value = s.Notes || s.notes || '';
 
-function clearEditContactFields() {
-    document.getElementById('editEmailsContainer').innerHTML = '';
-    document.getElementById('editPhonesContainer').innerHTML = '';
-    document.getElementById('editLocationsContainer').innerHTML = '';
-}
+        const previewBox = document.getElementById('editPreviewBox');
+        if (s.ThumbnailUrl || s.thumbnailUrl) {
+            previewBox.innerHTML = `<img src="${s.ThumbnailUrl || s.thumbnailUrl}" alt="Avatar" />`;
+        } else {
+            previewBox.innerHTML = `<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--text-secondary);"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`;
+        }
 
-function clearCreateContactFields() {
-    document.getElementById('emailsContainer').innerHTML = '';
-    document.getElementById('phonesContainer').innerHTML = '';
-    document.getElementById('locationsContainer').innerHTML = '';
-}
+        // Populate Emails
+        const emailContainer = document.getElementById('editEmailContainer');
+        emailContainer.innerHTML = '';
+        const emails = s.Emails || s.emails || [];
+        if (emails.length > 0) {
+            emails.forEach(e => {
+                const div = document.createElement('div');
+                div.className = 'contact-row-item';
+                div.innerHTML = `
+                    <button type="button" class="btn-remove-row" onclick="this.closest('.contact-row-item').remove()">&times;</button>
+                    <div style="display:grid; grid-template-columns: 2fr 1fr auto; gap:8px; align-items:center; padding-right:20px;">
+                        <input type="email" name="EditEmails" value="${e.Email || e.email || ''}" class="form-control" placeholder="email@vendor.com" />
+                        <select name="EditEmailTypes" class="supplier-select">
+                            <option value="Work" ${(e.EmailType == 0 || e.emailType == 'Work') ? 'selected' : ''}>Work</option>
+                            <option value="Personal" ${(e.EmailType == 1 || e.emailType == 'Personal') ? 'selected' : ''}>Personal</option>
+                            <option value="Other" ${(e.EmailType == 2 || e.emailType == 'Other') ? 'selected' : ''}>Other</option>
+                        </select>
+                        <label style="display:flex; align-items:center; gap:4px; font-size:0.8rem; margin:0;">
+                            <input type="checkbox" name="EditEmailPrimaries" value="true" ${(e.IsPrimary || e.isPrimary) ? 'checked' : ''} /> Primary
+                        </label>
+                    </div>
+                `;
+                emailContainer.appendChild(div);
+            });
+        } else {
+            addContactRow('editEmailContainer', 'email');
+        }
 
-function addEmailField(prefix, email = '', type = 'Work', isPrimary = false) {
-    const container = document.getElementById(prefix === 'Edit' ? 'editEmailsContainer' : 'emailsContainer');
-    const div = document.createElement('div');
-    div.className = 'input-group mb-2';
-    div.innerHTML = `
-        <input type="email" name="${prefix}Emails" class="form-control form-control-sm" placeholder="email@example.com" value="${escapeHtml(email)}" />
-        <select name="${prefix}EmailTypes" class="form-select form-select-sm">
-            @foreach (var typeOption in Model.EmailTypes) {
-                <option value="@((int)typeOption)">@typeOption</option>
+        // Populate Phones
+        const phoneContainer = document.getElementById('editPhoneContainer');
+        phoneContainer.innerHTML = '';
+        const phones = s.Phones || s.phones || [];
+        if (phones.length > 0) {
+            phones.forEach(p => {
+                const div = document.createElement('div');
+                div.className = 'contact-row-item';
+                div.innerHTML = `
+                    <button type="button" class="btn-remove-row" onclick="this.closest('.contact-row-item').remove()">&times;</button>
+                    <div style="display:grid; grid-template-columns: 2fr 1fr auto; gap:8px; align-items:center; padding-right:20px;">
+                        <input type="tel" name="EditPhones" value="${p.PhoneNumber || p.phoneNumber || ''}" class="form-control" placeholder="+237 600000000" />
+                        <select name="EditPhoneTypes" class="supplier-select">
+                            <option value="Work" ${(p.PhoneType == 0 || p.phoneType == 'Work') ? 'selected' : ''}>Work</option>
+                            <option value="Mobile" ${(p.PhoneType == 1 || p.phoneType == 'Mobile') ? 'selected' : ''}>Mobile</option>
+                            <option value="Home" ${(p.PhoneType == 2 || p.phoneType == 'Home') ? 'selected' : ''}>Home</option>
+                            <option value="Other" ${(p.PhoneType == 3 || p.phoneType == 'Other') ? 'selected' : ''}>Other</option>
+                        </select>
+                        <label style="display:flex; align-items:center; gap:4px; font-size:0.8rem; margin:0;">
+                            <input type="checkbox" name="EditPhonePrimaries" value="true" ${(p.IsPrimary || p.isPrimary) ? 'checked' : ''} /> Primary
+                        </label>
+                    </div>
+                `;
+                phoneContainer.appendChild(div);
+            });
+        } else {
+            addContactRow('editPhoneContainer', 'phone');
+        }
+
+        // Populate Locations
+        const locContainer = document.getElementById('editLocationContainer');
+        locContainer.innerHTML = '';
+        const locs = s.Locations || s.locations || [];
+        if (locs.length > 0) {
+            locs.forEach(l => {
+                const div = document.createElement('div');
+                div.className = 'contact-row-item';
+                div.innerHTML = `
+                    <button type="button" class="btn-remove-row" onclick="this.closest('.contact-row-item').remove()">&times;</button>
+                    <div style="padding-right:20px;">
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:8px;">
+                            <input type="text" name="EditAddressLines1" value="${l.AddressLine1 || l.addressLine1 || ''}" class="form-control" placeholder="Street Address" />
+                            <input type="text" name="EditAddressLines2" value="${l.AddressLine2 || l.addressLine2 || ''}" class="form-control" placeholder="Apt / Suite / Bldg" />
+                        </div>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr auto; gap:8px; align-items:center;">
+                            <input type="text" name="EditCities" value="${l.City || l.city || ''}" class="form-control" placeholder="City" />
+                            <input type="text" name="EditStates" value="${l.State || l.state || ''}" class="form-control" placeholder="State/Region" />
+                            <input type="text" name="EditCountries" value="${l.Country || l.country || 'Cameroon'}" class="form-control" placeholder="Country" />
+                            <label style="display:flex; align-items:center; gap:4px; font-size:0.8rem; margin:0;">
+                                <input type="checkbox" name="EditLocationPrimaries" value="true" ${(l.IsPrimary || l.isPrimary) ? 'checked' : ''} /> Primary
+                            </label>
+                        </div>
+                    </div>
+                `;
+                locContainer.appendChild(div);
+            });
+        } else {
+            addContactRow('editLocationContainer', 'location');
+        }
+
+        openEditModal();
+    }
+
+    function editFromDrawer() {
+        if (currentProfile) {
+            populateEditModalWithData(currentProfile);
+        }
+    }
+
+    // ── Supplier 360 Slide-Over Drawer ──
+    async function openSupplierDrawer(id) {
+        const backdrop = document.getElementById('supplierDrawerBackdrop');
+        const drawer = document.getElementById('supplierDrawer');
+
+        backdrop.classList.add('active');
+        drawer.classList.add('active');
+
+        try {
+            const resp = await fetch(`/Suppliers?handler=Profile&id=${id}`);
+            const data = await resp.json();
+            if (!data.success) throw new Error(data.message || 'Failed to fetch supplier details.');
+
+            const p = data.profile;
+            currentProfile = p;
+
+            // Render Header
+            document.getElementById('drawerSupplierName').textContent = p.name;
+            document.getElementById('drawerSupplierReg').textContent = p.registrationNumber ? `REG: ${p.registrationNumber}` : 'REG: N/A';
+            const initials = p.name.split(' ').slice(0, 2).map(w => w[0]).join('');
+
+            const avatarWrap = document.getElementById('drawerAvatarWrap');
+            if (p.thumbnailUrl) {
+                avatarWrap.innerHTML = `<img src="${p.thumbnailUrl}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover;" />`;
+            } else {
+                avatarWrap.innerHTML = `<span>${initials}</span>`;
             }
-        </select>
-        <div class="input-group-text">
-            <input type="checkbox" name="${prefix}EmailPrimaries" class="form-check-input" />
-            <label class="form-check-label ms-1">Primary</label>
-        </div>
-        <button type="button" class="btn btn-outline-danger btn-sm" onclick="this.parentElement.remove()">×</button>`;
-    container.appendChild(div);
-    div.querySelector('select')?.value = String(type);
-    div.querySelector('input[type="checkbox"]')?.checked = Boolean(isPrimary);
-}
 
-function addPhoneField(prefix, phone = '', type = 'Work', isPrimary = false) {
-    const container = document.getElementById(prefix === 'Edit' ? 'editPhonesContainer' : 'phonesContainer');
-    const div = document.createElement('div');
-    div.className = 'input-group mb-2';
-    div.innerHTML = `
-        <input type="tel" name="${prefix}Phones" class="form-control form-control-sm" placeholder="+1234567890" value="${escapeHtml(phone)}" />
-        <select name="${prefix}PhoneTypes" class="form-select form-select-sm">
-            @foreach (var phoneOption in Model.PhoneTypes) {
-                <option value="@((int)phoneOption)">@phoneOption</option>
+            // Quick Actions Strip
+            const primaryPhone = (p.phones || []).find(x => x.isPrimary)?.phoneNumber || (p.phones || [])[0]?.phoneNumber;
+            const primaryEmail = (p.emails || []).find(x => x.isPrimary)?.email || (p.emails || [])[0]?.email;
+            const primaryLoc = (p.locations || []).find(x => x.isPrimary) || (p.locations || [])[0];
+
+            let actionsHtml = '';
+            if (primaryPhone) {
+                const cleanPhone = primaryPhone.replace(/[^0-9+]/g, '');
+                actionsHtml += `<a href="https://wa.me/${cleanPhone.replace('+', '')}" target="_blank" rel="noopener" class="supplier-quick-btn whatsapp"><svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.301-.15-1.78-.878-2.056-.979-.276-.1-.476-.15-.676.15s-.777.979-.952 1.18c-.176.2-.351.226-.652.075-.3-.15-1.267-.467-2.414-1.488-.893-.797-1.496-1.78-1.671-2.082-.176-.3-.019-.463.132-.613.135-.135.301-.351.452-.527.15-.175.2-.3.301-.501.1-.2.05-.376-.025-.526-.075-.15-.676-1.631-.927-2.233-.244-.586-.492-.507-.676-.516l-.576-.01c-.2 0-.526.075-.802.376-.276.3-1.053 1.028-1.053 2.508 0 1.48 1.078 2.909 1.228 3.11.15.2 2.122 3.24 5.141 4.544.718.31 1.279.496 1.716.635.722.23 1.379.197 1.9.12.58-.087 1.78-.727 2.03-1.43.25-.702.25-1.304.175-1.43-.075-.125-.275-.2-.576-.35zM12 2C6.477 2 2 6.477 2 12c0 1.97.57 3.807 1.554 5.36L2.31 21.69a.75.75 0 0 0 .918.918l4.33-1.244A9.957 9.957 0 0 0 12 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg><span>WhatsApp</span></a>`;
+                actionsHtml += `<a href="tel:${cleanPhone}" class="supplier-quick-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span>Call</span></a>`;
             }
-        </select>
-        <div class="input-group-text">
-            <input type="checkbox" name="${prefix}PhonePrimaries" class="form-check-input" />
-            <label class="form-check-label ms-1">Primary</label>
-        </div>
-        <button type="button" class="btn btn-outline-danger btn-sm" onclick="this.parentElement.remove()">×</button>`;
-    container.appendChild(div);
-    div.querySelector('select')?.value = String(type);
-    div.querySelector('input[type="checkbox"]')?.checked = Boolean(isPrimary);
-}
+            if (primaryEmail) {
+                actionsHtml += `<a href="mailto:${primaryEmail}" class="supplier-quick-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg><span>Email</span></a>`;
+            }
+            if (primaryLoc) {
+                const query = encodeURIComponent(`${primaryLoc.addressLine1 || ''} ${primaryLoc.city || ''} ${primaryLoc.country || ''}`.trim());
+                actionsHtml += `<a href="https://www.google.com/maps/search/?api=1&query=${query}" target="_blank" rel="noopener" class="supplier-quick-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span>Map</span></a>`;
+            }
+            document.getElementById('drawerQuickActions').innerHTML = actionsHtml;
 
-function addLocationField(prefix, address1 = '', address2 = '', city = '', state = '', postalCode = '', country = '', isPrimary = false) {
-    const container = document.getElementById(prefix === 'Edit' ? 'editLocationsContainer' : 'locationsContainer');
-    const div = document.createElement('div');
-    div.className = 'row g-2 mb-3 border rounded p-2';
-    div.innerHTML = `
-        <div class="col-md-6">
-            <input type="text" name="${prefix}AddressLines1" class="form-control form-control-sm" placeholder="Address Line 1" value="${escapeHtml(address1)}" />
-        </div>
-        <div class="col-md-6">
-            <input type="text" name="${prefix}AddressLines2" class="form-control form-control-sm" placeholder="Address Line 2" value="${escapeHtml(address2)}" />
-        </div>
-        <div class="col-md-4">
-            <input type="text" name="${prefix}Cities" class="form-control form-control-sm" placeholder="City" value="${escapeHtml(city)}" />
-        </div>
-        <div class="col-md-4">
-            <input type="text" name="${prefix}States" class="form-control form-control-sm" placeholder="State/Province" value="${escapeHtml(state)}" />
-        </div>
-        <div class="col-md-4">
-            <input type="text" name="${prefix}PostalCodes" class="form-control form-control-sm" placeholder="Postal Code" value="${escapeHtml(postalCode)}" />
-        </div>
-        <div class="col-md-6">
-            <input type="text" name="${prefix}Countries" class="form-control form-control-sm" placeholder="Country" value="${escapeHtml(country)}" />
-        </div>
-        <div class="col-md-5 d-flex align-items-center">
-            <div class="form-check">
-                <input type="checkbox" name="${prefix}LocationPrimaries" class="form-check-input" ${isPrimary ? 'checked' : ''} />
-                <label class="form-check-label">Primary Address</label>
-            </div>
-        </div>
-        <div class="col-md-1">
-            <button type="button" class="btn btn-outline-danger btn-sm" onclick="this.parentElement.parentElement.remove()">×</button>
-        </div>`;
-    container.appendChild(div);
-}
+            // Financial & Order KPIs
+            document.getElementById('drawerTotalSpend').textContent = `${(p.totalSpend || 0).toLocaleString()} XAF`;
+            document.getElementById('drawerTotalOrders').textContent = (p.totalPurchaseOrdersCount || 0).toString();
+            document.getElementById('drawerOpenOrders').textContent = (p.openOrdersCount || 0).toString();
+
+            // Render Orders Tab
+            const ordersList = document.getElementById('drawerOrdersList');
+            if (!p.recentOrders || p.recentOrders.length === 0) {
+                ordersList.innerHTML = '<div style="color:var(--text-secondary); font-size:0.85rem; padding:16px 0; text-align:center;">No purchase orders on record.</div>';
+            } else {
+                ordersList.innerHTML = p.recentOrders.map(o => `
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:var(--canvas); padding:10px 14px; border-radius:8px; border:1px solid var(--border); font-size:0.85rem;">
+                        <div>
+                            <div style="font-weight:700;">#${o.referenceNumber || ('PO-' + o.purchaseOrderId)}</div>
+                            <div style="font-size:0.75rem; color:var(--text-secondary);">${new Date(o.dateCreated).toLocaleDateString()} • ${o.itemsCount} items</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-weight:700;">${(o.totalAmount || 0).toLocaleString()} XAF</div>
+                            <span class="badge ${o.status === 'Received' ? 'badge-green' : o.status === 'Approved' ? 'badge-blue' : 'badge-amber'}" style="font-size:0.7rem;">${o.status}</span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            // Render Supplied Products Tab
+            const prodList = document.getElementById('drawerProductsList');
+            if (!p.suppliedItems || p.suppliedItems.length === 0) {
+                prodList.innerHTML = '<div style="color:var(--text-secondary); font-size:0.85rem; padding:16px 0; text-align:center;">No product catalog or history linked.</div>';
+            } else {
+                prodList.innerHTML = p.suppliedItems.map(i => `
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:var(--canvas); padding:10px 14px; border-radius:8px; border:1px solid var(--border); font-size:0.85rem;">
+                        <div>
+                            <div style="font-weight:700;">${i.itemName}</div>
+                            <div style="font-size:0.75rem; color:var(--text-secondary); font-family:monospace;">${i.barcode ? 'BARCODE: ' + i.barcode : 'NO BARCODE'}</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-weight:700; color:var(--accent-primary, #3b82f6);">${(i.lastUnitCost || 0).toLocaleString()} XAF <small style="font-weight:normal; color:var(--text-secondary);">/unit</small></div>
+                            <div style="font-size:0.75rem; color:var(--text-secondary);">Total Rcvd: ${i.totalQuantityReceived}</div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            // Render Contacts & Locations Tab
+            const emailsList = document.getElementById('drawerEmailsList');
+            emailsList.innerHTML = (p.emails && p.emails.length > 0)
+                ? p.emails.map(e => `<div style="font-size:0.85rem; display:flex; justify-content:space-between; background:var(--canvas); padding:6px 10px; border-radius:6px; border:1px solid var(--border);"><a href="mailto:${e.email}" style="color:var(--text-primary); text-decoration:none;">${e.email}</a> <span class="badge ${e.isPrimary ? 'badge-blue' : 'badge-gray'}" style="font-size:0.7rem;">${e.isPrimary ? 'Primary' : ''} ${e.emailType || ''}</span></div>`).join('')
+                : '<div style="color:var(--text-secondary); font-size:0.85rem;">None</div>';
+
+            const phonesList = document.getElementById('drawerPhonesList');
+            phonesList.innerHTML = (p.phones && p.phones.length > 0)
+                ? p.phones.map(ph => `<div style="font-size:0.85rem; display:flex; justify-content:space-between; background:var(--canvas); padding:6px 10px; border-radius:6px; border:1px solid var(--border);"><a href="tel:${ph.phoneNumber}" style="color:var(--text-primary); text-decoration:none;">${ph.phoneNumber}</a> <span class="badge ${ph.isPrimary ? 'badge-blue' : 'badge-gray'}" style="font-size:0.7rem;">${ph.isPrimary ? 'Primary' : ''} ${ph.phoneType || ''}</span></div>`).join('')
+                : '<div style="color:var(--text-secondary); font-size:0.85rem;">None</div>';
+
+            const locsList = document.getElementById('drawerLocationsList');
+            locsList.innerHTML = (p.locations && p.locations.length > 0)
+                ? p.locations.map(l => `<div style="font-size:0.85rem; background:var(--canvas); padding:8px 10px; border-radius:6px; border:1px solid var(--border);">${l.addressLine1 ? l.addressLine1 + ', ' : ''}${l.city || ''}, ${l.country || ''} ${l.isPrimary ? '<span class="badge badge-blue" style="font-size:0.65rem; margin-left:4px;">Primary</span>' : ''}</div>`).join('')
+                : '<div style="color:var(--text-secondary); font-size:0.85rem;">None</div>';
+
+            document.getElementById('drawerNotes').textContent = p.notes || 'No internal vendor notes recorded.';
+
+            // Render ID Pass & Vector Barcode
+            document.getElementById('passSupplierName').textContent = p.name;
+            document.getElementById('passDateCreated').textContent = new Date(p.dateCreated).toLocaleDateString();
+            const barcodeVal = `SUPP-${p.supplierId.substring(0, 8).toUpperCase()}`;
+            document.getElementById('vendorBarcodeText').textContent = barcodeVal;
+            renderVectorBarcode('vendorBarcodeSvg', barcodeVal);
+
+            // Setup Footer Buttons
+            document.getElementById('drawerDeleteId').value = p.supplierId;
+            document.getElementById('drawerPoBtn').href = `/PurchaseOrders?supplierId=${p.supplierId}`;
+
+        } catch (err) {
+            alert('Error loading supplier profile: ' + err.message);
+            closeSupplierDrawer();
+        }
+    }
+
+    function closeSupplierDrawer() {
+        document.getElementById('supplierDrawerBackdrop').classList.remove('active');
+        document.getElementById('supplierDrawer').classList.remove('active');
+    }
+
+    function switchDrawerTab(tabId, btn) {
+        document.querySelectorAll('.supplier-tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.supplier-tab-pane').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(tabId).classList.add('active');
+    }
+
+    // ── Pure Vector SVG Barcode Generator (Code 128 / Code 39 Simulation) ──
+    function renderVectorBarcode(svgId, text) {
+        const svg = document.getElementById(svgId);
+        if (!svg) return;
+
+        const charPatterns = {
+            '0': '101001101101', '1': '110100101011', '2': '101100101011', '3': '110110010101',
+            '4': '101001101011', '5': '110100110101', '6': '101100110101', '7': '101001011011',
+            '8': '110100101101', '9': '101100101101', 'A': '110101001011', 'B': '101101001011',
+            'C': '110110100101', 'D': '101011001011', 'E': '110101100101', 'F': '101101100101',
+            'G': '101010011011', 'H': '110101001101', 'I': '101101001101', 'J': '101011001101',
+            'K': '110101010011', 'L': '101101010011', 'M': '110110101001', 'N': '101011010011',
+            'O': '110101101001', 'P': '101101101001', 'Q': '101010110011', 'R': '110101011001',
+            'S': '101101011001', 'T': '101011011001', 'U': '110010101011', 'V': '100110101011',
+            'W': '110011010101', 'X': '100101101011', 'Y': '110010110101', 'Z': '100110110101',
+            '-': '100101011011', '.': '110010101101', ' ': '100110101101', '$': '100100100101',
+            '/': '100100101001', '+': '100101001001', '%': '101001001001', '*': '100101101101'
+        };
+
+        const cleanText = '*' + text.toUpperCase().replace(/[^0-9A-Z\-\. \$\/\+\%]/g, '-') + '*';
+        let fullBits = '';
+        for (let ch of cleanText) {
+            fullBits += (charPatterns[ch] || charPatterns['-']) + '0';
+        }
+
+        const barWidth = 2.4;
+        const height = 55;
+        const totalWidth = fullBits.length * barWidth;
+
+        let rects = '';
+        for (let i = 0; i < fullBits.length; i++) {
+            if (fullBits[i] === '1') {
+                rects += `<rect x="${(i * barWidth).toFixed(1)}" y="0" width="${barWidth.toFixed(1)}" height="${height}" fill="#0f172a" />`;
+            }
+        }
+
+        svg.setAttribute('viewBox', `0 0 ${totalWidth} ${height}`);
+        svg.innerHTML = rects;
+    }
+
+    // Global ESC handler
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') {
+            closeCreateModal();
+            closeEditModal();
+            closeSupplierDrawer();
+        }
+    });
+
+    // Auto-open drawer if ?id= or ?supplierId= is present in URL
+    window.addEventListener('DOMContentLoaded', async () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const preselectedId = urlParams.get('id') || urlParams.get('supplierId');
+        const action = urlParams.get('action');
+
+        if (preselectedId) {
+            await openSupplierDrawer(preselectedId);
+            if (action === 'edit') {
+                editFromDrawer();
+            }
+        }
+    });
 </script>
 }
-
-

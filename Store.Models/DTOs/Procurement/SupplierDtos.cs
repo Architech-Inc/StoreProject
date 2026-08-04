@@ -127,3 +127,44 @@ public class UpdateSupplierRequest
     public List<CreateSupplierPhoneRequest>? Phones { get; set; }
     public List<CreateSupplierLocationRequest>? Locations { get; set; }
 }
+
+public class SupplierMetricsDto
+{
+    public int TotalSuppliers { get; set; }
+    public int ActiveSuppliers { get; set; }
+    public decimal TotalProcurementSpend { get; set; }
+    public int OpenPurchaseOrdersCount { get; set; }
+    public int PendingDeliveriesCount { get; set; }
+}
+
+public class SupplierProfileDto : SupplierDto
+{
+    public decimal TotalSpend { get; set; }
+    public int TotalPurchaseOrdersCount { get; set; }
+    public int OpenOrdersCount { get; set; }
+    public DateTime? LastOrderDate { get; set; }
+    public List<SupplierPurchaseOrderSummaryDto> RecentOrders { get; set; } = new();
+    public List<SupplierItemSummaryDto> SuppliedItems { get; set; } = new();
+}
+
+public class SupplierPurchaseOrderSummaryDto
+{
+    public int PurchaseOrderId { get; set; }
+    public string? ReferenceNumber { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public decimal TotalAmount { get; set; }
+    public int ItemsCount { get; set; }
+    public DateTime DateCreated { get; set; }
+    public DateTime? ExpectedDeliveryDate { get; set; }
+}
+
+public class SupplierItemSummaryDto
+{
+    public Guid ItemId { get; set; }
+    public string ItemName { get; set; } = string.Empty;
+    public string? Barcode { get; set; }
+    public decimal LastUnitCost { get; set; }
+    public int TotalQuantityReceived { get; set; }
+    public DateTime? LastReceivedDate { get; set; }
+}
+

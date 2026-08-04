@@ -1,6 +1,6 @@
+using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Store.Models.DTOs.Procurement;
-using Store.Models.Entities.Contacts;
 using Store.Models.Enums;
 using Store.Models.Interfaces.Services;
 using StoreUI.Services;
@@ -11,15 +11,31 @@ public class SuppliersModel : SecurePageModel
 {
     private readonly ISupplierService _supplierService;
     private readonly IApiClientService _apiClient;
+    private readonly IFileService _fileService;
 
     public List<SupplierDto> Suppliers { get; private set; } = new();
-    public string? SearchQuery { get; private set; }
+    public SupplierMetricsDto Metrics { get; private set; } = new();
+    public List<string> AvailableCities { get; private set; } = new();
+    public List<string> AvailableCountries { get; private set; } = new();
+
+    // Query & Filtering
+    [BindProperty(SupportsGet = true)] public string? Search { get; set; }
+    [BindProperty(SupportsGet = true)] public string? CityFilter { get; set; }
+    [BindProperty(SupportsGet = true)] public string? CountryFilter { get; set; }
+    [BindProperty(SupportsGet = true)] public string SortBy { get; set; } = "name_asc";
+    [BindProperty(SupportsGet = true)] public string ViewMode { get; set; } = "grid";
+    [BindProperty(SupportsGet = true)] public Guid? Id { get; set; }
+    [BindProperty(SupportsGet = true)] public Guid? SupplierId { get; set; }
 
     // ---- Create Supplier ----
-    [BindProperty] public Guid CreateSupplierId { get; set; }
     [BindProperty] public string CreateName { get; set; } = string.Empty;
     [BindProperty] public string? CreateRegistrationNumber { get; set; }
     [BindProperty] public string? CreateNotes { get; set; }
+    [BindProperty] public IFormFile? CreateImageUpload { get; set; }
+    [BindProperty] public int? CropX { get; set; }
+    [BindProperty] public int? CropY { get; set; }
+    [BindProperty] public int? CropW { get; set; }
+    [BindProperty] public int? CropH { get; set; }
 
     // Contacts
     [BindProperty] public List<string> CreateEmails { get; set; } = new();
@@ -43,6 +59,11 @@ public class SuppliersModel : SecurePageModel
     [BindProperty] public string EditName { get; set; } = string.Empty;
     [BindProperty] public string? EditRegistrationNumber { get; set; }
     [BindProperty] public string? EditNotes { get; set; }
+    [BindProperty] public IFormFile? EditImageUpload { get; set; }
+    [BindProperty] public int? EditCropX { get; set; }
+    [BindProperty] public int? EditCropY { get; set; }
+    [BindProperty] public int? EditCropW { get; set; }
+    [BindProperty] public int? EditCropH { get; set; }
 
     [BindProperty] public List<string> EditEmails { get; set; } = new();
     [BindProperty] public List<EmailType> EditEmailTypes { get; set; } = new();
@@ -65,40 +86,91 @@ public class SuppliersModel : SecurePageModel
     public IEnumerable<EmailType> EmailTypes { get; } = Enum.GetValues<EmailType>();
     public IEnumerable<PhoneType> PhoneTypes { get; } = Enum.GetValues<PhoneType>();
 
-    public SuppliersModel(ISupplierService supplierService, IApiClientService apiClient)
+    public SuppliersModel(
+        ISupplierService supplierService,
+        IApiClientService apiClient,
+        IFileService fileService)
     {
         _supplierService = supplierService;
         _apiClient = apiClient;
+        _fileService = fileService;
     }
 
-    public async Task<IActionResult> OnGetAsync(string? search = null)
+    public async Task<IActionResult> OnGetAsync(CancellationToken ct = default)
     {
         if (!TryGetSecurityContext(out var token, out _))
             return GoToLogin();
 
         _apiClient.SetToken(token);
-        Suppliers = await _supplierService.GetAllAsync();
-        
-        SearchQuery = search;
-        if (!string.IsNullOrWhiteSpace(search))
+
+        // Normalize ID deep-linking
+        if (SupplierId.HasValue && !Id.HasValue)
+            Id = SupplierId;
+
+        // Load KPI Metrics
+        try
         {
-            var s = search.ToLower();
-            Suppliers = Suppliers.Where(x => 
-                x.Name.ToLower().Contains(s) || 
-                (x.RegistrationNumber != null && x.RegistrationNumber.ToLower().Contains(s))
-            ).ToList();
+            Metrics = await _supplierService.GetMetricsAsync();
         }
-        
+        catch
+        {
+            Metrics = new SupplierMetricsDto();
+        }
+
+        // Load filtered suppliers
+        Suppliers = await _supplierService.GetAllAsync(Search, CityFilter, CountryFilter, SortBy);
+
+        // Load available cities & countries for filtering
+        var allSuppliers = await _supplierService.GetAllAsync();
+        AvailableCities = allSuppliers
+            .SelectMany(s => s.Locations)
+            .Where(l => !string.IsNullOrWhiteSpace(l.City))
+            .Select(l => l.City.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(c => c)
+            .ToList();
+
+        AvailableCountries = allSuppliers
+            .SelectMany(s => s.Locations)
+            .Where(l => !string.IsNullOrWhiteSpace(l.Country))
+            .Select(l => l.Country.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(c => c)
+            .ToList();
+
         ViewData["ActivePage"] = "Suppliers";
         return Page();
     }
 
-    public async Task<IActionResult> OnPostCreateAsync()
+    public async Task<IActionResult> OnGetProfileAsync(Guid id)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return new JsonResult(new { success = false, message = "Unauthorized" }) { StatusCode = 401 };
+
+        _apiClient.SetToken(token);
+        var profile = await _supplierService.GetProfileAsync(id);
+        if (profile is null)
+            return new JsonResult(new { success = false, message = "Supplier not found" }) { StatusCode = 404 };
+
+        return new JsonResult(new { success = true, profile });
+    }
+
+    public async Task<IActionResult> OnPostCreateAsync(CancellationToken ct = default)
     {
         if (!TryGetSecurityContext(out var token, out _))
             return GoToLogin();
 
         _apiClient.SetToken(token);
+
+        string? thumbUrl = null;
+        string? fullUrl = null;
+        if (CreateImageUpload != null && CreateImageUpload.Length > 0)
+        {
+            using var stream = CreateImageUpload.OpenReadStream();
+            var uploadResult = await _fileService.UploadFileAsync(stream, CreateImageUpload.FileName, CreateImageUpload.ContentType, "suppliers", CropX, CropY, CropW, CropH, ct);
+            thumbUrl = uploadResult.ThumbnailUrl;
+            fullUrl = uploadResult.FullImageUrl;
+        }
 
         var emails = new List<CreateSupplierEmailRequest>();
         for (int i = 0; i < CreateEmails.Count; i++)
@@ -107,7 +179,7 @@ public class SuppliersModel : SecurePageModel
             {
                 emails.Add(new CreateSupplierEmailRequest
                 {
-                    Email = CreateEmails[i],
+                    Email = CreateEmails[i].Trim(),
                     EmailType = CreateEmailTypes.ElementAtOrDefault(i),
                     IsPrimary = CreateEmailPrimaries.ElementAtOrDefault(i)
                 });
@@ -121,7 +193,7 @@ public class SuppliersModel : SecurePageModel
             {
                 phones.Add(new CreateSupplierPhoneRequest
                 {
-                    PhoneNumber = CreatePhones[i],
+                    PhoneNumber = CreatePhones[i].Trim(),
                     PhoneType = CreatePhoneTypes.ElementAtOrDefault(i),
                     IsPrimary = CreatePhonePrimaries.ElementAtOrDefault(i)
                 });
@@ -135,12 +207,12 @@ public class SuppliersModel : SecurePageModel
             {
                 locations.Add(new CreateSupplierLocationRequest
                 {
-                    AddressLine1 = CreateAddressLines1[i],
-                    AddressLine2 = CreateAddressLines2.ElementAtOrDefault(i),
-                    City = CreateCities.ElementAtOrDefault(i) ?? string.Empty,
-                    State = CreateStates.ElementAtOrDefault(i),
-                    PostalCode = CreatePostalCodes.ElementAtOrDefault(i),
-                    Country = CreateCountries.ElementAtOrDefault(i) ?? string.Empty,
+                    AddressLine1 = CreateAddressLines1[i].Trim(),
+                    AddressLine2 = string.IsNullOrWhiteSpace(CreateAddressLines2.ElementAtOrDefault(i)) ? null : CreateAddressLines2[i]?.Trim(),
+                    City = CreateCities.ElementAtOrDefault(i)?.Trim() ?? string.Empty,
+                    State = string.IsNullOrWhiteSpace(CreateStates.ElementAtOrDefault(i)) ? null : CreateStates[i]?.Trim(),
+                    PostalCode = string.IsNullOrWhiteSpace(CreatePostalCodes.ElementAtOrDefault(i)) ? null : CreatePostalCodes[i]?.Trim(),
+                    Country = CreateCountries.ElementAtOrDefault(i)?.Trim() ?? string.Empty,
                     IsPrimary = CreateLocationPrimaries.ElementAtOrDefault(i)
                 });
             }
@@ -148,9 +220,11 @@ public class SuppliersModel : SecurePageModel
 
         var request = new CreateSupplierRequest
         {
-            Name = CreateName,
-            RegistrationNumber = CreateRegistrationNumber,
-            Notes = CreateNotes,
+            Name = CreateName.Trim(),
+            RegistrationNumber = string.IsNullOrWhiteSpace(CreateRegistrationNumber) ? null : CreateRegistrationNumber.Trim(),
+            Notes = string.IsNullOrWhiteSpace(CreateNotes) ? null : CreateNotes.Trim(),
+            ThumbnailUrl = thumbUrl,
+            FullImageUrl = fullUrl,
             Emails = emails,
             Phones = phones,
             Locations = locations
@@ -158,23 +232,33 @@ public class SuppliersModel : SecurePageModel
 
         try
         {
-            await _supplierService.CreateAsync(request, Guid.Empty);
-            StatusMessage = "Supplier created successfully.";
+            var created = await _supplierService.CreateAsync(request, Guid.Empty);
+            StatusMessage = $"Supplier '{created.Name}' registered successfully.";
+            return RedirectToPage(new { id = created.SupplierId });
         }
-        catch
+        catch (Exception ex)
         {
-            StatusMessage = "Error: Failed to create supplier.";
+            StatusMessage = $"Error: Failed to create supplier ({ex.Message}).";
+            return RedirectToPage();
         }
-
-        return RedirectToPage();
     }
 
-    public async Task<IActionResult> OnPostEditAsync()
+    public async Task<IActionResult> OnPostEditAsync(CancellationToken ct = default)
     {
         if (!TryGetSecurityContext(out var token, out _))
             return GoToLogin();
 
         _apiClient.SetToken(token);
+
+        string? thumbUrl = null;
+        string? fullUrl = null;
+        if (EditImageUpload != null && EditImageUpload.Length > 0)
+        {
+            using var stream = EditImageUpload.OpenReadStream();
+            var uploadResult = await _fileService.UploadFileAsync(stream, EditImageUpload.FileName, EditImageUpload.ContentType, "suppliers", EditCropX, EditCropY, EditCropW, EditCropH, ct);
+            thumbUrl = uploadResult.ThumbnailUrl;
+            fullUrl = uploadResult.FullImageUrl;
+        }
 
         var emails = new List<CreateSupplierEmailRequest>();
         for (int i = 0; i < EditEmails.Count; i++)
@@ -183,7 +267,7 @@ public class SuppliersModel : SecurePageModel
             {
                 emails.Add(new CreateSupplierEmailRequest
                 {
-                    Email = EditEmails[i],
+                    Email = EditEmails[i].Trim(),
                     EmailType = EditEmailTypes.ElementAtOrDefault(i),
                     IsPrimary = EditEmailPrimaries.ElementAtOrDefault(i)
                 });
@@ -197,7 +281,7 @@ public class SuppliersModel : SecurePageModel
             {
                 phones.Add(new CreateSupplierPhoneRequest
                 {
-                    PhoneNumber = EditPhones[i],
+                    PhoneNumber = EditPhones[i].Trim(),
                     PhoneType = EditPhoneTypes.ElementAtOrDefault(i),
                     IsPrimary = EditPhonePrimaries.ElementAtOrDefault(i)
                 });
@@ -211,12 +295,12 @@ public class SuppliersModel : SecurePageModel
             {
                 locations.Add(new CreateSupplierLocationRequest
                 {
-                    AddressLine1 = EditAddressLines1[i],
-                    AddressLine2 = EditAddressLines2.ElementAtOrDefault(i),
-                    City = EditCities.ElementAtOrDefault(i) ?? string.Empty,
-                    State = EditStates.ElementAtOrDefault(i),
-                    PostalCode = EditPostalCodes.ElementAtOrDefault(i),
-                    Country = EditCountries.ElementAtOrDefault(i) ?? string.Empty,
+                    AddressLine1 = EditAddressLines1[i].Trim(),
+                    AddressLine2 = string.IsNullOrWhiteSpace(EditAddressLines2.ElementAtOrDefault(i)) ? null : EditAddressLines2[i]?.Trim(),
+                    City = EditCities.ElementAtOrDefault(i)?.Trim() ?? string.Empty,
+                    State = string.IsNullOrWhiteSpace(EditStates.ElementAtOrDefault(i)) ? null : EditStates[i]?.Trim(),
+                    PostalCode = string.IsNullOrWhiteSpace(EditPostalCodes.ElementAtOrDefault(i)) ? null : EditPostalCodes[i]?.Trim(),
+                    Country = EditCountries.ElementAtOrDefault(i)?.Trim() ?? string.Empty,
                     IsPrimary = EditLocationPrimaries.ElementAtOrDefault(i)
                 });
             }
@@ -224,9 +308,11 @@ public class SuppliersModel : SecurePageModel
 
         var request = new UpdateSupplierRequest
         {
-            Name = EditName,
-            RegistrationNumber = EditRegistrationNumber,
-            Notes = EditNotes,
+            Name = EditName.Trim(),
+            RegistrationNumber = string.IsNullOrWhiteSpace(EditRegistrationNumber) ? null : EditRegistrationNumber.Trim(),
+            Notes = string.IsNullOrWhiteSpace(EditNotes) ? null : EditNotes.Trim(),
+            ThumbnailUrl = thumbUrl,
+            FullImageUrl = fullUrl,
             Emails = emails,
             Phones = phones,
             Locations = locations
@@ -234,10 +320,10 @@ public class SuppliersModel : SecurePageModel
 
         var result = await _supplierService.UpdateAsync(EditSupplierId, request);
         StatusMessage = result is not null
-            ? "Supplier updated successfully."
+            ? $"Supplier '{result.Name}' updated successfully."
             : "Error: Supplier not found.";
 
-        return RedirectToPage();
+        return RedirectToPage(new { id = EditSupplierId });
     }
 
     public async Task<IActionResult> OnPostDeleteAsync(Guid supplierId)
@@ -250,8 +336,35 @@ public class SuppliersModel : SecurePageModel
         var success = await _supplierService.DeleteAsync(supplierId);
         StatusMessage = success
             ? "Supplier deleted successfully."
-            : "Error: Could not delete supplier (may have associated orders).";
+            : "Error: Could not delete supplier (supplier has associated purchase orders or item orders).";
 
         return RedirectToPage();
     }
+
+    public async Task<IActionResult> OnGetExportCsvAsync()
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return GoToLogin();
+
+        _apiClient.SetToken(token);
+        var list = await _supplierService.GetAllAsync(Search, CityFilter, CountryFilter, SortBy);
+
+        var sb = new StringBuilder();
+        sb.AppendLine("Supplier ID,Name,Registration Number,Primary Phone,Primary Email,Primary Location,Date Created");
+
+        foreach (var s in list)
+        {
+            var primaryPhone = s.Phones.FirstOrDefault(p => p.IsPrimary)?.PhoneNumber ?? s.Phones.FirstOrDefault()?.PhoneNumber ?? "";
+            var primaryEmail = s.Emails.FirstOrDefault(e => e.IsPrimary)?.Email ?? s.Emails.FirstOrDefault()?.Email ?? "";
+            var primaryLoc = s.Locations.FirstOrDefault(l => l.IsPrimary) ?? s.Locations.FirstOrDefault();
+            var locStr = primaryLoc != null ? $"{primaryLoc.AddressLine1}, {primaryLoc.City}, {primaryLoc.Country}" : "";
+
+            sb.AppendLine($"\"{s.SupplierId}\",\"{EscapeCsv(s.Name)}\",\"{EscapeCsv(s.RegistrationNumber ?? "")}\",\"{EscapeCsv(primaryPhone)}\",\"{EscapeCsv(primaryEmail)}\",\"{EscapeCsv(locStr)}\",\"{s.DateCreated:yyyy-MM-dd HH:mm:ss}\"");
+        }
+
+        var bytes = Encoding.UTF8.GetBytes(sb.ToString());
+        return File(bytes, "text/csv", $"suppliers_{DateTime.UtcNow:yyyyMMddHHmmss}.csv");
+    }
+
+    private static string EscapeCsv(string val) => val.Replace("\"", "\"\"");
 }

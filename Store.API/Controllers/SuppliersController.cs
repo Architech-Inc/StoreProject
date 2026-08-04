@@ -20,10 +20,22 @@ public class SuppliersController : ControllerBase
 
     [HttpGet]
     [Authorize(Policy = PermissionKeys.InventoryRead)]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll(
+        [FromQuery] string? search = null,
+        [FromQuery] string? city = null,
+        [FromQuery] string? country = null,
+        [FromQuery] string? sortBy = null)
     {
-        var suppliers = await _supplierService.GetAllAsync();
+        var suppliers = await _supplierService.GetAllAsync(search, city, country, sortBy);
         return Ok(ApiResponse<List<SupplierDto>>.Ok(suppliers));
+    }
+
+    [HttpGet("metrics")]
+    [Authorize(Policy = PermissionKeys.InventoryRead)]
+    public async Task<IActionResult> GetMetrics()
+    {
+        var metrics = await _supplierService.GetMetricsAsync();
+        return Ok(ApiResponse<SupplierMetricsDto>.Ok(metrics));
     }
 
     [HttpGet("{id:guid}")]
@@ -37,8 +49,19 @@ public class SuppliersController : ControllerBase
         return Ok(ApiResponse<SupplierDto>.Ok(supplier));
     }
 
+    [HttpGet("{id:guid}/profile")]
+    [Authorize(Policy = PermissionKeys.InventoryRead)]
+    public async Task<IActionResult> GetProfile(Guid id)
+    {
+        var profile = await _supplierService.GetProfileAsync(id);
+        if (profile is null)
+            return NotFound(ApiErrorResponse.From("not_found", "Supplier not found",
+                traceId: HttpContext.TraceIdentifier));
+        return Ok(ApiResponse<SupplierProfileDto>.Ok(profile));
+    }
+
     [HttpPost]
-    [Authorize(Policy = PermissionKeys.AdminBranches)]
+    [Authorize(Policy = PermissionKeys.InventoryWrite)]
     public async Task<IActionResult> Create([FromBody] CreateSupplierRequest request)
     {
         var userIdClaim = User.FindFirst("uid")?.Value;
@@ -51,7 +74,7 @@ public class SuppliersController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
-    [Authorize(Policy = PermissionKeys.AdminBranches)]
+    [Authorize(Policy = PermissionKeys.InventoryWrite)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateSupplierRequest request)
     {
         var supplier = await _supplierService.UpdateAsync(id, request);
@@ -62,7 +85,7 @@ public class SuppliersController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
-    [Authorize(Policy = PermissionKeys.AdminBranches)]
+    [Authorize(Policy = PermissionKeys.InventoryWrite)]
     public async Task<IActionResult> Delete(Guid id)
     {
         var success = await _supplierService.DeleteAsync(id);
