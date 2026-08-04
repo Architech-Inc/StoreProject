@@ -55,6 +55,7 @@ builder.Services.AddScoped<IDiscountOverrideService, ApiDiscountOverrideService>
 builder.Services.AddScoped<IPurchaseOrderService, ApiPurchaseOrderService>();
 builder.Services.AddScoped<ICashVarianceService, ApiCashVarianceService>();
 builder.Services.AddScoped<ISupplierService, ApiSupplierService>();
+builder.Services.AddScoped<ILoyaltyService, ApiLoyaltyService>();
 builder.Services.AddScoped<IFileService, ApiFileService>();
 
 var app = builder.Build();

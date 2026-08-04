@@ -1,171 +1,1526 @@
 @page
 @model StoreUI.Pages.LoyaltyModel
+@using Store.Models.Enums
 @{
-    ViewData["Title"] = "Customer Loyalty";
-    ViewData["PageDescription"] = "View and manage customer loyalty points and tier status.";
+    ViewData["Title"] = "Loyalty & Rewards 360 Hub";
+    ViewData["ActivePage"] = "Loyalty";
+    ViewData["PageDescription"] = "Customer Rewards Directory, Tier Progression, Points Circulation Liability, and Redemption Management.";
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
+    <style>
+        /* Loyalty 360 Hub Scoped Styles */
+        .loyalty-container {
+            max-width: 1440px;
+            margin: 0 auto;
+            color: var(--text-primary);
+        }
+
+        /* KPI Banner */
+        .loyalty-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .loyalty-kpi-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg, 12px);
+            padding: 18px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.05));
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .loyalty-kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,0.08));
+        }
+
+        .loyalty-kpi-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .loyalty-kpi-icon.purple { background: rgba(139, 92, 246, 0.12); color: #7c3aed; }
+        .loyalty-kpi-icon.amber { background: rgba(245, 158, 11, 0.12); color: #d97706; }
+        .loyalty-kpi-icon.green { background: rgba(16, 185, 129, 0.12); color: #059669; }
+        .loyalty-kpi-icon.rose { background: rgba(244, 63, 94, 0.12); color: #e11d48; }
+        .loyalty-kpi-icon.blue { background: rgba(59, 130, 246, 0.12); color: #2563eb; }
+
+        .loyalty-kpi-val {
+            font-size: 1.45rem;
+            font-weight: 700;
+            line-height: 1.2;
+            color: var(--text-primary);
+        }
+
+        .loyalty-kpi-lbl {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        /* Toolbar & Controls */
+        .loyalty-toolbar {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg, 12px);
+            padding: 16px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .loyalty-filter-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .loyalty-search-box {
+            position: relative;
+            min-width: 260px;
+        }
+
+        .loyalty-search-box input {
+            width: 100%;
+            padding: 8px 12px 8px 34px;
+            border-radius: var(--radius-md, 8px);
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+
+        .loyalty-search-box .search-icon {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            pointer-events: none;
+        }
+
+        .tier-pills {
+            display: flex;
+            gap: 4px;
+            background: var(--surface-alt, rgba(0,0,0,0.04));
+            padding: 3px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .tier-pill {
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            text-decoration: none;
+            color: var(--text-secondary);
+            transition: all 0.15s ease;
+        }
+
+        .tier-pill.active {
+            background: var(--primary, #2563eb);
+            color: #ffffff;
+            box-shadow: 0 1px 3px rgba(37,99,235,0.3);
+        }
+
+        .tier-pill:hover:not(.active) {
+            background: rgba(0,0,0,0.06);
+            color: var(--text-primary);
+        }
+
+        .view-mode-toggles {
+            display: flex;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .view-mode-btn {
+            padding: 8px 12px;
+            background: var(--surface);
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            text-decoration: none;
+            transition: background 0.15s ease, color 0.15s ease;
+        }
+
+        .view-mode-btn.active {
+            background: var(--primary, #2563eb);
+            color: #ffffff;
+        }
+
+        /* Scoped Buttons */
+        .loyalty-btn-primary {
+            background: var(--primary, #2563eb);
+            color: #ffffff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.88rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: background 0.15s ease, transform 0.15s ease;
+            text-decoration: none;
+        }
+
+        .loyalty-btn-primary:hover {
+            background: #1d4ed8;
+            color: #fff;
+            transform: translateY(-1px);
+        }
+
+        .loyalty-btn-secondary {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.88rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-decoration: none;
+        }
+
+        .loyalty-btn-secondary:hover {
+            background: var(--surface-alt, rgba(0,0,0,0.03));
+            border-color: var(--border-hover, #94a3b8);
+        }
+
+        .loyalty-btn-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-secondary);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .loyalty-btn-icon:hover {
+            background: var(--primary-light, rgba(37,99,235,0.08));
+            color: var(--primary, #2563eb);
+            border-color: var(--primary, #2563eb);
+        }
+
+        /* Metallic Tier Badges */
+        .tier-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.76rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .tier-badge.bronze {
+            background: linear-gradient(135deg, #cd7f32 0%, #a05a2c 100%);
+            color: #ffffff;
+            box-shadow: 0 1px 4px rgba(205, 127, 50, 0.4);
+        }
+
+        .tier-badge.silver {
+            background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
+            color: #ffffff;
+            box-shadow: 0 1px 4px rgba(100, 116, 139, 0.4);
+        }
+
+        .tier-badge.gold {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: #ffffff;
+            box-shadow: 0 1px 4px rgba(217, 119, 6, 0.4);
+        }
+
+        /* Grid Cards View */
+        .loyalty-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .loyalty-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg, 14px);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.05));
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .loyalty-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-md, 0 6px 16px rgba(0,0,0,0.08));
+            border-color: var(--primary-light, #93c5fd);
+        }
+
+        .loyalty-card-top {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            margin-bottom: 14px;
+        }
+
+        .member-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary, #2563eb) 0%, #7c3aed 100%);
+            color: #ffffff;
+            font-size: 1.1rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            object-fit: cover;
+            border: 2px solid var(--border);
+        }
+
+        .member-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .member-name {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0 0 3px 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: pointer;
+        }
+
+        .member-name:hover {
+            color: var(--primary, #2563eb);
+        }
+
+        .member-meta {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .points-box {
+            background: var(--surface-alt, rgba(0,0,0,0.03));
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 14px;
+            margin-bottom: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .points-val {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            line-height: 1.1;
+        }
+
+        .points-val small {
+            font-size: 0.82rem;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .points-xaf {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #059669;
+            background: rgba(16, 185, 129, 0.1);
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+
+        /* Tier Progress Meter */
+        .tier-progress-container {
+            margin-bottom: 16px;
+        }
+
+        .tier-progress-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 5px;
+        }
+
+        .tier-progress-track {
+            height: 8px;
+            background: var(--surface-alt, rgba(0,0,0,0.08));
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .tier-progress-bar {
+            height: 100%;
+            border-radius: 4px;
+            background: linear-gradient(90deg, #2563eb 0%, #7c3aed 100%);
+            transition: width 0.4s ease;
+        }
+
+        .tier-progress-bar.gold {
+            background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);
+        }
+
+        .loyalty-card-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            border-top: 1px solid var(--border);
+            padding-top: 14px;
+            margin-top: auto;
+        }
+
+        /* Dense Table View */
+        .loyalty-table-wrap {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg, 12px);
+            overflow: hidden;
+            box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.05));
+            margin-bottom: 24px;
+        }
+
+        .loyalty-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.88rem;
+            text-align: left;
+        }
+
+        .loyalty-table th {
+            background: var(--surface-alt, rgba(0,0,0,0.02));
+            padding: 12px 16px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+
+        .loyalty-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            vertical-align: middle;
+        }
+
+        .loyalty-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .loyalty-table tr:hover td {
+            background: var(--surface-alt, rgba(0,0,0,0.015));
+        }
+
+        /* Slide-Over 360 Drawer */
+        .drawer-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.45);
+            backdrop-filter: blur(2px);
+            z-index: 1050;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.25s ease, visibility 0.25s ease;
+        }
+
+        .drawer-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .loyalty-drawer {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 540px;
+            max-width: 95vw;
+            background: var(--surface);
+            box-shadow: -4px 0 24px rgba(0,0,0,0.15);
+            z-index: 1060;
+            transform: translateX(100%);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .loyalty-drawer.active {
+            transform: translateX(0);
+        }
+
+        .drawer-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--surface);
+        }
+
+        .drawer-title-group {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .drawer-body {
+            padding: 24px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .drawer-close-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.5rem;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.15s ease;
+        }
+
+        .drawer-close-btn:hover {
+            background: var(--surface-alt, rgba(0,0,0,0.06));
+            color: var(--text-primary);
+        }
+
+        .drawer-nav-tabs {
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 20px;
+        }
+
+        .drawer-tab-btn {
+            background: none;
+            border: none;
+            padding: 8px 16px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+            transition: color 0.15s ease, border-color 0.15s ease;
+        }
+
+        .drawer-tab-btn.active {
+            color: var(--primary, #2563eb);
+            border-bottom-color: var(--primary, #2563eb);
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(2px);
+            z-index: 1070;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s ease, visibility 0.2s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            width: 520px;
+            max-width: 100%;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            overflow: hidden;
+            transform: scale(0.96);
+            transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .modal-overlay.active .modal-card {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            padding: 18px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .mode-segmented-control {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 4px;
+            background: var(--surface-alt, rgba(0,0,0,0.05));
+            padding: 4px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .mode-btn {
+            padding: 8px 12px;
+            border: none;
+            background: transparent;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border-radius: 7px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: all 0.15s ease;
+        }
+
+        .mode-btn.active {
+            background: var(--surface);
+            color: var(--primary, #2563eb);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        /* Printable Loyalty Pass */
+        .digital-pass-card {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: #ffffff;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .digital-pass-card::after {
+            content: "";
+            position: absolute;
+            top: -40px;
+            right: -40px;
+            width: 140px;
+            height: 140px;
+            background: rgba(255,255,255,0.04);
+            border-radius: 50%;
+        }
+
+        @@media print {
+            body * { visibility: hidden !important; }
+            #printablePassContainer, #printablePassContainer * { visibility: visible !important; }
+            #printablePassContainer { position: absolute; left: 0; top: 0; width: 100%; }
+        }
+    </style>
 }
 
-<div class="ops-page">
-    
-
+<div class="loyalty-container">
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
     {
-        <div class="status @(Model.StatusMessage.StartsWith("Error") ? "error" : "ok")">
+        var isErr = Model.StatusMessage.StartsWith("Error", StringComparison.OrdinalIgnoreCase);
+        <div class="status @(isErr ? "error" : "ok")" style="margin-bottom: 18px;">
             @Model.StatusMessage
         </div>
     }
 
-    <!-- Customer lookup -->
-    <section class="card">
-        <h2>Look Up Customer Account</h2>
-        <form method="get" id="lookupCustomerForm">
-            <div style="display:flex;gap:8px;align-items:flex-end;">
-                <div class="form-group" style="flex:1;margin:0;">
-                    <label>Select Customer</label>
-                    <div class="smart-lookup-wrap" data-url="?handler=SearchCustomers" data-placeholder="Search customer by name, phone, email...">
-                        <input type="hidden" name="customerId" id="lookupCustomerId" value="@Model.CustomerId" />
-                    </div>
-                </div>
-                <button type="submit">Look Up</button>
+    <!-- 1. KPI Metrics Banner -->
+    <div class="loyalty-kpi-grid">
+        <div class="loyalty-kpi-card">
+            <div class="loyalty-kpi-icon purple">👥</div>
+            <div>
+                <div class="loyalty-kpi-val">@Model.Metrics.TotalMembers.ToString("N0")</div>
+                <div class="loyalty-kpi-lbl">Enrolled Members (@Model.Metrics.ActiveMembers Active)</div>
             </div>
-        </form>
+        </div>
 
-        @if (Model.CustomerId.HasValue && Model.Account is null)
-        {
-            <p style="margin-top:12px;color:var(--ops-subtle);">No loyalty account found for this customer yet. Points will be created on first earn.</p>
-        }
-    </section>
+        <div class="loyalty-kpi-card">
+            <div class="loyalty-kpi-icon amber">💰</div>
+            <div>
+                <div class="loyalty-kpi-val">@Model.Metrics.TotalPointsLiability.ToString("N0") <small style="font-size:0.8rem;color:var(--text-muted);">pts</small></div>
+                <div class="loyalty-kpi-lbl">Points Liability (~@Model.Metrics.PointsLiabilityValueXaf.ToString("N0") XAF)</div>
+            </div>
+        </div>
 
-    @if (Model.Account is not null)
+        <div class="loyalty-kpi-card">
+            <div class="loyalty-kpi-icon green">📈</div>
+            <div>
+                <div class="loyalty-kpi-val">+@Model.Metrics.PointsEarnedThisMonth.ToString("N0")</div>
+                <div class="loyalty-kpi-lbl">Points Earned (MTD)</div>
+            </div>
+        </div>
+
+        <div class="loyalty-kpi-card">
+            <div class="loyalty-kpi-icon rose">🎁</div>
+            <div>
+                <div class="loyalty-kpi-val">-@Model.Metrics.PointsRedeemedThisMonth.ToString("N0")</div>
+                <div class="loyalty-kpi-lbl">Points Redeemed (MTD)</div>
+            </div>
+        </div>
+
+        <div class="loyalty-kpi-card">
+            <div class="loyalty-kpi-icon blue">🏆</div>
+            <div>
+                <div class="loyalty-kpi-val">@Model.Metrics.VipTierRatio.ToString("F1")%</div>
+                <div class="loyalty-kpi-lbl">VIP Ratio (Silver: @Model.Metrics.SilverCount | Gold: @Model.Metrics.GoldCount)</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Controls & Filter Toolbar -->
+    <div class="loyalty-toolbar">
+        <div class="loyalty-filter-group">
+            <!-- Search -->
+            <form method="get" id="loyaltyFilterForm" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                <input type="hidden" name="viewMode" value="@Model.ViewMode" />
+                <input type="hidden" name="tier" id="tierFilterInput" value="@Model.Tier" />
+
+                <div class="loyalty-search-box">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" name="search" id="memberSearchInput" value="@Model.Search" placeholder="Search by name, phone, email, ID..." />
+                </div>
+
+                <!-- Tier Filter Pills -->
+                <div class="tier-pills">
+                    <a href="javascript:void(0)" onclick="setTierFilter('')" class="tier-pill @(string.IsNullOrEmpty(Model.Tier) ? "active" : "")">All Tiers</a>
+                    <a href="javascript:void(0)" onclick="setTierFilter('Bronze')" class="tier-pill @(Model.Tier == "Bronze" ? "active" : "")">🥉 Bronze</a>
+                    <a href="javascript:void(0)" onclick="setTierFilter('Silver')" class="tier-pill @(Model.Tier == "Silver" ? "active" : "")">🥈 Silver</a>
+                    <a href="javascript:void(0)" onclick="setTierFilter('Gold')" class="tier-pill @(Model.Tier == "Gold" ? "active" : "")">🥇 Gold</a>
+                </div>
+
+                <!-- Sort By -->
+                <select name="sortBy" onchange="this.form.submit()" style="padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text-primary);font-size:0.85rem;">
+                    <option value="points_desc" selected="@(Model.SortBy == "points_desc")">Highest Points</option>
+                    <option value="points_asc" selected="@(Model.SortBy == "points_asc")">Lowest Points</option>
+                    <option value="name_asc" selected="@(Model.SortBy == "name_asc")">Name (A-Z)</option>
+                    <option value="name_desc" selected="@(Model.SortBy == "name_desc")">Name (Z-A)</option>
+                    <option value="tier_desc" selected="@(Model.SortBy == "tier_desc")">VIP Tier First</option>
+                    <option value="date_desc" selected="@(Model.SortBy == "date_desc")">Newest Members</option>
+                </select>
+            </form>
+        </div>
+
+        <div class="loyalty-filter-group">
+            <!-- View Mode Switcher -->
+            <div class="view-mode-toggles">
+                <a href="/Loyalty?viewMode=grid&search=@Model.Search&tier=@Model.Tier&sortBy=@Model.SortBy" class="view-mode-btn @(Model.ViewMode == "grid" ? "active" : "")" title="Grid View">🔲 Grid</a>
+                <a href="/Loyalty?viewMode=table&search=@Model.Search&tier=@Model.Tier&sortBy=@Model.SortBy" class="view-mode-btn @(Model.ViewMode == "table" ? "active" : "")" title="Table View">📋 Table</a>
+                <a href="/Loyalty?viewMode=ledger&search=@Model.Search&tier=@Model.Tier&sortBy=@Model.SortBy" class="view-mode-btn @(Model.ViewMode == "ledger" ? "active" : "")" title="Global Ledger">📜 Ledger</a>
+            </div>
+
+            <!-- CSV Export -->
+            <a href="/Loyalty?handler=ExportCsv&search=@Model.Search&tier=@Model.Tier" class="loyalty-btn-secondary" title="Export to CSV">
+                📊 Export CSV
+            </a>
+
+            <!-- Manage Points Action -->
+            <button type="button" class="loyalty-btn-primary" onclick="openManageModal()">
+                ✨ Manage Points & Rewards
+            </button>
+        </div>
+    </div>
+
+    <!-- 3. Main Views -->
+    @if (Model.ViewMode == "grid")
     {
-        <section class="card">
-            <h2>Account Summary</h2>
-            <table>
-                <tbody>
-                    <tr><td><strong>Customer ID</strong></td><td>@Model.Account.CustomerId</td></tr>
-                    <tr><td><strong>Points Balance</strong></td><td><strong>@Model.Account.Points</strong></td></tr>
+        <!-- Member Grid Cards -->
+        @if (!Model.Members.Items.Any())
+        {
+            <div class="card" style="text-align:center;padding:48px 24px;">
+                <div style="font-size:3rem;margin-bottom:12px;">🏆</div>
+                <h3 style="margin-bottom:6px;">No Loyalty Members Found</h3>
+                <p style="color:var(--text-muted);max-width:400px;margin:0 auto 16px;">No loyalty accounts match your current filter. Try adjusting your search or award points to a customer.</p>
+                <button type="button" class="loyalty-btn-primary" onclick="openManageModal()">+ Award Loyalty Points</button>
+            </div>
+        }
+        else
+        {
+            <div class="loyalty-grid">
+                @foreach (var m in Model.Members.Items)
+                {
+                    var initials = !string.IsNullOrWhiteSpace(m.FullName)
+                        ? string.Concat(m.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(s => s[0]))
+                        : "CU";
+
+                    <div class="loyalty-card" id="member-card-@m.CustomerId">
+                        <div>
+                            <!-- Header -->
+                            <div class="loyalty-card-top">
+                                @if (!string.IsNullOrWhiteSpace(m.ThumbnailUrl))
+                                {
+                                    <img src="@m.ThumbnailUrl" alt="@m.FullName" class="member-avatar" />
+                                }
+                                else
+                                {
+                                    <div class="member-avatar">@initials</div>
+                                }
+                                <div class="member-info">
+                                    <div class="member-name" onclick="openDrawer('@m.CustomerId')" title="View 360 Loyalty Profile">@m.FullName</div>
+                                    <div class="member-meta">
+                                        <span class="tier-badge @m.Tier.ToLower()">@m.Tier</span>
+                                        <span class="badge" style="font-size:0.75rem;">@m.Segment</span>
+                                    </div>
+                                    <div style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;">
+                                        📞 @(string.IsNullOrEmpty(m.PrimaryPhone) ? "No phone" : m.PrimaryPhone)
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Points Box -->
+                            <div class="points-box">
+                                <div>
+                                    <div class="points-val">@m.Points.ToString("N0") <small>pts</small></div>
+                                    <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px;">
+                                        Lifetime: <strong>@m.LifetimePointsEarned.ToString("N0")</strong> pts
+                                    </div>
+                                </div>
+                                <div class="points-xaf">
+                                    ~@m.EstimatedMonetaryValue.ToString("N0") XAF
+                                </div>
+                            </div>
+
+                            <!-- Tier Progress -->
+                            <div class="tier-progress-container">
+                                <div class="tier-progress-header">
+                                    <span>
+                                        @if (m.Tier == "Gold")
+                                        {
+                                            <span>🥇 Max Tier Reached</span>
+                                        }
+                                        else
+                                        {
+                                            <span>Next: @(m.Tier == "Bronze" ? "🥈 Silver" : "🥇 Gold")</span>
+                                        }
+                                    </span>
+                                    <span>
+                                        @if (m.Tier != "Gold")
+                                        {
+                                            <span>@m.PointsNeededForNextTier pts needed</span>
+                                        }
+                                        else
+                                        {
+                                            <span>VIP Elite</span>
+                                        }
+                                    </span>
+                                </div>
+                                <div class="tier-progress-track">
+                                    <div class="tier-progress-bar @m.Tier.ToLower()" style="width: @m.TierProgressPercentage%;"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card Actions -->
+                        <div class="loyalty-card-actions">
+                            <button type="button" class="loyalty-btn-secondary" style="flex:1;justify-content:center;padding:6px 10px;" onclick="openDrawer('@m.CustomerId')">
+                                🔍 360 Hub
+                            </button>
+                            <button type="button" class="loyalty-btn-primary" style="padding:6px 12px;" onclick="quickActionModal('@m.CustomerId', '@m.FullName', @m.Points)" title="Quick Action">
+                                ⚡ Action
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    }
+    else if (Model.ViewMode == "table")
+    {
+        <!-- Dense Table View -->
+        <div class="loyalty-table-wrap">
+            <table class="loyalty-table">
+                <thead>
                     <tr>
-                        <td><strong>Tier</strong></td>
-                        <td>
-                            <span class="badge @Model.Account.Tier.ToLower()">@Model.Account.Tier</span>
-                        </td>
+                        <th>Member</th>
+                        <th>Contact</th>
+                        <th>Segment</th>
+                        <th>Tier</th>
+                        <th style="text-align:right;">Points Balance</th>
+                        <th style="text-align:right;">Estimated Value</th>
+                        <th style="text-align:right;">Lifetime Earned</th>
+                        <th style="text-align:right;">Total Redeemed</th>
+                        <th>Last Active</th>
+                        <th style="text-align:center;">Actions</th>
                     </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Members.Items.Any())
+                    {
+                        <tr>
+                            <td colspan="10" style="text-align:center;padding:32px;color:var(--text-muted);">
+                                No loyalty members match your query.
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var m in Model.Members.Items)
+                    {
+                        <tr>
+                            <td>
+                                <strong style="cursor:pointer;color:var(--primary, #2563eb);" onclick="openDrawer('@m.CustomerId')">@m.FullName</strong>
+                            </td>
+                            <td>
+                                <div>@(m.PrimaryPhone ?? "—")</div>
+                                <small style="color:var(--text-muted);">@(m.PrimaryEmail ?? "—")</small>
+                            </td>
+                            <td><span class="badge">@m.Segment</span></td>
+                            <td><span class="tier-badge @m.Tier.ToLower()">@m.Tier</span></td>
+                            <td style="text-align:right;font-weight:700;">@m.Points.ToString("N0") pts</td>
+                            <td style="text-align:right;color:#059669;font-weight:600;">@m.EstimatedMonetaryValue.ToString("N0") XAF</td>
+                            <td style="text-align:right;color:var(--text-secondary);">@m.LifetimePointsEarned.ToString("N0")</td>
+                            <td style="text-align:right;color:var(--text-secondary);">@m.TotalPointsRedeemed.ToString("N0")</td>
+                            <td>@(m.LastTransactionDate?.ToString("yyyy-MM-dd HH:mm") ?? "—")</td>
+                            <td style="text-align:center;">
+                                <button type="button" class="loyalty-btn-icon" onclick="openDrawer('@m.CustomerId')" title="View 360 Drawer">🔍</button>
+                                <button type="button" class="loyalty-btn-icon" onclick="quickActionModal('@m.CustomerId', '@m.FullName', @m.Points)" title="Manage Points">⚡</button>
+                            </td>
+                        </tr>
+                    }
                 </tbody>
             </table>
-        </section>
+        </div>
+    }
+    else if (Model.ViewMode == "ledger")
+    {
+        <!-- Store-Wide Global Audit Ledger -->
+        <div class="loyalty-table-wrap">
+            <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+                <h3 style="margin:0;font-size:1.1rem;">Store-Wide Points Transaction Stream</h3>
+                <span style="font-size:0.82rem;color:var(--text-muted);">Showing recent 100 transactions</span>
+            </div>
+            <table class="loyalty-table">
+                <thead>
+                    <tr>
+                        <th>Date &amp; Time</th>
+                        <th>Member</th>
+                        <th>Phone</th>
+                        <th>Type</th>
+                        <th style="text-align:right;">Points</th>
+                        <th>Invoice Ref</th>
+                        <th>Notes &amp; Reason</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.RecentGlobalTransactions.Any())
+                    {
+                        <tr>
+                            <td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted);">
+                                No recent loyalty transactions recorded in the audit ledger.
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var t in Model.RecentGlobalTransactions)
+                    {
+                        var isPos = t.Points > 0;
+                        <tr>
+                            <td>@t.DateCreated.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                            <td>
+                                <strong style="cursor:pointer;color:var(--primary, #2563eb);" onclick="openDrawer('@t.CustomerId')">@t.CustomerName</strong>
+                            </td>
+                            <td>@(t.CustomerPhone ?? "—")</td>
+                            <td>
+                                <span class="badge @t.TransactionType.ToLower()">@t.TransactionType</span>
+                            </td>
+                            <td style="text-align:right;font-weight:700;color:@(isPos ? "#059669" : "#e11d48");">
+                                @(isPos ? "+" + t.Points.ToString("N0") : t.Points.ToString("N0"))
+                            </td>
+                            <td>
+                                @if (t.InvoiceId.HasValue)
+                                {
+                                    <a href="/Invoices?id=@t.InvoiceId" target="_blank" style="color:var(--primary, #2563eb);text-decoration:underline;">
+                                        INV-@t.InvoiceId.Value.ToString("D")[..8]
+                                    </a>
+                                }
+                                else
+                                {
+                                    <span style="color:var(--text-muted);">—</span>
+                                }
+                            </td>
+                            <td>@(t.Note ?? "—")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
 
-        <section class="card">
-            <h2>Transaction History</h2>
-            @if (!Model.Transactions.Any())
+    <!-- Pagination -->
+    @if (Model.Members.TotalPages > 1 && Model.ViewMode != "ledger")
+    {
+        <div style="display:flex;justify-content:center;gap:8px;margin-top:20px;">
+            @if (Model.Members.HasPreviousPage)
             {
-                <p style="color:var(--ops-subtle);">No transactions yet.</p>
+                <a href="/Loyalty?pageNumber=@(Model.Members.Page - 1)&pageSize=@Model.PageSize&search=@Model.Search&tier=@Model.Tier&sortBy=@Model.SortBy&viewMode=@Model.ViewMode" class="loyalty-btn-secondary">
+                    &larr; Previous
+                </a>
             }
-            else
+            <span style="padding:8px 16px;font-weight:600;font-size:0.9rem;color:var(--text-secondary);display:flex;align-items:center;">
+                Page @Model.Members.Page of @Model.Members.TotalPages (@Model.Members.TotalCount Total)
+            </span>
+            @if (Model.Members.HasNextPage)
             {
-                <table>
+                <a href="/Loyalty?pageNumber=@(Model.Members.Page + 1)&pageSize=@Model.PageSize&search=@Model.Search&tier=@Model.Tier&sortBy=@Model.SortBy&viewMode=@Model.ViewMode" class="loyalty-btn-secondary">
+                    Next &rarr;
+                </a>
+            }
+        </div>
+    }
+</div>
+
+<!-- ========================================== -->
+<!-- 4. SLIDE-OVER MEMBER LOYALTY 360 DRAWER   -->
+<!-- ========================================== -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+<div class="loyalty-drawer" id="loyaltyDrawer">
+    <div class="drawer-header">
+        <div class="drawer-title-group">
+            <div class="member-avatar" id="drawerAvatar">CU</div>
+            <div>
+                <h3 id="drawerCustomerName" style="margin:0 0 4px 0;font-size:1.15rem;">Customer Name</h3>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <span id="drawerTierBadge" class="tier-badge bronze">Bronze</span>
+                    <span id="drawerSegmentBadge" class="badge" style="font-size:0.75rem;">Regular</span>
+                </div>
+            </div>
+        </div>
+        <button type="button" class="drawer-close-btn" onclick="closeDrawer()" title="Close Drawer">&times;</button>
+    </div>
+
+    <!-- Quick Action Bar in Drawer -->
+    <div style="padding:12px 24px;background:var(--surface-alt, rgba(0,0,0,0.02));border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;">
+        <button type="button" class="loyalty-btn-primary" style="flex:1;justify-content:center;padding:7px 12px;" onclick="openManageFromDrawer()">
+            ⚡ Manage Points
+        </button>
+        <a id="drawerCallBtn" href="tel:" class="loyalty-btn-secondary" title="Call Member">📞</a>
+        <a id="drawerWhatsappBtn" href="https://wa.me/" target="_blank" class="loyalty-btn-secondary" title="WhatsApp Member">💬</a>
+        <a id="drawerEmailBtn" href="mailto:" class="loyalty-btn-secondary" title="Email Member">✉️</a>
+    </div>
+
+    <!-- Drawer Navigation Tabs -->
+    <div style="padding:0 24px;background:var(--surface);">
+        <div class="drawer-nav-tabs">
+            <button type="button" class="drawer-tab-btn active" onclick="switchDrawerTab('tabOverview')">Overview &amp; Pass</button>
+            <button type="button" class="drawer-tab-btn" onclick="switchDrawerTab('tabLedger')">Transaction Ledger</button>
+            <button type="button" class="drawer-tab-btn" onclick="switchDrawerTab('tabCampaigns')">Active Campaigns</button>
+        </div>
+    </div>
+
+    <!-- Drawer Body -->
+    <div class="drawer-body">
+        <!-- Tab 1: Overview & Pass -->
+        <div id="tabOverview">
+            <!-- Points Balance Strip -->
+            <div class="points-box" style="margin-bottom:18px;">
+                <div>
+                    <div style="font-size:0.78rem;text-transform:uppercase;color:var(--text-muted);font-weight:600;">Available Points Balance</div>
+                    <div id="drawerPointsVal" class="points-val" style="font-size:1.8rem;margin-top:2px;">0 <small>pts</small></div>
+                </div>
+                <div id="drawerPointsXaf" class="points-xaf" style="font-size:1.1rem;padding:6px 12px;">
+                    ~0 XAF
+                </div>
+            </div>
+
+            <!-- Tier Progression Strip -->
+            <div class="card" style="padding:16px;margin-bottom:20px;">
+                <div class="tier-progress-header" style="margin-bottom:8px;">
+                    <strong id="drawerTierProgressLbl">Tier Standing</strong>
+                    <span id="drawerPointsNeededLbl">0 pts to next tier</span>
+                </div>
+                <div class="tier-progress-track" style="height:10px;margin-bottom:8px;">
+                    <div id="drawerTierProgressBar" class="tier-progress-bar bronze" style="width:0%;"></div>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:var(--text-muted);">
+                    <span>🥉 Bronze (0)</span>
+                    <span>🥈 Silver (500)</span>
+                    <span>🥇 Gold (2,000+)</span>
+                </div>
+            </div>
+
+            <!-- Lifetime Metrics -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+                <div style="background:var(--surface-alt, rgba(0,0,0,0.03));padding:12px;border-radius:10px;border:1px solid var(--border);">
+                    <div style="font-size:0.75rem;color:var(--text-muted);font-weight:600;">Lifetime Points Earned</div>
+                    <div id="drawerLifetimePoints" style="font-size:1.2rem;font-weight:700;color:var(--text-primary);margin-top:2px;">0</div>
+                </div>
+                <div style="background:var(--surface-alt, rgba(0,0,0,0.03));padding:12px;border-radius:10px;border:1px solid var(--border);">
+                    <div style="font-size:0.75rem;color:var(--text-muted);font-weight:600;">Total Points Redeemed</div>
+                    <div id="drawerTotalRedeemed" style="font-size:1.2rem;font-weight:700;color:#e11d48;margin-top:2px;">0</div>
+                </div>
+                <div style="background:var(--surface-alt, rgba(0,0,0,0.03));padding:12px;border-radius:10px;border:1px solid var(--border);">
+                    <div style="font-size:0.75rem;color:var(--text-muted);font-weight:600;">Total Store Spend</div>
+                    <div id="drawerLifetimeSpend" style="font-size:1.2rem;font-weight:700;color:#059669;margin-top:2px;">0 XAF</div>
+                </div>
+                <div style="background:var(--surface-alt, rgba(0,0,0,0.03));padding:12px;border-radius:10px;border:1px solid var(--border);">
+                    <div style="font-size:0.75rem;color:var(--text-muted);font-weight:600;">Total Store Orders</div>
+                    <div id="drawerTotalOrders" style="font-size:1.2rem;font-weight:700;color:var(--text-primary);margin-top:2px;">0</div>
+                </div>
+            </div>
+
+            <!-- Digital Membership Pass -->
+            <div id="printablePassContainer">
+                <div class="digital-pass-card">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;">
+                        <div>
+                            <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;font-weight:600;">ClexAn Rewards Member</div>
+                            <div id="passCustomerName" style="font-size:1.2rem;font-weight:700;margin-top:2px;">Customer Name</div>
+                        </div>
+                        <span id="passTierBadge" class="tier-badge gold">GOLD MEMBER</span>
+                    </div>
+
+                    <!-- Pure Vector SVG Barcode -->
+                    <div id="passBarcodeSvgContainer" style="background:#ffffff;padding:12px;border-radius:8px;text-align:center;margin-bottom:12px;">
+                        <!-- Generated SVG Barcode Inserted Here -->
+                    </div>
+
+                    <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:#cbd5e1;">
+                        <span id="passMemberId">MEMBER #--</span>
+                        <span>Scan at POS terminal</span>
+                    </div>
+                </div>
+            </div>
+
+            <button type="button" class="loyalty-btn-secondary" style="width:100%;justify-content:center;margin-top:8px;" onclick="window.print()">
+                🖨️ Print Digital Member Pass
+            </button>
+        </div>
+
+        <!-- Tab 2: Transaction Ledger -->
+        <div id="tabLedger" style="display:none;">
+            <div id="drawerLedgerContainer">
+                <!-- Dynamically Populated Table -->
+            </div>
+        </div>
+
+        <!-- Tab 3: Active Campaigns -->
+        <div id="tabCampaigns" style="display:none;">
+            <div id="drawerCampaignsContainer">
+                <!-- Dynamically Populated Campaign Cards -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- 5. UNIFIED MANAGE POINTS & REWARDS MODAL   -->
+<!-- ========================================== -->
+<div class="modal-overlay" id="managePointsModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3 style="margin:0;font-size:1.2rem;" id="modalHeading">Manage Loyalty Points &amp; Rewards</h3>
+            <button type="button" class="drawer-close-btn" onclick="closeManageModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <!-- Mode Switcher -->
+            <div class="mode-segmented-control">
+                <button type="button" class="mode-btn active" id="modeBtnEarn" onclick="setModalMode('Earn')">🎁 Earn Points</button>
+                <button type="button" class="mode-btn" id="modeBtnRedeem" onclick="setModalMode('Redeem')">🏷️ Redeem Reward</button>
+                <button type="button" class="mode-btn" id="modeBtnAdjust" onclick="setModalMode('Adjust')">⚙️ Admin Adjust</button>
+            </div>
+
+            <form method="post" asp-page-handler="ManagePoints" id="managePointsForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="ManageForm.ActionType" id="modalActionType" value="Earn" />
+
+                <!-- Customer Selection -->
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:6px;">Select Member</label>
+                    <div class="smart-lookup-wrap" data-url="?handler=SearchCustomers" data-placeholder="Search by name, phone, or scan card...">
+                        <input type="hidden" name="ManageForm.CustomerId" id="modalCustomerId" required />
+                    </div>
+                    <div id="modalCustomerHint" style="font-size:0.8rem;color:var(--text-muted);margin-top:6px;display:none;">
+                        Selected: <strong id="modalSelectedName"></strong> | Balance: <strong id="modalSelectedPoints" style="color:var(--primary, #2563eb);">0</strong> pts (<span id="modalSelectedTier">Bronze</span>)
+                    </div>
+                </div>
+
+                <!-- Points Input with Live Conversion Preview -->
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:6px;">
+                        <span id="modalPointsLabel">Points to Award</span>
+                    </label>
+                    <div style="display:flex;gap:10px;align-items:center;">
+                        <input type="number" name="ManageForm.Points" id="modalPointsInput" min="1" value="100" required
+                               style="flex:1;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text-primary);font-size:1.1rem;font-weight:700;"
+                               oninput="updateConversionPreview()" />
+                        <div id="modalConversionBadge" style="background:rgba(16, 185, 129, 0.12);color:#059669;font-weight:700;padding:10px 14px;border-radius:8px;font-size:0.9rem;white-space:nowrap;">
+                            = 500 XAF Value
+                        </div>
+                    </div>
+                    <div id="modalBalanceWarning" style="color:#e11d48;font-size:0.8rem;margin-top:4px;display:none;">
+                        ⚠️ Warning: Requested points exceed member's available balance!
+                    </div>
+                </div>
+
+                <!-- Invoice Ref (Earn Mode) -->
+                <div class="form-group" id="modalInvoiceGroup" style="margin-bottom:16px;">
+                    <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:6px;">Invoice Reference ID (Optional)</label>
+                    <input type="text" name="ManageForm.InvoiceId" id="modalInvoiceId" placeholder="e.g. 83927f4e-c47b-4856..."
+                           style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text-primary);font-size:0.88rem;" />
+                </div>
+
+                <!-- Notes / Reason -->
+                <div class="form-group" style="margin-bottom:20px;">
+                    <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:6px;">Transaction Note / Reason</label>
+                    <input type="text" name="ManageForm.Note" id="modalNote" placeholder="e.g. Purchase reward, Loyalty reward redemption, Promo..."
+                           style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text-primary);font-size:0.88rem;" />
+                </div>
+
+                <div style="display:flex;gap:10px;justify-content:flex-end;">
+                    <button type="button" class="loyalty-btn-secondary" onclick="closeManageModal()">Cancel</button>
+                    <button type="submit" class="loyalty-btn-primary" id="modalSubmitBtn">
+                        🎁 Award Points
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // State
+        let currentDrawerCustomerId = null;
+        let selectedMemberPoints = 0;
+
+        // Auto-open deep-linked customer if present
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const custId = urlParams.get('customerId') || urlParams.get('id');
+            if (custId) {
+                openDrawer(custId);
+            }
+        });
+
+        // Search debounce
+        let searchTimeout;
+        const searchInput = document.getElementById('memberSearchInput');
+        if (searchInput) {
+            searchInput.addEventListener('input', () => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    document.getElementById('loyaltyFilterForm').submit();
+                }, 400);
+            });
+        }
+
+        function setTierFilter(tier) {
+            document.getElementById('tierFilterInput').value = tier;
+            document.getElementById('loyaltyFilterForm').submit();
+        }
+
+        // ==========================================
+        // DRAWER CONTROLS & AJAX PROFILE FETCHING
+        // ==========================================
+        async function openDrawer(customerId) {
+            currentDrawerCustomerId = customerId;
+            const overlay = document.getElementById('drawerOverlay');
+            const drawer = document.getElementById('loyaltyDrawer');
+
+            overlay.classList.add('active');
+            drawer.classList.add('active');
+
+            try {
+                const res = await fetch(`?handler=Profile&customerId=${customerId}`);
+                if (!res.ok) throw new Error('Failed to load profile');
+                const profile = await res.json();
+                populateDrawer(profile);
+            } catch (err) {
+                console.error('Error fetching loyalty profile:', err);
+            }
+        }
+
+        function closeDrawer() {
+            document.getElementById('drawerOverlay').classList.remove('active');
+            document.getElementById('loyaltyDrawer').classList.remove('active');
+        }
+
+        function populateDrawer(profile) {
+            const m = profile.member;
+            const initials = m.fullName ? m.fullName.split(' ').map(n => n[0]).slice(0, 2).join('') : 'CU';
+
+            document.getElementById('drawerAvatar').innerText = initials;
+            document.getElementById('drawerCustomerName').innerText = m.fullName;
+            document.getElementById('passCustomerName').innerText = m.fullName;
+
+            // Tier Badges
+            const tierLower = m.tier.toLowerCase();
+            const tb = document.getElementById('drawerTierBadge');
+            tb.className = `tier-badge ${tierLower}`;
+            tb.innerText = m.tier;
+
+            const pb = document.getElementById('passTierBadge');
+            pb.className = `tier-badge ${tierLower}`;
+            pb.innerText = `${m.tier.toUpperCase()} MEMBER`;
+
+            document.getElementById('drawerSegmentBadge').innerText = m.segment;
+
+            // Contact Links
+            document.getElementById('drawerCallBtn').href = m.primaryPhone ? `tel:${m.primaryPhone}` : 'javascript:alert("No phone recorded")';
+            document.getElementById('drawerWhatsappBtn').href = m.primaryPhone ? `https://wa.me/${m.primaryPhone.replace(/\D/g,'')}` : 'javascript:alert("No phone recorded")';
+            document.getElementById('drawerEmailBtn').href = m.primaryEmail ? `mailto:${m.primaryEmail}` : 'javascript:alert("No email recorded")';
+
+            // Points & Valuation
+            document.getElementById('drawerPointsVal').innerHTML = `${Number(m.points).toLocaleString()} <small>pts</small>`;
+            document.getElementById('drawerPointsXaf').innerText = `~${Number(m.estimatedMonetaryValue).toLocaleString()} XAF`;
+
+            // Tier Progress
+            document.getElementById('drawerTierProgressLbl').innerText = `${m.tier} Standing (${m.tierProgressPercentage}%)`;
+            document.getElementById('drawerPointsNeededLbl').innerText = m.tier === 'Gold' ? 'VIP Status Unlocked' : `${m.pointsNeededForNextTier} pts to next tier`;
+            const bar = document.getElementById('drawerTierProgressBar');
+            bar.className = `tier-progress-bar ${tierLower}`;
+            bar.style.width = `${m.tierProgressPercentage}%`;
+
+            // Lifetime metrics
+            document.getElementById('drawerLifetimePoints').innerText = Number(m.lifetimePointsEarned).toLocaleString();
+            document.getElementById('drawerTotalRedeemed').innerText = Number(m.totalPointsRedeemed).toLocaleString();
+            document.getElementById('drawerLifetimeSpend').innerText = `${Number(profile.lifetimeSpend).toLocaleString()} XAF`;
+            document.getElementById('drawerTotalOrders').innerText = Number(profile.totalOrders).toLocaleString();
+
+            document.getElementById('passMemberId').innerText = `MEMBER #${m.loyaltyAccountId}`;
+
+            // Render Vector SVG Barcode
+            renderSvgBarcode(`LOYAL-${m.customerId.substring(0,8).toUpperCase()}`);
+
+            // Populate Ledger Tab
+            renderLedgerTable(profile.recentTransactions);
+
+            // Populate Campaigns Tab
+            renderCampaignsList(profile.activeCampaigns);
+        }
+
+        function switchDrawerTab(tabId) {
+            document.querySelectorAll('.drawer-tab-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+
+            document.getElementById('tabOverview').style.display = tabId === 'tabOverview' ? 'block' : 'none';
+            document.getElementById('tabLedger').style.display = tabId === 'tabLedger' ? 'block' : 'none';
+            document.getElementById('tabCampaigns').style.display = tabId === 'tabCampaigns' ? 'block' : 'none';
+        }
+
+        function renderLedgerTable(txns) {
+            const container = document.getElementById('drawerLedgerContainer');
+            if (!txns || txns.length === 0) {
+                container.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:24px;">No transaction records found for this member.</p>';
+                return;
+            }
+
+            let html = `
+                <table class="loyalty-table">
                     <thead>
                         <tr>
                             <th>Date</th>
                             <th>Type</th>
-                            <th>Points</th>
-                            <th>Invoice</th>
+                            <th style="text-align:right;">Points</th>
                             <th>Note</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var t in Model.Transactions)
-                        {
-                            <tr>
-                                <td>@t.DateCreated.ToString("yyyy-MM-dd HH:mm")</td>
-                                <td><span class="badge @t.TransactionType.ToLower()">@t.TransactionType</span></td>
-                                <td>@(t.Points > 0 ? "+" + t.Points : t.Points.ToString())</td>
-                                <td>@(t.InvoiceId.HasValue ? t.InvoiceId.Value.ToString("D")[..8] + "…" : "—")</td>
-                                <td>@(t.Note ?? "—")</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
+            `;
+
+            txns.forEach(t => {
+                const isPos = t.points > 0;
+                html += `
+                    <tr>
+                        <td>${new Date(t.dateCreated).toLocaleDateString()} ${new Date(t.dateCreated).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</td>
+                        <td><span class="badge ${t.transactionType.toLowerCase()}">${t.transactionType}</span></td>
+                        <td style="text-align:right;font-weight:700;color:${isPos ? '#059669' : '#e11d48'};">
+                            ${isPos ? '+' + Number(t.points).toLocaleString() : Number(t.points).toLocaleString()}
+                        </td>
+                        <td>${t.note || '—'}</td>
+                    </tr>
+                `;
+            });
+
+            html += `</tbody></table>`;
+            container.innerHTML = html;
+        }
+
+        function renderCampaignsList(campaigns) {
+            const container = document.getElementById('drawerCampaignsContainer');
+            if (!campaigns || campaigns.length === 0) {
+                container.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:24px;">No active promotional bonus campaigns currently applicable to this customer segment.</p>';
+                return;
             }
-        </section>
-    }
 
-    <!-- Actions -->
-    <section class="card">
-        <h2>Manage Points</h2>
-        <div style="display:flex;gap:16px;flex-wrap:wrap;">
-
-            <!-- Earn -->
-            <div style="flex:1;min-width:250px;">
-                <h3>Earn Points</h3>
-                <form method="post" asp-page-handler="Earn">
-                    @Html.AntiForgeryToken()
-                    <div class="form-group">
-                        <label>Customer</label>
-                        <div class="smart-lookup-wrap" data-url="?handler=SearchCustomers" data-placeholder="Search customer...">
-                            <input type="hidden" name="EarnCustomerId" required value="@Model.CustomerId" />
+            let html = '<div style="display:flex;flex-direction:column;gap:12px;">';
+            campaigns.forEach(c => {
+                html += `
+                    <div style="background:var(--surface-alt, rgba(0,0,0,0.03));border:1px solid var(--border);border-radius:10px;padding:14px;">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                            <strong style="font-size:0.95rem;color:var(--text-primary);">${c.name}</strong>
+                            <span class="badge" style="background:#059669;color:#fff;">ACTIVE</span>
+                        </div>
+                        <p style="font-size:0.82rem;color:var(--text-muted);margin:4px 0 8px 0;">${c.description || 'Exclusive loyalty reward promotion.'}</p>
+                        <div style="font-size:0.8rem;font-weight:600;color:var(--primary, #2563eb);">
+                            ${c.multiplierFactor ? `🔥 ${c.multiplierFactor}x Point Multiplier` : `🎁 +${c.bonusPoints} Bonus Points`}
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label>Points</label>
-                        <input name="EarnPoints" type="number" min="1" required value="1" />
-                    </div>
-                    <div class="form-group">
-                        <label>Note</label>
-                        <input name="EarnNote" type="text" placeholder="Optional earn note..." />
-                    </div>
-                    <button type="submit">Earn Points</button>
-                </form>
-            </div>
+                `;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        }
 
-            <!-- Redeem -->
-            <div style="flex:1;min-width:250px;">
-                <h3>Redeem Points</h3>
-                <form method="post" asp-page-handler="Redeem">
-                    @Html.AntiForgeryToken()
-                    <div class="form-group">
-                        <label>Customer</label>
-                        <div class="smart-lookup-wrap" data-url="?handler=SearchCustomers" data-placeholder="Search customer...">
-                            <input type="hidden" name="RedeemCustomerId" required value="@Model.CustomerId" />
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Points</label>
-                        <input name="RedeemPoints" type="number" min="1" required value="1" />
-                    </div>
-                    <div class="form-group">
-                        <label>Note</label>
-                        <input name="RedeemNote" type="text" placeholder="Optional redemption note..." />
-                    </div>
-                    <button type="submit">Redeem Points</button>
-                </form>
-            </div>
+        // ==========================================
+        // PURE VECTOR SVG BARCODE GENERATOR
+        // ==========================================
+        function renderSvgBarcode(code) {
+            const container = document.getElementById('passBarcodeSvgContainer');
+            const bars = [];
+            for (let i = 0; i < code.length; i++) {
+                const charCode = code.charCodeAt(i);
+                const bitPattern = (charCode * 17) % 31;
+                for (let b = 0; b < 5; b++) {
+                    bars.push((bitPattern >> b) & 1);
+                }
+                bars.push(0); // gap
+            }
 
-            <!-- Adjust -->
-            <div style="flex:1;min-width:250px;">
-                <h3>Adjust Points (Admin)</h3>
-                <form method="post" asp-page-handler="Adjust">
-                    @Html.AntiForgeryToken()
-                    <div class="form-group">
-                        <label>Customer</label>
-                        <div class="smart-lookup-wrap" data-url="?handler=SearchCustomers" data-placeholder="Search customer...">
-                            <input type="hidden" name="AdjustCustomerId" required value="@Model.CustomerId" />
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Points (negative to subtract)</label>
-                        <input name="AdjustPoints" type="number" required value="0" />
-                    </div>
-                    <div class="form-group">
-                        <label>Note</label>
-                        <input name="AdjustNote" type="text" placeholder="Reason for adjustment..." />
-                    </div>
-                    <button type="submit">Apply Adjustment</button>
-                </form>
-            </div>
-        </div>
-    </section>
-</div>
+            let svg = `<svg viewBox="0 0 ${bars.length * 4} 48" width="100%" height="48" xmlns="http://www.w3.org/2000/svg">`;
+            for (let i = 0; i < bars.length; i++) {
+                if (bars[i] === 1) {
+                    svg += `<rect x="${i * 4}" y="0" width="3" height="48" fill="#0f172a" />`;
+                }
+            }
+            svg += `</svg><div style="font-family:monospace;font-size:0.8rem;color:#0f172a;font-weight:700;margin-top:4px;letter-spacing:2px;">${code}</div>`;
+            container.innerHTML = svg;
+        }
+
+        // ==========================================
+        // UNIFIED MANAGE MODAL CONTROLS
+        // ==========================================
+        function openManageModal() {
+            document.getElementById('managePointsModal').classList.add('active');
+            setModalMode('Earn');
+        }
+
+        function closeManageModal() {
+            document.getElementById('managePointsModal').classList.remove('active');
+        }
+
+        function quickActionModal(customerId, customerName, points) {
+            openManageModal();
+            document.getElementById('modalCustomerId').value = customerId;
+            document.getElementById('modalSelectedName').innerText = customerName;
+            document.getElementById('modalSelectedPoints').innerText = Number(points).toLocaleString();
+            selectedMemberPoints = points;
+            document.getElementById('modalCustomerHint').style.display = 'block';
+            updateConversionPreview();
+        }
+
+        function openManageFromDrawer() {
+            if (currentDrawerCustomerId) {
+                const name = document.getElementById('drawerCustomerName').innerText;
+                const ptsText = document.getElementById('drawerPointsVal').innerText.replace(/\D/g, '');
+                quickActionModal(currentDrawerCustomerId, name, parseInt(ptsText) || 0);
+            }
+        }
+
+        function setModalMode(mode) {
+            document.getElementById('modalActionType').value = mode;
+            document.getElementById('modeBtnEarn').classList.toggle('active', mode === 'Earn');
+            document.getElementById('modeBtnRedeem').classList.toggle('active', mode === 'Redeem');
+            document.getElementById('modeBtnAdjust').classList.toggle('active', mode === 'Adjust');
+
+            const submitBtn = document.getElementById('modalSubmitBtn');
+            const pointsLbl = document.getElementById('modalPointsLabel');
+            const invGroup = document.getElementById('modalInvoiceGroup');
+
+            if (mode === 'Earn') {
+                pointsLbl.innerText = 'Points to Award';
+                submitBtn.innerHTML = '🎁 Award Points';
+                invGroup.style.display = 'block';
+            } else if (mode === 'Redeem') {
+                pointsLbl.innerText = 'Points to Redeem';
+                submitBtn.innerHTML = '🏷️ Redeem Reward';
+                invGroup.style.display = 'none';
+            } else {
+                pointsLbl.innerText = 'Points Adjustment (+ or -)';
+                submitBtn.innerHTML = '⚙️ Apply Adjustment';
+                invGroup.style.display = 'none';
+            }
+
+            updateConversionPreview();
+        }
+
+        function updateConversionPreview() {
+            const pts = parseInt(document.getElementById('modalPointsInput').value) || 0;
+            const xafVal = pts * 5;
+            document.getElementById('modalConversionBadge').innerText = `= ${xafVal.toLocaleString()} XAF Value`;
+
+            const mode = document.getElementById('modalActionType').value;
+            const warning = document.getElementById('modalBalanceWarning');
+            if (mode === 'Redeem' && pts > selectedMemberPoints && selectedMemberPoints > 0) {
+                warning.style.display = 'block';
+            } else {
+                warning.style.display = 'none';
+            }
+        }
+    </script>
+}
