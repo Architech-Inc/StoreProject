@@ -774,16 +774,467 @@
         }
     };
 
+    /**
+     * ============================================================
+     * BarcodeScannerService - Background Sleeper Daemon & Action Hub
+     * ============================================================
+     */
+    window.BarcodeScannerService = {
+        STORAGE_KEY: 'clexan_scanner_pref',
+        MAX_BURST_INTERVAL_MS: 40,
+        MIN_BURST_LENGTH: 3,
+        
+        state: {
+            status: 'active', // 'active' | 'paused' | 'session_disabled' | 'permanently_disabled' | 'in_page_only'
+            pauseUntil: null
+        },
+        
+        buffer: [],
+        lastKeyTime: 0,
+        currentModalResult: null,
+
+        init: function() {
+            // Gatekeeper: strict authentication check
+            const path = window.location.pathname.toLowerCase();
+            const isPublicPage = path.includes('/login') || path.includes('/register') || path.includes('/forgotpassword') || path.includes('/resetpassword') || path.includes('/accessdenied') || path.includes('/error');
+            const isAuthenticated = document.body.dataset.authenticated === 'true' || (document.getElementById('appShell') !== null && !isPublicPage);
+            const fab = document.getElementById('scannerFabWidget');
+            if (!isAuthenticated || isPublicPage) {
+                if (fab) fab.style.display = 'none';
+                return;
+            }
+            if (fab) fab.style.display = '';
+
+            this.loadPreferences();
+            this.setupGlobalKeyListener();
+            this.setupFabControls();
+            this.setupModalEvents();
+            this.updateFabUI();
+            
+            // Background check for pause expiration every 30s
+            setInterval(() => this.checkPauseExpiration(), 30000);
+        },
+
+        loadPreferences: function() {
+            try {
+                // Check session-level preference first
+                const sessionPref = sessionStorage.getItem(this.STORAGE_KEY);
+                if (sessionPref === 'session_disabled') {
+                    this.state.status = 'session_disabled';
+                    return;
+                }
+
+                // Check local storage preferences
+                const saved = localStorage.getItem(this.STORAGE_KEY);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (parsed.status === 'paused' && parsed.pauseUntil && parsed.pauseUntil > Date.now()) {
+                        this.state.status = 'paused';
+                        this.state.pauseUntil = parsed.pauseUntil;
+                    } else if (parsed.status === 'permanently_disabled' || parsed.status === 'in_page_only') {
+                        this.state.status = parsed.status;
+                    } else {
+                        this.state.status = 'active';
+                    }
+                }
+            } catch (e) {
+                this.state.status = 'active';
+            }
+        },
+
+        savePreferences: function() {
+            try {
+                if (this.state.status === 'session_disabled') {
+                    sessionStorage.setItem(this.STORAGE_KEY, 'session_disabled');
+                } else {
+                    sessionStorage.removeItem(this.STORAGE_KEY);
+                    localStorage.setItem(this.STORAGE_KEY, JSON.stringify({
+                        status: this.state.status,
+                        pauseUntil: this.state.pauseUntil
+                    }));
+                }
+            } catch (e) {}
+            this.updateFabUI();
+        },
+
+        checkPauseExpiration: function() {
+            if (this.state.status === 'paused' && this.state.pauseUntil && Date.now() >= this.state.pauseUntil) {
+                this.state.status = 'active';
+                this.state.pauseUntil = null;
+                this.savePreferences();
+                if (window.showToast) window.showToast('info', 'Smart Scanner has automatically resumed.');
+            }
+        },
+
+        setStatus: function(newStatus, durationMs = 0) {
+            this.state.status = newStatus;
+            this.state.pauseUntil = durationMs > 0 ? Date.now() + durationMs : null;
+            this.savePreferences();
+        },
+
+        setupGlobalKeyListener: function() {
+            window.addEventListener('keydown', (e) => {
+                // If scanner disabled or session paused, ignore keystrokes
+                if (this.state.status === 'session_disabled' || this.state.status === 'permanently_disabled') return;
+                if (this.state.status === 'paused') {
+                    this.checkPauseExpiration();
+                    if (this.state.status === 'paused') return;
+                }
+
+                // Ignore control keys, function keys, meta keys
+                if (e.ctrlKey || e.altKey || e.metaKey || e.key.length > 1 && e.key !== 'Enter') return;
+
+                const now = Date.now();
+                const interval = now - this.lastKeyTime;
+                this.lastKeyTime = now;
+
+                // If interval exceeds burst threshold, reset buffer
+                if (interval > 120 && this.buffer.length > 0) {
+                    this.buffer = [];
+                }
+
+                if (e.key === 'Enter') {
+                    if (this.buffer.length >= this.MIN_BURST_LENGTH) {
+                        // Analyze inter-keystroke intervals
+                        const totalTime = this.buffer[this.buffer.length - 1].time - this.buffer[0].time;
+                        const avgInterval = totalTime / (this.buffer.length - 1 || 1);
+
+                        // If average interval is fast enough (<= 45ms), consider it a hardware scanner burst
+                        if (avgInterval <= 45 || (this.buffer.length >= 5 && avgInterval <= 65)) {
+                            const scannedCode = this.buffer.map(b => b.char).join('').trim();
+                            this.buffer = [];
+
+                            if (scannedCode.length >= 2) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                this.handleHardwareScan(scannedCode);
+                            }
+                        }
+                    }
+                    this.buffer = [];
+                } else if (e.key.length === 1) {
+                    this.buffer.push({ char: e.key, time: now });
+                }
+            }, true);
+        },
+
+        handleHardwareScan: function(code) {
+            // Deduplication guard
+            if (window.BarcodeGuard && !window.BarcodeGuard.acceptScan(code, 800)) {
+                return;
+            }
+
+            // 1. Check if user is actively focused on an input element
+            const activeEl = document.activeElement;
+            if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+                // If it's an input on the page, fill it and fire events
+                activeEl.value = code;
+                activeEl.dispatchEvent(new Event('input', { bubbles: true }));
+                activeEl.dispatchEvent(new Event('change', { bubbles: true }));
+                activeEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }));
+                return;
+            }
+
+            // 2. Check for in-page barcode target inputs
+            const pageBarcodeInputs = Array.from(document.querySelectorAll(
+                'input[data-barcode-input], input[id*="barcode" i], input[name*="barcode" i], input.barcode-input'
+            )).filter(el => el.offsetParent !== null && !el.disabled && !el.readOnly);
+
+            if (pageBarcodeInputs.length === 1) {
+                const targetInput = pageBarcodeInputs[0];
+                targetInput.focus();
+                targetInput.value = code;
+                targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+                targetInput.dispatchEvent(new Event('change', { bubbles: true }));
+                targetInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }));
+                return;
+            }
+
+            // 3. If in-page-only mode, do not open global modal
+            if (this.state.status === 'in_page_only') {
+                if (window.showToast) window.showToast('info', `Scanned: ${code} (In-page mode only)`);
+                return;
+            }
+
+            // 4. Global Action Hub Modal Fallback
+            this.resolveAndShowModal(code);
+        },
+
+        resolveAndShowModal: async function(code) {
+            const modal = document.getElementById('globalScanModal');
+            const codeText = document.getElementById('scanModalCodeText');
+            const loading = document.getElementById('scanModalLoading');
+            const content = document.getElementById('scanModalContent');
+
+            if (!modal) return;
+
+            modal.hidden = false;
+            if (codeText) codeText.textContent = code;
+            if (loading) loading.style.display = 'block';
+            if (content) {
+                content.style.display = 'none';
+                content.innerHTML = '';
+            }
+
+            try {
+                const response = await fetch(`/api/scanner/resolve?code=${encodeURIComponent(code)}`);
+                if (!response.ok) throw new Error('Network error resolving scanned code');
+                const data = await response.json();
+
+                if (data && data.success && data.data) {
+                    this.renderModalContent(data.data);
+                } else {
+                    this.renderModalContent({
+                        entityType: 'Unknown',
+                        code: code,
+                        title: 'Unknown Scanned Code',
+                        subtitle: 'No details found',
+                        details: { 'Raw Value': code },
+                        actions: [
+                            { actionId: 'catalog', label: 'Register in Catalog', icon: 'plus-circle', targetUrl: `/Catalog?newBarcode=${encodeURIComponent(code)}`, buttonClass: 'button-primary', shortcutKey: '1' },
+                            { actionId: 'search', label: 'Search Catalog', icon: 'search', targetUrl: `/Catalog?search=${encodeURIComponent(code)}`, buttonClass: 'button-command', shortcutKey: '2' }
+                        ]
+                    });
+                }
+            } catch (err) {
+                if (loading) loading.style.display = 'none';
+                if (content) {
+                    content.style.display = 'block';
+                    content.innerHTML = `<div class="scan-detail-card" style="color:#ef4444;">Failed to resolve entity: ${err.message}</div>`;
+                }
+            }
+        },
+
+        renderModalContent: function(res) {
+            this.currentModalResult = res;
+            const loading = document.getElementById('scanModalLoading');
+            const content = document.getElementById('scanModalContent');
+            if (loading) loading.style.display = 'none';
+            if (!content) return;
+
+            const typeLower = (res.entityType || 'unknown').toLowerCase();
+            const badgeClass = `scan-entity-badge ${typeLower}`;
+
+            let detailsHtml = '';
+            if (res.details) {
+                for (const [key, val] of Object.entries(res.details)) {
+                    detailsHtml += `
+                        <div class="scan-detail-card">
+                            <div class="scan-detail-key">${key}</div>
+                            <div class="scan-detail-val">${val}</div>
+                        </div>
+                    `;
+                }
+            }
+
+            let actionsHtml = '';
+            if (res.actions && res.actions.length > 0) {
+                actionsHtml = res.actions.map((act, idx) => `
+                    <a href="${act.targetUrl}" class="scan-action-btn ${act.buttonClass || 'button-command'}" data-shortcut="${act.shortcutKey || (idx + 1)}">
+                        <div class="scan-action-label-group">
+                            <span>${act.label}</span>
+                        </div>
+                        <kbd class="scan-shortcut-kbd">${act.shortcutKey || (idx + 1)}</kbd>
+                    </a>
+                `).join('');
+            }
+
+            const thumbnailHtml = res.thumbnailUrl
+                ? `<img src="${res.thumbnailUrl}" class="scan-entity-img" alt="${res.title}" />`
+                : `<div class="scan-entity-icon-ph">🏷️</div>`;
+
+            content.innerHTML = `
+                <div class="scan-entity-hero">
+                    ${thumbnailHtml}
+                    <div class="scan-entity-meta">
+                        <span class="${badgeClass}">${res.entityType}</span>
+                        <h4 class="scan-entity-title">${res.title}</h4>
+                        <p class="scan-entity-sub">${res.subtitle || ''}</p>
+                    </div>
+                </div>
+
+                ${detailsHtml ? `<div class="scan-details-grid">${detailsHtml}</div>` : ''}
+
+                <div class="scan-actions-section">
+                    <div class="scan-actions-title">Contextual Quick Actions</div>
+                    <div class="scan-actions-grid">${actionsHtml}</div>
+                </div>
+            `;
+
+            content.style.display = 'block';
+        },
+
+        setupModalEvents: function() {
+            const modal = document.getElementById('globalScanModal');
+            const btnClose = document.getElementById('btnCloseScanModal');
+            const btnDismiss = document.getElementById('btnDismissScanModal');
+            const btnCopy = document.getElementById('btnCopyScanCode');
+
+            const closeModal = () => {
+                if (modal) modal.hidden = true;
+                this.currentModalResult = null;
+            };
+
+            if (btnClose) btnClose.addEventListener('click', closeModal);
+            if (btnDismiss) btnDismiss.addEventListener('click', closeModal);
+
+            if (btnCopy) {
+                btnCopy.addEventListener('click', () => {
+                    const text = document.getElementById('scanModalCodeText')?.textContent;
+                    if (text && text !== '---') {
+                        navigator.clipboard.writeText(text);
+                        if (window.showToast) window.showToast('info', 'Code copied to clipboard');
+                    }
+                });
+            }
+
+            // Keyboard navigation for modal (1-9 to trigger action, Esc to close)
+            window.addEventListener('keydown', (e) => {
+                if (!modal || modal.hidden) return;
+
+                if (e.key === 'Escape') {
+                    closeModal();
+                    return;
+                }
+
+                // Check 1-9 shortcuts
+                if (/^[1-9]$/.test(e.key)) {
+                    const targetBtn = modal.querySelector(`[data-shortcut="${e.key}"]`);
+                    if (targetBtn) {
+                        e.preventDefault();
+                        targetBtn.click();
+                    }
+                }
+            });
+        },
+
+        setupFabControls: function() {
+            const fabBtn = document.getElementById('btnToggleScannerFab');
+            const popover = document.getElementById('scannerFabMenu');
+            const resumeBtn = document.getElementById('btnResumeScanner');
+            const btnRunTest = document.getElementById('btnRunTestScan');
+            const testInput = document.getElementById('scannerTestInput');
+
+            if (fabBtn && popover) {
+                fabBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const isHidden = popover.hidden;
+                    popover.hidden = !isHidden;
+                    fabBtn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+                });
+
+                document.addEventListener('click', (e) => {
+                    if (!popover.contains(e.target) && !fabBtn.contains(e.target)) {
+                        popover.hidden = true;
+                        fabBtn.setAttribute('aria-expanded', 'false');
+                    }
+                });
+            }
+
+            // Menu actions
+            document.querySelectorAll('.scanner-menu-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const action = btn.dataset.action;
+                    if (action === 'pause-15m') {
+                        this.setStatus('paused', 15 * 60 * 1000);
+                        if (window.showToast) window.showToast('warning', 'Scanner paused for 15 minutes');
+                    } else if (action === 'pause-1h') {
+                        this.setStatus('paused', 60 * 60 * 1000);
+                        if (window.showToast) window.showToast('warning', 'Scanner paused for 1 hour');
+                    } else if (action === 'toggle-session') {
+                        this.setStatus('session_disabled');
+                        if (window.showToast) window.showToast('warning', 'Scanner disabled for this browser session');
+                    } else if (action === 'toggle-inpage') {
+                        this.setStatus('in_page_only');
+                        if (window.showToast) window.showToast('info', 'Scanner set to In-Page Inputs Only (No Popups)');
+                    } else if (action === 'toggle-permanent') {
+                        this.setStatus('permanently_disabled');
+                        if (window.showToast) window.showToast('error', 'Scanner disabled permanently');
+                    } else if (action === 'resume') {
+                        this.setStatus('active');
+                        if (window.showToast) window.showToast('success', 'Scanner resumed and listening!');
+                    }
+
+                    if (popover) popover.hidden = true;
+                });
+            });
+
+            // Test scan simulator
+            if (btnRunTest && testInput) {
+                const runTest = () => {
+                    const val = testInput.value.trim();
+                    if (!val) return;
+                    testInput.value = '';
+                    if (popover) popover.hidden = true;
+                    this.handleHardwareScan(val);
+                };
+
+                btnRunTest.addEventListener('click', runTest);
+                testInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        runTest();
+                    }
+                });
+            }
+        },
+
+        updateFabUI: function() {
+            const statusDot = document.getElementById('fabStatusDot');
+            const menuDot = document.getElementById('fabMenuStatusDot');
+            const modeTag = document.getElementById('fabMenuModeTag');
+            const label = document.getElementById('fabLabel');
+            const bannerText = document.getElementById('scannerStatusBannerText');
+            const resumeBtn = document.getElementById('btnResumeScanner');
+
+            const status = this.state.status;
+
+            if (status === 'active') {
+                if (statusDot) { statusDot.className = 'fab-status-indicator'; }
+                if (menuDot) { menuDot.className = 'fab-status-dot'; }
+                if (modeTag) { modeTag.textContent = 'Active'; modeTag.style.color = '#34d399'; modeTag.style.background = 'rgba(16,185,129,0.2)'; }
+                if (label) { label.textContent = 'Scanner: Active'; }
+                if (bannerText) { bannerText.textContent = '🟢 Background Scanner is actively listening'; }
+                if (resumeBtn) { resumeBtn.style.display = 'none'; }
+            } else if (status === 'paused') {
+                const minsLeft = this.state.pauseUntil ? Math.ceil((this.state.pauseUntil - Date.now()) / 60000) : 0;
+                if (statusDot) { statusDot.className = 'fab-status-indicator paused'; }
+                if (menuDot) { menuDot.className = 'fab-status-dot paused'; }
+                if (modeTag) { modeTag.textContent = `Paused (${minsLeft}m)`; modeTag.style.color = '#fbbf24'; modeTag.style.background = 'rgba(245,158,11,0.2)'; }
+                if (label) { label.textContent = `Scanner: Paused (${minsLeft}m)`; }
+                if (bannerText) { bannerText.textContent = `🟡 Scanner is snoozed for ${minsLeft} more minutes`; }
+                if (resumeBtn) { resumeBtn.style.display = 'flex'; }
+            } else if (status === 'in_page_only') {
+                if (statusDot) { statusDot.className = 'fab-status-indicator'; }
+                if (menuDot) { menuDot.className = 'fab-status-dot'; }
+                if (modeTag) { modeTag.textContent = 'In-Page Only'; modeTag.style.color = '#38bdf8'; modeTag.style.background = 'rgba(56,189,248,0.2)'; }
+                if (label) { label.textContent = 'Scanner: In-Page'; }
+                if (bannerText) { bannerText.textContent = '🎯 Scanner fills active inputs only (no global popups)'; }
+                if (resumeBtn) { resumeBtn.style.display = 'flex'; }
+            } else {
+                if (statusDot) { statusDot.className = 'fab-status-indicator disabled'; }
+                if (menuDot) { menuDot.className = 'fab-status-dot disabled'; }
+                if (modeTag) { modeTag.textContent = 'Disabled'; modeTag.style.color = '#94a3b8'; modeTag.style.background = 'rgba(148,163,184,0.2)'; }
+                if (label) { label.textContent = 'Scanner: Off'; }
+                if (bannerText) { bannerText.textContent = '⚪ Scanner is turned off'; }
+                if (resumeBtn) { resumeBtn.style.display = 'flex'; }
+            }
+        }
+    };
+
     // Auto-init on page load
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {
             window.SmartLookup.initAll();
             window.BarcodeGuard.initAll();
+            window.BarcodeScannerService.init();
         });
     } else {
         window.SmartLookup.initAll();
         window.BarcodeGuard.initAll();
+        window.BarcodeScannerService.init();
     }
 
 })();
+
 

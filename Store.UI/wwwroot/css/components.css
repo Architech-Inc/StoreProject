@@ -307,3 +307,454 @@ tbody tr:hover { background: color-mix(in srgb, var(--ops-brand, var(--brand)) 4
     to { transform: rotate(360deg); }
 }
 
+/* ── Smart Scan Hub Modal & FAB Widget ───────── */
+.scan-hub-modal {
+    max-width: 640px;
+    width: 92%;
+    border-radius: var(--radius-lg, 12px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+    background: var(--ops-paper, var(--surface, #ffffff));
+    border: 1px solid var(--ops-border, var(--border, #e2e8f0));
+    overflow: hidden;
+    animation: scanModalSlideIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes scanModalSlideIn {
+    from { opacity: 0; transform: scale(0.96) translateY(12px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.scan-hub-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: color-mix(in srgb, var(--ops-brand, var(--brand, #0284c7)) 8%, var(--ops-paper, #fff));
+    border-bottom: 1px solid var(--ops-border, var(--border, #e2e8f0));
+}
+.scan-hub-title-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.scan-hub-icon-badge {
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    background: var(--ops-brand, var(--brand, #0284c7));
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px color-mix(in srgb, var(--ops-brand, #0284c7) 35%, transparent);
+}
+.scan-hub-title {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--ops-ink, var(--text-primary, #0f172a));
+    line-height: 1.2;
+}
+.scan-hub-code-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.78rem;
+    font-weight: 600;
+    background: var(--ops-surface-alt, #f1f5f9);
+    border: 1px solid var(--ops-border, #cbd5e1);
+    color: var(--ops-ink, #0f172a);
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-top: 3px;
+}
+.btn-copy-code {
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: var(--ops-subtle, #64748b);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+}
+.btn-copy-code:hover {
+    color: var(--ops-brand, #0284c7);
+}
+.scan-hub-body {
+    padding: 20px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+.scan-hub-loading {
+    text-align: center;
+    padding: 30px 10px;
+}
+.scanner-laser-anim {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 12px;
+    color: var(--ops-brand, #0284c7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.laser-beam {
+    position: absolute;
+    top: 15%;
+    left: 10%;
+    right: 10%;
+    height: 2px;
+    background: #ef4444;
+    box-shadow: 0 0 8px #ef4444;
+    animation: laserScan 1.2s ease-in-out infinite alternate;
+}
+@keyframes laserScan {
+    0% { top: 20%; opacity: 0.8; }
+    100% { top: 80%; opacity: 0.8; }
+}
+.scan-loading-text {
+    font-size: 0.9rem;
+    color: var(--ops-subtle, #64748b);
+    margin: 0;
+}
+
+/* Entity Hero Card */
+.scan-entity-hero {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    padding: 16px;
+    border-radius: 10px;
+    background: var(--ops-surface-alt, #f8fafc);
+    border: 1px solid var(--ops-border, #e2e8f0);
+    margin-bottom: 20px;
+}
+.scan-entity-img {
+    width: 64px;
+    height: 64px;
+    border-radius: 8px;
+    object-fit: cover;
+    border: 1px solid var(--ops-border, #cbd5e1);
+    background: #ffffff;
+    flex-shrink: 0;
+}
+.scan-entity-icon-ph {
+    width: 64px;
+    height: 64px;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--ops-brand, #0284c7) 12%, transparent);
+    color: var(--ops-brand, #0284c7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    flex-shrink: 0;
+}
+.scan-entity-meta {
+    flex: 1;
+    min-width: 0;
+}
+.scan-entity-badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: var(--ops-brand, #0284c7);
+    color: #ffffff;
+    margin-bottom: 4px;
+}
+.scan-entity-badge.item { background: #0284c7; }
+.scan-entity-badge.invoice { background: #16a34a; }
+.scan-entity-badge.user { background: #9333ea; }
+.scan-entity-badge.supplier { background: #d97706; }
+.scan-entity-badge.batch { background: #0891b2; }
+.scan-entity-badge.unknown { background: #64748b; }
+
+.scan-entity-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--ops-ink, #0f172a);
+    margin: 0 0 2px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.scan-entity-sub {
+    font-size: 0.85rem;
+    color: var(--ops-subtle, #64748b);
+    margin: 0;
+}
+
+/* Details Grid */
+.scan-details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+}
+.scan-detail-card {
+    padding: 10px 12px;
+    border-radius: 6px;
+    background: var(--ops-paper, #ffffff);
+    border: 1px solid var(--ops-border, #e2e8f0);
+}
+.scan-detail-key {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ops-subtle, #64748b);
+    margin-bottom: 2px;
+}
+.scan-detail-val {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--ops-ink, #0f172a);
+}
+
+/* Action Buttons Grid */
+.scan-actions-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ops-subtle, #64748b);
+    margin-bottom: 10px;
+}
+.scan-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+}
+.scan-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-align: left;
+    text-decoration: none;
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+.scan-action-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+.scan-action-label-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.scan-shortcut-kbd {
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.18);
+    color: inherit;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.scan-hub-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    background: var(--ops-surface-alt, #f8fafc);
+    border-top: 1px solid var(--ops-border, #e2e8f0);
+}
+.scan-hub-hints {
+    display: flex;
+    gap: 14px;
+    font-size: 0.78rem;
+    color: var(--ops-subtle, #64748b);
+}
+.scan-hub-hints kbd {
+    background: var(--ops-paper, #ffffff);
+    border: 1px solid var(--ops-border, #cbd5e1);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: monospace;
+    font-weight: 600;
+}
+
+/* ── Floating Quick-Access Scanner Widget (FAB) ───────── */
+.scanner-fab-wrapper {
+    position: fixed;
+    bottom: 22px;
+    right: 22px;
+    z-index: 9999;
+    font-family: inherit;
+}
+.scanner-fab-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 9999px;
+    background: #0f172a;
+    color: #f8fafc;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.scanner-fab-btn:hover {
+    background: #1e293b;
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+}
+.fab-status-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #10b981;
+    display: inline-block;
+}
+.fab-status-indicator.paused { background: #f59e0b; }
+.fab-status-indicator.disabled { background: #94a3b8; }
+
+.fab-pulse-ring {
+    position: absolute;
+    left: 14px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: rgba(16, 185, 129, 0.4);
+    animation: fabPulse 2s cubic-bezier(0.24, 0, 0.38, 1) infinite;
+    pointer-events: none;
+}
+.fab-status-indicator.paused ~ .fab-pulse-ring { background: rgba(245, 158, 11, 0.4); }
+.fab-status-indicator.disabled ~ .fab-pulse-ring { display: none; }
+
+@keyframes fabPulse {
+    0% { transform: scale(0.9); opacity: 0.8; }
+    70% { transform: scale(2.4); opacity: 0; }
+    100% { transform: scale(2.4); opacity: 0; }
+}
+
+.scanner-fab-popover {
+    position: absolute;
+    bottom: 54px;
+    right: 0;
+    width: 290px;
+    border-radius: 12px;
+    background: #0f172a;
+    color: #f8fafc;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    animation: fabPopoverIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes fabPopoverIn {
+    from { opacity: 0; transform: translateY(10px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.scanner-fab-popover-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 14px;
+    background: rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.fab-head-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.88rem;
+}
+.fab-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #10b981;
+}
+.fab-status-dot.paused { background: #f59e0b; }
+.fab-status-dot.disabled { background: #94a3b8; }
+.fab-mode-tag {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+}
+.scanner-fab-popover-body {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.scanner-status-banner {
+    font-size: 0.78rem;
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    color: #cbd5e1;
+}
+.scanner-menu-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.scanner-menu-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    margin-bottom: 2px;
+}
+.scanner-menu-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 7px 10px;
+    border-radius: 6px;
+    background: transparent;
+    border: none;
+    color: #e2e8f0;
+    font-size: 0.82rem;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.12s ease;
+}
+.scanner-menu-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+.scanner-menu-btn.text-danger { color: #f87171; }
+.scanner-menu-btn.text-danger:hover { background: rgba(239, 68, 68, 0.15); }
+.scanner-menu-btn.text-success { color: #34d399; }
+.scanner-menu-btn.text-success:hover { background: rgba(16, 185, 129, 0.15); }
+.menu-btn-icon { font-size: 0.95rem; }
+
+.scanner-test-input-group {
+    display: flex;
+    gap: 6px;
+}
+.scanner-test-input-group input {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #f8fafc;
+    font-size: 0.8rem;
+    padding: 6px 8px;
+}
+.scanner-test-input-group input:focus {
+    border-color: #38bdf8;
+}
+
+

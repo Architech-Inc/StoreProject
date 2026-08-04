@@ -301,3 +301,49 @@ To guarantee zero unauthorized access, data leaks, or background firing while un
 3. **Target Pages Integration**:
    - Add `data-scan-entity` attributes to disambiguate multi-input forms.
    - Enable deep-linking query parameters (e.g. `/Pos?addItemBarcode=...`, `/Catalog?highlightBarcode=...`, `/Wastage?itemCode=...`).
+
+---
+
+## 9. Future Roadmap: Minimized Staging Tray & Batch Buffer ("Scan Now, Process Later")
+
+In high-volume operations—such as receiving dock unboxing, warehouse stocktakes, aisle audit walks, or multi-item transfers—operators need the ability to scan 10–50 items in rapid succession without a modal popup or page navigation interrupting their scanning flow on every single item.
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                                                                        │
+│                                              ┌───────────────────────┐ │
+│                                              │ 📥 STAGING SCAN TRAY  │ │
+│                                              ├───────────────────────┤ │
+│                                              │ • 🥤 Coca-Cola 500ml  │ │
+│                                              │ • 🍞 Golden Loaf 600g │ │
+│                                              │ • 🧼 Omo Detergent 1kg│ │
+│                                              │ • 🍫 Choco Crunch 80g │ │
+│                                              ├───────────────────────┤ │
+│                                              │ 4 items staged        │ │
+│                                              │ [Batch Process ▾]     │ │
+│                                              └───────────┬───────────┘ │
+│                                                          │             │
+│                                                ┌─────────┴─────────┐   │
+│                                                │  📥 Staging Tray  │   │
+│                                                │   [4 Items]       │   │
+│                                                └───────────────────┘   │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+### 9.1 Core Capabilities & User Flow
+1. **Mode Switch ("Scan to Tray" Mode)**:
+   - Operators can toggle between **"Action Hub (Immediate)"** and **"Staging Tray (Batch / Later)"** via the floating FAB menu or shortcut (`Ctrl + Shift + S`).
+   - When in Staging Tray mode, scanning an item suppresses the full-screen modal, plays a subtle chime/haptic pulse, and silently enqueues the item into a minimized floating dock at the bottom-right.
+2. **Minimized Floating Drawer**:
+   - Displays a compact counter badge (e.g., `📥 8 items staged`).
+   - Clicking expands a lightweight slide-over tray showing scanned timestamps, thumbnails, quantities (auto-incrementing upon re-scanning the same barcode), and remove buttons.
+3. **Batch Quick-Dispatch Actions**:
+   - When ready to process the collected items, the operator selects a batch target with one click:
+     - **Transfer to POS**: Imports all staged items directly into the active register checkout cart.
+     - **Generate Stock Transfer**: Populates a new multi-line inter-branch transfer with all scanned items and counts.
+     - **Bulk Wastage / Write-Off**: Files a batch disposal record for damaged/expired stock found during audit sweeps.
+     - **Create Purchase Order / GRN**: Converts receiving scans into a Goods Received Note against a supplier PO.
+     - **Export to CSV / Clipboard**: Quick export for audit logs or external reporting.
+4. **Persistent Offline Storage**:
+   - Scanned buffer stored in `IndexedDB` / `localStorage` with a 24-hour retention policy, ensuring zero data loss if the browser tab is accidentally refreshed or closed during an audit walk.
+

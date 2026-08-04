@@ -94,4 +94,21 @@ app.UseRouting();
 
 app.MapRazorPages();
 
+app.MapGet("/api/scanner/resolve", async (HttpContext httpContext, IApiClientService apiClient, string code, CancellationToken ct) =>
+{
+    var token = httpContext.Session.GetString("access_token");
+    if (string.IsNullOrWhiteSpace(token))
+    {
+        return Results.Unauthorized();
+    }
+    apiClient.SetToken(token);
+    var result = await apiClient.GetAsync<Store.Models.DTOs.Common.ApiResponse<Store.Models.DTOs.Scanner.ScanResolutionResultDto>>(
+        $"/api/scanner/resolve?code={Uri.EscapeDataString(code)}", ct);
+    if (result == null)
+    {
+        return Results.Ok(Store.Models.DTOs.Common.ApiResponse<Store.Models.DTOs.Scanner.ScanResolutionResultDto>.Fail("Resolution failed"));
+    }
+    return Results.Ok(result);
+});
+
 app.Run();

@@ -28,7 +28,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" referrerpolicy="no-referrer" />
     @await RenderSectionAsync("Styles", required: false)
 </head>
-<body>
+<body data-authenticated="@(!string.IsNullOrWhiteSpace(token) ? "true" : "false")">
     <div class="app-shell" id="appShell">
         <aside class="app-sidebar" id="appSidebar" aria-label="Primary navigation">
             <div class="brand-block">
@@ -142,6 +142,9 @@
     </div>
 
     <div id="toast-container" class="toast-container" aria-live="polite"></div>
+    
+    <!-- Smart Scanner Hub & Floating FAB -->
+    <partial name="_SmartScanHub" />
 
     <!-- Global Crop Modal -->
     <div class="modal-overlay" id="globalCropModal" hidden>

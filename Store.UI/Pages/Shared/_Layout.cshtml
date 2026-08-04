@@ -12,10 +12,13 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" referrerpolicy="no-referrer" />
     @await RenderSectionAsync("Styles", required: false)
 </head>
-<body>
+<body data-authenticated="@(!string.IsNullOrWhiteSpace(Context.Session.GetString("access_token")) ? "true" : "false")">
     @RenderBody()
     
     <div id="toast-container" class="toast-container" aria-live="polite"></div>
+    
+    <!-- Smart Scanner Hub & Floating FAB -->
+    <partial name="_SmartScanHub" />
     
     <!-- Global Crop Modal -->
     <div class="modal-overlay" id="globalCropModal" hidden>

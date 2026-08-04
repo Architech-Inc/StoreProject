@@ -863,6 +863,22 @@
     renderOfflineBanner();
     renderCatalog();
     renderCart();
+
+    // Deep-linking from Smart Scan Hub (e.g. /Pos?addItem=GUID or /Pos?barcode=CODE)
+    const urlParams = new URLSearchParams(window.location.search);
+    const paramBarcode = urlParams.get('barcode');
+    const paramAddItem = urlParams.get('addItem');
+    if (paramBarcode) {
+        barcodeInput.value = paramBarcode;
+        addByBarcode();
+        window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (paramAddItem) {
+        const itemToAdd = catalog.find(i => i.itemId === paramAddItem);
+        if (itemToAdd) {
+            addToCart(itemToAdd);
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    }
 })();
 </script>
 }

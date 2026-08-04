@@ -234,6 +234,26 @@ modal.addEventListener('click', e => {
 document.addEventListener('keydown', e => {
     if (e.key === 'Escape') closeModal();
 });
+
+document.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const newBarcode = urlParams.get('newBarcode');
+    const editId = urlParams.get('edit');
+    if (newBarcode) {
+        openCreate();
+        const barcodeEl = document.getElementById('itemBarcode');
+        if (barcodeEl) barcodeEl.value = newBarcode;
+        const nameEl = document.getElementById('itemName');
+        if (nameEl) nameEl.focus();
+        window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (editId) {
+        const editBtn = document.querySelector(`button[onclick*="${editId}"]`);
+        if (editBtn) {
+            editBtn.click();
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    }
+});
 </script>
 }
 

@@ -1,0 +1,119 @@
+@* Smart Barcode/QR Scanner Sleeper Service & Global Action Hub Partial *@
+<div id="smartScannerContainer" class="smart-scanner-container" aria-live="polite">
+    <!-- 1. Global Scan Action Hub Modal -->
+    <div class="modal-overlay" id="globalScanModal" hidden style="z-index: 99999;">
+        <div class="modal scan-hub-modal" role="dialog" aria-modal="true" aria-labelledby="scanModalTitle">
+            <div class="modal-head scan-hub-head">
+                <div class="scan-hub-title-group">
+                    <div class="scan-hub-icon-badge">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"></path>
+                            <rect x="7" y="7" width="10" height="10" rx="1"></rect>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 id="scanModalTitle" class="scan-hub-title">Smart Scan Hub</h3>
+                        <div class="scan-hub-code-pill" id="scanModalCodePill">
+                            <span id="scanModalCodeText">---</span>
+                            <button type="button" class="btn-copy-code" id="btnCopyScanCode" title="Copy code">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" id="btnCloseScanModal" aria-label="Close">×</button>
+            </div>
+
+            <div class="scan-hub-body" id="scanModalBody">
+                <!-- Dynamic Content Rendered via JS -->
+                <div class="scan-hub-loading" id="scanModalLoading">
+                    <div class="scanner-laser-anim">
+                        <div class="laser-beam"></div>
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"></path>
+                            <line x1="7" y1="12" x2="17" y2="12"></line>
+                        </svg>
+                    </div>
+                    <p class="scan-loading-text">Resolving entity from database...</p>
+                </div>
+                <div id="scanModalContent" class="scan-hub-content" style="display: none;"></div>
+            </div>
+
+            <div class="scan-hub-footer">
+                <div class="scan-hub-hints">
+                    <span>💡 Press <kbd>1</kbd>-<kbd>9</kbd> to trigger action</span>
+                    <span>Press <kbd>Esc</kbd> to dismiss</span>
+                </div>
+                <button type="button" class="button-command btn-sm" id="btnDismissScanModal">Dismiss</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Floating Quick-Access Scanner Widget (FAB) -->
+    <div class="scanner-fab-wrapper" id="scannerFabWidget">
+        <div class="scanner-fab-popover" id="scannerFabMenu" hidden>
+            <div class="scanner-fab-popover-head">
+                <div class="fab-head-title">
+                    <span class="fab-status-dot" id="fabMenuStatusDot"></span>
+                    <strong>Scanner Hub</strong>
+                </div>
+                <span class="fab-mode-tag" id="fabMenuModeTag">Active</span>
+            </div>
+
+            <div class="scanner-fab-popover-body">
+                <div class="scanner-status-banner" id="scannerStatusBanner">
+                    <span id="scannerStatusBannerText">🟢 Background Scanner is actively listening</span>
+                </div>
+
+                <div class="scanner-menu-group">
+                    <span class="scanner-menu-label">Snooze / Pause Controls</span>
+                    <button type="button" class="scanner-menu-btn" data-action="pause-15m">
+                        <span class="menu-btn-icon">⏱️</span>
+                        <span>Pause for 15 Minutes</span>
+                    </button>
+                    <button type="button" class="scanner-menu-btn" data-action="pause-1h">
+                        <span class="menu-btn-icon">⏱️</span>
+                        <span>Pause for 1 Hour</span>
+                    </button>
+                    <button type="button" class="scanner-menu-btn" data-action="toggle-session">
+                        <span class="menu-btn-icon">🔒</span>
+                        <span>Turn Off for This Session</span>
+                    </button>
+                    <button type="button" class="scanner-menu-btn" data-action="toggle-inpage">
+                        <span class="menu-btn-icon">🎯</span>
+                        <span>In-Page Inputs Only (No Popups)</span>
+                    </button>
+                    <button type="button" class="scanner-menu-btn text-danger" data-action="toggle-permanent">
+                        <span class="menu-btn-icon">⚪</span>
+                        <span>Disable Permanently</span>
+                    </button>
+                    <button type="button" class="scanner-menu-btn text-success" id="btnResumeScanner" style="display:none;" data-action="resume">
+                        <span class="menu-btn-icon">▶️</span>
+                        <strong>Resume Scanner Now</strong>
+                    </button>
+                </div>
+
+                <div class="scanner-menu-group">
+                    <span class="scanner-menu-label">Test Scan Simulator</span>
+                    <div class="scanner-test-input-group">
+                        <input type="text" id="scannerTestInput" class="form-input form-input-sm" placeholder="Enter barcode/code to test..." />
+                        <button type="button" class="button-primary btn-sm" id="btnRunTestScan">Simulate</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button type="button" class="scanner-fab-btn" id="btnToggleScannerFab" title="Smart Scanner Status & Controls" aria-expanded="false">
+            <span class="fab-pulse-ring" id="fabPulseRing"></span>
+            <span class="fab-status-indicator" id="fabStatusDot"></span>
+            <svg class="fab-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"></path>
+                <rect x="7" y="7" width="10" height="10" rx="1"></rect>
+            </svg>
+            <span class="fab-label" id="fabLabel">Scanner: Active</span>
+        </button>
+    </div>
+</div>
