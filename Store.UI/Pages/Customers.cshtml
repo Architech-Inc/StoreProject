@@ -1686,12 +1686,22 @@ document.addEventListener('keydown', e => {
     }
 });
 
-// Auto-open drawer if customerId parameter is present in URL
-window.addEventListener('DOMContentLoaded', () => {
+// Auto-open drawer if customerId or id parameter is present in URL
+window.addEventListener('DOMContentLoaded', async () => {
     const urlParams = new URLSearchParams(window.location.search);
-    const preselectedCustomerId = urlParams.get('customerId');
+    const preselectedCustomerId = urlParams.get('id') || urlParams.get('customerId');
+    const action = urlParams.get('action');
+
     if (preselectedCustomerId) {
-        openDrawer(preselectedCustomerId);
+        await openDrawer(preselectedCustomerId);
+
+        if (action === 'edit') {
+            editFromDrawer();
+        } else if (action === 'loyalty') {
+            openLoyaltyModal();
+        } else if (action === 'print') {
+            printLoyaltyCard();
+        }
     }
 });
 </script>

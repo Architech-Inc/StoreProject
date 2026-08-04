@@ -35,6 +35,7 @@ public class CustomersModel : SecurePageModel
     [BindProperty(SupportsGet = true)] public string SortBy { get; set; } = "name_asc";
     [BindProperty(SupportsGet = true)] public string ViewMode { get; set; } = "grid";
     [BindProperty(SupportsGet = true)] public Guid? CustomerId { get; set; }
+    [BindProperty(SupportsGet = true)] public Guid? Id { get; set; }
 
     // Create Form
     [BindProperty] public string FirstName { get; set; } = string.Empty;
@@ -73,6 +74,7 @@ public class CustomersModel : SecurePageModel
 
     public async Task<IActionResult> OnGetAsync(int page = 1, CancellationToken ct = default)
     {
+        CustomerId ??= Id;
         if (!TryGetSecurityContext(out var token, out _))
         {
             return GoToLogin();
