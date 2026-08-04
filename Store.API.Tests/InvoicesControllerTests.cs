@@ -70,11 +70,11 @@ public class InvoicesControllerTests
     public async Task Void_ReturnsNotFound_WhenInvoiceNotFoundOrAlreadyVoided()
     {
         var svc = new Mock<IInvoiceService>();
-        svc.Setup(s => s.VoidInvoiceAsync(It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
+        svc.Setup(s => s.VoidInvoiceAsync(It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
         var controller = CreateController(svc.Object, Guid.NewGuid());
-        var result = await controller.Void(Guid.NewGuid(), CancellationToken.None);
+        var result = await controller.Void(Guid.NewGuid(), null, CancellationToken.None);
 
         Assert.IsType<NotFoundObjectResult>(result);
     }
@@ -83,11 +83,11 @@ public class InvoicesControllerTests
     public async Task Void_ReturnsOk_WhenInvoiceVoidedSuccessfully()
     {
         var svc = new Mock<IInvoiceService>();
-        svc.Setup(s => s.VoidInvoiceAsync(It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
+        svc.Setup(s => s.VoidInvoiceAsync(It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
         var controller = CreateController(svc.Object, Guid.NewGuid());
-        var result = await controller.Void(Guid.NewGuid(), CancellationToken.None);
+        var result = await controller.Void(Guid.NewGuid(), null, CancellationToken.None);
 
         Assert.IsType<OkObjectResult>(result);
     }
@@ -118,11 +118,11 @@ public class InvoicesControllerTests
     [Fact]
     public async Task GetAll_ReturnsPagedResult()
     {
-        var pagedRequest = new PagedRequest { Page = 1, PageSize = 10 };
+        var pagedRequest = new InvoicePagedRequest { Page = 1, PageSize = 10 };
         var pagedResult = new PagedResult<InvoiceDto>(new List<InvoiceDto>(), 0, 1, 10);
 
         var svc = new Mock<IInvoiceService>();
-        svc.Setup(s => s.GetAllAsync(It.IsAny<PagedRequest>(), It.IsAny<CancellationToken>()))
+        svc.Setup(s => s.GetAllAsync(It.IsAny<InvoicePagedRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(pagedResult);
 
         var controller = CreateController(svc.Object);

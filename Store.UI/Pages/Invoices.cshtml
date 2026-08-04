@@ -2,105 +2,977 @@
 @model StoreUI.Pages.InvoicesModel
 @using Store.Models.Enums
 @{
-    ViewData["Title"] = "Invoices";
-    ViewData["PageDescription"] = "Browse, inspect, and void sales invoices.";
+    ViewData["Title"] = "Invoices 360 Financial & Billing Hub";
+    ViewData["ActivePage"] = "Invoices";
+    ViewData["PageDescription"] = "Central financial & billing hub: inspect sales, line-item returns, debt settlement, thermal receipts, and A4 tax invoices.";
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
+    <style>
+        /* Modern Invoices 360 Financial & Billing Hub Styles */
+        .inv-container {
+            max-width: 1440px;
+            margin: 0 auto;
+            color: var(--text-primary);
+        }
+
+        /* KPI Banner */
+        .inv-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .inv-kpi-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg, 12px);
+            padding: 18px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.05));
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .inv-kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,0.08));
+        }
+
+        .inv-kpi-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .inv-kpi-icon svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .inv-kpi-icon.green { background: rgba(16, 185, 129, 0.12); color: #059669; }
+        .inv-kpi-icon.blue { background: rgba(59, 130, 246, 0.12); color: #2563eb; }
+        .inv-kpi-icon.amber { background: rgba(245, 158, 11, 0.12); color: #d97706; }
+        .inv-kpi-icon.purple { background: rgba(139, 92, 246, 0.12); color: #7c3aed; }
+        .inv-kpi-icon.red { background: rgba(239, 68, 68, 0.12); color: #dc2626; }
+
+        .inv-kpi-val {
+            font-size: 1.45rem;
+            font-weight: 700;
+            line-height: 1.2;
+            color: var(--text-primary);
+        }
+
+        .inv-kpi-lbl {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            margin-top: 3px;
+        }
+
+        .inv-kpi-sub {
+            font-size: 0.76rem;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        /* Toolbar & Filters */
+        .inv-toolbar {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg, 12px);
+            padding: 16px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .inv-toolbar-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .inv-search-box {
+            position: relative;
+            min-width: 280px;
+            flex: 1;
+            max-width: 420px;
+        }
+
+        .inv-search-box input {
+            width: 100%;
+            padding: 8px 12px 8px 36px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--canvas);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+
+        .inv-search-box input:focus {
+            border-color: var(--brand);
+        }
+
+        .inv-search-icon {
+            position: absolute;
+            left: 11px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            color: var(--text-secondary);
+            pointer-events: none;
+        }
+
+        .inv-filters-strip {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .inv-select {
+            padding: 7px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-primary);
+            font-size: 0.86rem;
+            font-weight: 500;
+        }
+
+        .inv-btn-primary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            background: var(--brand);
+            color: #ffffff !important;
+            border: 1px solid var(--brand);
+            font-size: 0.88rem;
+            font-weight: 600;
+            text-decoration: none !important;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+
+        .inv-btn-primary:hover {
+            background: var(--brand-dark, #059669);
+            transform: translateY(-1px);
+        }
+
+        .inv-btn-secondary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 7px 14px;
+            border-radius: 8px;
+            background: var(--surface);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            font-size: 0.86rem;
+            font-weight: 500;
+            text-decoration: none !important;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+
+        .inv-btn-secondary:hover {
+            background: var(--canvas);
+            border-color: var(--brand);
+            color: var(--brand);
+        }
+
+        .inv-pill-group {
+            display: inline-flex;
+            background: var(--canvas);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 2px;
+            gap: 2px;
+        }
+
+        .inv-pill {
+            padding: 5px 12px;
+            border-radius: 6px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 0.82rem;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none !important;
+            transition: all 0.15s;
+        }
+
+        .inv-pill:hover {
+            color: var(--text-primary);
+        }
+
+        .inv-pill.active {
+            background: var(--surface);
+            color: var(--brand);
+            font-weight: 600;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        /* Invoices Table Card */
+        .inv-table-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg, 12px);
+            overflow: hidden;
+            box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.05));
+        }
+
+        .inv-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 0.88rem;
+        }
+
+        .inv-table th {
+            background: var(--canvas);
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.74rem;
+            letter-spacing: 0.5px;
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+            white-space: nowrap;
+        }
+
+        .inv-table td {
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+            color: var(--text-primary);
+        }
+
+        .inv-table tbody tr {
+            transition: background 0.15s ease;
+        }
+
+        .inv-table tbody tr:hover {
+            background: rgba(59, 130, 246, 0.03);
+        }
+
+        .inv-id-chip {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.82rem;
+            font-weight: 600;
+            background: var(--canvas);
+            padding: 3px 6px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+
+        .inv-id-chip:hover {
+            border-color: var(--brand);
+            color: var(--brand);
+        }
+
+        /* Status & Method Badges */
+        .inv-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 0.76rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            white-space: nowrap;
+        }
+
+        .inv-badge.paid { background: rgba(16, 185, 129, 0.12); color: #059669; }
+        .inv-badge.unpaid { background: rgba(245, 158, 11, 0.14); color: #b45309; }
+        .inv-badge.voided { background: rgba(239, 68, 68, 0.12); color: #dc2626; }
+        .inv-badge.refunded { background: rgba(139, 92, 246, 0.14); color: #6d28d9; }
+        .inv-badge.partial-refund { background: rgba(168, 85, 247, 0.12); color: #7e22ce; }
+
+        .inv-pay-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            background: var(--canvas);
+            padding: 2px 7px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+        }
+
+        .inv-action-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            justify-content: flex-end;
+        }
+
+        .inv-btn-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-secondary);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .inv-btn-icon:hover {
+            color: var(--brand);
+            border-color: var(--brand);
+            background: var(--canvas);
+        }
+
+        .inv-btn-icon svg {
+            width: 15px;
+            height: 15px;
+        }
+
+        .inv-btn-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 0.82rem;
+            font-weight: 500;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+
+        .inv-btn-action:hover {
+            border-color: var(--brand);
+            color: var(--brand);
+            background: var(--canvas);
+        }
+
+        .inv-btn-action.pay {
+            background: rgba(245, 158, 11, 0.1);
+            color: #b45309;
+            border-color: rgba(245, 158, 11, 0.3);
+            font-weight: 600;
+        }
+
+        .inv-btn-action.pay:hover {
+            background: #d97706;
+            color: #ffffff;
+            border-color: #d97706;
+        }
+
+        .inv-btn-action.refund {
+            background: rgba(139, 92, 246, 0.1);
+            color: #7c3aed;
+            border-color: rgba(139, 92, 246, 0.3);
+        }
+
+        .inv-btn-action.refund:hover {
+            background: #7c3aed;
+            color: #ffffff;
+            border-color: #7c3aed;
+        }
+
+        /* Slide-over Drawer */
+        .inv-drawer-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            backdrop-filter: blur(2px);
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+        }
+
+        .inv-drawer-backdrop.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .inv-drawer {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            max-width: 680px;
+            background: var(--surface);
+            box-shadow: -4px 0 24px rgba(0,0,0,0.18);
+            z-index: 1001;
+            transform: translateX(100%);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .inv-drawer.open {
+            transform: translateX(0);
+        }
+
+        .inv-drawer-header {
+            padding: 18px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--canvas);
+        }
+
+        .inv-drawer-body {
+            padding: 24px;
+            overflow-y: auto;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .inv-drawer-footer {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border);
+            background: var(--canvas);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .inv-section-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .inv-meta-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            background: var(--canvas);
+            padding: 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .inv-meta-item label {
+            display: block;
+            font-size: 0.74rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .inv-meta-item span {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .inv-items-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.86rem;
+        }
+
+        .inv-items-table th {
+            text-align: left;
+            font-size: 0.74rem;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            padding: 8px 10px;
+            border-bottom: 1px solid var(--border);
+            background: var(--canvas);
+        }
+
+        .inv-items-table td {
+            padding: 10px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+
+        .inv-totals-box {
+            background: var(--canvas);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            padding: 14px 18px;
+            margin-left: auto;
+            width: 100%;
+            max-width: 320px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .inv-totals-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+        }
+
+        .inv-totals-row.grand {
+            border-top: 1px solid var(--border);
+            padding-top: 6px;
+            margin-top: 4px;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        /* Modals */
+        .inv-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(2px);
+            z-index: 1100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .inv-modal-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .inv-modal {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg, 12px);
+            width: 100%;
+            max-width: 560px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: var(--shadow-lg, 0 10px 30px rgba(0,0,0,0.2));
+            transform: translateY(12px);
+            transition: transform 0.2s ease;
+        }
+
+        .inv-modal-overlay.open .inv-modal {
+            transform: translateY(0);
+        }
+
+        .inv-modal-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .inv-modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .inv-modal-footer {
+            padding: 14px 20px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+            background: var(--canvas);
+        }
+
+        /* Toast notification */
+        .inv-toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #1e293b;
+            color: #ffffff;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+            font-size: 0.9rem;
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .inv-toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .inv-toast.success { background: #065f46; border-left: 4px solid #10b981; }
+        .inv-toast.error { background: #7f1d1d; border-left: 4px solid #ef4444; }
+
+        @@media (max-width: 768px) {
+            .inv-search-box { max-width: 100%; }
+            .inv-toolbar-row { flex-direction: column; align-items: stretch; }
+            .inv-filters-strip { flex-direction: column; align-items: stretch; }
+            .inv-drawer { max-width: 100%; }
+        }
+    </style>
 }
 
-<div class="panel">
-    
+<div class="inv-container">
+    <!-- ── Header ─────────────────────────────────────────── -->
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+        <div>
+            <h1 style="font-size: 1.6rem; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 10px;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--brand);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                Invoices & Billing Hub
+                <span style="font-size: 0.8rem; font-weight: 600; padding: 2px 8px; border-radius: 12px; background: rgba(59, 130, 246, 0.12); color: #2563eb;">
+                    @Model.TotalInvoices recorded
+                </span>
+            </h1>
+            <p style="margin: 4px 0 0; color: var(--text-secondary); font-size: 0.9rem;">
+                Audit financial records, inspect customer billing, manage partial debts, and process itemized returns.
+            </p>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <a asp-page-handler="ExportCsv"
+               asp-route-search="@Model.Search"
+               asp-route-status="@Model.Status"
+               asp-route-payType="@Model.PayType"
+               asp-route-datePreset="@Model.DatePreset"
+               asp-route-fromDate="@Model.FromDate?.ToString("yyyy-MM-dd")"
+               asp-route-toDate="@Model.ToDate?.ToString("yyyy-MM-dd")"
+               asp-route-sortBy="@Model.SortBy"
+               class="inv-btn-secondary" title="Export current filtered view to CSV">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                Export CSV
+            </a>
+            <a href="/POS" class="inv-btn-primary" title="Open POS Terminal to make a sale">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                New POS Sale
+            </a>
+        </div>
+    </div>
 
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
     {
-        <div class="status @(Model.StatusMessage.StartsWith("Error") || Model.StatusMessage.StartsWith("Failed") ? "error" : "ok")">
+        <div class="status @(Model.StatusMessage.StartsWith("Error") || Model.StatusMessage.StartsWith("Failed") ? "error" : "ok")" style="margin-bottom: 16px;">
             @Model.StatusMessage
         </div>
     }
 
-    <!-- ── Filter bar ──────────────────────────────────────────── -->
-    <form method="get" class="filter-bar" style="display: flex; gap: 8px; margin-bottom: 16px;">
-        <input type="text" name="search" value="@Model.SearchTerm" placeholder="Customer or ref…" style="max-width:220px;" class="input-text" />
-        <select name="payType" class="input-text">
-            <option value="">All payment types</option>
-            @foreach (var pt in Enum.GetValues<PaymentType>())
-            {
-                <option value="@pt" selected="@(Model.PayTypeFilter == pt.ToString() ? "selected" : null)">@pt</option>
-            }
-        </select>
-        <button type="submit" class="button-secondary">Filter</button>
-        <a href="/Invoices" class="button-command" style="align-self: center;">Clear</a>
+    <!-- ── Financial KPI Strip ───────────────────────────── -->
+    <div class="inv-kpi-grid">
+        <div class="inv-kpi-card">
+            <div class="inv-kpi-icon green">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+            </div>
+            <div>
+                <div class="inv-kpi-val">@Model.Summary.GrossRevenue.ToString("N0") <span style="font-size:0.8rem;font-weight:500;">XAF</span></div>
+                <div class="inv-kpi-lbl">Gross Invoiced</div>
+                <div class="inv-kpi-sub">@Model.Summary.TotalCount invoices</div>
+            </div>
+        </div>
+
+        <div class="inv-kpi-card">
+            <div class="inv-kpi-icon blue">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+            </div>
+            <div>
+                <div class="inv-kpi-val">@Model.Summary.TotalCollected.ToString("N0") <span style="font-size:0.8rem;font-weight:500;">XAF</span></div>
+                <div class="inv-kpi-lbl">Total Collected</div>
+                <div class="inv-kpi-sub">@Model.Summary.PaidCount fully settled</div>
+            </div>
+        </div>
+
+        <div class="inv-kpi-card">
+            <div class="inv-kpi-icon @(Model.Summary.OutstandingBalance > 0 ? "amber" : "green")">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            </div>
+            <div>
+                <div class="inv-kpi-val" style="@(Model.Summary.OutstandingBalance > 0 ? "color: #d97706;" : "")">@Model.Summary.OutstandingBalance.ToString("N0") <span style="font-size:0.8rem;font-weight:500;">XAF</span></div>
+                <div class="inv-kpi-lbl">Outstanding Debt</div>
+                <div class="inv-kpi-sub">@Model.Summary.UnpaidCount unpaid / partial</div>
+            </div>
+        </div>
+
+        <div class="inv-kpi-card">
+            <div class="inv-kpi-icon purple">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+            </div>
+            <div>
+                <div class="inv-kpi-val">@Model.Summary.TotalRefunded.ToString("N0") <span style="font-size:0.8rem;font-weight:500;">XAF</span></div>
+                <div class="inv-kpi-lbl">Refunds & Returns</div>
+                <div class="inv-kpi-sub">@Model.Summary.RefundedCount return transactions</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Filter & Search Toolbar ───────────────────────── -->
+    <form method="get" id="filterForm" class="inv-toolbar">
+        <div class="inv-toolbar-row">
+            <div class="inv-search-box">
+                <svg class="inv-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" name="Search" value="@Model.Search" placeholder="Search by Invoice ID, customer, cashier, notes..." />
+            </div>
+
+            <!-- Date Preset Pills -->
+            <div class="inv-pill-group">
+                <button type="button" class="inv-pill @(Model.DatePreset == "all" || string.IsNullOrEmpty(Model.DatePreset) ? "active" : "")" onclick="setDatePreset('all')">All Time</button>
+                <button type="button" class="inv-pill @(Model.DatePreset == "today" ? "active" : "")" onclick="setDatePreset('today')">Today</button>
+                <button type="button" class="inv-pill @(Model.DatePreset == "yesterday" ? "active" : "")" onclick="setDatePreset('yesterday')">Yesterday</button>
+                <button type="button" class="inv-pill @(Model.DatePreset == "7days" ? "active" : "")" onclick="setDatePreset('7days')">Last 7d</button>
+                <button type="button" class="inv-pill @(Model.DatePreset == "30days" ? "active" : "")" onclick="setDatePreset('30days')">Last 30d</button>
+                <button type="button" class="inv-pill @(Model.DatePreset == "this_month" ? "active" : "")" onclick="setDatePreset('this_month')">This Month</button>
+                <button type="button" class="inv-pill @(Model.DatePreset == "custom" ? "active" : "")" onclick="setDatePreset('custom')">Custom</button>
+            </div>
+            <input type="hidden" name="DatePreset" id="datePresetInput" value="@Model.DatePreset" />
+        </div>
+
+        <div class="inv-toolbar-row" style="border-top: 1px dashed var(--border); padding-top: 12px;">
+            <div class="inv-filters-strip">
+                <!-- Status Filter -->
+                <select name="Status" class="inv-select" onchange="this.form.submit()">
+                    <option value="all" selected="@(Model.Status == "all" ? "selected" : null)">All Statuses</option>
+                    <option value="paid" selected="@(Model.Status == "paid" ? "selected" : null)">Paid in Full</option>
+                    <option value="unpaid" selected="@(Model.Status == "unpaid" ? "selected" : null)">Unpaid / Debt</option>
+                    <option value="refunded" selected="@(Model.Status == "refunded" ? "selected" : null)">Refunded / Returned</option>
+                    <option value="voided" selected="@(Model.Status == "voided" ? "selected" : null)">Voided</option>
+                </select>
+
+                <!-- Payment Type Filter -->
+                <select name="PayType" class="inv-select" onchange="this.form.submit()">
+                    <option value="all" selected="@(Model.PayType == "all" ? "selected" : null)">All Payment Methods</option>
+                    @foreach (var pt in Enum.GetValues<PaymentType>())
+                    {
+                        <option value="@pt" selected="@(Model.PayType == pt.ToString() ? "selected" : null)">@pt</option>
+                    }
+                </select>
+
+                <!-- Sort Order -->
+                <select name="SortBy" class="inv-select" onchange="this.form.submit()">
+                    <option value="date_desc" selected="@(Model.SortBy == "date_desc" ? "selected" : null)">Date: Newest First</option>
+                    <option value="date_asc" selected="@(Model.SortBy == "date_asc" ? "selected" : null)">Date: Oldest First</option>
+                    <option value="total_desc" selected="@(Model.SortBy == "total_desc" ? "selected" : null)">Total: High to Low</option>
+                    <option value="total_asc" selected="@(Model.SortBy == "total_asc" ? "selected" : null)">Total: Low to High</option>
+                    <option value="balance_desc" selected="@(Model.SortBy == "balance_desc" ? "selected" : null)">Highest Debt First</option>
+                </select>
+
+                <!-- Custom Date Inputs (if custom is active) -->
+                <div id="customDateWrap" style="display: @(Model.DatePreset == "custom" ? "inline-flex" : "none"); gap: 6px; align-items: center;">
+                    <input type="date" name="FromDate" value="@Model.FromDate?.ToString("yyyy-MM-dd")" class="inv-select" />
+                    <span style="color: var(--text-secondary); font-size: 0.8rem;">to</span>
+                    <input type="date" name="ToDate" value="@Model.ToDate?.ToString("yyyy-MM-dd")" class="inv-select" />
+                    <button type="submit" class="inv-btn-secondary" style="padding: 6px 10px;">Apply</button>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 8px;">
+                <button type="submit" class="inv-btn-secondary">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+                    Filter
+                </button>
+                <a href="/Invoices" class="inv-btn-secondary" style="color: var(--text-secondary);">Reset</a>
+            </div>
+        </div>
     </form>
 
-    <!-- ── Invoice table ──────────────────────────────────────── -->
-    <section class="card-resource">
-        <h2 style="font-size: var(--fontSize-heading-sm); margin-top:0;">
-            Invoice List
-            <small style="font-weight:400;color:var(--text-secondary);">@Model.TotalInvoices total</small>
-        </h2>
-
+    <!-- ── Invoices Data Table ───────────────────────────── -->
+    <div class="inv-table-card">
         @if (!Model.Invoices.Any())
         {
-            <p style="color:var(--ops-subtle);padding:12px 0;">No invoices match the current filter.</p>
+            <div style="text-align: center; padding: 48px 24px;">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-secondary); opacity: 0.6; margin-bottom: 12px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                <h3 style="font-size: 1.1rem; margin: 0 0 6px;">No invoices match your filters</h3>
+                <p style="color: var(--text-secondary); font-size: 0.88rem; max-width: 400px; margin: 0 auto 16px;">
+                    Try clearing your search terms or expanding your date range to view past transactions.
+                </p>
+                <a href="/Invoices" class="inv-btn-secondary">Clear All Filters</a>
+            </div>
         }
         else
         {
-            <div style="overflow-x:auto;">
-                <table class="table">
-                    <thead style="background-color: var(--surface);">
+            <div style="overflow-x: auto;">
+                <table class="inv-table">
+                    <thead>
                         <tr>
-                            <th style="padding: 0 8px;">Date</th>
-                            <th style="padding: 0 8px;">Customer</th>
-                            <th style="padding: 0 8px;">Processed by</th>
-                            <th style="padding: 0 8px;">Payment</th>
-                            <th style="text-align:right; padding: 0 8px;">Total (XAF)</th>
-                            <th style="text-align:right; padding: 0 8px;">Tendered</th>
-                            <th style="text-align:right; padding: 0 8px;">Outstanding</th>
-                            <th style="padding: 0 8px;">Status</th>
-                            <th style="padding: 0 8px;"></th>
+                            <th>Invoice ID</th>
+                            <th>Date & Time</th>
+                            <th>Customer</th>
+                            <th>Cashier</th>
+                            <th>Payment Method</th>
+                            <th style="text-align: right;">Total Amount</th>
+                            <th style="text-align: right;">Paid</th>
+                            <th style="text-align: right;">Balance</th>
+                            <th>Status</th>
+                            <th style="text-align: right;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var inv in Model.Invoices)
                         {
+                            var isUnpaid = !inv.IsPaid && inv.OutstandingBalance > 0;
+                            var isVoided = !inv.IsPaid && inv.OutstandingBalance == 0 && inv.TotalAmount > 0;
+                            var shortId = inv.InvoiceId.ToString().Substring(0, 8);
+
                             <tr>
-                                <td>@inv.DateCreated.ToString("yyyy-MM-dd HH:mm")</td>
-                                <td>@(inv.CustomerName ?? "—")</td>
-                                <td>@(inv.ProcessedBy ?? "—")</td>
-                                <td>@inv.PaymentType</td>
-                                <td style="text-align:right;font-weight:600;">@inv.TotalAmount.ToString("N0")</td>
-                                <td style="text-align:right;">@inv.AmountTendered.ToString("N0")</td>
-                                <td style="text-align:right;color:var(--ops-danger);font-weight:600;">@(inv.OutstandingBalance > 0 ? inv.OutstandingBalance.ToString("N0") : "—")</td>
                                 <td>
-                                    @if (inv.IsPaid)
+                                    <span class="inv-id-chip" onclick="copyToClipboard('@inv.InvoiceId', 'Invoice ID copied!')" title="Click to copy full ID: @inv.InvoiceId">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                        #@shortId
+                                    </span>
+                                </td>
+                                <td>
+                                    <div style="font-weight: 500;">@inv.DateCreated.ToString("yyyy-MM-dd")</div>
+                                    <div style="font-size: 0.76rem; color: var(--text-secondary);">@inv.DateCreated.ToString("HH:mm:ss")</div>
+                                </td>
+                                <td>
+                                    @if (inv.CustomerId.HasValue)
                                     {
-                                        <span class="badge-success">Paid</span>
-                                    }
-                                    else if (inv.OutstandingBalance > 0)
-                                    {
-                                        <span class="badge-critical" style="background-color: var(--accent-yellow); color: var(--text-primary);">Unpaid</span>
+                                        <a href="/Customers?id=@inv.CustomerId" style="font-weight: 600; color: var(--brand); text-decoration: none;" title="View customer profile">
+                                            @(inv.CustomerName ?? "Customer")
+                                        </a>
+                                        @if (!string.IsNullOrEmpty(inv.CustomerPhone))
+                                        {
+                                            <div style="font-size: 0.76rem; color: var(--text-secondary);">@inv.CustomerPhone</div>
+                                        }
                                     }
                                     else
                                     {
-                                        <span class="badge-critical">Voided</span>
+                                        <span style="color: var(--text-secondary); font-style: italic;">Walk-in Customer</span>
                                     }
                                 </td>
-                                <td style="display:flex;gap:4px;flex-wrap:nowrap;">
-                                    <button type="button" class="button-command" onclick="openDetail('@inv.InvoiceId')">Details</button>
-                                    @if (!inv.IsPaid && inv.OutstandingBalance > 0)
+                                <td>
+                                    <div style="font-size: 0.85rem;">@(inv.ProcessedBy ?? "System")</div>
+                                    @if (!string.IsNullOrEmpty(inv.BranchName))
                                     {
-                                        <button type="button" class="button-primary" onclick="openPay('@inv.InvoiceId', @inv.OutstandingBalance)">Pay</button>
+                                        <div style="font-size: 0.74rem; color: var(--text-secondary);">@inv.BranchName</div>
                                     }
-                                    @if (inv.IsPaid)
+                                </td>
+                                <td>
+                                    <span class="inv-pay-tag">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+                                        @inv.TenderSummary
+                                    </span>
+                                </td>
+                                <td style="text-align: right; font-weight: 700; font-size: 0.95rem;">
+                                    @inv.TotalAmount.ToString("N0") <span style="font-size: 0.74rem; font-weight: 400; color: var(--text-secondary);">XAF</span>
+                                </td>
+                                <td style="text-align: right; color: #059669; font-weight: 600;">
+                                    @inv.AmountTendered.ToString("N0")
+                                </td>
+                                <td style="text-align: right;">
+                                    @if (inv.OutstandingBalance > 0)
                                     {
-                                        <form method="post" asp-page-handler="Void" style="margin:0;">
-                                            @Html.AntiForgeryToken()
-                                            <input type="hidden" name="invoiceId" value="@inv.InvoiceId" />
-                                            <button type="submit" class="button-command" style="color: var(--accent-red);" onclick="return confirm('Void invoice @inv.DateCreated.ToString("yyyy-MM-dd") for @inv.TotalAmount.ToString("N0") XAF?')">Void</button>
-                                        </form>
+                                        <span style="color: #dc2626; font-weight: 700; background: rgba(239, 68, 68, 0.1); padding: 2px 6px; border-radius: 4px;">
+                                            @inv.OutstandingBalance.ToString("N0")
+                                        </span>
                                     }
+                                    else
+                                    {
+                                        <span style="color: var(--text-secondary);">—</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (inv.IsRefunded)
+                                    {
+                                        <span class="inv-badge refunded" title="Refunded @inv.RefundedAmount.ToString("N0") XAF">
+                                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+                                            Refunded
+                                        </span>
+                                    }
+                                    else if (inv.IsPaid)
+                                    {
+                                        <span class="inv-badge paid">
+                                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                            Paid
+                                        </span>
+                                    }
+                                    else if (isUnpaid)
+                                    {
+                                        <span class="inv-badge unpaid">
+                                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line></svg>
+                                            Unpaid
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="inv-badge voided">Voided</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="inv-action-group">
+                                        <!-- Open Drawer Details -->
+                                        <button type="button" class="inv-btn-action" onclick="openInvoiceDrawer('@inv.InvoiceId')" title="View complete 360 invoice profile">
+                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                            Details
+                                        </button>
+
+                                        <!-- Quick Settle Debt (if unpaid) -->
+                                        @if (isUnpaid && Model.CanAddTender)
+                                        {
+                                            <button type="button" class="inv-btn-action pay" onclick="openTenderModal('@inv.InvoiceId', @inv.OutstandingBalance, '@(inv.CustomerName ?? "Walk-in")')" title="Settle remaining balance">
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                                                Pay
+                                            </button>
+                                        }
+
+                                        <!-- Direct Thermal Print -->
+                                        <button type="button" class="inv-btn-icon" onclick="printReceiptDirect('@inv.InvoiceId', 'thermal')" title="Print 80mm Thermal Receipt">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                                        </button>
+
+                                        <!-- Direct A4 Print -->
+                                        <button type="button" class="inv-btn-icon" onclick="printReceiptDirect('@inv.InvoiceId', 'a4')" title="Print A4 Tax Invoice">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         }
@@ -108,173 +980,941 @@
                 </table>
             </div>
 
+            <!-- Pagination -->
             @if (Model.TotalPages > 1)
             {
-                <nav class="pagination" aria-label="Invoice pages">
-                    @if (Model.PageNumber > 1)
-                    {
-                        <a href="?page=@(Model.PageNumber - 1)&search=@Model.SearchTerm&payType=@Model.PayTypeFilter">‹ Prev</a>
-                    }
-                    <span class="active">@Model.PageNumber / @Model.TotalPages</span>
-                    @if (Model.PageNumber < Model.TotalPages)
-                    {
-                        <a href="?page=@(Model.PageNumber + 1)&search=@Model.SearchTerm&payType=@Model.PayTypeFilter">Next ›</a>
-                    }
-                </nav>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; border-top: 1px solid var(--border); background: var(--canvas); flex-wrap: wrap; gap: 10px;">
+                    <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                        Showing page <strong>@Model.PageNumber</strong> of <strong>@Model.TotalPages</strong> (@Model.TotalInvoices total records)
+                    </div>
+                    <div class="pagination" style="margin: 0;">
+                        @if (Model.PageNumber > 1)
+                        {
+                            <a href="?page=@(Model.PageNumber - 1)&search=@Model.Search&status=@Model.Status&payType=@Model.PayType&datePreset=@Model.DatePreset&fromDate=@Model.FromDate?.ToString("yyyy-MM-dd")&toDate=@Model.ToDate?.ToString("yyyy-MM-dd")&sortBy=@Model.SortBy" class="inv-btn-secondary" style="padding: 4px 10px;">‹ Prev</a>
+                        }
+                        <span class="active" style="padding: 4px 12px; font-weight: 600;">@Model.PageNumber</span>
+                        @if (Model.PageNumber < Model.TotalPages)
+                        {
+                            <a href="?page=@(Model.PageNumber + 1)&search=@Model.Search&status=@Model.Status&payType=@Model.PayType&datePreset=@Model.DatePreset&fromDate=@Model.FromDate?.ToString("yyyy-MM-dd")&toDate=@Model.ToDate?.ToString("yyyy-MM-dd")&sortBy=@Model.SortBy" class="inv-btn-secondary" style="padding: 4px 10px;">Next ›</a>
+                        }
+                    </div>
+                </div>
             }
         }
-    </section>
+    </div>
 </div>
 
-<!-- ── Invoice Detail Modal ───────────────────────────────── -->
-<div class="modal-overlay" id="detailModal" hidden>
-    <div class="modal" style="max-width:700px;" role="dialog" aria-labelledby="detailTitle" aria-modal="true">
-        <div class="modal-head">
-            <h3 id="detailTitle">Invoice Detail</h3>
-            <button type="button" class="btn-close" onclick="closeDetail()" aria-label="Close">×</button>
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- ── SLIDE-OVER DRAWER: INVOICE 360 DETAIL ─────────────── -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="inv-drawer-backdrop" id="drawerBackdrop" onclick="closeInvoiceDrawer()"></div>
+<div class="inv-drawer" id="invoiceDrawer" role="dialog" aria-labelledby="drawerTitle">
+    <div class="inv-drawer-header">
+        <div>
+            <div style="font-size: 0.76rem; text-transform: uppercase; color: var(--text-secondary); font-weight: 600; letter-spacing: 0.5px;">Invoice Details</div>
+            <h2 id="drawerTitle" style="margin: 2px 0 0; font-size: 1.25rem; font-weight: 700;">#00000000</h2>
         </div>
-        <div id="detailContent" style="font-size:14px;line-height:1.6;">
-            <p style="color:var(--ops-subtle);">Loading…</p>
+        <button type="button" class="inv-btn-icon" onclick="closeInvoiceDrawer()" aria-label="Close drawer">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+    </div>
+
+    <div class="inv-drawer-body" id="drawerBody">
+        <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
+            <svg class="spinner" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
+            <p style="margin-top: 10px;">Loading invoice details…</p>
+        </div>
+    </div>
+
+    <div class="inv-drawer-footer" id="drawerFooter" style="display: none;">
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button type="button" class="inv-btn-secondary" onclick="triggerDrawerPrint('thermal')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                Thermal Receipt
+            </button>
+            <button type="button" class="inv-btn-secondary" onclick="triggerDrawerPrint('a4')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                A4 Tax Invoice
+            </button>
+        </div>
+
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="drawerDynamicActions">
+            <!-- Dynamically populated actions (Pay, Refund, Void) -->
         </div>
     </div>
 </div>
 
-<!-- ── Partial Payment Modal ───────────────────────────────── -->
-<div class="modal-overlay" id="payModal" hidden>
-    <div class="modal" style="max-width:440px;" role="dialog" aria-modal="true">
-        <div class="modal-head">
-            <h3>Record Payment</h3>
-            <button type="button" class="btn-close" onclick="closePay()" aria-label="Close">×</button>
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- ── MODAL: LINE-ITEM REFUND & RETURN ───────────────────── -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="inv-modal-overlay" id="refundModalOverlay">
+    <div class="inv-modal" style="max-width: 640px;" role="dialog" aria-labelledby="refundModalTitle">
+        <div class="inv-modal-header">
+            <h3 id="refundModalTitle" style="margin:0; font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #7c3aed;"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+                Process Line-Item Return & Refund
+            </h3>
+            <button type="button" class="inv-btn-icon" onclick="closeRefundModal()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
         </div>
-        <p>Outstanding: <strong id="payOutstanding"></strong></p>
-        <form id="payForm">
-            @Html.AntiForgeryToken()
-            <div class="form-group">
-                <label>Payment Type</label>
-                <select id="payType" class="form-control">
-                    @foreach (var pt in Enum.GetValues<Store.Models.Enums.PaymentType>())
-                    {
-                        <option value="@((int)pt)">@pt</option>
-                    }
-                </select>
+
+        <form id="refundForm" onsubmit="submitRefund(event)">
+            <div class="inv-modal-body">
+                <p style="font-size: 0.88rem; color: var(--text-secondary); margin-top: 0;">
+                    Select the quantities of individual items to return. Restocked inventory will be returned to the store's warehouse.
+                </p>
+
+                <div style="overflow-x: auto; margin-bottom: 16px;">
+                    <table class="inv-items-table" id="refundItemsTable">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th style="text-align: right;">Unit Price</th>
+                                <th style="text-align: center;">Qty Paid</th>
+                                <th style="text-align: center;">Return Qty</th>
+                                <th style="text-align: right;">Refund Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody id="refundItemsBody">
+                            <!-- Items injected dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+                    <div>
+                        <label style="display:block; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px;">Refund Method</label>
+                        <select id="refundMethod" class="inv-select" style="width: 100%;">
+                            <option value="Cash">Cash Return</option>
+                            <option value="MobileMoney">Mobile Money</option>
+                            <option value="CustomerCredit">Customer Credit</option>
+                            <option value="Card">Card Reversal</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display:block; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px;">Restock Inventory</label>
+                        <div style="display: flex; align-items: center; gap: 8px; padding-top: 6px;">
+                            <input type="checkbox" id="refundRestock" checked style="width: 18px; height: 18px;" />
+                            <span style="font-size: 0.88rem;">Restock returned goods</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label style="display:block; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px;">Reason for Return</label>
+                    <input type="text" id="refundReason" class="inv-select" style="width: 100%;" placeholder="e.g. Defective item, customer changed mind, wrong size..." required />
+                </div>
+
+                <div style="margin-top: 16px; background: rgba(139, 92, 246, 0.08); border: 1px solid rgba(139, 92, 246, 0.2); border-radius: 8px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 600; font-size: 0.9rem; color: #6d28d9;">Total Refund to Customer:</span>
+                    <span id="refundTotalPreview" style="font-size: 1.2rem; font-weight: 700; color: #6d28d9;">0 XAF</span>
+                </div>
             </div>
-            <div class="form-group">
-                <label>Amount (XAF)</label>
-                <input type="number" id="payAmount" class="input-text" style="width: 100%;" min="0.01" step="0.01" required />
-            </div>
-            <div class="form-group">
-                <label>Reference (optional)</label>
-                <input type="text" id="payReference" class="input-text" style="width: 100%;" />
-            </div>
-            <p id="payError" style="color:var(--accent-red);margin:4px 0;"></p>
-            <div class="modal-actions" style="margin-top: 16px;">
-                <button type="button" class="button-secondary" onclick="closePay()">Cancel</button>
-                <button type="submit" id="payBtn" class="button-primary">Record Payment</button>
+
+            <div class="inv-modal-footer">
+                <button type="button" class="inv-btn-secondary" onclick="closeRefundModal()">Cancel</button>
+                <button type="submit" id="refundSubmitBtn" class="inv-btn-primary" style="background: #7c3aed; border-color: #7c3aed;">
+                    Process Return & Refund
+                </button>
             </div>
         </form>
     </div>
 </div>
 
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- ── MODAL: RECORD DEBT TENDER (PAYMENT) ────────────────── -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="inv-modal-overlay" id="tenderModalOverlay">
+    <div class="inv-modal" style="max-width: 440px;" role="dialog" aria-labelledby="tenderModalTitle">
+        <div class="inv-modal-header">
+            <h3 id="tenderModalTitle" style="margin:0; font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #d97706;"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+                Record Payment / Settle Debt
+            </h3>
+            <button type="button" class="inv-btn-icon" onclick="closeTenderModal()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+
+        <form id="tenderForm" onsubmit="submitTender(event)">
+            <div class="inv-modal-body">
+                <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;">
+                    <div style="font-size: 0.8rem; color: #b45309; text-transform: uppercase; font-weight: 600;">Outstanding Balance</div>
+                    <div id="tenderOutstandingDisplay" style="font-size: 1.4rem; font-weight: 700; color: #b45309;">0 XAF</div>
+                    <div id="tenderCustomerDisplay" style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 2px;">Customer: Walk-in</div>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <div>
+                        <label style="display:block; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px;">Payment Method</label>
+                        <select id="tenderPayType" class="inv-select" style="width: 100%;">
+                            @foreach (var pt in Enum.GetValues<PaymentType>())
+                            {
+                                <option value="@((int)pt)">@pt</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style="display:block; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px;">Amount Tendered (XAF)</label>
+                        <input type="number" id="tenderAmount" class="inv-select" style="width: 100%; font-size: 1.1rem; font-weight: 700;" min="1" step="any" required />
+                    </div>
+
+                    <div>
+                        <label style="display:block; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px;">Payment Reference / Memo (Optional)</label>
+                        <input type="text" id="tenderReference" class="inv-select" style="width: 100%;" placeholder="e.g. MTN MoMo TxID #983281, Cheque #004" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="inv-modal-footer">
+                <button type="button" class="inv-btn-secondary" onclick="closeTenderModal()">Cancel</button>
+                <button type="submit" id="tenderSubmitBtn" class="inv-btn-primary" style="background: #d97706; border-color: #d97706;">
+                    Record Payment
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- ── MODAL: VOID INVOICE CONFIRMATION ───────────────────── -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="inv-modal-overlay" id="voidModalOverlay">
+    <div class="inv-modal" style="max-width: 440px;" role="dialog" aria-labelledby="voidModalTitle">
+        <div class="inv-modal-header">
+            <h3 id="voidModalTitle" style="margin:0; font-size: 1.15rem; display: flex; align-items: center; gap: 8px; color: #dc2626;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+                Void Invoice
+            </h3>
+            <button type="button" class="inv-btn-icon" onclick="closeVoidModal()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+
+        <form method="post" asp-page-handler="Void" id="voidForm">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="invoiceId" id="voidInvoiceIdInput" />
+            <div class="inv-modal-body">
+                <p style="font-size: 0.88rem; color: var(--text-secondary); margin-top: 0;">
+                    Voiding this invoice will cancel the transaction, reverse inventory deductions, and log an administrative audit note.
+                </p>
+                <div style="margin-bottom: 12px;">
+                    <label style="display:block; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px;">Reason for Voiding</label>
+                    <input type="text" name="reason" id="voidReasonInput" class="inv-select" style="width: 100%;" placeholder="e.g. Cashier error, duplicate billing..." required />
+                </div>
+            </div>
+
+            <div class="inv-modal-footer">
+                <button type="button" class="inv-btn-secondary" onclick="closeVoidModal()">Cancel</button>
+                <button type="submit" class="inv-btn-primary" style="background: #dc2626; border-color: #dc2626;">
+                    Confirm & Void Invoice
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ── Hidden Print Iframe ─────────────────────────────────── -->
+<iframe id="printIframe" style="position: absolute; width: 0; height: 0; border: 0; visibility: hidden;"></iframe>
+
+<!-- ── Toast Notification Element ─────────────────────────── -->
+<div class="inv-toast" id="invToast">
+    <span id="invToastMsg">Action completed</span>
+</div>
+
 @section Scripts {
     <script>
-        const apiBase = '@Url.Content("~/")'.replace(/\/$/, '');
+        let currentActiveInvoice = null;
 
-        async function openDetail(invoiceId) {
-            document.getElementById('detailContent').innerHTML = '<p style="color:var(--ops-subtle)">Loading…</p>';
-            document.getElementById('detailModal').hidden = false;
+        // ── Toast System ─────────────────────────────────────────
+        function showToast(msg, type = 'success') {
+            const t = document.getElementById('invToast');
+            const tm = document.getElementById('invToastMsg');
+            tm.textContent = msg;
+            t.className = `inv-toast show ${type}`;
+            setTimeout(() => { t.className = 'inv-toast'; }, 3500);
+        }
+
+        function copyToClipboard(text, successMsg = 'Copied!') {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast(successMsg, 'success');
+            }).catch(() => {
+                showToast('Failed to copy', 'error');
+            });
+        }
+
+        // ── Date Preset Handling ─────────────────────────────────
+        function setDatePreset(preset) {
+            document.getElementById('datePresetInput').value = preset;
+            const customWrap = document.getElementById('customDateWrap');
+            if (preset === 'custom') {
+                customWrap.style.display = 'inline-flex';
+            } else {
+                customWrap.style.display = 'none';
+                document.getElementById('filterForm').submit();
+            }
+        }
+
+        // ── Drawer Open & Load ───────────────────────────────────
+        async function openInvoiceDrawer(invoiceId) {
+            const drawer = document.getElementById('invoiceDrawer');
+            const backdrop = document.getElementById('drawerBackdrop');
+            const body = document.getElementById('drawerBody');
+            const title = document.getElementById('drawerTitle');
+            const footer = document.getElementById('drawerFooter');
+            const dynamicActions = document.getElementById('drawerDynamicActions');
+
+            drawer.classList.add('open');
+            backdrop.classList.add('open');
+            footer.style.display = 'none';
+            body.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                    <p>Loading invoice data…</p>
+                </div>`;
 
             try {
                 const resp = await fetch(`/Invoices?handler=Detail&id=${invoiceId}`, { credentials: 'same-origin' });
-                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                const data = await resp.json();
-                renderDetail(data);
-            } catch (e) {
-                document.getElementById('detailContent').innerHTML = `<p style="color:red">Failed to load: ${e.message}</p>`;
+                if (!resp.ok) throw new Error('Failed to load invoice');
+                const inv = await resp.json();
+                currentActiveInvoice = inv;
+
+                title.textContent = `Invoice #${inv.invoiceId.substring(0, 8)}`;
+                renderDrawerDetails(inv);
+                footer.style.display = 'flex';
+            } catch (err) {
+                body.innerHTML = `<div style="color: #dc2626; padding: 20px; text-align: center;">Error loading invoice: ${err.message}</div>`;
             }
         }
 
-        function renderDetail(inv) {
-            const lines = (inv.lines || []).map(l => `
+        function closeInvoiceDrawer() {
+            document.getElementById('invoiceDrawer').classList.remove('open');
+            document.getElementById('drawerBackdrop').classList.remove('open');
+        }
+
+        function renderDrawerDetails(inv) {
+            const body = document.getElementById('drawerBody');
+            const dynamicActions = document.getElementById('drawerDynamicActions');
+
+            const isUnpaid = !inv.isPaid && inv.outstandingBalance > 0;
+            const isRefunded = inv.isRefunded;
+            const canRefund = inv.isPaid && !isRefunded;
+
+            // Lines HTML
+            let linesHtml = (inv.lines || []).map(l => `
                 <tr>
-                    <td>${l.itemName}</td>
-                    <td style="text-align:center;">${l.quantity} ${l.unitAbbreviation || ''}</td>
-                    <td style="text-align:right;">${Number(l.unitPrice).toLocaleString('fr-CM')}</td>
-                    <td style="text-align:right;">${l.discountAmount ? Number(l.discountAmount).toLocaleString('fr-CM') : '—'}</td>
-                    <td style="text-align:right;font-weight:600;">${Number(l.lineTotal).toLocaleString('fr-CM')}</td>
-                </tr>`).join('');
+                    <td>
+                        <div style="font-weight: 600;">${escapeHtml(l.itemName)}</div>
+                        ${l.itemSku ? `<div style="font-size: 0.74rem; color: var(--text-secondary);">SKU: ${escapeHtml(l.itemSku)}</div>` : ''}
+                    </td>
+                    <td style="text-align: right;">${Number(l.unitPrice).toLocaleString('fr-CM')}</td>
+                    <td style="text-align: center; font-weight: 600;">${l.quantity}</td>
+                    <td style="text-align: right;">${l.discountAmount ? Number(l.discountAmount).toLocaleString('fr-CM') : '—'}</td>
+                    <td style="text-align: right; font-weight: 700;">${Number(l.lineTotal).toLocaleString('fr-CM')} XAF</td>
+                </tr>
+            `).join('');
 
-            document.getElementById('detailTitle').textContent = `Invoice — ${new Date(inv.dateCreated).toLocaleString()}`;
-            document.getElementById('detailContent').innerHTML = `
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;margin-bottom:12px;">
-                    <div><strong>Customer:</strong> ${inv.customerName || '—'}</div>
-                    <div><strong>Processed by:</strong> ${inv.processedBy || '—'}</div>
-                    <div><strong>Payment:</strong> ${inv.paymentType}</div>
-                    <div><strong>Status:</strong> ${inv.isPaid ? '<span class="badge badge-green">Paid</span>' : '<span class="badge badge-red">Voided</span>'}</div>
-                    <div><strong>Tendered:</strong> ${Number(inv.amountTendered).toLocaleString('fr-CM')} XAF</div>
-                    <div><strong>Change:</strong> ${Number(inv.changeGiven).toLocaleString('fr-CM')} XAF</div>
-                    ${inv.notes ? `<div style="grid-column:span 2;"><strong>Notes:</strong> ${inv.notes}</div>` : ''}
+            // Tenders HTML
+            let tendersHtml = '';
+            if (inv.tenders && inv.tenders.length > 0) {
+                tendersHtml = `
+                    <div>
+                        <div class="inv-section-title">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+                            Payment Tender Breakdown
+                        </div>
+                        <table class="inv-items-table">
+                            <thead>
+                                <tr>
+                                    <th>Method</th>
+                                    <th>Tendered</th>
+                                    <th>Change</th>
+                                    <th>Reference</th>
+                                    <th>Recorded</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${inv.tenders.map(t => `
+                                    <tr>
+                                        <td><strong>${t.paymentTypeDisplay || t.paymentType}</strong></td>
+                                        <td style="color: #059669; font-weight: 600;">${Number(t.amountTendered).toLocaleString('fr-CM')} XAF</td>
+                                        <td>${t.changeGiven > 0 ? Number(t.changeGiven).toLocaleString('fr-CM') + ' XAF' : '—'}</td>
+                                        <td style="color: var(--text-secondary);">${escapeHtml(t.reference || '—')}</td>
+                                        <td style="font-size: 0.76rem; color: var(--text-secondary);">${new Date(t.dateCreated).toLocaleString()}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>`;
+            }
+
+            body.innerHTML = `
+                <!-- Meta Grid -->
+                <div class="inv-meta-grid">
+                    <div class="inv-meta-item">
+                        <label>Date & Time</label>
+                        <span>${new Date(inv.dateCreated).toLocaleString()}</span>
+                    </div>
+                    <div class="inv-meta-item">
+                        <label>Customer</label>
+                        <span>
+                            ${inv.customerId ? `<a href="/Customers?id=${inv.customerId}" style="color: var(--brand); text-decoration: none; font-weight: 600;">${escapeHtml(inv.customerName)}</a>` : 'Walk-in Customer'}
+                        </span>
+                    </div>
+                    <div class="inv-meta-item">
+                        <label>Processed By</label>
+                        <span>${escapeHtml(inv.processedBy || 'System')}</span>
+                    </div>
+                    <div class="inv-meta-item">
+                        <label>Branch</label>
+                        <span>${escapeHtml(inv.branchName || 'Main Store')}</span>
+                    </div>
+                    <div class="inv-meta-item">
+                        <label>Status</label>
+                        <span>
+                            ${inv.isPaid ? '<span class="inv-badge paid">Paid</span>' : (isUnpaid ? '<span class="inv-badge unpaid">Unpaid Debt</span>' : '<span class="inv-badge voided">Voided</span>')}
+                            ${inv.isRefunded ? '<span class="inv-badge refunded" style="margin-left: 4px;">Refunded</span>' : ''}
+                        </span>
+                    </div>
+                    <div class="inv-meta-item">
+                        <label>Payment Mode</label>
+                        <span>${escapeHtml(inv.tenderSummary || inv.paymentType)}</span>
+                    </div>
                 </div>
-                <table>
-                    <thead><tr><th>Item</th><th style="text-align:center;">Qty</th><th style="text-align:right;">Price</th><th style="text-align:right;">Discount</th><th style="text-align:right;">Total</th></tr></thead>
-                    <tbody>${lines}</tbody>
-                    <tfoot>
-                        <tr>
-                            <td colspan="4" style="text-align:right;font-weight:600;padding-top:8px;">Grand Total</td>
-                            <td style="text-align:right;font-weight:700;font-size:1.05em;">${Number(inv.totalAmount).toLocaleString('fr-CM')} XAF</td>
-                        </tr>
-                    </tfoot>
-                </table>`;
+
+                <!-- Notes if present -->
+                ${inv.notes ? `
+                    <div style="background: rgba(59, 130, 246, 0.06); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 8px; padding: 10px 14px; font-size: 0.86rem;">
+                        <strong>Notes / Audit:</strong> ${escapeHtml(inv.notes)}
+                    </div>
+                ` : ''}
+
+                <!-- Items Section -->
+                <div>
+                    <div class="inv-section-title">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+                        Itemized Bill (${inv.lines ? inv.lines.length : 0} items)
+                    </div>
+                    <div style="overflow-x: auto; border: 1px solid var(--border); border-radius: 8px;">
+                        <table class="inv-items-table">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th style="text-align: right;">Unit Price</th>
+                                    <th style="text-align: center;">Qty</th>
+                                    <th style="text-align: right;">Discount</th>
+                                    <th style="text-align: right;">Line Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>${linesHtml}</tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Financial Breakdown -->
+                <div style="display: flex; justify-content: flex-end;">
+                    <div class="inv-totals-box">
+                        <div class="inv-totals-row">
+                            <span>Subtotal:</span>
+                            <span>${Number(inv.subtotal || inv.totalAmount).toLocaleString('fr-CM')} XAF</span>
+                        </div>
+                        ${inv.discountAmount > 0 ? `
+                            <div class="inv-totals-row" style="color: #059669;">
+                                <span>Discount:</span>
+                                <span>-${Number(inv.discountAmount).toLocaleString('fr-CM')} XAF</span>
+                            </div>
+                        ` : ''}
+                        ${inv.taxAmount > 0 ? `
+                            <div class="inv-totals-row">
+                                <span>Tax:</span>
+                                <span>+${Number(inv.taxAmount).toLocaleString('fr-CM')} XAF</span>
+                            </div>
+                        ` : ''}
+                        <div class="inv-totals-row grand">
+                            <span>Grand Total:</span>
+                            <span>${Number(inv.totalAmount).toLocaleString('fr-CM')} XAF</span>
+                        </div>
+                        <div class="inv-totals-row" style="color: #059669; font-weight: 600;">
+                            <span>Amount Tendered:</span>
+                            <span>${Number(inv.amountTendered).toLocaleString('fr-CM')} XAF</span>
+                        </div>
+                        ${inv.outstandingBalance > 0 ? `
+                            <div class="inv-totals-row" style="color: #dc2626; font-weight: 700;">
+                                <span>Outstanding Debt:</span>
+                                <span>${Number(inv.outstandingBalance).toLocaleString('fr-CM')} XAF</span>
+                            </div>
+                        ` : ''}
+                        ${inv.refundedAmount > 0 ? `
+                            <div class="inv-totals-row" style="color: #7c3aed; font-weight: 700;">
+                                <span>Total Refunded:</span>
+                                <span>${Number(inv.refundedAmount).toLocaleString('fr-CM')} XAF</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+
+                <!-- Tender History -->
+                ${tendersHtml}
+            `;
+
+            // Dynamic Action Buttons inside Footer
+            let actions = '';
+            if (isUnpaid) {
+                actions += `
+                    <button type="button" class="inv-btn-action pay" onclick="openTenderModal('${inv.invoiceId}', ${inv.outstandingBalance}, '${escapeHtml(inv.customerName || 'Walk-in')}')">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                        Settle Debt
+                    </button>`;
+            }
+
+            if (canRefund) {
+                actions += `
+                    <button type="button" class="inv-btn-action refund" onclick="openRefundModal('${inv.invoiceId}')">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+                        Refund & Return Items
+                    </button>`;
+            }
+
+            if (inv.isPaid) {
+                actions += `
+                    <button type="button" class="inv-btn-action" style="color: #dc2626;" onclick="openVoidModal('${inv.invoiceId}')">
+                        Void
+                    </button>`;
+            }
+
+            dynamicActions.innerHTML = actions;
         }
 
-        function closeDetail() { document.getElementById('detailModal').hidden = true; }
-        document.getElementById('detailModal').addEventListener('click', function(e) {
-            if (e.target === this) closeDetail();
-        });
-
-        // ── Partial Payment ──────────────────────────────────────────
-        let currentInvoiceId = null;
-
-        function openPay(invoiceId, outstanding) {
-            currentInvoiceId = invoiceId;
-            document.getElementById('payOutstanding').textContent = Number(outstanding).toLocaleString('fr-CM') + ' XAF';
-            document.getElementById('payAmount').value = outstanding.toFixed(2);
-            document.getElementById('payError').textContent = '';
-            document.getElementById('payModal').hidden = false;
+        // ── Line-Item Refund Modal Handling ──────────────────────
+        function openRefundModal(invoiceId) {
+            if (!currentActiveInvoice || currentActiveInvoice.invoiceId !== invoiceId) {
+                openInvoiceDrawer(invoiceId).then(() => showRefundModalInner());
+            } else {
+                showRefundModalInner();
+            }
         }
 
-        function closePay() { document.getElementById('payModal').hidden = true; }
-        document.getElementById('payModal').addEventListener('click', function(e) {
-            if (e.target === this) closePay();
-        });
+        function showRefundModalInner() {
+            if (!currentActiveInvoice) return;
+            const modal = document.getElementById('refundModalOverlay');
+            const tbody = document.getElementById('refundItemsBody');
 
-        document.getElementById('payForm').addEventListener('submit', async function(e) {
+            tbody.innerHTML = (currentActiveInvoice.lines || []).map((l, idx) => `
+                <tr data-line-id="${l.invoiceLineId || idx}" data-item-id="${l.itemId}" data-unit-price="${l.unitPrice}">
+                    <td>
+                        <div style="font-weight: 600;">${escapeHtml(l.itemName)}</div>
+                        <div style="font-size: 0.74rem; color: var(--text-secondary);">${Number(l.unitPrice).toLocaleString('fr-CM')} XAF each</div>
+                    </td>
+                    <td style="text-align: right;">${Number(l.unitPrice).toLocaleString('fr-CM')}</td>
+                    <td style="text-align: center; font-weight: 600;">${l.quantity}</td>
+                    <td style="text-align: center;">
+                        <input type="number" class="refund-qty-input inv-select" min="0" max="${l.quantity}" value="0" style="width: 70px; text-align: center; padding: 4px;" onchange="recalcRefundTotal()" oninput="recalcRefundTotal()" />
+                    </td>
+                    <td style="text-align: right; font-weight: 600;" class="refund-line-subtotal">0 XAF</td>
+                </tr>
+            `).join('');
+
+            document.getElementById('refundReason').value = '';
+            recalcRefundTotal();
+            modal.classList.add('open');
+        }
+
+        function closeRefundModal() {
+            document.getElementById('refundModalOverlay').classList.remove('open');
+        }
+
+        function recalcRefundTotal() {
+            let total = 0;
+            const rows = document.querySelectorAll('#refundItemsBody tr');
+            rows.forEach(r => {
+                const unitPrice = parseFloat(r.getAttribute('data-unit-price')) || 0;
+                const qtyInput = r.querySelector('.refund-qty-input');
+                const qty = parseInt(qtyInput.value) || 0;
+                const subtotal = qty * unitPrice;
+                r.querySelector('.refund-line-subtotal').textContent = `${Number(subtotal).toLocaleString('fr-CM')} XAF`;
+                total += subtotal;
+            });
+            document.getElementById('refundTotalPreview').textContent = `${Number(total).toLocaleString('fr-CM')} XAF`;
+        }
+
+        async function submitRefund(e) {
             e.preventDefault();
-            const btn = document.getElementById('payBtn');
+            if (!currentActiveInvoice) return;
+
+            const items = [];
+            document.querySelectorAll('#refundItemsBody tr').forEach(r => {
+                const itemId = r.getAttribute('data-item-id');
+                const qty = parseInt(r.querySelector('.refund-qty-input').value) || 0;
+                if (qty > 0) {
+                    items.push({
+                        itemId: itemId,
+                        quantity: qty,
+                        returnToStock: document.getElementById('refundRestock').checked
+                    });
+                }
+            });
+
+            if (items.length === 0) {
+                alert('Please select at least 1 item quantity to refund.');
+                return;
+            }
+
+            const btn = document.getElementById('refundSubmitBtn');
             btn.disabled = true;
-            document.getElementById('payError').textContent = '';
+            btn.textContent = 'Processing...';
+
+            const payload = {
+                reason: document.getElementById('refundReason').value || 'Customer return',
+                refundPaymentType: document.getElementById('refundMethod').value,
+                items: items
+            };
+
             try {
-                const body = {
-                    paymentType: parseInt(document.getElementById('payType').value),
-                    amount: parseFloat(document.getElementById('payAmount').value),
-                    reference: document.getElementById('payReference').value || null
-                };
-                const resp = await fetch(`/Invoices?handler=AddTender&invoiceId=${currentInvoiceId}`, {
+                const resp = await fetch(`/Invoices?handler=Refund&invoiceId=${currentActiveInvoice.invoiceId}`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': document.querySelector('[name=__RequestVerificationToken]').value },
-                    body: JSON.stringify(body),
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    },
+                    body: JSON.stringify(payload),
                     credentials: 'same-origin'
                 });
-                if (!resp.ok) {
-                    const err = await resp.json().catch(() => ({}));
-                    throw new Error(err.message || `HTTP ${resp.status}`);
-                }
-                closePay();
-                window.location.reload();
-            } catch (ex) {
-                document.getElementById('payError').textContent = ex.message;
+
+                const res = await resp.json();
+                if (!resp.ok) throw new Error(res.message || 'Refund failed');
+
+                closeRefundModal();
+                showToast('Refund and return processed successfully!', 'success');
+                setTimeout(() => window.location.reload(), 1000);
+            } catch (err) {
+                alert(`Error: ${err.message}`);
             } finally {
                 btn.disabled = false;
+                btn.textContent = 'Process Return & Refund';
             }
+        }
+
+        // ── Debt Settlement Modal Handling ───────────────────────
+        let activeTenderInvoiceId = null;
+
+        function openTenderModal(invoiceId, outstanding, customerName) {
+            activeTenderInvoiceId = invoiceId;
+            document.getElementById('tenderOutstandingDisplay').textContent = `${Number(outstanding).toLocaleString('fr-CM')} XAF`;
+            document.getElementById('tenderCustomerDisplay').textContent = `Customer: ${customerName}`;
+            document.getElementById('tenderAmount').value = outstanding;
+            document.getElementById('tenderReference').value = '';
+            document.getElementById('tenderModalOverlay').classList.add('open');
+        }
+
+        function closeTenderModal() {
+            document.getElementById('tenderModalOverlay').classList.remove('open');
+        }
+
+        async function submitTender(e) {
+            e.preventDefault();
+            if (!activeTenderInvoiceId) return;
+
+            const btn = document.getElementById('tenderSubmitBtn');
+            btn.disabled = true;
+            btn.textContent = 'Recording...';
+
+            const payload = {
+                paymentType: parseInt(document.getElementById('tenderPayType').value),
+                amount: parseFloat(document.getElementById('tenderAmount').value),
+                reference: document.getElementById('tenderReference').value || null
+            };
+
+            try {
+                const resp = await fetch(`/Invoices?handler=AddTender&invoiceId=${activeTenderInvoiceId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    },
+                    body: JSON.stringify(payload),
+                    credentials: 'same-origin'
+                });
+
+                const res = await resp.json();
+                if (!resp.ok) throw new Error(res.message || 'Payment failed');
+
+                closeTenderModal();
+                showToast('Payment recorded successfully!', 'success');
+                setTimeout(() => window.location.reload(), 800);
+            } catch (err) {
+                alert(`Error: ${err.message}`);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Record Payment';
+            }
+        }
+
+        // ── Void Modal Handling ──────────────────────────────────
+        function openVoidModal(invoiceId) {
+            document.getElementById('voidInvoiceIdInput').value = invoiceId;
+            document.getElementById('voidReasonInput').value = '';
+            document.getElementById('voidModalOverlay').classList.add('open');
+        }
+
+        function closeVoidModal() {
+            document.getElementById('voidModalOverlay').classList.remove('open');
+        }
+
+        // ── Dual Print Engines ───────────────────────────────────
+        function triggerDrawerPrint(format) {
+            if (!currentActiveInvoice) return;
+            printReceiptDirect(currentActiveInvoice.invoiceId, format);
+        }
+
+        async function printReceiptDirect(invoiceId, format = 'thermal') {
+            try {
+                let inv = currentActiveInvoice && currentActiveInvoice.invoiceId === invoiceId ? currentActiveInvoice : null;
+                if (!inv) {
+                    const resp = await fetch(`/Invoices?handler=Detail&id=${invoiceId}`, { credentials: 'same-origin' });
+                    if (!resp.ok) throw new Error('Could not fetch invoice for printing');
+                    inv = await resp.json();
+                }
+
+                const doc = format === 'thermal' ? generateThermalReceiptHtml(inv) : generateA4InvoiceHtml(inv);
+                const iframe = document.getElementById('printIframe');
+                const ifrDoc = iframe.contentWindow.document;
+                ifrDoc.open();
+                ifrDoc.write(doc);
+                ifrDoc.close();
+                setTimeout(() => {
+                    iframe.contentWindow.focus();
+                    iframe.contentWindow.print();
+                }, 400);
+            } catch (err) {
+                alert(`Print error: ${err.message}`);
+            }
+        }
+
+        function generateThermalReceiptHtml(inv) {
+            const lines = (inv.lines || []).map(l => `
+                <tr>
+                    <td style="text-align: left; padding: 2px 0;">${escapeHtml(l.itemName)}<br><small style="color:#555;">${l.quantity} x ${Number(l.unitPrice).toLocaleString('fr-CM')}</small></td>
+                    <td style="text-align: right; vertical-align: top; padding: 2px 0; font-weight: bold;">${Number(l.lineTotal).toLocaleString('fr-CM')}</td>
+                </tr>
+            `).join('');
+
+            return `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Thermal Receipt - ${inv.invoiceId.substring(0, 8)}</title>
+                    <style>
+                        @@page { size: 80mm auto; margin: 0; }
+                        body { font-family: 'Courier New', monospace, sans-serif; width: 72mm; margin: 4mm auto; font-size: 11px; line-height: 1.3; color: #000; }
+                        .center { text-align: center; }
+                        .right { text-align: right; }
+                        .bold { font-weight: bold; }
+                        .divider { border-top: 1px dashed #000; margin: 5px 0; }
+                        table { width: 100%; border-collapse: collapse; font-size: 11px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="center">
+                        <h2 style="margin: 0; font-size: 16px; font-weight: 900;">${escapeHtml(inv.branchName || 'ARCHITECH STORE')}</h2>
+                        <div style="font-size: 10px;">Sales Receipt & Tax Invoice</div>
+                        <div style="font-size: 9px; margin-top: 2px;">Tel: +237 600 000 000 | Douala, Cameroon</div>
+                    </div>
+                    <div class="divider"></div>
+                    <div>
+                        <div><strong>Inv #:</strong> ${inv.invoiceId.substring(0, 8)}</div>
+                        <div><strong>Date:</strong> ${new Date(inv.dateCreated).toLocaleString()}</div>
+                        <div><strong>Cashier:</strong> ${escapeHtml(inv.processedBy || 'System')}</div>
+                        <div><strong>Customer:</strong> ${escapeHtml(inv.customerName || 'Walk-in')}</div>
+                    </div>
+                    <div class="divider"></div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="text-align:left; border-bottom: 1px dashed #000;">Item</th>
+                                <th style="text-align:right; border-bottom: 1px dashed #000;">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>${lines}</tbody>
+                    </table>
+                    <div class="divider"></div>
+                    <table>
+                        <tr>
+                            <td class="bold">GRAND TOTAL:</td>
+                            <td class="right bold" style="font-size: 13px;">${Number(inv.totalAmount).toLocaleString('fr-CM')} XAF</td>
+                        </tr>
+                        <tr>
+                            <td>Paid / Tendered:</td>
+                            <td class="right">${Number(inv.amountTendered).toLocaleString('fr-CM')} XAF</td>
+                        </tr>
+                        ${inv.outstandingBalance > 0 ? `
+                            <tr>
+                                <td class="bold" style="color: #000;">BALANCE DUE:</td>
+                                <td class="right bold">${Number(inv.outstandingBalance).toLocaleString('fr-CM')} XAF</td>
+                            </tr>
+                        ` : ''}
+                        ${inv.changeGiven > 0 ? `
+                            <tr>
+                                <td>Change Given:</td>
+                                <td class="right">${Number(inv.changeGiven).toLocaleString('fr-CM')} XAF</td>
+                            </tr>
+                        ` : ''}
+                    </table>
+                    <div class="divider"></div>
+                    <div class="center" style="font-size: 9px; margin-top: 6px;">
+                        <div>*** THANK YOU FOR YOUR BUSINESS ***</div>
+                        <div>Goods once sold cannot be returned without original receipt.</div>
+                    </div>
+                </body>
+                </html>`;
+        }
+
+        function generateA4InvoiceHtml(inv) {
+            const lines = (inv.lines || []).map((l, i) => `
+                <tr>
+                    <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: center;">${i + 1}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #ddd;">
+                        <strong>${escapeHtml(l.itemName)}</strong>
+                        ${l.itemSku ? `<br><small style="color:#666;">SKU: ${escapeHtml(l.itemSku)}</small>` : ''}
+                    </td>
+                    <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">${Number(l.unitPrice).toLocaleString('fr-CM')} XAF</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: center;">${l.quantity}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">${l.discountAmount ? Number(l.discountAmount).toLocaleString('fr-CM') : '0'}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right; font-weight: bold;">${Number(l.lineTotal).toLocaleString('fr-CM')} XAF</td>
+                </tr>
+            `).join('');
+
+            return `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Tax Invoice - ${inv.invoiceId}</title>
+                    <style>
+                        @@page { size: A4 portrait; margin: 15mm; }
+                        body { font-family: 'Segoe UI', system-ui, sans-serif; color: #1e293b; line-height: 1.4; font-size: 13px; }
+                        .header-table { width: 100%; margin-bottom: 24px; border-bottom: 2px solid #059669; padding-bottom: 16px; }
+                        .billing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+                        .card-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px 16px; }
+                        table.items { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+                        table.items th { background: #059669; color: #fff; text-align: left; padding: 8px; font-size: 12px; }
+                        .totals-table { width: 300px; margin-left: auto; border-collapse: collapse; }
+                        .totals-table td { padding: 4px 8px; }
+                        .totals-table tr.grand-row td { font-weight: bold; font-size: 15px; border-top: 2px solid #059669; color: #059669; }
+                    </style>
+                </head>
+                <body>
+                    <table class="header-table">
+                        <tr>
+                            <td>
+                                <h1 style="margin: 0; color: #059669; font-size: 22px;">${escapeHtml(inv.branchName || 'ARCHITECH STORE INC.')}</h1>
+                                <div style="color: #64748b; font-size: 11px;">Enterprise Retail & Commercial Distribution</div>
+                                <div style="color: #64748b; font-size: 11px;">Douala & Yaounde, Cameroon | info@architech.cm</div>
+                            </td>
+                            <td style="text-align: right;">
+                                <h2 style="margin: 0; font-size: 20px; color: #1e293b;">COMMERCIAL INVOICE</h2>
+                                <div style="font-weight: bold; margin-top: 4px;">#${inv.invoiceId}</div>
+                                <div style="color: #64748b; font-size: 12px;">Date: ${new Date(inv.dateCreated).toLocaleDateString()}</div>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <div class="billing-grid">
+                        <div class="card-box">
+                            <div style="font-size: 11px; text-transform: uppercase; font-weight: bold; color: #64748b; margin-bottom: 4px;">Billed To:</div>
+                            <div style="font-size: 14px; font-weight: bold;">${escapeHtml(inv.customerName || 'Walk-in Customer')}</div>
+                            ${inv.customerPhone ? `<div>Tel: ${escapeHtml(inv.customerPhone)}</div>` : ''}
+                        </div>
+                        <div class="card-box">
+                            <div style="font-size: 11px; text-transform: uppercase; font-weight: bold; color: #64748b; margin-bottom: 4px;">Invoice Information:</div>
+                            <div><strong>Payment Status:</strong> ${inv.isPaid ? 'PAID' : (inv.outstandingBalance > 0 ? 'PARTIAL / DEBT' : 'VOIDED')}</div>
+                            <div><strong>Payment Method:</strong> ${escapeHtml(inv.tenderSummary || inv.paymentType)}</div>
+                            <div><strong>Processed By:</strong> ${escapeHtml(inv.processedBy || 'Cashier')}</div>
+                        </div>
+                    </div>
+
+                    <table class="items">
+                        <thead>
+                            <tr>
+                                <th style="width: 30px; text-align: center;">#</th>
+                                <th>Item Description</th>
+                                <th style="text-align: right;">Unit Price</th>
+                                <th style="text-align: center; width: 60px;">Qty</th>
+                                <th style="text-align: right;">Discount</th>
+                                <th style="text-align: right;">Total Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>${lines}</tbody>
+                    </table>
+
+                    <table class="totals-table">
+                        <tr>
+                            <td>Subtotal:</td>
+                            <td style="text-align: right;">${Number(inv.subtotal || inv.totalAmount).toLocaleString('fr-CM')} XAF</td>
+                        </tr>
+                        ${inv.discountAmount > 0 ? `
+                            <tr>
+                                <td style="color: #059669;">Discount:</td>
+                                <td style="text-align: right; color: #059669;">-${Number(inv.discountAmount).toLocaleString('fr-CM')} XAF</td>
+                            </tr>
+                        ` : ''}
+                        <tr class="grand-row">
+                            <td>Grand Total:</td>
+                            <td style="text-align: right;">${Number(inv.totalAmount).toLocaleString('fr-CM')} XAF</td>
+                        </tr>
+                        <tr>
+                            <td>Amount Paid:</td>
+                            <td style="text-align: right; font-weight: bold; color: #059669;">${Number(inv.amountTendered).toLocaleString('fr-CM')} XAF</td>
+                        </tr>
+                        ${inv.outstandingBalance > 0 ? `
+                            <tr>
+                                <td style="color: #dc2626; font-weight: bold;">Balance Due:</td>
+                                <td style="text-align: right; color: #dc2626; font-weight: bold;">${Number(inv.outstandingBalance).toLocaleString('fr-CM')} XAF</td>
+                            </tr>
+                        ` : ''}
+                    </table>
+
+                    <div style="margin-top: 48px; padding-top: 16px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #64748b; display: flex; justify-content: space-between;">
+                        <div>Generated by Architech Store ERP System</div>
+                        <div>Authorized Signature: _______________________</div>
+                    </div>
+                </body>
+                </html>`;
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        // ── URL Deep-Linking & Keyboard Shortcuts ────────────────
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const autoId = urlParams.get('id') || urlParams.get('Id');
+            const autoAction = urlParams.get('action') || urlParams.get('Action');
+
+            if (autoId) {
+                openInvoiceDrawer(autoId).then(() => {
+                    if (autoAction === 'pay') {
+                        if (currentActiveInvoice && currentActiveInvoice.outstandingBalance > 0) {
+                            openTenderModal(autoId, currentActiveInvoice.outstandingBalance, currentActiveInvoice.customerName || 'Walk-in');
+                        }
+                    } else if (autoAction === 'refund') {
+                        openRefundModal(autoId);
+                    } else if (autoAction === 'print') {
+                        printReceiptDirect(autoId, 'thermal');
+                    }
+                });
+            }
+
+            // Keyboard shortcut Escape to close drawers/modals
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    closeInvoiceDrawer();
+                    closeRefundModal();
+                    closeTenderModal();
+                    closeVoidModal();
+                }
+            });
         });
     </script>
 }

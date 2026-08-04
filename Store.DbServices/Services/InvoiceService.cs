@@ -25,9 +25,12 @@ public class InvoiceService : IInvoiceService
     public async Task<InvoiceDto?> GetByIdAsync(Guid invoiceId, CancellationToken ct = default)
     {
         var invoice = await _uow.Repository<Invoice>().Query()
-            .Include(i => i.Customer)
-            .Include(i => i.User)
-            .Include(i => i.Sales)
+            .Include(i => i.Customer).ThenInclude(c => c!.Phones).ThenInclude(cp => cp.Phone)
+            .Include(i => i.Customer).ThenInclude(c => c!.Emails).ThenInclude(ce => ce.Email)
+            .Include(i => i.Customer).ThenInclude(c => c!.LoyaltyAccount)
+            .Include(i => i.User).ThenInclude(u => u!.Employee)
+            .Include(i => i.Branch)
+            .Include(i => i.Sales).ThenInclude(s => s.Item).ThenInclude(it => it.Unit)
             .Include(i => i.Tenders)
             .AsNoTracking()
             .FirstOrDefaultAsync(i => i.InvoiceId == invoiceId, ct);
@@ -37,24 +40,190 @@ public class InvoiceService : IInvoiceService
 
     public async Task<PagedResult<InvoiceDto>> GetAllAsync(PagedRequest request, CancellationToken ct = default)
     {
-        var query = _uow.Repository<Invoice>().Query()
-            .Include(i => i.Customer)
-            .Include(i => i.Sales)
-            .AsNoTracking();
+        var invReq = request as InvoicePagedRequest ?? new InvoicePagedRequest
+        {
+            Page = request.Page,
+            PageSize = request.PageSize,
+            SearchTerm = request.SearchTerm,
+            SortBy = request.SortBy,
+            SortDescending = request.SortDescending
+        };
+
+        var query = BuildFilteredQuery(invReq);
 
         var total = await query.CountAsync(ct);
-        var invoices = await query
-            .OrderByDescending(i => i.DateCreated)
-            .Skip((request.Page - 1) * request.PageSize)
-            .Take(request.PageSize)
-            .Select(i => MapToDto(i))
+
+        // Sorting
+        query = (invReq.SortBy?.ToLowerInvariant()) switch
+        {
+            "date_asc" => query.OrderBy(i => i.DateCreated),
+            "total_desc" => query.OrderByDescending(i => i.TotalAmount),
+            "total_asc" => query.OrderBy(i => i.TotalAmount),
+            "balance_desc" => query.OrderByDescending(i => i.TotalAmount - i.AmountTendered),
+            _ => query.OrderByDescending(i => i.DateCreated)
+        };
+
+        var items = await query
+            .Skip((invReq.Page - 1) * invReq.PageSize)
+            .Take(invReq.PageSize)
             .ToListAsync(ct);
 
-        return new PagedResult<InvoiceDto>(invoices, total, request.Page, request.PageSize);
+        return new PagedResult<InvoiceDto>
+        {
+            Items = items.Select(MapToDto).ToList(),
+            TotalCount = total,
+            Page = invReq.Page,
+            PageSize = invReq.PageSize
+        };
+    }
+
+    public async Task<InvoiceSummaryMetricsDto> GetSummaryMetricsAsync(InvoicePagedRequest request, CancellationToken ct = default)
+    {
+        var query = BuildFilteredQuery(request);
+
+        var invoices = await query.Select(i => new
+        {
+            i.TotalAmount,
+            i.AmountTendered,
+            i.IsPaid,
+            RefundedAmount = i.Sales.Where(s => s.Quantity < 0).Sum(s => -s.LineTotal)
+        }).ToListAsync(ct);
+
+        var totalCount = invoices.Count;
+        var grossSales = invoices.Sum(i => i.TotalAmount);
+        var collected = invoices.Sum(i => i.AmountTendered);
+        var outstanding = invoices.Where(i => !i.IsPaid).Sum(i => Math.Max(0, i.TotalAmount - i.AmountTendered));
+        var refunded = invoices.Sum(i => i.RefundedAmount);
+        var voided = invoices.Where(i => !i.IsPaid && i.AmountTendered == 0 && i.TotalAmount > 0).Sum(i => i.TotalAmount);
+
+        var paidCount = invoices.Count(i => i.IsPaid);
+        var unpaidCount = invoices.Count(i => !i.IsPaid && (i.TotalAmount - i.AmountTendered) > 0);
+        var refundedCount = invoices.Count(i => i.RefundedAmount > 0);
+        var voidedCount = invoices.Count(i => !i.IsPaid && i.AmountTendered == 0 && i.TotalAmount > 0);
+
+        var aov = totalCount > 0 ? Math.Round(grossSales / totalCount, 2) : 0;
+
+        return new InvoiceSummaryMetricsDto
+        {
+            GrossSales = grossSales,
+            CollectedRevenue = collected,
+            OutstandingReceivables = outstanding,
+            RefundedVolume = refunded,
+            VoidedVolume = voided,
+            TotalInvoicesCount = totalCount,
+            PaidCount = paidCount,
+            UnpaidCount = unpaidCount,
+            RefundedCount = refundedCount,
+            VoidedCount = voidedCount,
+            AverageOrderValue = aov
+        };
+    }
+
+    private IQueryable<Invoice> BuildFilteredQuery(InvoicePagedRequest request)
+    {
+        var query = _uow.Repository<Invoice>().Query()
+            .Include(i => i.Customer).ThenInclude(c => c!.Phones).ThenInclude(cp => cp.Phone)
+            .Include(i => i.Customer).ThenInclude(c => c!.Emails).ThenInclude(ce => ce.Email)
+            .Include(i => i.User).ThenInclude(u => u!.Employee)
+            .Include(i => i.Branch)
+            .Include(i => i.Sales)
+            .Include(i => i.Tenders)
+            .AsNoTracking();
+
+        if (!string.IsNullOrWhiteSpace(request.SearchTerm))
+        {
+            var term = request.SearchTerm.Trim();
+            if (Guid.TryParse(term, out var guid))
+            {
+                query = query.Where(i => i.InvoiceId == guid);
+            }
+            else
+            {
+                query = query.Where(i =>
+                    i.InvoiceId.ToString().Contains(term) ||
+                    (i.Customer != null && (
+                        (i.Customer.FirstName + " " + i.Customer.LastName).Contains(term) ||
+                        (i.Customer.MiddleName != null && i.Customer.MiddleName.Contains(term)) ||
+                        i.Customer.Phones.Any(p => p.Phone.Number.Contains(term)) ||
+                        i.Customer.Emails.Any(e => e.Email.Address.Contains(term))
+                    )) ||
+                    (i.User != null && (
+                        (i.User.Employee != null && (i.User.Employee.FirstName + " " + i.User.Employee.LastName).Contains(term)) ||
+                        i.User.Username.Contains(term)
+                    )) ||
+                    (i.Notes != null && i.Notes.Contains(term)) ||
+                    i.Tenders.Any(t => t.Reference != null && t.Reference.Contains(term))
+                );
+            }
+        }
+
+        if (request.FromDate.HasValue)
+        {
+            var from = request.FromDate.Value.Date;
+            query = query.Where(i => i.DateCreated >= from);
+        }
+
+        if (request.ToDate.HasValue)
+        {
+            var to = request.ToDate.Value.Date.AddDays(1).AddTicks(-1);
+            query = query.Where(i => i.DateCreated <= to);
+        }
+
+        if (request.BranchId.HasValue)
+        {
+            query = query.Where(i => i.BranchId == request.BranchId.Value);
+        }
+
+        if (request.PaymentType.HasValue)
+        {
+            query = query.Where(i => i.PaymentType == request.PaymentType.Value ||
+                                     i.Tenders.Any(t => t.PaymentType == request.PaymentType.Value));
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Status) && request.Status.ToLowerInvariant() != "all")
+        {
+            var st = request.Status.ToLowerInvariant();
+            if (st == "paid")
+            {
+                query = query.Where(i => i.IsPaid);
+            }
+            else if (st == "unpaid")
+            {
+                query = query.Where(i => !i.IsPaid && (i.TotalAmount - i.AmountTendered) > 0);
+            }
+            else if (st == "refunded")
+            {
+                query = query.Where(i => i.Sales.Any(s => s.Quantity < 0));
+            }
+            else if (st == "voided")
+            {
+                query = query.Where(i => !i.IsPaid && i.AmountTendered == 0 && i.TotalAmount > 0);
+            }
+        }
+
+        if (request.MinAmount.HasValue)
+        {
+            query = query.Where(i => i.TotalAmount >= request.MinAmount.Value);
+        }
+
+        if (request.MaxAmount.HasValue)
+        {
+            query = query.Where(i => i.TotalAmount <= request.MaxAmount.Value);
+        }
+
+        return query;
     }
 
     public async Task<InvoiceDto> CreateInvoiceAsync(CreateInvoiceRequest request, Guid? actingUserId, CancellationToken ct = default)
     {
+        int? branchId = null;
+        if (actingUserId.HasValue)
+        {
+            var userRole = await _uow.Repository<UserBranchRole>().Query()
+                .FirstOrDefaultAsync(ubr => ubr.UserId == actingUserId.Value, ct);
+            branchId = userRole?.BranchId;
+        }
+
         return await _uow.ExecuteStrategyAsync(async () =>
         {
             await _uow.BeginTransactionAsync(ct);
@@ -65,34 +234,28 @@ public class InvoiceService : IInvoiceService
                     InvoiceId = Guid.NewGuid(),
                     UserId = actingUserId,
                     CustomerId = request.CustomerId,
+                    BranchId = branchId,
                     PaymentType = request.PaymentType,
                     AmountTendered = request.AmountTendered,
-                    Notes = request.Notes?.Trim(),
-                    IsPaid = false,
-                    TotalAmount = 0,
-                    ChangeGiven = 0
+                    Notes = request.Notes,
+                    DateCreated = DateTime.UtcNow
                 };
 
-                decimal total = 0;
+                decimal total = 0m;
+                var sales = new List<Sale>();
 
                 foreach (var line in request.Lines)
                 {
                     var item = await _uow.Repository<Item>().Query()
                         .Include(i => i.Unit)
-                        .Include(i => i.Discount)
                         .FirstOrDefaultAsync(i => i.ItemId == line.ItemId, ct)
-                        ?? throw new InvalidOperationException($"Item {line.ItemId} not found.");
+                        ?? throw new KeyNotFoundException($"Item {line.ItemId} not found.");
 
                     if (item.InStock < line.Quantity)
-                        throw new InvalidOperationException($"Insufficient stock for '{item.Name}'. Available: {item.InStock}.");
+                        throw new InvalidOperationException($"Insufficient stock for item '{item.Name}'. Available: {item.InStock}, requested: {line.Quantity}.");
 
-                    var discountAmount = item.Discount?.IsActive == true
-                        ? Math.Round(item.UnitPrice * (item.Discount.Percentage / 100m), 4)
-                        : 0m;
-
-                    var effectivePrice = item.UnitPrice - discountAmount;
-                    var lineTotal = Math.Round(effectivePrice * line.Quantity, 2);
-                    total += lineTotal;
+                    var unitPrice = line.OverrideUnitPrice ?? item.UnitPrice;
+                    var lineTotal = unitPrice * line.Quantity;
 
                     var sale = new Sale
                     {
@@ -102,47 +265,73 @@ public class InvoiceService : IInvoiceService
                         UserId = actingUserId,
                         ItemName = item.Name,
                         UnitAbbreviation = item.Unit?.Abbreviation,
-                        UnitPrice = item.UnitPrice,
-                        DiscountAmount = discountAmount,
+                        UnitPrice = unitPrice,
                         Quantity = line.Quantity,
                         LineTotal = lineTotal
                     };
 
-                    await _uow.Repository<Sale>().AddAsync(sale, ct);
-
-                    // Deduct stock
                     item.InStock -= line.Quantity;
                     _uow.Repository<Item>().Update(item);
-                }
 
-                DiscountDto? appliedCoupon = null;
-                if (!string.IsNullOrWhiteSpace(request.CouponCode))
-                {
-                    appliedCoupon = await _discountService.ValidateCouponAsync(request.CouponCode);
-                    if (appliedCoupon == null)
-                        throw new InvalidOperationException($"Coupon '{request.CouponCode}' is invalid or expired.");
-                }
-
-                if (appliedCoupon != null)
-                {
-                    if (appliedCoupon.DiscountType == "Percentage")
-                        total -= Math.Round(total * (appliedCoupon.Percentage / 100m), 2);
-                    else if (appliedCoupon.DiscountType == "Fixed")
-                        total -= appliedCoupon.FixedAmount.GetValueOrDefault();
-                        
-                    total = Math.Max(0, total);
-                    await _discountService.IncrementUsageAsync(appliedCoupon.DiscountId);
+                    sales.Add(sale);
+                    total += lineTotal;
                 }
 
                 invoice.TotalAmount = total;
-                invoice.IsPaid = total > 0 && request.AmountTendered >= total;
-                invoice.ChangeGiven = Math.Max(0, request.AmountTendered - total);
+                invoice.Sales = sales;
+
+                // Add tender record
+                var tender = new InvoiceTender
+                {
+                    InvoiceId = invoice.InvoiceId,
+                    PaymentType = request.PaymentType,
+                    Amount = request.AmountTendered,
+                    DateCreated = DateTime.UtcNow
+                };
+                invoice.Tenders.Add(tender);
+
+                if (invoice.AmountTendered >= invoice.TotalAmount)
+                {
+                    invoice.IsPaid = true;
+                    invoice.ChangeGiven = invoice.AmountTendered - invoice.TotalAmount;
+                }
 
                 await _uow.Repository<Invoice>().AddAsync(invoice, ct);
+
+                // If coupon code provided, record usage
+                if (!string.IsNullOrWhiteSpace(request.CouponCode))
+                {
+                    var discount = await _discountService.ValidateCouponAsync(request.CouponCode.Trim());
+                    if (discount != null)
+                    {
+                        decimal discountAmount = 0;
+                        if (discount.FixedAmount.HasValue && discount.FixedAmount.Value > 0)
+                        {
+                            discountAmount = discount.FixedAmount.Value;
+                        }
+                        else if (discount.Percentage > 0)
+                        {
+                            discountAmount = Math.Round(invoice.TotalAmount * (discount.Percentage / 100m), 2);
+                        }
+
+                        if (discountAmount > 0)
+                        {
+                            invoice.TotalAmount = Math.Max(0, invoice.TotalAmount - discountAmount);
+                            if (invoice.AmountTendered >= invoice.TotalAmount)
+                            {
+                                invoice.IsPaid = true;
+                                invoice.ChangeGiven = invoice.AmountTendered - invoice.TotalAmount;
+                            }
+                            await _discountService.IncrementUsageAsync(discount.DiscountId);
+                        }
+                    }
+                }
+
                 await _uow.SaveChangesAsync(ct);
                 await _uow.CommitTransactionAsync(ct);
 
-                return (await GetByIdAsync(invoice.InvoiceId, ct))!;
+                return await GetByIdAsync(invoice.InvoiceId, ct)
+                    ?? throw new InvalidOperationException("Failed to retrieve created invoice.");
             }
             catch
             {
@@ -152,14 +341,18 @@ public class InvoiceService : IInvoiceService
         });
     }
 
-    public async Task<bool> VoidInvoiceAsync(Guid invoiceId, Guid? actingUserId, CancellationToken ct = default)
+    public Task<bool> VoidInvoiceAsync(Guid invoiceId, Guid? actingUserId, CancellationToken ct = default)
+    {
+        return VoidInvoiceAsync(invoiceId, actingUserId, null, ct);
+    }
+
+    public async Task<bool> VoidInvoiceAsync(Guid invoiceId, Guid? actingUserId, string? reason, CancellationToken ct = default)
     {
         var invoice = await _uow.Repository<Invoice>().Query()
             .Include(i => i.Sales)
             .FirstOrDefaultAsync(i => i.InvoiceId == invoiceId, ct);
 
-        if (invoice is null) return false;
-        if (!invoice.IsPaid) return false;  // already voided / not paid
+        if (invoice is null || !invoice.IsPaid) return false;
 
         if (actingUserId.HasValue && invoice.BranchId.HasValue)
         {
@@ -173,8 +366,7 @@ public class InvoiceService : IInvoiceService
             await _uow.BeginTransactionAsync(ct);
             try
             {
-                // Restore stock
-                foreach (var sale in invoice.Sales)
+                foreach (var sale in invoice.Sales.Where(s => s.Quantity > 0))
                 {
                     var item = await _uow.Repository<Item>().GetByIdAsync(sale.ItemId, ct);
                     if (item is not null)
@@ -185,6 +377,13 @@ public class InvoiceService : IInvoiceService
                 }
 
                 invoice.IsPaid = false;
+                if (!string.IsNullOrWhiteSpace(reason))
+                {
+                    invoice.Notes = string.IsNullOrWhiteSpace(invoice.Notes)
+                        ? $"[VOIDED: {reason.Trim()}]"
+                        : $"{invoice.Notes} [VOIDED: {reason.Trim()}]";
+                }
+
                 _uow.Repository<Invoice>().Update(invoice);
 
                 await _uow.SaveChangesAsync(ct);
@@ -221,15 +420,18 @@ public class InvoiceService : IInvoiceService
             {
                 foreach (var refundLine in request.Lines)
                 {
-                    var sale = invoice.Sales.FirstOrDefault(s => s.ItemId == refundLine.ItemId);
+                    var sale = invoice.Sales.FirstOrDefault(s => s.ItemId == refundLine.ItemId && s.Quantity > 0);
                     if (sale is null || sale.Quantity < refundLine.Quantity)
                         throw new InvalidOperationException($"Cannot refund quantity {refundLine.Quantity} for item {refundLine.ItemId}.");
 
-                    var item = await _uow.Repository<Item>().GetByIdAsync(refundLine.ItemId, ct);
-                    if (item is not null)
+                    if (request.RestockItems)
                     {
-                        item.InStock += refundLine.Quantity;
-                        _uow.Repository<Item>().Update(item);
+                        var item = await _uow.Repository<Item>().GetByIdAsync(refundLine.ItemId, ct);
+                        if (item is not null)
+                        {
+                            item.InStock += refundLine.Quantity;
+                            _uow.Repository<Item>().Update(item);
+                        }
                     }
 
                     // Add a negative sale line to reflect the refund
@@ -237,10 +439,10 @@ public class InvoiceService : IInvoiceService
                     {
                         SaleId = Guid.NewGuid(),
                         InvoiceId = invoice.InvoiceId,
-                        ItemId = item!.ItemId,
+                        ItemId = sale.ItemId,
                         UserId = actingUserId,
-                        ItemName = $"{item.Name} (Refund - {request.ReasonCode})",
-                        UnitAbbreviation = item.Unit?.Abbreviation,
+                        ItemName = $"{sale.ItemName} (Return - {request.ReasonCode})",
+                        UnitAbbreviation = sale.UnitAbbreviation,
                         UnitPrice = sale.UnitPrice,
                         DiscountAmount = sale.DiscountAmount,
                         Quantity = -refundLine.Quantity,
@@ -249,6 +451,13 @@ public class InvoiceService : IInvoiceService
 
                     await _uow.Repository<Sale>().AddAsync(negativeSale, ct);
                     invoice.TotalAmount += negativeSale.LineTotal;
+                }
+
+                if (!string.IsNullOrWhiteSpace(request.Notes))
+                {
+                    invoice.Notes = string.IsNullOrWhiteSpace(invoice.Notes)
+                        ? $"[RETURN NOTE: {request.Notes.Trim()}]"
+                        : $"{invoice.Notes} [RETURN NOTE: {request.Notes.Trim()}]";
                 }
 
                 _uow.Repository<Invoice>().Update(invoice);
@@ -280,7 +489,8 @@ public class InvoiceService : IInvoiceService
             InvoiceId = invoiceId,
             PaymentType = request.PaymentType,
             Amount = request.Amount,
-            Reference = request.Reference?.Trim()
+            Reference = request.Reference?.Trim(),
+            DateCreated = DateTime.UtcNow
         };
 
         await _uow.Repository<InvoiceTender>().AddAsync(tender, ct);
@@ -305,22 +515,22 @@ public class InvoiceService : IInvoiceService
         };
     }
 
-    private static InvoiceDto MapToDto(Invoice i) => new()
+    private static InvoiceDto MapToDto(Invoice i)
     {
-        InvoiceId = i.InvoiceId,
-        CustomerId = i.CustomerId,
-        CustomerName = i.Customer is null ? null : $"{i.Customer.FirstName} {i.Customer.LastName}".Trim(),
-        UserId = i.UserId,
-        BranchId = i.BranchId,
-        TotalAmount = i.TotalAmount,
-        AmountTendered = i.AmountTendered,
-        ChangeGiven = i.ChangeGiven,
-        OutstandingBalance = i.IsPaid ? 0 : Math.Max(0, i.TotalAmount - i.AmountTendered),
-        PaymentType = i.PaymentType,
-        IsPaid = i.IsPaid,
-        Notes = i.Notes,
-        DateCreated = i.DateCreated,
-        Lines = i.Sales.Select(s => new SaleLineDto
+        var tendersList = i.Tenders?.Select(t => new InvoiceTenderDto
+        {
+            InvoiceTenderId = t.InvoiceTenderId,
+            PaymentType = t.PaymentType.ToString(),
+            Amount = t.Amount,
+            Reference = t.Reference,
+            DateCreated = t.DateCreated
+        }).ToList() ?? new List<InvoiceTenderDto>();
+
+        var tenderSummary = tendersList.Count > 1
+            ? $"Split ({string.Join(", ", tendersList.Select(t => t.PaymentType).Distinct())})"
+            : (tendersList.Count == 1 ? tendersList[0].PaymentType : i.PaymentType.ToString());
+
+        var salesList = i.Sales?.Select(s => new SaleLineDto
         {
             SaleId = s.SaleId,
             ItemId = s.ItemId,
@@ -330,14 +540,42 @@ public class InvoiceService : IInvoiceService
             DiscountAmount = s.DiscountAmount,
             Quantity = s.Quantity,
             LineTotal = s.LineTotal
-        }).ToList(),
-        Tenders = i.Tenders.Select(t => new InvoiceTenderDto
+        }).ToList() ?? new List<SaleLineDto>();
+
+        var refundedAmount = salesList.Where(s => s.Quantity < 0).Sum(s => -s.LineTotal);
+
+        var primaryPhone = i.Customer?.Phones.Select(p => p.Phone.Number).FirstOrDefault();
+        var primaryEmail = i.Customer?.Emails.Select(e => e.Email.Address).FirstOrDefault();
+        var processedByName = i.User?.Employee != null
+            ? $"{i.User.Employee.FirstName} {i.User.Employee.LastName}".Trim()
+            : i.User?.Username;
+
+        return new InvoiceDto
         {
-            InvoiceTenderId = t.InvoiceTenderId,
-            PaymentType = t.PaymentType.ToString(),
-            Amount = t.Amount,
-            Reference = t.Reference,
-            DateCreated = t.DateCreated
-        }).ToList()
-    };
+            InvoiceId = i.InvoiceId,
+            CustomerId = i.CustomerId,
+            CustomerName = i.Customer is null ? null : $"{i.Customer.FirstName} {i.Customer.LastName}".Trim(),
+            CustomerPhone = primaryPhone,
+            CustomerEmail = primaryEmail,
+            CustomerSegment = i.Customer?.Segment.ToString(),
+            UserId = i.UserId,
+            ProcessedBy = processedByName,
+            BranchId = i.BranchId,
+            BranchName = i.Branch?.Name,
+            TotalAmount = i.TotalAmount,
+            AmountTendered = i.AmountTendered,
+            ChangeGiven = i.ChangeGiven,
+            OutstandingBalance = i.IsPaid ? 0 : Math.Max(0, i.TotalAmount - i.AmountTendered),
+            PaymentType = i.PaymentType,
+            TenderSummary = tenderSummary,
+            IsPaid = i.IsPaid,
+            IsRefunded = refundedAmount > 0,
+            RefundedAmount = refundedAmount,
+            LinesCount = salesList.Count(s => s.Quantity > 0),
+            Notes = i.Notes,
+            DateCreated = i.DateCreated,
+            Lines = salesList,
+            Tenders = tendersList
+        };
+    }
 }

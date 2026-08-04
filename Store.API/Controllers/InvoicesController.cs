@@ -18,10 +18,18 @@ public class InvoicesController : ControllerBase
 
     [HttpGet]
     [Authorize(Roles = "Admin,Manager")]
-    public async Task<IActionResult> GetAll([FromQuery] PagedRequest request, CancellationToken ct)
+    public async Task<IActionResult> GetAll([FromQuery] InvoicePagedRequest request, CancellationToken ct)
     {
         var result = await _invoiceService.GetAllAsync(request, ct);
         return Ok(ApiResponse<PagedResult<InvoiceDto>>.Ok(result));
+    }
+
+    [HttpGet("summary")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> GetSummary([FromQuery] InvoicePagedRequest request, CancellationToken ct)
+    {
+        var result = await _invoiceService.GetSummaryMetricsAsync(request, ct);
+        return Ok(ApiResponse<InvoiceSummaryMetricsDto>.Ok(result));
     }
 
     [HttpGet("{id:guid}")]
@@ -44,24 +52,24 @@ public class InvoicesController : ControllerBase
 
     [HttpDelete("{id:guid}/void")]
     [Authorize(Roles = "Admin,Manager")]
-    public async Task<IActionResult> Void(Guid id, CancellationToken ct)
+    public async Task<IActionResult> Void(Guid id, [FromQuery] string? reason, CancellationToken ct)
     {
         var userIdClaim = User.FindFirst("uid")?.Value;
         Guid.TryParse(userIdClaim, out var userId);
 
-        var success = await _invoiceService.VoidInvoiceAsync(id, userId == Guid.Empty ? null : userId, ct);
+        var success = await _invoiceService.VoidInvoiceAsync(id, userId == Guid.Empty ? null : userId, reason, ct);
         if (!success) return NotFound(ApiResponse<object>.Fail("Invoice not found or already voided."));
         return Ok(ApiResponse<object>.Ok(null!, "Invoice voided."));
     }
 
     [HttpPost("{id:guid}/void")]
     [Authorize(Roles = "Admin,Manager")]
-    public async Task<IActionResult> VoidCompat(Guid id, CancellationToken ct)
+    public async Task<IActionResult> VoidCompat(Guid id, [FromQuery] string? reason, CancellationToken ct)
     {
         var userIdClaim = User.FindFirst("uid")?.Value;
         Guid.TryParse(userIdClaim, out var userId);
 
-        var success = await _invoiceService.VoidInvoiceAsync(id, userId == Guid.Empty ? null : userId, ct);
+        var success = await _invoiceService.VoidInvoiceAsync(id, userId == Guid.Empty ? null : userId, reason, ct);
         if (!success) return NotFound(ApiResponse<object>.Fail("Invoice not found or already voided."));
         return Ok(ApiResponse<object>.Ok(null!, "Invoice voided."));
     }
