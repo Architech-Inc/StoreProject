@@ -652,8 +652,9 @@
                 }
             });
 
-            // Re-open suggestions on focus if query has enough chars
+            // Auto-select text on focus so subsequent barcode scanning/typing replaces existing value
             textInput.addEventListener('focus', () => {
+                textInput.select();
                 if (textInput.value.trim().length >= minChars && !dropdown.classList.contains('show')) {
                     textInput.dispatchEvent(new Event('input'));
                 }
@@ -674,11 +675,114 @@
         }
     });
 
+    // ── Universal Barcode Input Guard (Anti-Duplicate & Anti-Append) ────────
+    window.BarcodeGuard = {
+        DEFAULT_COOLDOWN_MS: 800, // Cooldown to ignore duplicate scans of identical barcode
+        lastScannedCode: '',
+        lastScannedTime: 0,
+
+        /**
+         * Checks if a scanned barcode is a duplicate within the cooldown window.
+         * @param {string} rawCode
+         * @param {number} cooldownMs
+         * @returns {boolean} True if accepted (new scan), False if duplicate (suppressed)
+         */
+        acceptScan: function(rawCode, cooldownMs = this.DEFAULT_COOLDOWN_MS) {
+            const code = String(rawCode ?? '').trim();
+            if (!code) return false;
+
+            const now = Date.now();
+            if (code === this.lastScannedCode && (now - this.lastScannedTime) < cooldownMs) {
+                console.warn(`[BarcodeGuard] Suppressed duplicate bounce for "${code}" (${now - this.lastScannedTime}ms since last read).`);
+                if (window.showToast) {
+                    window.showToast('error', `Duplicate scan ignored: ${code}`);
+                }
+                return false;
+            }
+
+            this.lastScannedCode = code;
+            this.lastScannedTime = now;
+            return true;
+        },
+
+        /**
+         * Attaches anti-append and anti-duplicate guards to a specific text input element.
+         * @param {HTMLInputElement} inputEl
+         * @param {Object} options
+         */
+        attach: function(inputEl, options = {}) {
+            if (!inputEl || inputEl.dataset.barcodeGuarded === 'true') return;
+            inputEl.dataset.barcodeGuarded = 'true';
+
+            const cooldown = options.cooldownMs ?? this.DEFAULT_COOLDOWN_MS;
+            const autoClear = options.autoClear ?? (inputEl.dataset.barcodeAutoClear !== 'false');
+            let lastKeyTime = 0;
+
+            // 1. Auto-select existing text on focus so subsequent scanning or typing overwrites rather than appends
+            inputEl.addEventListener('focus', () => {
+                inputEl.select();
+            });
+
+            // 2. Detect hardware scanner burst start: if rapid keys arrive after a pause and text isn't selected, replace buffer
+            inputEl.addEventListener('keydown', (e) => {
+                const now = Date.now();
+                const interval = now - lastKeyTime;
+                lastKeyTime = now;
+
+                // Enter key terminates a barcode scan
+                if (e.key === 'Enter') {
+                    const value = inputEl.value.trim();
+                    if (!value) return;
+
+                    // If it's a duplicate scan from lingering under the laser, stop submission
+                    if (!window.BarcodeGuard.acceptScan(value, cooldown)) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (autoClear) inputEl.value = '';
+                        return;
+                    }
+
+                    // Valid scan: if autoClear is requested, clear immediately so future scans never concatenate
+                    if (autoClear) {
+                        setTimeout(() => {
+                            if (document.activeElement === inputEl) {
+                                inputEl.value = '';
+                            }
+                        }, 50);
+                    }
+                }
+            });
+        },
+
+        /**
+         * Scans the document and attaches guards to all barcode-related inputs.
+         * @param {HTMLElement|Document} root
+         */
+        initAll: function(root = document) {
+            const selector = [
+                'input[data-barcode-input]',
+                'input[id*="barcode" i]',
+                'input[id*="Barcode" i]',
+                'input[name*="barcode" i]',
+                'input[name*="Barcode" i]',
+                'input.barcode-input'
+            ].join(', ');
+
+            root.querySelectorAll(selector).forEach(input => {
+                this.attach(input);
+            });
+        }
+    };
+
     // Auto-init on page load
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => window.SmartLookup.initAll());
+        document.addEventListener('DOMContentLoaded', () => {
+            window.SmartLookup.initAll();
+            window.BarcodeGuard.initAll();
+        });
     } else {
         window.SmartLookup.initAll();
+        window.BarcodeGuard.initAll();
     }
 
 })();

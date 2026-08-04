@@ -621,21 +621,36 @@
         setMessage('Suspended sale deleted.');
     }
 
-    function addByBarcode() {
-        const scanValue = normalizeBarcode(barcodeInput.value);
+    let lastScannedBarcode = '';
+    let lastScannedTime = 0;
+    const DUPLICATE_SCAN_COOLDOWN_MS = 800; // 800ms cooldown for identical barcode to prevent double-firing
+
+    function addByBarcode(rawCode) {
+        const scanValue = normalizeBarcode(rawCode !== undefined ? rawCode : barcodeInput.value);
+        barcodeInput.value = ''; // Always clear immediately to prevent appending on rapid second scan
+        
         if (!scanValue) {
             setMessage('Scan or type a barcode first.', true);
             return;
         }
 
+        const now = Date.now();
+        // Check for rapid accidental double-scan of the exact same item
+        if (scanValue === lastScannedBarcode && (now - lastScannedTime) < DUPLICATE_SCAN_COOLDOWN_MS) {
+            console.warn(`[POS] Suppressed duplicate scan of "${scanValue}" (${now - lastScannedTime}ms since last scan)`);
+            return;
+        }
+
+        lastScannedBarcode = scanValue;
+        lastScannedTime = now;
+
         const item = catalog.find(i => normalizeBarcode(i.barcode) === scanValue);
         if (!item) {
-            setMessage(`No catalog item found for barcode "${barcodeInput.value}".`, true);
+            setMessage(`No catalog item found for barcode "${scanValue}".`, true);
             return;
         }
 
         addToCart(item);
-        barcodeInput.value = '';
         barcodeInput.focus();
         setMessage(`${item.name} added to cart.`);
     }
@@ -807,7 +822,8 @@
     addTenderLineBtn.addEventListener('click', () => addTenderLine());
     syncQueueBtn.addEventListener('click', syncOfflineQueue);
     catalogSearch.addEventListener('input', () => renderCatalog(catalogSearch.value));
-    barcodeAddBtn.addEventListener('click', addByBarcode);
+    barcodeAddBtn.addEventListener('click', () => addByBarcode());
+    barcodeInput.addEventListener('focus', () => barcodeInput.select());
     barcodeInput.addEventListener('keydown', (e) => {
         if (e.key !== 'Enter') {
             return;
