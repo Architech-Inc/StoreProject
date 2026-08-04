@@ -14,6 +14,7 @@ public class ScannerController : ControllerBase
     private readonly IItemService _itemService;
     private readonly IInvoiceService _invoiceService;
     private readonly IEmployeeService _employeeService;
+    private readonly ICustomerService _customerService;
     private readonly ISupplierService _supplierService;
     private readonly IBatchService _batchService;
     private readonly ILogger<ScannerController> _logger;
@@ -22,6 +23,7 @@ public class ScannerController : ControllerBase
         IItemService itemService,
         IInvoiceService invoiceService,
         IEmployeeService employeeService,
+        ICustomerService customerService,
         ISupplierService supplierService,
         IBatchService batchService,
         ILogger<ScannerController> logger)
@@ -29,6 +31,7 @@ public class ScannerController : ControllerBase
         _itemService = itemService;
         _invoiceService = invoiceService;
         _employeeService = employeeService;
+        _customerService = customerService;
         _supplierService = supplierService;
         _batchService = batchService;
         _logger = logger;
@@ -47,11 +50,10 @@ public class ScannerController : ControllerBase
 
         // 1. Check Items (by Barcode or ID)
         var itemsResult = await _itemService.GetAllAsync(new PagedRequest { Page = 1, PageSize = 10, SearchTerm = trimmedCode }, ct);
-        var matchedItem = itemsResult.Items?.FirstOrDefault(i =>
+        var matchedItem = itemsResult?.Items?.FirstOrDefault(i =>
             string.Equals(i.Barcode, trimmedCode, StringComparison.OrdinalIgnoreCase) ||
             string.Equals(i.Name, trimmedCode, StringComparison.OrdinalIgnoreCase))
-            ?? (Guid.TryParse(trimmedCode, out var itemGuid) ? await _itemService.GetByIdAsync(itemGuid, ct) : null)
-            ?? itemsResult.Items?.FirstOrDefault();
+            ?? (Guid.TryParse(trimmedCode, out var itemGuid) ? await _itemService.GetByIdAsync(itemGuid, ct) : null);
 
         if (matchedItem != null)
         {
@@ -134,8 +136,7 @@ public class ScannerController : ControllerBase
         // 2. Check Invoices (by InvoiceId)
         var invoicesResult = await _invoiceService.GetAllAsync(new PagedRequest { Page = 1, PageSize = 10, SearchTerm = trimmedCode }, ct);
         var matchedInvoice = (Guid.TryParse(trimmedCode, out var invGuid) ? await _invoiceService.GetByIdAsync(invGuid, ct) : null)
-            ?? invoicesResult.Items?.FirstOrDefault(i => i.InvoiceId.ToString().Contains(trimmedCode, StringComparison.OrdinalIgnoreCase))
-            ?? invoicesResult.Items?.FirstOrDefault();
+            ?? invoicesResult?.Items?.FirstOrDefault(i => i.InvoiceId.ToString().Equals(trimmedCode, StringComparison.OrdinalIgnoreCase) || i.InvoiceId.ToString().StartsWith(trimmedCode, StringComparison.OrdinalIgnoreCase));
 
         if (matchedInvoice != null)
         {
@@ -181,7 +182,7 @@ public class ScannerController : ControllerBase
 
         // 3. Check Employees / Users (by NID, Name, or ID)
         var employeesResult = await _employeeService.GetAllAsync(new PagedRequest { Page = 1, PageSize = 10, SearchTerm = trimmedCode }, ct);
-        var matchedEmployee = employeesResult.Items?.FirstOrDefault(e =>
+        var matchedEmployee = employeesResult?.Items?.FirstOrDefault(e =>
             string.Equals(e.NidNumber, trimmedCode, StringComparison.OrdinalIgnoreCase) ||
             string.Equals(e.FullName, trimmedCode, StringComparison.OrdinalIgnoreCase))
             ?? (Guid.TryParse(trimmedCode, out var empGuid) ? await _employeeService.GetByIdAsync(empGuid, ct) : null);
@@ -219,7 +220,72 @@ public class ScannerController : ControllerBase
             return Ok(ApiResponse<ScanResolutionResultDto>.Ok(result));
         }
 
-        // 4. Check Suppliers (by RegistrationNumber or Name)
+        // 4. Check Customers (by Barcode / CUST-ID, Phone, or Name)
+        var customerCodeToLookup = trimmedCode.StartsWith("CUST-", StringComparison.OrdinalIgnoreCase)
+            ? trimmedCode[5..]
+            : trimmedCode;
+
+        var customersResult = await _customerService.GetAllAsync(new PagedRequest { Page = 1, PageSize = 10, SearchTerm = customerCodeToLookup }, ct);
+        var matchedCustomer = (Guid.TryParse(customerCodeToLookup, out var custGuid) ? await _customerService.GetByIdAsync(custGuid, ct) : null)
+            ?? customersResult?.Items?.FirstOrDefault(c =>
+                string.Equals(c.PrimaryPhone, trimmedCode, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(c.FullName, trimmedCode, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(c.CustomerId.ToString(), customerCodeToLookup, StringComparison.OrdinalIgnoreCase))
+            ?? (trimmedCode.StartsWith("CUST-", StringComparison.OrdinalIgnoreCase) ? customersResult?.Items?.FirstOrDefault() : null);
+
+        if (matchedCustomer != null)
+        {
+            var result = new ScanResolutionResultDto
+            {
+                EntityType = ScanEntityTypes.Customer,
+                Code = trimmedCode,
+                Title = matchedCustomer.FullName,
+                Subtitle = $"{matchedCustomer.Segment} • Tier: {matchedCustomer.LoyaltyTier} ({matchedCustomer.LoyaltyPoints:N0} pts)",
+                ThumbnailUrl = matchedCustomer.ThumbnailUrl ?? matchedCustomer.FullImageUrl,
+                EntityId = matchedCustomer.CustomerId.ToString(),
+                Details = new Dictionary<string, string>
+                {
+                    ["Primary Phone"] = matchedCustomer.PrimaryPhone ?? "N/A",
+                    ["Primary Email"] = matchedCustomer.PrimaryEmail ?? "N/A",
+                    ["Loyalty Tier"] = $"{matchedCustomer.LoyaltyTier} ({matchedCustomer.LoyaltyPoints:N0} pts)",
+                    ["Lifetime Value"] = $"XAF {matchedCustomer.LifetimeValue:N0}",
+                    ["Outstanding Balance"] = matchedCustomer.OutstandingBalance > 0 ? $"XAF {matchedCustomer.OutstandingBalance:N0}" : "None"
+                },
+                Actions = new List<ScanActionDto>
+                {
+                    new()
+                    {
+                        ActionId = "pos_sale",
+                        Label = "Start POS Sale for Customer",
+                        Icon = "shopping-cart",
+                        TargetUrl = $"/Pos?customerId={matchedCustomer.CustomerId}",
+                        ButtonClass = "button-primary",
+                        ShortcutKey = "1"
+                    },
+                    new()
+                    {
+                        ActionId = "view_customer",
+                        Label = "Open Customer 360 Hub",
+                        Icon = "user-check",
+                        TargetUrl = $"/Customers?customerId={matchedCustomer.CustomerId}",
+                        ButtonClass = "button-command",
+                        ShortcutKey = "2"
+                    },
+                    new()
+                    {
+                        ActionId = "loyalty_adjust",
+                        Label = "Manage Loyalty Rewards",
+                        Icon = "award",
+                        TargetUrl = $"/Loyalty?customerId={matchedCustomer.CustomerId}",
+                        ButtonClass = "button-command",
+                        ShortcutKey = "3"
+                    }
+                }
+            };
+            return Ok(ApiResponse<ScanResolutionResultDto>.Ok(result));
+        }
+
+        // 5. Check Suppliers (by RegistrationNumber or Name)
         var suppliers = await _supplierService.GetAllAsync();
         var matchedSupplier = suppliers?.FirstOrDefault(s =>
             string.Equals(s.RegistrationNumber, trimmedCode, StringComparison.OrdinalIgnoreCase) ||
@@ -265,7 +331,7 @@ public class ScannerController : ControllerBase
             return Ok(ApiResponse<ScanResolutionResultDto>.Ok(result));
         }
 
-        // 5. Check Batches (by BatchNumber)
+        // 6. Check Batches (by BatchNumber)
         var batches = await _batchService.GetAllAsync();
         var matchedBatch = batches?.FirstOrDefault(b =>
             string.Equals(b.BatchNumber, trimmedCode, StringComparison.OrdinalIgnoreCase));
@@ -302,7 +368,7 @@ public class ScannerController : ControllerBase
             return Ok(ApiResponse<ScanResolutionResultDto>.Ok(result));
         }
 
-        // 6. Unknown / Unregistered Code Fallback
+        // 7. Unknown / Unregistered Code Fallback
         var unknownResult = new ScanResolutionResultDto
         {
             EntityType = ScanEntityTypes.Unknown,

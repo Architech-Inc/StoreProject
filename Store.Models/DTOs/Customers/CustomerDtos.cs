@@ -18,6 +18,12 @@ public class CustomerDto
     public string? ThumbnailUrl { get; set; }
     public string? FullImageUrl { get; set; }
     public CustomerSegment Segment { get; set; } = CustomerSegment.Standard;
+    public LoyaltyTier LoyaltyTier { get; set; } = LoyaltyTier.Bronze;
+    public int LoyaltyPoints { get; set; }
+    public decimal LifetimeValue { get; set; }
+    public int TotalOrders { get; set; }
+    public decimal OutstandingBalance { get; set; }
+    public DateTime? LastOrderDate { get; set; }
     public DateTime DateCreated { get; set; }
 }
 
@@ -62,6 +68,13 @@ public class UpdateCustomerRequest
 
     public Gender? Gender { get; set; }
     public DateTime? DateOfBirth { get; set; }
+
+    [EmailAddress, StringLength(254)]
+    public string? Email { get; set; }
+
+    [StringLength(20)]
+    public string? Phone { get; set; }
+
     public CustomerSegment? Segment { get; set; }
 
     [StringLength(500)]

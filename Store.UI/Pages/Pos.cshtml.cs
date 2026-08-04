@@ -21,6 +21,18 @@ public class PosModel : PageModel
     public IReadOnlyList<ItemDto> CatalogItems { get; private set; } = Array.Empty<ItemDto>();
     public IReadOnlyList<CustomerDto> Customers { get; private set; } = Array.Empty<CustomerDto>();
 
+    [BindProperty(SupportsGet = true)]
+    public Guid? CustomerId { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public Guid? ItemId { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public Guid? AddItem { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public string? Barcode { get; set; }
+
     public bool HasLoadError { get; private set; }
     public string? LoadErrorMessage { get; private set; }
 
@@ -58,14 +70,38 @@ public class PosModel : PageModel
             var items = await itemsTask;
             var customers = await customersTask;
 
-            CatalogItems = items.Items
+            var catalogList = items.Items
                 .Where(i => i.IsActive && i.InStock > 0)
                 .OrderBy(i => i.Name)
                 .ToList();
 
-            Customers = customers.Items
+            var customerList = customers.Items
                 .OrderBy(c => c.FullName)
                 .ToList();
+
+            // Ensure targeted customer is present in list if specified by URL
+            if (CustomerId.HasValue && !customerList.Any(c => c.CustomerId == CustomerId.Value))
+            {
+                var directCustomer = await _customerService.GetByIdAsync(CustomerId.Value, ct);
+                if (directCustomer != null)
+                {
+                    customerList.Insert(0, directCustomer);
+                }
+            }
+
+            // Ensure targeted item is present in list if specified by URL
+            var targetItemId = ItemId ?? AddItem;
+            if (targetItemId.HasValue && !catalogList.Any(i => i.ItemId == targetItemId.Value))
+            {
+                var directItem = await _itemService.GetByIdAsync(targetItemId.Value, ct);
+                if (directItem != null && directItem.IsActive && directItem.InStock > 0)
+                {
+                    catalogList.Insert(0, directItem);
+                }
+            }
+
+            CatalogItems = catalogList;
+            Customers = customerList;
         }
         catch (Exception ex)
         {

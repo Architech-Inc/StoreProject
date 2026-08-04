@@ -1,119 +1,1291 @@
 @page
 @model StoreUI.Pages.CustomersModel
 @{
-    ViewData["Title"] = "Customers";
+    ViewData["Title"] = "Customer 360 CRM Hub";
     ViewData["ActivePage"] = "Customers";
-    ViewData["PageDescription"] = "Manage registered customer profiles and contact details.";
+    ViewData["PageDescription"] = "Central CRM Hub: customer profiles, loyalty tiers, credit & purchase ledger, and barcode passes.";
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
+    <style>
+        /* Modern Customer 360 CRM Hub Styles */
+        .crm-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            color: var(--text-primary);
+        }
+
+        /* KPI Banner */
+        .crm-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .crm-kpi-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg, 12px);
+            padding: 18px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.05));
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .crm-kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,0.08));
+        }
+
+        .crm-kpi-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .crm-kpi-icon.blue { background: rgba(59, 130, 246, 0.12); color: #2563eb; }
+        .crm-kpi-icon.gold { background: rgba(245, 158, 11, 0.12); color: #d97706; }
+        .crm-kpi-icon.purple { background: rgba(139, 92, 246, 0.12); color: #7c3aed; }
+        .crm-kpi-icon.amber { background: rgba(239, 68, 68, 0.12); color: #dc2626; }
+        .crm-kpi-icon.green { background: rgba(16, 185, 129, 0.12); color: #059669; }
+
+        .crm-kpi-val {
+            font-size: 1.5rem;
+            font-weight: 700;
+            line-height: 1.2;
+            color: var(--text-primary);
+        }
+
+        .crm-kpi-lbl {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        /* Toolbar & Controls */
+        .crm-toolbar {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg, 12px);
+            padding: 16px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .crm-filter-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .crm-search-box {
+            position: relative;
+            min-width: 260px;
+            flex-grow: 1;
+        }
+
+        .crm-search-box input {
+            width: 100%;
+            padding: 9px 12px 9px 36px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--canvas);
+            color: var(--text-primary);
+            font-size: 0.92rem;
+        }
+
+        .crm-search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            pointer-events: none;
+        }
+
+        .crm-pill-btn {
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            line-height: 1;
+            white-space: nowrap;
+        }
+
+        .crm-pill-btn svg {
+            width: 13px;
+            height: 13px;
+            flex-shrink: 0;
+        }
+
+        .crm-pill-btn:hover {
+            border-color: var(--brand);
+            color: var(--brand);
+        }
+
+        .crm-pill-btn.active {
+            background: var(--brand);
+            color: #ffffff !important;
+            border-color: var(--brand);
+            font-weight: 600;
+        }
+
+        .crm-pill-btn.active svg {
+            stroke: #ffffff;
+        }
+
+        .crm-select {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-primary);
+            font-size: 0.88rem;
+        }
+
+        .crm-view-switch {
+            display: inline-flex;
+            align-items: center;
+            background: var(--canvas);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 3px;
+            gap: 2px;
+        }
+
+        .crm-view-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 6px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.88rem;
+            font-weight: 500;
+            line-height: 1;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+
+        .crm-view-btn svg {
+            width: 14px;
+            height: 14px;
+            stroke: currentColor;
+            flex-shrink: 0;
+        }
+
+        .crm-view-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .crm-view-btn.active {
+            background: var(--surface);
+            color: var(--brand);
+            font-weight: 600;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        }
+
+        /* CRM Button System */
+        .crm-btn-primary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            background: var(--brand);
+            color: #ffffff !important;
+            border: 1px solid var(--brand);
+            font-size: 0.88rem;
+            font-weight: 600;
+            line-height: 1;
+            text-decoration: none !important;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(16, 185, 129, 0.2);
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+
+        .crm-btn-primary:hover {
+            background: var(--brand-dark, #059669);
+            border-color: var(--brand-dark, #059669);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.28);
+        }
+
+        .crm-btn-primary svg {
+            width: 15px;
+            height: 15px;
+            stroke: #ffffff;
+            flex-shrink: 0;
+        }
+
+        .crm-btn-secondary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            background: var(--surface);
+            color: var(--text-primary) !important;
+            border: 1px solid var(--border);
+            font-size: 0.88rem;
+            font-weight: 600;
+            line-height: 1;
+            text-decoration: none !important;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+
+        .crm-btn-secondary:hover {
+            background: var(--canvas);
+            border-color: var(--border-hover, var(--border));
+            color: var(--text-primary) !important;
+        }
+
+        .crm-btn-secondary svg {
+            width: 15px;
+            height: 15px;
+            stroke: currentColor;
+            flex-shrink: 0;
+        }
+
+        .crm-btn-danger {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            background: #ef4444;
+            color: #ffffff !important;
+            border: 1px solid #ef4444;
+            font-size: 0.88rem;
+            font-weight: 600;
+            line-height: 1;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+
+        .crm-btn-danger:hover {
+            background: #dc2626;
+            border-color: #dc2626;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 10px rgba(239, 68, 68, 0.25);
+        }
+
+        .crm-btn-danger svg {
+            width: 14px;
+            height: 14px;
+            stroke: #ffffff;
+            flex-shrink: 0;
+        }
+
+        /* Customer Cards Grid View */
+        .crm-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 18px;
+            margin-bottom: 24px;
+        }
+
+        .crm-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg, 12px);
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .crm-card:hover {
+            transform: translateY(-3px);
+            border-color: var(--brand);
+            box-shadow: var(--shadow-md, 0 6px 18px rgba(0,0,0,0.08));
+        }
+
+        .crm-card-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            margin-bottom: 14px;
+        }
+
+        .crm-avatar-wrap {
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .crm-avatar {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--border);
+            background: var(--canvas);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--brand);
+        }
+
+        .crm-badge-tier {
+            font-size: 0.72rem;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: inline-block;
+        }
+
+        .tier-gold { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+        .tier-silver { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+        .tier-bronze { background: #ffedd5; color: #9a3412; border: 1px solid #fed7aa; }
+
+        .crm-card-body {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        .crm-contact-chip {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            font-size: 0.84rem;
+            text-decoration: none;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .crm-contact-chip:hover {
+            color: var(--brand);
+        }
+
+        .crm-contact-chip svg {
+            flex-shrink: 0;
+        }
+
+        .crm-card-metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            padding: 10px;
+            background: var(--canvas);
+            border-radius: 8px;
+            font-size: 0.82rem;
+            margin-bottom: 12px;
+        }
+
+        .crm-card-metric-title {
+            color: var(--text-secondary);
+            font-size: 0.74rem;
+            text-transform: uppercase;
+        }
+
+        .crm-card-metric-val {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--text-primary);
+        }
+
+        .crm-card-actions {
+            display: flex;
+            gap: 6px;
+            justify-content: flex-end;
+            border-top: 1px solid var(--border);
+            padding-top: 12px;
+        }
+
+        /* Slide-Over Drawer Styles */
+        .crm-drawer-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.45);
+            backdrop-filter: blur(3px);
+            z-index: 1050;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+        }
+
+        .crm-drawer-backdrop.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .crm-drawer {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 540px;
+            max-width: 95vw;
+            background: var(--surface);
+            box-shadow: -6px 0 24px rgba(0,0,0,0.18);
+            z-index: 1055;
+            transform: translateX(100%);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .crm-drawer.active {
+            transform: translateX(0);
+        }
+
+        .crm-drawer-header {
+            padding: 20px 24px;
+            background: var(--canvas);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .crm-drawer-body {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 20px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .crm-drawer-footer {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border);
+            background: var(--canvas);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* Drawer Tabs */
+        .crm-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .crm-tab-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px 14px;
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.88rem;
+            cursor: pointer;
+            line-height: 1;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .crm-tab-btn svg {
+            width: 14px;
+            height: 14px;
+            stroke: currentColor;
+            flex-shrink: 0;
+        }
+
+        .crm-tab-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .crm-tab-btn.active {
+            color: var(--brand);
+            border-bottom-color: var(--brand);
+        }
+
+        .crm-tab-pane {
+            display: none;
+        }
+
+        .crm-tab-pane.active {
+            display: block;
+        }
+
+        /* Loyalty Pass Card (Pure SVG & Vector) */
+        .crm-pass-card {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: #ffffff;
+            border-radius: 16px;
+            padding: 20px;
+            position: relative;
+            box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+        }
+
+        .crm-pass-card::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 250px;
+            height: 250px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .crm-pass-barcode-box {
+            background: #ffffff;
+            padding: 12px 14px;
+            border-radius: 8px;
+            margin-top: 14px;
+            text-align: center;
+        }
+
+        .crm-pass-barcode-svg {
+            width: 100%;
+            height: 60px;
+        }
+
+        .crm-pass-barcode-text {
+            font-family: monospace;
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: #0f172a;
+            letter-spacing: 2px;
+            margin-top: 4px;
+        }
+
+        /* Quick Action Icon Buttons */
+        .crm-quick-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            text-decoration: none !important;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-primary);
+            line-height: 1;
+            transition: all 0.15s ease;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .crm-quick-btn svg {
+            width: 14px;
+            height: 14px;
+            flex-shrink: 0;
+        }
+
+        .crm-quick-btn:hover {
+            background: var(--canvas);
+            color: var(--brand);
+            border-color: var(--brand);
+        }
+
+        .crm-quick-btn.whatsapp {
+            background: rgba(37, 211, 102, 0.12);
+            color: #128c7e !important;
+            border-color: rgba(37, 211, 102, 0.3);
+        }
+
+        .crm-quick-btn.whatsapp:hover {
+            background: rgba(37, 211, 102, 0.22);
+            border-color: #25d366;
+        }
+
+        .crm-quick-btn.whatsapp svg {
+            fill: currentColor;
+        }
+
+        /* Print Media Styles for Isolated Loyalty Card */
+        @@media print {
+            body * {
+                visibility: hidden;
+            }
+            #printableLoyaltyCard, #printableLoyaltyCard * {
+                visibility: visible;
+            }
+            #printableLoyaltyCard {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 85.6mm;
+                height: 53.98mm;
+                margin: 0;
+                padding: 10mm;
+                border: 1px solid #ccc;
+                border-radius: 4mm;
+                background: white !important;
+                color: black !important;
+                box-shadow: none !important;
+            }
+        }
+    </style>
 }
 
-<div class="ops-page">
+<div class="crm-container">
 
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
     {
-        <div class="status">@Model.StatusMessage</div>
+        <div class="status" style="margin-bottom: 16px;">@Model.StatusMessage</div>
     }
 
-    <section class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-            <h2 style="margin:0;">Customer Records <small style="font-weight:400;color:var(--ops-subtle);">@Model.TotalCustomers total</small></h2>
-            <button type="button" onclick="openCreate()">+ New Customer</button>
+    <!-- ── KPI Top Summary Banner ──────────────────────────── -->
+    <div class="crm-kpi-grid">
+        <div class="crm-kpi-card">
+            <div class="crm-kpi-icon blue">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <div>
+                <div class="crm-kpi-val">@Model.TotalCustomerCount</div>
+                <div class="crm-kpi-lbl">Total Registered</div>
+            </div>
         </div>
 
-        @if (!Model.Customers.Any())
+        <div class="crm-kpi-card">
+            <div class="crm-kpi-icon gold">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            </div>
+            <div>
+                <div class="crm-kpi-val">@Model.VipCustomerCount VIP <span style="font-size:0.85rem;font-weight:400;color:var(--text-secondary);">/ @Model.WholesaleCustomerCount Whls</span></div>
+                <div class="crm-kpi-lbl">Tiered Accounts</div>
+            </div>
+        </div>
+
+        <div class="crm-kpi-card">
+            <div class="crm-kpi-icon purple">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+            </div>
+            <div>
+                <div class="crm-kpi-val">@Model.TotalLoyaltyPoints.ToString("N0")</div>
+                <div class="crm-kpi-lbl">Active Loyalty Points</div>
+            </div>
+        </div>
+
+        <div class="crm-kpi-card">
+            <div class="crm-kpi-icon @(Model.TotalReceivables > 0 ? "amber" : "green")">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+            </div>
+            <div>
+                <div class="crm-kpi-val">XAF @Model.TotalReceivables.ToString("N0")</div>
+                <div class="crm-kpi-lbl">Outstanding Balance</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Filter & Search Toolbar ─────────────────────────── -->
+    <form method="get" id="crmFilterForm" class="crm-toolbar">
+        <input type="hidden" name="viewMode" id="viewModeInput" value="@Model.ViewMode" />
+
+        <div class="crm-search-box">
+            <svg class="crm-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="search" name="search" value="@Model.Search" placeholder="Search customer name, phone, barcode or email..." onchange="this.form.submit()" />
+        </div>
+
+        <div class="crm-filter-group">
+            <a href="@Url.Page("", new { viewMode = Model.ViewMode, search = Model.Search, sortBy = Model.SortBy, tierFilter = Model.TierFilter, hasDebtOnly = Model.HasDebtOnly })"
+               class="crm-pill-btn @(string.IsNullOrEmpty(Model.SegmentFilter) ? "active" : "")">All Segments</a>
+            <a href="@Url.Page("", new { segmentFilter = "Standard", viewMode = Model.ViewMode, search = Model.Search, sortBy = Model.SortBy, tierFilter = Model.TierFilter, hasDebtOnly = Model.HasDebtOnly })"
+               class="crm-pill-btn @(Model.SegmentFilter == "Standard" ? "active" : "")">Standard</a>
+            <a href="@Url.Page("", new { segmentFilter = "Wholesale", viewMode = Model.ViewMode, search = Model.Search, sortBy = Model.SortBy, tierFilter = Model.TierFilter, hasDebtOnly = Model.HasDebtOnly })"
+               class="crm-pill-btn @(Model.SegmentFilter == "Wholesale" ? "active" : "")">Wholesale</a>
+            <a href="@Url.Page("", new { segmentFilter = "Vip", viewMode = Model.ViewMode, search = Model.Search, sortBy = Model.SortBy, tierFilter = Model.TierFilter, hasDebtOnly = Model.HasDebtOnly })"
+               class="crm-pill-btn @(Model.SegmentFilter == "Vip" ? "active" : "")">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"/></svg> VIP
+            </a>
+        </div>
+
+        <div class="crm-filter-group">
+            <select name="tierFilter" class="crm-select" onchange="this.form.submit()">
+                <option value="">All Loyalty Tiers</option>
+                <option value="Bronze" selected="@(Model.TierFilter == "Bronze")">Bronze Tier</option>
+                <option value="Silver" selected="@(Model.TierFilter == "Silver")">Silver Tier</option>
+                <option value="Gold" selected="@(Model.TierFilter == "Gold")">Gold Tier</option>
+            </select>
+
+            <label style="display:flex;align-items:center;gap:6px;font-size:0.85rem;cursor:pointer;user-select:none;">
+                <input type="checkbox" name="hasDebtOnly" value="true" checked="@Model.HasDebtOnly" onchange="this.form.submit()" />
+                <span>With Debt Only</span>
+            </label>
+
+            <select name="sortBy" class="crm-select" onchange="this.form.submit()">
+                <option value="name_asc" selected="@(Model.SortBy == "name_asc")">Name (A-Z)</option>
+                <option value="name_desc" selected="@(Model.SortBy == "name_desc")">Name (Z-A)</option>
+                <option value="ltv_desc" selected="@(Model.SortBy == "ltv_desc")">Highest Lifetime Spend</option>
+                <option value="points_desc" selected="@(Model.SortBy == "points_desc")">Highest Loyalty Points</option>
+                <option value="debt_desc" selected="@(Model.SortBy == "debt_desc")">Highest Debt</option>
+                <option value="newest" selected="@(Model.SortBy == "newest")">Newest First</option>
+            </select>
+        </div>
+
+        <div class="crm-filter-group">
+            <div class="crm-view-switch">
+                <button type="button" class="crm-view-btn @(Model.ViewMode == "grid" ? "active" : "")" onclick="setViewMode('grid')" title="Card Grid View">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                    <span>Grid</span>
+                </button>
+                <button type="button" class="crm-view-btn @(Model.ViewMode == "table" ? "active" : "")" onclick="setViewMode('table')" title="High-Density Table View">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                    <span>Table</span>
+                </button>
+            </div>
+
+            <button type="button" class="crm-btn-primary" onclick="openCreateModal()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <span>New Customer</span>
+            </button>
+        </div>
+    </form>
+
+    <!-- ── Main Content Area ───────────────────────────────── -->
+    @if (!Model.Customers.Any())
+    {
+        <div class="card" style="text-align:center;padding:48px 20px;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-secondary);margin-bottom:12px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <h3 style="margin-bottom:6px;">No Customer Profiles Found</h3>
+            <p style="color:var(--text-secondary);max-width:400px;margin:0 auto 16px;">
+                @(string.IsNullOrWhiteSpace(Model.Search) ? "Start building your customer relationship directory." : $"No customers match your search '{Model.Search}'.")
+            </p>
+            <button type="button" class="crm-btn-primary" onclick="openCreateModal()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <span>Create Customer Profile</span>
+            </button>
+        </div>
+    }
+    else
+    {
+        @if (Model.ViewMode == "grid")
         {
-            <p style="color:var(--ops-subtle);padding:12px 0;">No customer records yet.</p>
-        }
-        else
-        {
-            <div style="overflow-x:auto;">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Photo</th>
-                            <th>Name</th>
-                            <th>Gender</th>
-                            <th>Segment</th>
-                            <th>Phone</th>
-                            <th>Email</th>
-                            <th>Notes</th>
-                            <th>Registered</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var c in Model.Customers)
-                        {
-                            <tr>
-                                <td>
+            <!-- ── Grid View ───────────────────────────────── -->
+            <div class="crm-cards-grid">
+                @foreach (var c in Model.Customers)
+                {
+                    var initials = !string.IsNullOrWhiteSpace(c.FullName) 
+                        ? string.Join("", c.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(s => s[0])) 
+                        : "CU";
+
+                    var tierClass = c.LoyaltyTier switch {
+                        Store.Models.Enums.LoyaltyTier.Gold => "tier-gold",
+                        Store.Models.Enums.LoyaltyTier.Silver => "tier-silver",
+                        _ => "tier-bronze"
+                    };
+
+                    <div class="crm-card" onclick="openDrawer('@c.CustomerId')">
+                        <div>
+                            <div class="crm-card-header">
+                                <div class="crm-avatar-wrap">
                                     @if (!string.IsNullOrEmpty(c.ThumbnailUrl))
                                     {
-                                        <img src="@c.ThumbnailUrl" alt="Photo" style="width:32px;height:32px;border-radius:50%;object-fit:cover;cursor:pointer;" onclick="viewImage('@(c.FullImageUrl ?? c.ThumbnailUrl)')" />
+                                        <img src="@c.ThumbnailUrl" alt="@c.FullName" class="crm-avatar" />
                                     }
                                     else
                                     {
-                                        <div style="width:32px;height:32px;border-radius:50%;background-color:var(--ops-border);display:inline-block;"></div>
+                                        <div class="crm-avatar">@initials</div>
                                     }
-                                </td>
-                                <td><strong>@c.FullName</strong></td>
-                                <td>@c.Gender</td>
-                                <td>
-                                    @{
-                                        var segClass = c.Segment switch {
-                                            Store.Models.Enums.CustomerSegment.Wholesale => "badge-blue",
-                                            Store.Models.Enums.CustomerSegment.Vip => "badge-gold",
-                                            _ => "badge-gray"
-                                        };
-                                    }
-                                    <span class="badge @segClass">@c.Segment</span>
-                                </td>
-                                <td>@(c.PrimaryPhone ?? "—")</td>
-                                <td>@(c.PrimaryEmail ?? "—")</td>
-                                <td>@(c.Notes ?? "—")</td>
-                                <td>@c.DateCreated.ToString("yyyy-MM-dd")</td>
-                                <td>
-                                    <div style="display:flex;gap:4px;">
-                                        <button type="button"
-                                            onclick="openEdit('@c.CustomerId','@Html.Raw(c.FirstName.Replace("'","\\'"))','@Html.Raw((c.MiddleName ?? "").Replace("'","\\'"))','@Html.Raw(c.LastName.Replace("'","\\'"))','@c.Gender','@c.Segment','@Html.Raw((c.Notes ?? "").Replace("'","\\'"))')">Edit</button>
-                                        <form method="post" asp-page-handler="Delete" style="margin:0;">
-                                            @Html.AntiForgeryToken()
-                                            <input type="hidden" name="customerId" value="@c.CustomerId" />
-                                            <button type="submit" class="danger" onclick="return confirm('Remove @(c.FullName.Replace("'","\\'"))?')">Remove</button>
-                                        </form>
+                                </div>
+                                <div style="flex-grow:1;min-width:0;">
+                                    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;">
+                                        <h4 style="margin:0;font-size:1.05rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@c.FullName</h4>
+                                        <span class="crm-badge-tier @tierClass">@c.LoyaltyTier</span>
                                     </div>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+                                    <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
+                                        <span class="badge @(c.Segment == Store.Models.Enums.CustomerSegment.Vip ? "badge-gold" : c.Segment == Store.Models.Enums.CustomerSegment.Wholesale ? "badge-blue" : "badge-gray")">
+                                            @c.Segment
+                                        </span>
+                                        <span style="font-size:0.75rem;color:var(--text-secondary);display:inline-flex;align-items:center;gap:3px;">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="color:#f59e0b;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                                            @c.LoyaltyPoints.ToString("N0") pts
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
 
-            @if (Model.TotalPages > 1)
-            {
-                <nav class="pagination" aria-label="Customer pages">
-                    @if (Model.PageNumber > 1)
-                    {
-                        <a href="?page=@(Model.PageNumber - 1)">‹ Prev</a>
-                    }
-                    <span class="active">@Model.PageNumber / @Model.TotalPages</span>
-                    @if (Model.PageNumber < Model.TotalPages)
-                    {
-                        <a href="?page=@(Model.PageNumber + 1)">Next ›</a>
-                    }
-                </nav>
-            }
+                            <div class="crm-card-body">
+                                @if (!string.IsNullOrWhiteSpace(c.PrimaryPhone))
+                                {
+                                    <div class="crm-contact-chip" onclick="event.stopPropagation()">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                                        <span>@c.PrimaryPhone</span>
+                                    </div>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(c.PrimaryEmail))
+                                {
+                                    <div class="crm-contact-chip" onclick="event.stopPropagation()">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                                        <span>@c.PrimaryEmail</span>
+                                    </div>
+                                }
+                            </div>
+
+                            <div class="crm-card-metrics">
+                                <div>
+                                    <div class="crm-card-metric-title">Lifetime Value</div>
+                                    <div class="crm-card-metric-val">XAF @c.LifetimeValue.ToString("N0")</div>
+                                </div>
+                                <div>
+                                    <div class="crm-card-metric-title">Balance / Debt</div>
+                                    <div class="crm-card-metric-val" style="color:@(c.OutstandingBalance > 0 ? "var(--accent-red)" : "inherit");">
+                                        @(c.OutstandingBalance > 0 ? $"XAF {c.OutstandingBalance:N0}" : "Cleared")
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="crm-card-actions" onclick="event.stopPropagation()">
+                            <a href="/Pos?customerId=@c.CustomerId" class="crm-quick-btn" title="Start POS Sale for this customer">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg> POS Sale
+                            </a>
+                            <button type="button" class="crm-quick-btn" onclick="openDrawer('@c.CustomerId')">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> View 360
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
         }
-    </section>
+        else
+        {
+            <!-- ── Table View ──────────────────────────────── -->
+            <div class="card" style="padding:0;overflow:hidden;margin-bottom:24px;">
+                <div style="overflow-x:auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width:48px;">Photo</th>
+                                <th>Customer Name</th>
+                                <th>Segment</th>
+                                <th>Tier & Points</th>
+                                <th>Primary Contact</th>
+                                <th>Lifetime Spend</th>
+                                <th>Balance / Debt</th>
+                                <th>Registered</th>
+                                <th style="text-align:right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var c in Model.Customers)
+                            {
+                                var initials = !string.IsNullOrWhiteSpace(c.FullName) 
+                                    ? string.Join("", c.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(s => s[0])) 
+                                    : "CU";
+
+                                var tierClass = c.LoyaltyTier switch {
+                                    Store.Models.Enums.LoyaltyTier.Gold => "tier-gold",
+                                    Store.Models.Enums.LoyaltyTier.Silver => "tier-silver",
+                                    _ => "tier-bronze"
+                                };
+
+                                <tr style="cursor:pointer;" onclick="openDrawer('@c.CustomerId')">
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(c.ThumbnailUrl))
+                                        {
+                                            <img src="@c.ThumbnailUrl" alt="@c.FullName" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" />
+                                        }
+                                        else
+                                        {
+                                            <div style="width:32px;height:32px;border-radius:50%;background:var(--canvas);color:var(--brand);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.8rem;border:1px solid var(--border);">
+                                                @initials
+                                            </div>
+                                        }
+                                    </td>
+                                    <td>
+                                        <strong>@c.FullName</strong>
+                                    </td>
+                                    <td>
+                                        <span class="badge @(c.Segment == Store.Models.Enums.CustomerSegment.Vip ? "badge-gold" : c.Segment == Store.Models.Enums.CustomerSegment.Wholesale ? "badge-blue" : "badge-gray")">
+                                            @c.Segment
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="crm-badge-tier @tierClass">@c.LoyaltyTier</span>
+                                        <small style="color:var(--text-secondary);margin-left:4px;">@c.LoyaltyPoints.ToString("N0") pts</small>
+                                    </td>
+                                    <td>
+                                        <div>@(c.PrimaryPhone ?? "—")</div>
+                                        @if (!string.IsNullOrWhiteSpace(c.PrimaryEmail))
+                                        {
+                                            <small style="color:var(--text-secondary);">@c.PrimaryEmail</small>
+                                        }
+                                    </td>
+                                    <td>
+                                        <strong>XAF @c.LifetimeValue.ToString("N0")</strong>
+                                    </td>
+                                    <td>
+                                        @if (c.OutstandingBalance > 0)
+                                        {
+                                            <span style="color:var(--accent-red);font-weight:700;">XAF @c.OutstandingBalance.ToString("N0")</span>
+                                        }
+                                        else
+                                        {
+                                            <span style="color:var(--text-secondary);">Cleared</span>
+                                        }
+                                    </td>
+                                    <td>@c.DateCreated.ToString("yyyy-MM-dd")</td>
+                                    <td style="text-align:right;" onclick="event.stopPropagation()">
+                                        <div style="display:flex;gap:4px;justify-content:flex-end;">
+                                            <a href="/Pos?customerId=@c.CustomerId" class="crm-quick-btn" title="Start Sale">
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+                                            </a>
+                                            <button type="button" class="crm-quick-btn" onclick="openDrawer('@c.CustomerId')" title="View 360 Profile">
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+
+        <!-- ── Pagination ──────────────────────────────────── -->
+        @if (Model.TotalPages > 1)
+        {
+            <nav class="pagination" aria-label="Customer pages">
+                @if (Model.PageNumber > 1)
+                {
+                    <a href="@Url.Page("", new { page = Model.PageNumber - 1, search = Model.Search, segmentFilter = Model.SegmentFilter, tierFilter = Model.TierFilter, hasDebtOnly = Model.HasDebtOnly, sortBy = Model.SortBy, viewMode = Model.ViewMode })">‹ Prev</a>
+                }
+                <span class="active">@Model.PageNumber / @Model.TotalPages (@Model.TotalCustomers records)</span>
+                @if (Model.PageNumber < Model.TotalPages)
+                {
+                    <a href="@Url.Page("", new { page = Model.PageNumber + 1, search = Model.Search, segmentFilter = Model.SegmentFilter, tierFilter = Model.TierFilter, hasDebtOnly = Model.HasDebtOnly, sortBy = Model.SortBy, viewMode = Model.ViewMode })">Next ›</a>
+                }
+            </nav>
+        }
+    }
+
 </div>
 
-<!-- ── Edit Customer Modal ─────────────────────────────── -->
-<div class="modal-overlay" id="editCustomerModal" hidden>
-    <div class="modal" role="dialog" aria-labelledby="editCustModalTitle" aria-modal="true">
+<!-- ═════════════════════════════════════════════════════════ -->
+<!-- ── Customer 360 Slide-Over Drawer ──────────────────────── -->
+<!-- ═════════════════════════════════════════════════════════ -->
+<div class="crm-drawer-backdrop" id="drawerBackdrop" onclick="closeDrawer()"></div>
+<aside class="crm-drawer" id="customerDrawer" aria-label="Customer 360 Profile">
+    
+    <!-- Drawer Header -->
+    <div class="crm-drawer-header">
+        <div style="display:flex;gap:14px;align-items:center;">
+            <div id="drawerAvatarWrap"></div>
+            <div>
+                <h3 id="drawerCustomerName" style="margin:0;font-size:1.25rem;">Loading...</h3>
+                <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
+                    <span id="drawerSegmentBadge" class="badge">Standard</span>
+                    <span id="drawerTierBadge" class="crm-badge-tier tier-bronze">Bronze</span>
+                </div>
+            </div>
+        </div>
+        <button type="button" class="btn-close" onclick="closeDrawer()" aria-label="Close">×</button>
+    </div>
+
+    <!-- Drawer Body -->
+    <div class="crm-drawer-body">
+
+        <!-- Direct CRM Quick Actions Strip -->
+        <div style="display:flex;flex-wrap:wrap;gap:8px;" id="drawerContactActions">
+            <!-- Dynamically injected WhatsApp, Call, Email buttons -->
+        </div>
+
+        <!-- Financial KPI Strip -->
+        <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:10px;background:var(--canvas);padding:14px;border-radius:12px;border:1px solid var(--border);">
+            <div>
+                <div style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;">Lifetime Spend</div>
+                <div id="drawerLtv" style="font-size:1.15rem;font-weight:700;color:var(--text-primary);margin-top:2px;">XAF 0</div>
+            </div>
+            <div>
+                <div style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;">Total Invoices</div>
+                <div id="drawerOrdersCount" style="font-size:1.15rem;font-weight:700;color:var(--text-primary);margin-top:2px;">0</div>
+            </div>
+            <div>
+                <div style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;">Unpaid Balance</div>
+                <div id="drawerDebt" style="font-size:1.15rem;font-weight:700;color:var(--accent-red);margin-top:2px;">XAF 0</div>
+            </div>
+        </div>
+
+        <!-- Digital Loyalty Card (Vector SVG) -->
+        <div class="crm-pass-card" id="printableLoyaltyCard">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                    <div style="font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;color:#94a3b8;">STORE REWARDS PASS</div>
+                    <div id="passCustomerName" style="font-size:1.1rem;font-weight:700;margin-top:2px;">Customer Name</div>
+                </div>
+                <div id="passTierBadge" class="crm-badge-tier tier-gold" style="font-size:0.75rem;">GOLD MEMBER</div>
+            </div>
+
+            <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:flex-end;">
+                <div>
+                    <div style="font-size:0.7rem;color:#94a3b8;text-transform:uppercase;">Reward Points</div>
+                    <div id="passPoints" style="font-size:1.4rem;font-weight:800;color:#fbbf24;">0 pts</div>
+                </div>
+                <button type="button" class="crm-quick-btn" onclick="printLoyaltyCard()" style="background:rgba(255,255,255,0.15);color:#fff;border:none;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                    <span>Print Pass</span>
+                </button>
+            </div>
+
+            <!-- Barcode container rendered via vector SVG -->
+            <div class="crm-pass-barcode-box">
+                <svg id="loyaltyBarcodeSvg" class="crm-pass-barcode-svg" preserveAspectRatio="none"></svg>
+                <div id="loyaltyBarcodeText" class="crm-pass-barcode-text">CUST-000000</div>
+            </div>
+        </div>
+
+        <!-- Loyalty Points Quick Adjust Trigger -->
+        <div style="display:flex;justify-content:space-between;align-items:center;background:var(--canvas);padding:10px 14px;border-radius:8px;border:1px solid var(--border);">
+            <div>
+                <span style="font-size:0.85rem;font-weight:600;">Loyalty Tier Progress</span>
+                <div id="drawerProgressText" style="font-size:0.75rem;color:var(--text-secondary);">Earn points to reach next tier</div>
+            </div>
+            <button type="button" class="crm-quick-btn" onclick="openLoyaltyModal()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <span>Adjust Points</span>
+            </button>
+        </div>
+
+        <!-- History Tabs -->
+        <div>
+            <div class="crm-tabs">
+                <button type="button" class="crm-tab-btn active" onclick="switchDrawerTab('invoicesTab', this)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                    <span>Invoices (<span id="invoiceCountTab">0</span>)</span>
+                </button>
+                <button type="button" class="crm-tab-btn" onclick="switchDrawerTab('loyaltyTab', this)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    <span>Loyalty Ledger</span>
+                </button>
+                <button type="button" class="crm-tab-btn" onclick="switchDrawerTab('notesTab', this)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><circle cx="12" cy="14" r="3"/><path d="M12 2v6h6"/></svg>
+                    <span>Profile & Notes</span>
+                </button>
+            </div>
+
+            <!-- Tab 1: Invoices -->
+            <div class="crm-tab-pane active" id="invoicesTab">
+                <div id="drawerInvoicesList" style="display:flex;flex-direction:column;gap:8px;">
+                    <p style="color:var(--text-secondary);font-size:0.85rem;">Loading purchase history...</p>
+                </div>
+            </div>
+
+            <!-- Tab 2: Loyalty Transactions -->
+            <div class="crm-tab-pane" id="loyaltyTab">
+                <div id="drawerLoyaltyList" style="display:flex;flex-direction:column;gap:8px;">
+                    <p style="color:var(--text-secondary);font-size:0.85rem;">Loading loyalty transactions...</p>
+                </div>
+            </div>
+
+            <!-- Tab 3: Notes & Profile details -->
+            <div class="crm-tab-pane" id="notesTab">
+                <div style="background:var(--canvas);padding:14px;border-radius:8px;border:1px solid var(--border);font-size:0.88rem;display:flex;flex-direction:column;gap:10px;">
+                    <div><strong>Gender:</strong> <span id="drawerGender">—</span></div>
+                    <div><strong>Phone:</strong> <span id="drawerPhone">—</span></div>
+                    <div><strong>Email:</strong> <span id="drawerEmail">—</span></div>
+                    <div><strong>Registered Since:</strong> <span id="drawerDateCreated">—</span></div>
+                    <div style="border-top:1px solid var(--border);padding-top:8px;">
+                        <strong>Internal CRM Notes:</strong>
+                        <p id="drawerNotes" style="margin:4px 0 0 0;color:var(--text-secondary);font-style:italic;">No notes recorded.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Drawer Footer Actions -->
+    <div class="crm-drawer-footer">
+        <div style="display:flex;gap:8px;">
+            <form method="post" asp-page-handler="Delete" id="drawerDeleteForm" style="margin:0;">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="customerId" id="drawerDeleteCustId" />
+                <button type="submit" class="crm-btn-danger" onclick="return confirm('Are you sure you want to permanently remove this customer profile?')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    <span>Delete</span>
+                </button>
+            </form>
+            <button type="button" class="crm-btn-secondary" onclick="editFromDrawer()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                <span>Edit Profile</span>
+            </button>
+        </div>
+
+        <a id="drawerPosSaleBtn" href="/Pos" class="crm-btn-primary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+            <span>Start POS Sale</span>
+        </a>
+    </div>
+
+</aside>
+
+<!-- ═════════════════════════════════════════════════════════ -->
+<!-- ── Adjust Loyalty Points Modal ─────────────────────────── -->
+<!-- ═════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="loyaltyAdjustModal" hidden>
+    <div class="modal" role="dialog" aria-labelledby="loyaltyModalTitle" aria-modal="true">
         <div class="modal-head">
-            <h3 id="editCustModalTitle">Edit Customer</h3>
+            <h3 id="loyaltyModalTitle">Adjust Loyalty Points</h3>
+            <button type="button" class="btn-close" onclick="closeLoyaltyModal()" aria-label="Close">×</button>
+        </div>
+
+        <div style="padding:14px 0;">
+            <p style="font-size:0.88rem;color:var(--text-secondary);margin-bottom:12px;">
+                Add or deduct loyalty points for <strong id="loyaltyAdjustCustName">Customer</strong>.
+            </p>
+
+            <label for="loyaltyPointsDelta">Points Amount (+ to add, - to deduct) *</label>
+            <input type="number" id="loyaltyPointsDelta" placeholder="e.g. 50 or -20" required />
+
+            <label for="loyaltyReason" style="margin-top:10px;">Reason / Internal Note</label>
+            <input type="text" id="loyaltyReason" placeholder="e.g. Compensation for order issue, VIP bonus" />
+
+            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
+                <button type="button" class="crm-btn-secondary" onclick="closeLoyaltyModal()">Cancel</button>
+                <button type="button" class="crm-btn-primary" id="btnSubmitLoyaltyAdjust" onclick="submitLoyaltyAdjust()">Save Adjustment</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════ -->
+<!-- ── Create Customer Modal ─────────────────────────────── -->
+<!-- ═════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="customerModal" hidden>
+    <div class="modal" role="dialog" aria-labelledby="custModalTitle" aria-modal="true" style="max-width:560px;">
+        <div class="modal-head">
+            <h3 id="custModalTitle">Register New Customer</h3>
+            <button type="button" class="btn-close" onclick="closeCreateModal()" aria-label="Close">×</button>
+        </div>
+
+        <form method="post" asp-page-handler="Create" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div>
+                    <label for="firstName">First Name *</label>
+                    <input asp-for="FirstName" id="firstName" required />
+                </div>
+                <div>
+                    <label for="lastName">Last Name *</label>
+                    <input asp-for="LastName" id="lastName" required />
+                </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px;">
+                <div>
+                    <label for="middleName">Middle Name</label>
+                    <input asp-for="MiddleName" id="middleName" />
+                </div>
+                <div>
+                    <label for="genderSel">Gender</label>
+                    <select asp-for="Gender" id="genderSel">
+                        <option value="NotSpecified">Not Specified</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="margin-top:8px;">
+                <label for="segmentSel">Segment</label>
+                <select asp-for="Segment" id="segmentSel">
+                    <option value="Standard">Standard Customer</option>
+                    <option value="Wholesale">Wholesale Account</option>
+                    <option value="Vip">VIP Account (High Priority)</option>
+                </select>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px;">
+                <div>
+                    <label for="phone">Phone Number</label>
+                    <input asp-for="Phone" id="phone" type="tel" placeholder="+237 6XXXXXXXX" />
+                </div>
+                <div>
+                    <label for="email">Email Address</label>
+                    <input asp-for="Email" id="email" type="email" placeholder="client@example.com" />
+                </div>
+            </div>
+
+            <div style="margin-top:8px;">
+                <label for="notes">Internal CRM Notes</label>
+                <textarea asp-for="Notes" id="notes" rows="2" placeholder="Preferences, allergies, special terms..."></textarea>
+            </div>
+
+            <div style="margin-top:8px;">
+                <label for="createImageUpload">Profile Photo</label>
+                <input type="file" asp-for="ImageUpload" id="createImageUpload" accept="image/*" data-crop="true" />
+            </div>
+
+            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
+                <button type="button" class="crm-btn-secondary" onclick="closeCreateModal()">Cancel</button>
+                <button type="submit" class="crm-btn-primary">Create Profile</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════ -->
+<!-- ── Edit Customer Modal ───────────────────────────────── -->
+<!-- ═════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="editCustomerModal" hidden>
+    <div class="modal" role="dialog" aria-labelledby="editCustModalTitle" aria-modal="true" style="max-width:560px;">
+        <div class="modal-head">
+            <h3 id="editCustModalTitle">Edit Customer Profile</h3>
             <button type="button" class="btn-close" onclick="closeEditModal()" aria-label="Close">×</button>
         </div>
 
@@ -121,92 +1293,65 @@
             @Html.AntiForgeryToken()
             <input type="hidden" asp-for="EditCustomerId" id="editCustomerId" />
 
-            <label for="editFirstName">First Name *</label>
-            <input asp-for="EditFirstName" id="editFirstName" required />
-
-            <label for="editMiddleName">Middle Name</label>
-            <input asp-for="EditMiddleName" id="editMiddleName" />
-
-            <label for="editLastName">Last Name *</label>
-            <input asp-for="EditLastName" id="editLastName" required />
-
-            <label for="editGender">Gender</label>
-            <select asp-for="EditGender" id="editGender">
-                <option value="NotSpecified">Not Specified</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-            </select>
-
-            <label for="editSegment">Segment</label>
-            <select asp-for="EditSegment" id="editSegment">
-                <option value="Standard">Standard</option>
-                <option value="Wholesale">Wholesale</option>
-                <option value="Vip">VIP</option>
-            </select>
-
-            <label for="editNotes">Notes</label>
-            <textarea asp-for="EditNotes" id="editNotes" rows="2"></textarea>
-
-            <label for="editImageUpload">Photo</label>
-            <input type="file" asp-for="ImageUpload" id="editImageUpload" accept="image/*" data-crop="true" />
-
-            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;">
-                <button type="button" class="button-command" onclick="closeEditModal()">Cancel</button>
-                <button type="submit" class="button-primary">Save Changes</button>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div>
+                    <label for="editFirstName">First Name *</label>
+                    <input asp-for="EditFirstName" id="editFirstName" required />
+                </div>
+                <div>
+                    <label for="editLastName">Last Name *</label>
+                    <input asp-for="EditLastName" id="editLastName" required />
+                </div>
             </div>
-        </form>
-    </div>
-</div>
 
-<!-- ── Create Customer Modal ─────────────────────────────── -->
-<div class="modal-overlay" id="customerModal" hidden>
-    <div class="modal" role="dialog" aria-labelledby="custModalTitle" aria-modal="true">
-        <div class="modal-head">
-            <h3 id="custModalTitle">New Customer</h3>
-            <button type="button" class="btn-close" onclick="closeModal()" aria-label="Close">×</button>
-        </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px;">
+                <div>
+                    <label for="editMiddleName">Middle Name</label>
+                    <input asp-for="EditMiddleName" id="editMiddleName" />
+                </div>
+                <div>
+                    <label for="editGender">Gender</label>
+                    <select asp-for="EditGender" id="editGender">
+                        <option value="NotSpecified">Not Specified</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                    </select>
+                </div>
+            </div>
 
-        <form method="post" asp-page-handler="Create" enctype="multipart/form-data">
-            @Html.AntiForgeryToken()
+            <div style="margin-top:8px;">
+                <label for="editSegment">Segment</label>
+                <select asp-for="EditSegment" id="editSegment">
+                    <option value="Standard">Standard Customer</option>
+                    <option value="Wholesale">Wholesale Account</option>
+                    <option value="Vip">VIP Account</option>
+                </select>
+            </div>
 
-            <label for="firstName">First Name *</label>
-            <input asp-for="FirstName" id="firstName" required />
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px;">
+                <div>
+                    <label for="editPhone">Phone Number</label>
+                    <input asp-for="EditPhone" id="editPhone" type="tel" />
+                </div>
+                <div>
+                    <label for="editEmail">Email Address</label>
+                    <input asp-for="EditEmail" id="editEmail" type="email" />
+                </div>
+            </div>
 
-            <label for="middleName">Middle Name</label>
-            <input asp-for="MiddleName" id="middleName" />
+            <div style="margin-top:8px;">
+                <label for="editNotes">Internal CRM Notes</label>
+                <textarea asp-for="EditNotes" id="editNotes" rows="2"></textarea>
+            </div>
 
-            <label for="lastName">Last Name *</label>
-            <input asp-for="LastName" id="lastName" required />
+            <div style="margin-top:8px;">
+                <label for="editImageUpload">Update Photo</label>
+                <input type="file" asp-for="ImageUpload" id="editImageUpload" accept="image/*" data-crop="true" />
+            </div>
 
-            <label for="genderSel">Gender</label>
-            <select asp-for="Gender" id="genderSel">
-                <option value="NotSpecified">Not Specified</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-            </select>
-
-            <label for="segmentSel">Segment</label>
-            <select asp-for="Segment" id="segmentSel">
-                <option value="Standard">Standard</option>
-                <option value="Wholesale">Wholesale</option>
-                <option value="Vip">VIP</option>
-            </select>
-
-            <label for="phone">Phone</label>
-            <input asp-for="Phone" id="phone" type="tel" placeholder="+237 6XXXXXXXX" />
-
-            <label for="email">Email</label>
-            <input asp-for="Email" id="email" type="email" />
-
-            <label for="notes">Notes</label>
-            <textarea asp-for="Notes" id="notes" rows="2" placeholder="Optional internal notes"></textarea>
-
-            <label for="createImageUpload">Photo</label>
-            <input type="file" asp-for="ImageUpload" id="createImageUpload" accept="image/*" data-crop="true" />
-
-            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
-                <button type="button" class="button-command" onclick="closeModal()">Cancel</button>
-                <button type="submit" class="button-primary">Create Customer</button>
+            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
+                <button type="button" class="crm-btn-secondary" onclick="closeEditModal()">Cancel</button>
+                <button type="submit" class="crm-btn-primary">Save Changes</button>
             </div>
         </form>
     </div>
@@ -214,26 +1359,35 @@
 
 @section Scripts {
 <script>
-const modal = document.getElementById('customerModal');
-const editModal = document.getElementById('editCustomerModal');
+// State
+let currentCustomerData = null;
 
-function openCreate() {
-    modal.removeAttribute('hidden');
+// Modal Controls
+const createModal = document.getElementById('customerModal');
+const editModal = document.getElementById('editCustomerModal');
+const loyaltyModal = document.getElementById('loyaltyAdjustModal');
+const drawer = document.getElementById('customerDrawer');
+const backdrop = document.getElementById('drawerBackdrop');
+
+function openCreateModal() {
+    createModal.removeAttribute('hidden');
     document.getElementById('firstName').focus();
 }
 
-function closeModal() {
-    modal.setAttribute('hidden', '');
+function closeCreateModal() {
+    createModal.setAttribute('hidden', '');
 }
 
-function openEdit(id, firstName, middleName, lastName, gender, segment, notes) {
-    document.getElementById('editCustomerId').value = id;
-    document.getElementById('editFirstName').value = firstName;
-    document.getElementById('editMiddleName').value = middleName;
-    document.getElementById('editLastName').value = lastName;
-    document.getElementById('editGender').value = gender;
-    document.getElementById('editSegment').value = segment;
-    document.getElementById('editNotes').value = notes;
+function openEditModal(c) {
+    document.getElementById('editCustomerId').value = c.customerId;
+    document.getElementById('editFirstName').value = c.firstName || '';
+    document.getElementById('editMiddleName').value = c.middleName || '';
+    document.getElementById('editLastName').value = c.lastName || '';
+    document.getElementById('editGender').value = c.gender || 'NotSpecified';
+    document.getElementById('editSegment').value = c.segment || 'Standard';
+    document.getElementById('editPhone').value = c.primaryPhone || '';
+    document.getElementById('editEmail').value = c.primaryEmail || '';
+    document.getElementById('editNotes').value = c.notes || '';
     editModal.removeAttribute('hidden');
     document.getElementById('editFirstName').focus();
 }
@@ -242,10 +1396,303 @@ function closeEditModal() {
     editModal.setAttribute('hidden', '');
 }
 
-modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
-editModal.addEventListener('click', e => { if (e.target === editModal) closeEditModal(); });
+function editFromDrawer() {
+    if (currentCustomerData) {
+        closeDrawer();
+        openEditModal(currentCustomerData);
+    }
+}
+
+function openLoyaltyModal() {
+    if (!currentCustomerData) return;
+    document.getElementById('loyaltyAdjustCustName').textContent = currentCustomerData.fullName;
+    document.getElementById('loyaltyPointsDelta').value = '';
+    document.getElementById('loyaltyReason').value = '';
+    loyaltyModal.removeAttribute('hidden');
+    document.getElementById('loyaltyPointsDelta').focus();
+}
+
+function closeLoyaltyModal() {
+    loyaltyModal.setAttribute('hidden', '');
+}
+
+async function submitLoyaltyAdjust() {
+    if (!currentCustomerData) return;
+    const points = parseInt(document.getElementById('loyaltyPointsDelta').value, 10);
+    const reason = document.getElementById('loyaltyReason').value;
+
+    if (isNaN(points) || points === 0) {
+        alert('Please enter a valid non-zero points value.');
+        return;
+    }
+
+    const btn = document.getElementById('btnSubmitLoyaltyAdjust');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+
+    try {
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+        const formData = new FormData();
+        formData.append('customerId', currentCustomerData.customerId);
+        formData.append('points', points);
+        formData.append('note', reason);
+
+        const res = await fetch(`?handler=AdjustLoyalty`, {
+            method: 'POST',
+            headers: {
+                'RequestVerificationToken': token
+            },
+            body: formData
+        });
+
+        const data = await res.json();
+        if (data.success) {
+            closeLoyaltyModal();
+            // Refresh drawer
+            await openDrawer(currentCustomerData.customerId);
+        } else {
+            alert(data.message || 'Failed to adjust points.');
+        }
+    } catch (err) {
+        alert('Network error adjusting loyalty points: ' + err.message);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Save Adjustment';
+    }
+}
+
+// Switch View Mode (Grid vs Table)
+function setViewMode(mode) {
+    document.getElementById('viewModeInput').value = mode;
+    document.getElementById('crmFilterForm').submit();
+}
+
+// Drawer Tab Switching
+function switchDrawerTab(tabId, btn) {
+    document.querySelectorAll('.crm-tab-pane').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.crm-tab-btn').forEach(b => b.classList.remove('active'));
+    const target = document.getElementById(tabId);
+    if (target) target.classList.add('active');
+    if (btn) btn.classList.add('active');
+}
+
+// Slide-Over Drawer
+async function openDrawer(customerId) {
+    drawer.classList.add('active');
+    backdrop.classList.add('active');
+
+    document.getElementById('drawerCustomerName').textContent = 'Loading Profile...';
+    document.getElementById('drawerInvoicesList').innerHTML = '<p style="color:var(--text-secondary);font-size:0.85rem;">Loading invoices...</p>';
+    document.getElementById('drawerLoyaltyList').innerHTML = '<p style="color:var(--text-secondary);font-size:0.85rem;">Loading transactions...</p>';
+
+    try {
+        const res = await fetch(`?handler=CustomerDrawer&id=${customerId}`);
+        const result = await res.json();
+
+        if (!result.success || !result.customer) {
+            alert('Failed to load customer profile details.');
+            closeDrawer();
+            return;
+        }
+
+        const c = result.customer;
+        currentCustomerData = c;
+
+        // Render Hero Header
+        document.getElementById('drawerCustomerName').textContent = c.fullName;
+        const initials = (c.fullName || 'CU').split(' ').map(s => s[0]).slice(0, 2).join('');
+        
+        const avatarWrap = document.getElementById('drawerAvatarWrap');
+        if (c.thumbnailUrl) {
+            avatarWrap.innerHTML = `<img src="${c.thumbnailUrl}" alt="${c.fullName}" class="crm-avatar" style="width:56px;height:56px;" />`;
+        } else {
+            avatarWrap.innerHTML = `<div class="crm-avatar" style="width:56px;height:56px;font-size:1.2rem;">${initials}</div>`;
+        }
+
+        const formatSegment = (seg) => {
+            if (seg === 0 || seg === '0' || seg === 'Standard') return 'Standard';
+            if (seg === 1 || seg === '1' || seg === 'Wholesale') return 'Wholesale';
+            if (seg === 2 || seg === '2' || seg === 'Vip') return 'VIP';
+            return seg || 'Standard';
+        };
+        const formatTier = (tier) => {
+            if (tier === 0 || tier === '0' || tier === 'Bronze') return 'Bronze';
+            if (tier === 1 || tier === '1' || tier === 'Silver') return 'Silver';
+            if (tier === 2 || tier === '2' || tier === 'Gold') return 'Gold';
+            return tier || 'Bronze';
+        };
+
+        const segmentDisplay = formatSegment(c.segment);
+        const tierDisplay = formatTier(c.loyaltyTier);
+
+        const segBadge = document.getElementById('drawerSegmentBadge');
+        segBadge.textContent = segmentDisplay;
+        segBadge.className = `badge ${segmentDisplay === 'VIP' ? 'badge-gold' : segmentDisplay === 'Wholesale' ? 'badge-blue' : 'badge-gray'}`;
+
+        const tierBadge = document.getElementById('drawerTierBadge');
+        tierBadge.textContent = `${tierDisplay} Tier`;
+        tierBadge.className = `crm-badge-tier tier-${tierDisplay.toLowerCase()}`;
+
+        // Contact Actions Strip
+        const contactActions = document.getElementById('drawerContactActions');
+        let actionsHtml = '';
+        if (c.primaryPhone) {
+            const cleanPhone = c.primaryPhone.replace(/[^0-9+]/g, '');
+            actionsHtml += `<a href="https://wa.me/${cleanPhone.replace('+', '')}" target="_blank" rel="noopener" class="crm-quick-btn whatsapp"><svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.301-.15-1.78-.878-2.056-.979-.276-.1-.476-.15-.676.15s-.777.979-.952 1.18c-.176.2-.351.226-.652.075-.3-.15-1.267-.467-2.414-1.488-.893-.797-1.496-1.78-1.671-2.082-.176-.3-.019-.463.132-.613.135-.135.301-.351.452-.527.15-.175.2-.3.301-.501.1-.2.05-.376-.025-.526-.075-.15-.676-1.631-.927-2.233-.244-.586-.492-.507-.676-.516l-.576-.01c-.2 0-.526.075-.802.376-.276.3-1.053 1.028-1.053 2.508 0 1.48 1.078 2.909 1.228 3.11.15.2 2.122 3.24 5.141 4.544.718.31 1.279.496 1.716.635.722.23 1.379.197 1.9.12.58-.087 1.78-.727 2.03-1.43.25-.702.25-1.304.175-1.43-.075-.125-.275-.2-.576-.35zM12 2C6.477 2 2 6.477 2 12c0 1.97.57 3.807 1.554 5.36L2.31 21.69a.75.75 0 0 0 .918.918l4.33-1.244A9.957 9.957 0 0 0 12 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg><span>WhatsApp</span></a>`;
+            actionsHtml += `<a href="tel:${cleanPhone}" class="crm-quick-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span>Call (${c.primaryPhone})</span></a>`;
+        }
+        if (c.primaryEmail) {
+            actionsHtml += `<a href="mailto:${c.primaryEmail}" class="crm-quick-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg><span>Email</span></a>`;
+        }
+        contactActions.innerHTML = actionsHtml;
+
+        // Financial KPIs
+        document.getElementById('drawerLtv').textContent = `XAF ${(c.lifetimeValue || 0).toLocaleString()}`;
+        document.getElementById('drawerOrdersCount').textContent = (c.totalOrdersCount || 0).toString();
+        const debtEl = document.getElementById('drawerDebt');
+        debtEl.textContent = c.outstandingBalance > 0 ? `XAF ${(c.outstandingBalance).toLocaleString()}` : 'Cleared (XAF 0)';
+        debtEl.style.color = c.outstandingBalance > 0 ? 'var(--accent-red)' : 'var(--text-primary)';
+
+        // Loyalty Pass Card
+        document.getElementById('passCustomerName').textContent = c.fullName;
+        document.getElementById('passPoints').textContent = `${(c.loyaltyPoints || 0).toLocaleString()} pts`;
+        const passTier = document.getElementById('passTierBadge');
+        passTier.textContent = `${tierDisplay.toUpperCase()} MEMBER`;
+        passTier.className = `crm-badge-tier tier-${tierDisplay.toLowerCase()}`;
+
+        const barcodeCode = `CUST-${c.customerId.substring(0, 8).toUpperCase()}`;
+        document.getElementById('loyaltyBarcodeText').textContent = barcodeCode;
+        renderVectorBarcode('loyaltyBarcodeSvg', barcodeCode);
+
+        // Progress
+        const nextTierPoints = tierDisplay === 'Bronze' ? 500 : tierDisplay === 'Silver' ? 1500 : 5000;
+        const currentPoints = c.loyaltyPoints || 0;
+        document.getElementById('drawerProgressText').textContent = `${currentPoints} / ${nextTierPoints} pts to next tier unlock`;
+
+        // Tab 1: Invoices
+        const invoices = result.invoices || [];
+        document.getElementById('invoiceCountTab').textContent = invoices.length.toString();
+        const invList = document.getElementById('drawerInvoicesList');
+        if (!invoices.length) {
+            invList.innerHTML = '<p style="color:var(--text-secondary);font-size:0.85rem;padding:8px 0;">No past purchases or invoices found.</p>';
+        } else {
+            invList.innerHTML = invoices.map(i => `
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--canvas);border-radius:8px;border:1px solid var(--border);font-size:0.85rem;">
+                    <div>
+                        <div style="font-weight:700;">#${i.invoiceNumber || 'INV'}</div>
+                        <div style="color:var(--text-secondary);font-size:0.75rem;">${new Date(i.dateCreated).toLocaleDateString()} • ${i.itemCount || 1} items</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-weight:700;">XAF ${(i.totalAmount || 0).toLocaleString()}</div>
+                        <span class="badge ${i.isPaid ? 'badge-green' : 'badge-amber'}" style="font-size:0.7rem;">${i.isPaid ? 'Paid' : 'Unpaid'}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Tab 2: Loyalty Ledger
+        const transactions = result.transactions || [];
+        const loyList = document.getElementById('drawerLoyaltyList');
+        if (!transactions.length) {
+            loyList.innerHTML = '<p style="color:var(--text-secondary);font-size:0.85rem;padding:8px 0;">No loyalty transactions recorded yet.</p>';
+        } else {
+            loyList.innerHTML = transactions.map(t => `
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--canvas);border-radius:8px;border:1px solid var(--border);font-size:0.85rem;">
+                    <div>
+                        <div style="font-weight:600;">${t.transactionType || 'Adjust'} <small style="color:var(--text-secondary);font-weight:normal;">• ${t.note || ''}</small></div>
+                        <div style="color:var(--text-secondary);font-size:0.75rem;">${new Date(t.dateCreated).toLocaleString()}</div>
+                    </div>
+                    <div style="font-weight:700;font-size:0.95rem;color:${t.points >= 0 ? '#10b981' : '#ef4444'};">
+                        ${t.points >= 0 ? '+' : ''}${t.points} pts
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Tab 3: Notes & Info
+        document.getElementById('drawerGender').textContent = c.gender || 'Not Specified';
+        document.getElementById('drawerPhone').textContent = c.primaryPhone || 'None';
+        document.getElementById('drawerEmail').textContent = c.primaryEmail || 'None';
+        document.getElementById('drawerDateCreated').textContent = new Date(c.dateCreated).toLocaleDateString();
+        document.getElementById('drawerNotes').textContent = c.notes || 'No notes recorded.';
+
+        // Footer Actions
+        document.getElementById('drawerDeleteCustId').value = c.customerId;
+        document.getElementById('drawerPosSaleBtn').href = `/Pos?customerId=${c.customerId}`;
+
+    } catch (err) {
+        alert('Error fetching customer profile: ' + err.message);
+        closeDrawer();
+    }
+}
+
+function closeDrawer() {
+    drawer.classList.remove('active');
+    backdrop.classList.remove('active');
+}
+
+function printLoyaltyCard() {
+    window.print();
+}
+
+// ── Pure Vector SVG Barcode Generator (Code 128 / High Contrast) ──
+function renderVectorBarcode(svgId, text) {
+    const svg = document.getElementById(svgId);
+    if (!svg) return;
+
+    // Standard Code 39 / 128 Barcode Simulation Pattern for Crisp Vector Output
+    const charPatterns = {
+        '0': '101001101101', '1': '110100101011', '2': '101100101011', '3': '110110010101',
+        '4': '101001101011', '5': '110100110101', '6': '101100110101', '7': '101001011011',
+        '8': '110100101101', '9': '101100101101', 'A': '110101001011', 'B': '101101001011',
+        'C': '110110100101', 'D': '101011001011', 'E': '110101100101', 'F': '101101100101',
+        'G': '101010011011', 'H': '110101001101', 'I': '101101001101', 'J': '101011001101',
+        'K': '110101010011', 'L': '101101010011', 'M': '110110101001', 'N': '101011010011',
+        'O': '110101101001', 'P': '101101101001', 'Q': '101010110011', 'R': '110101011001',
+        'S': '101101011001', 'T': '101011011001', 'U': '110010101011', 'V': '100110101011',
+        'W': '110011010101', 'X': '100101101011', 'Y': '110010110101', 'Z': '100110110101',
+        '-': '100101011011', '.': '110010101101', ' ': '100110101101', '$': '100100100101',
+        '/': '100100101001', '+': '100101001001', '%': '101001001001', '*': '100101101101'
+    };
+
+    const cleanText = '*' + text.toUpperCase().replace(/[^0-9A-Z\-\. \$\/\+\%]/g, '-') + '*';
+    let fullBits = '';
+    for (let ch of cleanText) {
+        fullBits += (charPatterns[ch] || charPatterns['-']) + '0';
+    }
+
+    const barWidth = 2.4;
+    const height = 55;
+    const totalWidth = fullBits.length * barWidth;
+
+    let rects = '';
+    for (let i = 0; i < fullBits.length; i++) {
+        if (fullBits[i] === '1') {
+            rects += `<rect x="${(i * barWidth).toFixed(1)}" y="0" width="${barWidth.toFixed(1)}" height="${height}" fill="#0f172a" />`;
+        }
+    }
+
+    svg.setAttribute('viewBox', `0 0 ${totalWidth} ${height}`);
+    svg.innerHTML = rects;
+}
+
+// Global modal esc handler
 document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { closeModal(); closeEditModal(); }
+    if (e.key === 'Escape') {
+        closeCreateModal();
+        closeEditModal();
+        closeLoyaltyModal();
+        closeDrawer();
+    }
+});
+
+// Auto-open drawer if customerId parameter is present in URL
+window.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const preselectedCustomerId = urlParams.get('customerId');
+    if (preselectedCustomerId) {
+        openDrawer(preselectedCustomerId);
+    }
 });
 </script>
 }

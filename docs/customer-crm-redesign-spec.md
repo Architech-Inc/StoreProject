@@ -172,10 +172,10 @@ sequenceDiagram
 
 ## 6. Verification & Validation Checklist
 
-- [ ] **Contact Persistence**: Creating a customer with phone and email populates `CustomerPhones` and `CustomerEmails` in MySQL.
-- [ ] **Contact Update**: Modifying a phone/email in the edit modal updates existing records or inserts new primary contacts.
-- [ ] **Contact Mapping**: All DTO responses contain correct `PrimaryPhone` and `PrimaryEmail`.
-- [ ] **Customer 360 Drawer**: Clicking a customer opens the slide-over drawer smoothly with LTV, orders, and loyalty details.
-- [ ] **Barcode & Print**: Pure SVG barcode renders and prints cleanly on thermal and standard membership card paper.
-- [ ] **POS Dispatch**: Clicking "POS New Sale" navigates to `/Pos?customerId=...` properly.
-- [ ] **Smart Scanner**: Scanning customer barcode in the floating widget resolves customer profile and provides quick-action shortcuts.
+- [x] **Contact Persistence**: Creating a customer with phone and email populates `CustomerPhones` and `CustomerEmails` in MySQL.
+- [x] **Contact Update**: Modifying a phone/email in the edit modal updates existing records or inserts new primary contacts.
+- [x] **Contact Mapping**: All DTO responses contain correct `PrimaryPhone` and `PrimaryEmail`.
+- [x] **Customer 360 Drawer**: Clicking a customer opens the slide-over drawer smoothly with LTV, orders, and loyalty details.
+- [x] **Barcode & Print**: Pure SVG barcode renders and prints cleanly on thermal and standard membership card paper.
+- [x] **POS Dispatch**: Clicking "POS New Sale" navigates to `/Pos?customerId=...` properly.
+- [x] **Smart Scanner**: Scanning customer barcode in the floating widget resolves customer profile and provides quick-action shortcuts.

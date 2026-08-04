@@ -28,6 +28,7 @@ public static class ScanEntityTypes
     public const string Item = "Item";
     public const string Invoice = "Invoice";
     public const string User = "User";
+    public const string Customer = "Customer";
     public const string Supplier = "Supplier";
     public const string Batch = "Batch";
     public const string Unknown = "Unknown";
