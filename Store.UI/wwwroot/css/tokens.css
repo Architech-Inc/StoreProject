@@ -50,4 +50,23 @@
     --space-4: 16px;
     --space-5: 20px;
     --space-6: 24px;
+
+    /* Shadows (used across all pages) */
+    --shadow-sm:    0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md:    0 4px 12px rgba(0,0,0,0.10), 0 2px 4px rgba(0,0,0,0.06);
+    --shadow-lg:    0 10px 25px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.06);
+
+    /* Interactive border states */
+    --border-hover: #c2c0be;
+
+    /* Subdued / muted text (between secondary and invisible) */
+    --text-muted:   #8a8886;
+
+    /* Semantic success green (consistent across pages) */
+    --success-green:        #059669;
+    --success-green-soft:   rgba(5, 150, 105, 0.10);
+
+    /* Semantic danger (canonical — use instead of raw hex) */
+    --danger:       var(--accent-red, #d13438);
+    --danger-hover: #a72729;
 }

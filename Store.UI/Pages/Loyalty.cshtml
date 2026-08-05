@@ -57,7 +57,7 @@
         .loyalty-kpi-icon.amber { background: rgba(245, 158, 11, 0.12); color: #d97706; }
         .loyalty-kpi-icon.green { background: rgba(16, 185, 129, 0.12); color: #059669; }
         .loyalty-kpi-icon.rose { background: rgba(244, 63, 94, 0.12); color: #e11d48; }
-        .loyalty-kpi-icon.blue { background: rgba(59, 130, 246, 0.12); color: #2563eb; }
+        .loyalty-kpi-icon.blue { background: var(--brand-soft, rgba(1,156,1,0.1)); color: var(--brand, #019c01); }
 
         .loyalty-kpi-val {
             font-size: 1.45rem;
@@ -140,9 +140,9 @@
         }
 
         .tier-pill.active {
-            background: var(--primary, #2563eb);
+            background: var(--brand, #019c01);
             color: #ffffff;
-            box-shadow: 0 1px 3px rgba(37,99,235,0.3);
+            box-shadow: 0 1px 3px rgba(1,156,1,0.35);
         }
 
         .tier-pill:hover:not(.active) {
@@ -172,13 +172,13 @@
         }
 
         .view-mode-btn.active {
-            background: var(--primary, #2563eb);
+            background: var(--brand, #019c01);
             color: #ffffff;
         }
 
         /* Scoped Buttons */
         .loyalty-btn-primary {
-            background: var(--primary, #2563eb);
+            background: var(--brand, #019c01);
             color: #ffffff;
             border: none;
             padding: 8px 16px;
@@ -194,7 +194,7 @@
         }
 
         .loyalty-btn-primary:hover {
-            background: #1d4ed8;
+            background: var(--brand-dark, #006300);
             color: #fff;
             transform: translateY(-1px);
         }
@@ -235,9 +235,9 @@
         }
 
         .loyalty-btn-icon:hover {
-            background: var(--primary-light, rgba(37,99,235,0.08));
-            color: var(--primary, #2563eb);
-            border-color: var(--primary, #2563eb);
+            background: var(--brand-soft, rgba(1,156,1,0.08));
+            color: var(--brand, #019c01);
+            border-color: var(--brand, #019c01);
         }
 
         /* Metallic Tier Badges */
@@ -296,7 +296,7 @@
         .loyalty-card:hover {
             transform: translateY(-3px);
             box-shadow: var(--shadow-md, 0 6px 16px rgba(0,0,0,0.08));
-            border-color: var(--primary-light, #93c5fd);
+            border-color: var(--brand-border, #b7d9b7);
         }
 
         .loyalty-card-top {
@@ -310,7 +310,7 @@
             width: 48px;
             height: 48px;
             border-radius: 50%;
-            background: linear-gradient(135deg, var(--primary, #2563eb) 0%, #7c3aed 100%);
+            background: linear-gradient(135deg, var(--brand, #019c01) 0%, var(--brand-dark, #006300) 100%);
             color: #ffffff;
             font-size: 1.1rem;
             font-weight: 700;
@@ -339,7 +339,7 @@
         }
 
         .member-name:hover {
-            color: var(--primary, #2563eb);
+            color: var(--brand, #019c01);
         }
 
         .member-meta {
@@ -409,7 +409,7 @@
         .tier-progress-bar {
             height: 100%;
             border-radius: 4px;
-            background: linear-gradient(90deg, #2563eb 0%, #7c3aed 100%);
+            background: linear-gradient(90deg, var(--brand, #019c01) 0%, var(--brand-dark, #006300) 100%);
             transition: width 0.4s ease;
         }
 
@@ -569,8 +569,8 @@
         }
 
         .drawer-tab-btn.active {
-            color: var(--primary, #2563eb);
-            border-bottom-color: var(--primary, #2563eb);
+            color: var(--brand, #019c01);
+            border-bottom-color: var(--brand, #019c01);
         }
 
         /* Modal Styles */
@@ -649,7 +649,7 @@
 
         .mode-btn.active {
             background: var(--surface);
-            color: var(--primary, #2563eb);
+            color: var(--brand, #019c01);
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
@@ -808,7 +808,7 @@
         @if (!Model.Members.Items.Any())
         {
             <div class="card" style="text-align:center;padding:48px 24px;">
-                <div style="margin-bottom:16px;color:var(--primary,#2563eb);"><svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg></div>
+                <div style="margin-bottom:16px;color:var(--brand,#019c01);"><svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg></div>
                 <h3 style="margin-bottom:6px;">No Loyalty Members Found</h3>
                 <p style="color:var(--text-muted);max-width:400px;margin:0 auto 16px;">No loyalty accounts match your current filter. Try adjusting your search or award points to a customer.</p>
                 <button type="button" class="loyalty-btn-primary" onclick="openManageModal()">+ Award Loyalty Points</button>
@@ -936,7 +936,7 @@
                     {
                         <tr>
                             <td>
-                                <strong style="cursor:pointer;color:var(--primary, #2563eb);" onclick="openDrawer('@m.CustomerId')">@m.FullName</strong>
+                                <strong style="cursor:pointer;color:var(--brand, #019c01);" onclick="openDrawer('@m.CustomerId')">@m.FullName</strong>
                             </td>
                             <td>
                                 <div>@(m.PrimaryPhone ?? "—")</div>
@@ -994,7 +994,7 @@
                         <tr>
                             <td>@t.DateCreated.ToString("yyyy-MM-dd HH:mm:ss")</td>
                             <td>
-                                <strong style="cursor:pointer;color:var(--primary, #2563eb);" onclick="openDrawer('@t.CustomerId')">@t.CustomerName</strong>
+                                <strong style="cursor:pointer;color:var(--brand, #019c01);" onclick="openDrawer('@t.CustomerId')">@t.CustomerName</strong>
                             </td>
                             <td>@(t.CustomerPhone ?? "—")</td>
                             <td>
@@ -1006,7 +1006,7 @@
                             <td>
                                 @if (t.InvoiceId.HasValue)
                                 {
-                                    <a href="/Invoices?id=@t.InvoiceId" target="_blank" style="color:var(--primary, #2563eb);text-decoration:underline;">
+                                    <a href="/Invoices?id=@t.InvoiceId" target="_blank" style="color:var(--brand, #019c01);text-decoration:underline;">
                                         INV-@t.InvoiceId.Value.ToString("D")[..8]
                                     </a>
                                 }
@@ -1208,7 +1208,7 @@
                         <input type="hidden" name="ManageForm.CustomerId" id="modalCustomerId" required />
                     </div>
                     <div id="modalCustomerHint" style="font-size:0.8rem;color:var(--text-muted);margin-top:6px;display:none;">
-                        Selected: <strong id="modalSelectedName"></strong> | Balance: <strong id="modalSelectedPoints" style="color:var(--primary, #2563eb);">0</strong> pts (<span id="modalSelectedTier">Bronze</span>)
+                        Selected: <strong id="modalSelectedName"></strong> | Balance: <strong id="modalSelectedPoints" style="color:var(--brand, #019c01);">0</strong> pts (<span id="modalSelectedTier">Bronze</span>)
                     </div>
                 </div>
 
@@ -1430,7 +1430,7 @@
                             <span class="badge" style="background:#059669;color:#fff;">ACTIVE</span>
                         </div>
                         <p style="font-size:0.82rem;color:var(--text-muted);margin:4px 0 8px 0;">${c.description || 'Exclusive loyalty reward promotion.'}</p>
-                        <div style="font-size:0.8rem;font-weight:600;color:var(--primary, #2563eb);display:flex;align-items:center;gap:5px;">
+                        <div style="font-size:0.8rem;font-weight:600;color:var(--brand, #019c01);display:flex;align-items:center;gap:5px;">
                             ${c.multiplierFactor ? `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg> ${c.multiplierFactor}x Point Multiplier` : `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/></svg> +${c.bonusPoints} Bonus Points`}
                         </div>
                     </div>
