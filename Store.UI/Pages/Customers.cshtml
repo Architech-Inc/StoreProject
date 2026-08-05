@@ -52,7 +52,7 @@
             flex-shrink: 0;
         }
 
-        .crm-kpi-icon.blue { background: rgba(59, 130, 246, 0.12); color: #2563eb; }
+        .crm-kpi-icon.blue, .crm-kpi-icon.brand { background: var(--brand-soft, rgba(1, 156, 1, 0.12)); color: var(--brand, #019c01); }
         .crm-kpi-icon.gold { background: rgba(245, 158, 11, 0.12); color: #d97706; }
         .crm-kpi-icon.purple { background: rgba(139, 92, 246, 0.12); color: #7c3aed; }
         .crm-kpi-icon.amber { background: rgba(239, 68, 68, 0.12); color: #dc2626; }
@@ -238,10 +238,10 @@
         }
 
         .crm-btn-primary:hover {
-            background: var(--brand-dark, #059669);
-            border-color: var(--brand-dark, #059669);
+            background: var(--brand-dark, #006300);
+            border-color: var(--brand-dark, #006300);
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.28);
+            box-shadow: 0 4px 12px rgba(1, 156, 1, 0.28);
         }
 
         .crm-btn-primary svg {
@@ -338,7 +338,7 @@
 
         .crm-card:hover {
             transform: translateY(-3px);
-            border-color: var(--brand);
+            border-color: var(--brand-border, #b7d9b7);
             box-shadow: var(--shadow-md, 0 6px 18px rgba(0,0,0,0.08));
         }
 
@@ -546,12 +546,19 @@
         }
 
         .crm-tab-btn:hover {
-            color: var(--text-primary);
+            background: transparent;
+            color: var(--brand, #019c01);
         }
 
         .crm-tab-btn.active {
-            color: var(--brand);
-            border-bottom-color: var(--brand);
+            background: transparent;
+            color: var(--brand, #019c01);
+            border-bottom-color: var(--brand, #019c01);
+        }
+
+        .crm-tab-btn.active:hover {
+            background: transparent;
+            color: var(--brand, #019c01);
         }
 
         .crm-tab-pane {

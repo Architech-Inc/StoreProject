@@ -150,10 +150,13 @@ tbody tr:hover {
     font-weight: 600;
 }
 
-.badge-green  { background: #dcfce7; color: #15803d; }
+.badge-green, .badge-brand { background: var(--brand-soft, #e8f5e8); color: var(--brand, #019c01); }
+.badge-blue   { background: var(--brand-soft, #e8f5e8); color: var(--brand, #019c01); }
 .badge-red    { background: #fee2e2; color: #b91c1c; }
 .badge-gray   { background: #f1f5f9; color: #475569; }
-.badge-yellow { background: #fef9c3; color: #854d0e; }
+.badge-yellow, .badge-amber { background: #fef9c3; color: #854d0e; }
+.badge-gold   { background: rgba(245, 158, 11, 0.15); color: #d97706; }
+.badge-purple { background: rgba(139, 92, 246, 0.15); color: #7c3aed; }
 
 /* ── search/filter bar ───────────────────────── */
 .filter-bar {
@@ -381,12 +384,12 @@ button.toggle.off {
 .catalog-kpi-card:hover {
     transform: translateY(-3px);
     box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-    border-color: var(--ops-brand, #3b82f6);
+    border-color: var(--brand-border, #b7d9b7);
 }
 
 .catalog-kpi-card.active {
-    border-color: var(--ops-brand, #3b82f6);
-    background: rgba(59, 130, 246, 0.04);
+    border-color: var(--ops-brand, #019c01);
+    background: var(--brand-soft, rgba(1, 156, 1, 0.06));
 }
 
 .catalog-kpi-icon {
@@ -400,7 +403,8 @@ button.toggle.off {
     flex-shrink: 0;
 }
 
-.kpi-icon-blue   { background: rgba(59, 130, 246, 0.12); color: #2563eb; }
+.kpi-icon-blue   { background: var(--brand-soft, rgba(1, 156, 1, 0.12)); color: var(--brand, #019c01); }
+.kpi-icon-brand  { background: var(--brand-soft, rgba(1, 156, 1, 0.12)); color: var(--brand, #019c01); }
 .kpi-icon-green  { background: rgba(16, 185, 129, 0.12); color: #059669; }
 .kpi-icon-amber  { background: rgba(245, 158, 11, 0.12); color: #d97706; }
 .kpi-icon-red    { background: rgba(239, 68, 68, 0.12); color: #dc2626; }
@@ -474,8 +478,8 @@ button.toggle.off {
 }
 
 .filter-search-box input:focus {
-    border-color: var(--ops-brand, #3b82f6);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    border-color: var(--ops-brand, #019c01);
+    box-shadow: 0 0 0 3px rgba(1, 156, 1, 0.15);
 }
 
 .filter-search-icon {
@@ -536,13 +540,13 @@ button.toggle.off {
 }
 
 .filter-pill:hover {
-    border-color: var(--ops-brand, #3b82f6);
-    color: var(--ops-ink);
+    border-color: var(--ops-brand, #019c01);
+    color: var(--ops-brand, #019c01);
 }
 
 .filter-pill.active {
-    background: var(--ops-brand, #3b82f6);
-    border-color: var(--ops-brand, #3b82f6);
+    background: var(--ops-brand, #019c01);
+    border-color: var(--ops-brand, #019c01);
     color: #fff;
     font-weight: 600;
 }
@@ -561,18 +565,30 @@ button.toggle.off {
     background: transparent;
     color: var(--ops-subtle);
     cursor: pointer;
-    display: flex;
+    display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
     font-size: 0.85rem;
+    line-height: 1;
     transition: all 0.15s ease;
+}
+
+.view-toggle-btn:hover:not(.active) {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--ops-ink);
 }
 
 .view-toggle-btn.active {
     background: var(--ops-paper);
-    color: var(--ops-brand, #3b82f6);
+    color: var(--ops-brand, #019c01);
     font-weight: 600;
     box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+.view-toggle-btn.active:hover {
+    background: var(--ops-paper);
+    color: var(--ops-brand, #019c01);
 }
 
 /* Interactive Table */
@@ -582,7 +598,7 @@ button.toggle.off {
 }
 
 .catalog-table tbody tr:hover {
-    background-color: rgba(59, 130, 246, 0.05);
+    background-color: var(--surface-alt, rgba(0,0,0,0.02));
 }
 
 .row-photo-thumb {
@@ -646,7 +662,7 @@ button.toggle.off {
 .product-card-modern:hover {
     transform: translateY(-4px);
     box-shadow: 0 10px 25px rgba(0,0,0,0.12);
-    border-color: var(--ops-brand, #3b82f6);
+    border-color: var(--brand-border, #b7d9b7);
 }
 
 .card-photo-hero {
@@ -732,7 +748,7 @@ button.toggle.off {
 .card-price-primary {
     font-size: 1.15rem;
     font-weight: 700;
-    color: var(--ops-brand, #2563eb);
+    color: var(--ops-brand, #019c01);
 }
 
 .card-cost-sub {

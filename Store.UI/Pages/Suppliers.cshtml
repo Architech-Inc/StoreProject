@@ -53,7 +53,7 @@
             flex-shrink: 0;
         }
 
-        .supplier-kpi-icon.blue { background: rgba(59, 130, 246, 0.12); color: #2563eb; }
+        .supplier-kpi-icon.blue, .supplier-kpi-icon.brand { background: var(--brand-soft, rgba(1, 156, 1, 0.12)); color: var(--brand, #019c01); }
         .supplier-kpi-icon.teal { background: rgba(20, 184, 166, 0.12); color: #0d9488; }
         .supplier-kpi-icon.purple { background: rgba(139, 92, 246, 0.12); color: #7c3aed; }
         .supplier-kpi-icon.amber { background: rgba(245, 158, 11, 0.12); color: #d97706; }
@@ -155,8 +155,12 @@
 
         .supplier-view-btn.active {
             background: var(--surface);
-            color: var(--accent-primary, #3b82f6);
+            color: var(--brand, #019c01);
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .supplier-view-btn:hover {
+            color: var(--brand, #019c01);
         }
 
         /* Supplier Grid Cards */
@@ -182,7 +186,7 @@
         .supplier-card:hover {
             transform: translateY(-2px);
             box-shadow: var(--shadow-md, 0 6px 16px rgba(0,0,0,0.06));
-            border-color: var(--accent-primary, #3b82f6);
+            border-color: var(--brand-border, #b7d9b7);
         }
 
         .supplier-card-header {
@@ -283,24 +287,24 @@
             gap: 6px;
             padding: 8px 16px;
             border-radius: 8px;
-            background: var(--brand, #10b981);
+            background: var(--brand, #019c01);
             color: #ffffff !important;
-            border: 1px solid var(--brand, #10b981);
+            border: 1px solid var(--brand, #019c01);
             font-size: 0.88rem;
             font-weight: 600;
             line-height: 1;
             text-decoration: none !important;
             cursor: pointer;
-            box-shadow: 0 2px 6px rgba(16, 185, 129, 0.2);
+            box-shadow: 0 2px 6px rgba(1, 156, 1, 0.2);
             transition: all 0.15s ease;
             white-space: nowrap;
         }
 
         .supplier-btn-primary:hover {
-            background: var(--brand-dark, #059669);
-            border-color: var(--brand-dark, #059669);
+            background: var(--brand-dark, #006300);
+            border-color: var(--brand-dark, #006300);
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.28);
+            box-shadow: 0 4px 12px rgba(1, 156, 1, 0.28);
             color: #ffffff !important;
             text-decoration: none !important;
         }
@@ -333,7 +337,7 @@
 
         .supplier-btn-secondary:hover {
             background: var(--canvas);
-            border-color: var(--border-hover, #94a3b8);
+            border-color: var(--brand-border, #b7d9b7);
             color: var(--text-primary) !important;
             text-decoration: none !important;
         }
@@ -352,24 +356,24 @@
             gap: 6px;
             padding: 8px 16px;
             border-radius: 8px;
-            background: #ef4444;
+            background: var(--danger, #d13438);
             color: #ffffff !important;
-            border: 1px solid #ef4444;
+            border: 1px solid var(--danger, #d13438);
             font-size: 0.88rem;
             font-weight: 600;
             line-height: 1;
             cursor: pointer;
             text-decoration: none !important;
-            box-shadow: 0 2px 6px rgba(239, 68, 68, 0.2);
+            box-shadow: 0 2px 6px rgba(209, 52, 56, 0.2);
             transition: all 0.15s ease;
             white-space: nowrap;
         }
 
         .supplier-btn-danger:hover {
-            background: #dc2626;
-            border-color: #dc2626;
+            background: var(--danger-hover, #a72729);
+            border-color: var(--danger-hover, #a72729);
             transform: translateY(-1px);
-            box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);
+            box-shadow: 0 4px 10px rgba(209, 52, 56, 0.3);
             color: #ffffff !important;
             text-decoration: none !important;
         }
@@ -409,8 +413,8 @@
 
         .supplier-btn-icon:hover {
             background: var(--canvas);
-            color: var(--brand, #10b981) !important;
-            border-color: var(--brand, #10b981);
+            color: var(--brand, #019c01) !important;
+            border-color: var(--brand, #019c01);
         }
 
         .supplier-btn-icon svg {
@@ -528,8 +532,8 @@
 
         .supplier-quick-btn:hover {
             background: var(--surface);
-            border-color: var(--accent-primary, #3b82f6);
-            color: var(--accent-primary, #3b82f6);
+            border-color: var(--brand, #019c01);
+            color: var(--brand, #019c01);
         }
 
         .supplier-quick-btn.whatsapp {
@@ -571,9 +575,20 @@
             transition: all 0.15s ease;
         }
 
+        .supplier-tab-btn:hover {
+            background: transparent;
+            color: var(--brand, #019c01);
+        }
+
         .supplier-tab-btn.active {
-            color: var(--accent-primary, #3b82f6);
-            border-bottom-color: var(--accent-primary, #3b82f6);
+            background: transparent;
+            color: var(--brand, #019c01);
+            border-bottom-color: var(--brand, #019c01);
+        }
+
+        .supplier-tab-btn.active:hover {
+            background: transparent;
+            color: var(--brand, #019c01);
         }
 
         .supplier-tab-pane {
@@ -1643,7 +1658,7 @@
                             <div style="font-size:0.75rem; color:var(--text-secondary); font-family:monospace;">${i.barcode ? 'BARCODE: ' + i.barcode : 'NO BARCODE'}</div>
                         </div>
                         <div style="text-align:right;">
-                            <div style="font-weight:700; color:var(--accent-primary, #3b82f6);">${(i.lastUnitCost || 0).toLocaleString()} XAF <small style="font-weight:normal; color:var(--text-secondary);">/unit</small></div>
+                            <div style="font-weight:700; color:var(--brand, #019c01);">${(i.lastUnitCost || 0).toLocaleString()} XAF <small style="font-weight:normal; color:var(--text-secondary);">/unit</small></div>
                             <div style="font-size:0.75rem; color:var(--text-secondary);">Total Rcvd: ${i.totalQuantityReceived}</div>
                         </div>
                     </div>

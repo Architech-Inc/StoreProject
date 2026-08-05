@@ -21,7 +21,7 @@
     <section class="catalog-kpi-grid">
         <a href="?search=&categoryId=&stockStatus=all&sortBy=@Model.SortBy&viewMode=@Model.ViewMode" 
            class="catalog-kpi-card @(Model.StockStatus == "all" && string.IsNullOrEmpty(Model.Search) ? "active" : "")">
-            <div class="catalog-kpi-icon kpi-icon-blue">📦</div>
+            <div class="catalog-kpi-icon kpi-icon-brand">📦</div>
             <div class="catalog-kpi-info">
                 <span class="catalog-kpi-label">Active Products</span>
                 <span class="catalog-kpi-val">@Model.TotalSkus.ToString("N0")</span>
@@ -465,7 +465,7 @@
         </div>
 
         <!-- Inventory Valuation Card -->
-        <div class="financial-metric-card" style="background:rgba(59,130,246,0.05);border-color:rgba(59,130,246,0.2);">
+        <div class="financial-metric-card" style="background:var(--brand-soft, #e8f5e8);border-color:var(--brand-border, #b7d9b7);">
             <span class="f-label" style="color:var(--ops-brand);">Total Inventory Valuation (Cost)</span>
             <span class="f-val" id="drawerStockValuation" style="color:var(--ops-brand);">0 XAF</span>
         </div>

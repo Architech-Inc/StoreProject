@@ -58,7 +58,7 @@
         }
 
         .inv-kpi-icon.green { background: rgba(16, 185, 129, 0.12); color: #059669; }
-        .inv-kpi-icon.blue { background: rgba(59, 130, 246, 0.12); color: #2563eb; }
+        .inv-kpi-icon.blue, .inv-kpi-icon.brand { background: var(--brand-soft, rgba(1, 156, 1, 0.12)); color: var(--brand, #019c01); }
         .inv-kpi-icon.amber { background: rgba(245, 158, 11, 0.12); color: #d97706; }
         .inv-kpi-icon.purple { background: rgba(139, 92, 246, 0.12); color: #7c3aed; }
         .inv-kpi-icon.red { background: rgba(239, 68, 68, 0.12); color: #dc2626; }
@@ -175,7 +175,7 @@
         }
 
         .inv-btn-primary:hover {
-            background: var(--brand-dark, #059669);
+            background: var(--brand-dark, #006300);
             transform: translateY(-1px);
         }
 
@@ -277,7 +277,7 @@
         }
 
         .inv-table tbody tr:hover {
-            background: rgba(59, 130, 246, 0.03);
+            background: var(--surface-alt, rgba(0, 0, 0, 0.02));
         }
 
         .inv-id-chip {
@@ -672,7 +672,7 @@
             <h1 style="font-size: 1.6rem; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 10px;">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--brand);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                 Invoices & Billing Hub
-                <span style="font-size: 0.8rem; font-weight: 600; padding: 2px 8px; border-radius: 12px; background: rgba(59, 130, 246, 0.12); color: #2563eb;">
+                <span style="font-size: 0.8rem; font-weight: 600; padding: 2px 8px; border-radius: 12px; background: var(--brand-soft, rgba(1, 156, 1, 0.12)); color: var(--brand, #019c01);">
                     @Model.TotalInvoices recorded
                 </span>
             </h1>
@@ -1385,7 +1385,7 @@
 
                 <!-- Notes if present -->
                 ${inv.notes ? `
-                    <div style="background: rgba(59, 130, 246, 0.06); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 8px; padding: 10px 14px; font-size: 0.86rem;">
+                    <div style="background: var(--brand-soft, rgba(1, 156, 1, 0.06)); border: 1px solid var(--brand-border, #b7d9b7); border-radius: 8px; padding: 10px 14px; font-size: 0.86rem;">
                         <strong>Notes / Audit:</strong> ${escapeHtml(inv.notes)}
                     </div>
                 ` : ''}
