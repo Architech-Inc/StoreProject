@@ -696,7 +696,9 @@
     <!-- 1. KPI Metrics Banner -->
     <div class="loyalty-kpi-grid">
         <div class="loyalty-kpi-card">
-            <div class="loyalty-kpi-icon purple">👥</div>
+            <div class="loyalty-kpi-icon purple">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
             <div>
                 <div class="loyalty-kpi-val">@Model.Metrics.TotalMembers.ToString("N0")</div>
                 <div class="loyalty-kpi-lbl">Enrolled Members (@Model.Metrics.ActiveMembers Active)</div>
@@ -704,7 +706,9 @@
         </div>
 
         <div class="loyalty-kpi-card">
-            <div class="loyalty-kpi-icon amber">💰</div>
+            <div class="loyalty-kpi-icon amber">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+            </div>
             <div>
                 <div class="loyalty-kpi-val">@Model.Metrics.TotalPointsLiability.ToString("N0") <small style="font-size:0.8rem;color:var(--text-muted);">pts</small></div>
                 <div class="loyalty-kpi-lbl">Points Liability (~@Model.Metrics.PointsLiabilityValueXaf.ToString("N0") XAF)</div>
@@ -712,7 +716,9 @@
         </div>
 
         <div class="loyalty-kpi-card">
-            <div class="loyalty-kpi-icon green">📈</div>
+            <div class="loyalty-kpi-icon green">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+            </div>
             <div>
                 <div class="loyalty-kpi-val">+@Model.Metrics.PointsEarnedThisMonth.ToString("N0")</div>
                 <div class="loyalty-kpi-lbl">Points Earned (MTD)</div>
@@ -720,7 +726,9 @@
         </div>
 
         <div class="loyalty-kpi-card">
-            <div class="loyalty-kpi-icon rose">🎁</div>
+            <div class="loyalty-kpi-icon rose">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+            </div>
             <div>
                 <div class="loyalty-kpi-val">-@Model.Metrics.PointsRedeemedThisMonth.ToString("N0")</div>
                 <div class="loyalty-kpi-lbl">Points Redeemed (MTD)</div>
@@ -728,7 +736,9 @@
         </div>
 
         <div class="loyalty-kpi-card">
-            <div class="loyalty-kpi-icon blue">🏆</div>
+            <div class="loyalty-kpi-icon blue">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
+            </div>
             <div>
                 <div class="loyalty-kpi-val">@Model.Metrics.VipTierRatio.ToString("F1")%</div>
                 <div class="loyalty-kpi-lbl">VIP Ratio (Silver: @Model.Metrics.SilverCount | Gold: @Model.Metrics.GoldCount)</div>
@@ -745,16 +755,16 @@
                 <input type="hidden" name="tier" id="tierFilterInput" value="@Model.Tier" />
 
                 <div class="loyalty-search-box">
-                    <span class="search-icon">🔍</span>
+                    <span class="search-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
                     <input type="text" name="search" id="memberSearchInput" value="@Model.Search" placeholder="Search by name, phone, email, ID..." />
                 </div>
 
                 <!-- Tier Filter Pills -->
                 <div class="tier-pills">
                     <a href="javascript:void(0)" onclick="setTierFilter('')" class="tier-pill @(string.IsNullOrEmpty(Model.Tier) ? "active" : "")">All Tiers</a>
-                    <a href="javascript:void(0)" onclick="setTierFilter('Bronze')" class="tier-pill @(Model.Tier == "Bronze" ? "active" : "")">🥉 Bronze</a>
-                    <a href="javascript:void(0)" onclick="setTierFilter('Silver')" class="tier-pill @(Model.Tier == "Silver" ? "active" : "")">🥈 Silver</a>
-                    <a href="javascript:void(0)" onclick="setTierFilter('Gold')" class="tier-pill @(Model.Tier == "Gold" ? "active" : "")">🥇 Gold</a>
+                    <a href="javascript:void(0)" onclick="setTierFilter('Bronze')" class="tier-pill @(Model.Tier == "Bronze" ? "active" : "")"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg> Bronze</a>
+                    <a href="javascript:void(0)" onclick="setTierFilter('Silver')" class="tier-pill @(Model.Tier == "Silver" ? "active" : "")"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg> Silver</a>
+                    <a href="javascript:void(0)" onclick="setTierFilter('Gold')" class="tier-pill @(Model.Tier == "Gold" ? "active" : "")"><svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" stroke="none"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg> Gold</a>
                 </div>
 
                 <!-- Sort By -->
@@ -773,18 +783,20 @@
             <!-- View Mode Switcher -->
             <div class="view-mode-toggles">
                 <a href="/Loyalty?viewMode=grid&search=@Model.Search&tier=@Model.Tier&sortBy=@Model.SortBy" class="view-mode-btn @(Model.ViewMode == "grid" ? "active" : "")" title="Grid View">🔲 Grid</a>
-                <a href="/Loyalty?viewMode=table&search=@Model.Search&tier=@Model.Tier&sortBy=@Model.SortBy" class="view-mode-btn @(Model.ViewMode == "table" ? "active" : "")" title="Table View">📋 Table</a>
-                <a href="/Loyalty?viewMode=ledger&search=@Model.Search&tier=@Model.Tier&sortBy=@Model.SortBy" class="view-mode-btn @(Model.ViewMode == "ledger" ? "active" : "")" title="Global Ledger">📜 Ledger</a>
+                <a href="/Loyalty?viewMode=table&search=@Model.Search&tier=@Model.Tier&sortBy=@Model.SortBy" class="view-mode-btn @(Model.ViewMode == "table" ? "active" : "")" title="Table View"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg> Table</a>
+                <a href="/Loyalty?viewMode=ledger&search=@Model.Search&tier=@Model.Tier&sortBy=@Model.SortBy" class="view-mode-btn @(Model.ViewMode == "ledger" ? "active" : "")" title="Global Ledger"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> Ledger</a>
             </div>
 
             <!-- CSV Export -->
             <a href="/Loyalty?handler=ExportCsv&search=@Model.Search&tier=@Model.Tier" class="loyalty-btn-secondary" title="Export to CSV">
-                📊 Export CSV
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Export CSV
             </a>
 
             <!-- Manage Points Action -->
             <button type="button" class="loyalty-btn-primary" onclick="openManageModal()">
-                ✨ Manage Points & Rewards
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                Manage Points &amp; Rewards
             </button>
         </div>
     </div>
@@ -796,7 +808,7 @@
         @if (!Model.Members.Items.Any())
         {
             <div class="card" style="text-align:center;padding:48px 24px;">
-                <div style="font-size:3rem;margin-bottom:12px;">🏆</div>
+                <div style="margin-bottom:16px;color:var(--primary,#2563eb);"><svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg></div>
                 <h3 style="margin-bottom:6px;">No Loyalty Members Found</h3>
                 <p style="color:var(--text-muted);max-width:400px;margin:0 auto 16px;">No loyalty accounts match your current filter. Try adjusting your search or award points to a customer.</p>
                 <button type="button" class="loyalty-btn-primary" onclick="openManageModal()">+ Award Loyalty Points</button>
@@ -830,7 +842,7 @@
                                         <span class="badge" style="font-size:0.75rem;">@m.Segment</span>
                                     </div>
                                     <div style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;">
-                                        📞 @(string.IsNullOrEmpty(m.PrimaryPhone) ? "No phone" : m.PrimaryPhone)
+                                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block;vertical-align:middle;margin-right:3px;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.63 3.38 2 2 0 0 1 3.6 1.18h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.73a16 16 0 0 0 6.29 6.29l.96-.96a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7a2 2 0 0 1 1.72 2.01z"/></svg> @(string.IsNullOrEmpty(m.PrimaryPhone) ? "No phone" : m.PrimaryPhone)
                                     </div>
                                 </div>
                             </div>
@@ -854,11 +866,11 @@
                                     <span>
                                         @if (m.Tier == "Gold")
                                         {
-                                            <span>🥇 Max Tier Reached</span>
+                                            <span><svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" stroke="none" style="display:inline-block;vertical-align:middle;margin-right:2px;"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg> Max Tier Reached</span>
                                         }
                                         else
                                         {
-                                            <span>Next: @(m.Tier == "Bronze" ? "🥈 Silver" : "🥇 Gold")</span>
+                                            <span>Next: @(m.Tier == "Bronze" ? "Silver" : "Gold")</span>
                                         }
                                     </span>
                                     <span>
@@ -881,10 +893,10 @@
                         <!-- Card Actions -->
                         <div class="loyalty-card-actions">
                             <button type="button" class="loyalty-btn-secondary" style="flex:1;justify-content:center;padding:6px 10px;" onclick="openDrawer('@m.CustomerId')">
-                                🔍 360 Hub
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> 360 Hub
                             </button>
                             <button type="button" class="loyalty-btn-primary" style="padding:6px 12px;" onclick="quickActionModal('@m.CustomerId', '@m.FullName', @m.Points)" title="Quick Action">
-                                ⚡ Action
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Action
                             </button>
                         </div>
                     </div>
@@ -938,8 +950,8 @@
                             <td style="text-align:right;color:var(--text-secondary);">@m.TotalPointsRedeemed.ToString("N0")</td>
                             <td>@(m.LastTransactionDate?.ToString("yyyy-MM-dd HH:mm") ?? "—")</td>
                             <td style="text-align:center;">
-                                <button type="button" class="loyalty-btn-icon" onclick="openDrawer('@m.CustomerId')" title="View 360 Drawer">🔍</button>
-                                <button type="button" class="loyalty-btn-icon" onclick="quickActionModal('@m.CustomerId', '@m.FullName', @m.Points)" title="Manage Points">⚡</button>
+                                <button type="button" class="loyalty-btn-icon" onclick="openDrawer('@m.CustomerId')" title="View 360 Drawer"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
+                                <button type="button" class="loyalty-btn-icon" onclick="quickActionModal('@m.CustomerId', '@m.FullName', @m.Points)" title="Manage Points"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></button>
                             </td>
                         </tr>
                     }
@@ -1056,11 +1068,11 @@
     <!-- Quick Action Bar in Drawer -->
     <div style="padding:12px 24px;background:var(--surface-alt, rgba(0,0,0,0.02));border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;">
         <button type="button" class="loyalty-btn-primary" style="flex:1;justify-content:center;padding:7px 12px;" onclick="openManageFromDrawer()">
-            ⚡ Manage Points
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Manage Points
         </button>
-        <a id="drawerCallBtn" href="tel:" class="loyalty-btn-secondary" title="Call Member">📞</a>
-        <a id="drawerWhatsappBtn" href="https://wa.me/" target="_blank" class="loyalty-btn-secondary" title="WhatsApp Member">💬</a>
-        <a id="drawerEmailBtn" href="mailto:" class="loyalty-btn-secondary" title="Email Member">✉️</a>
+        <a id="drawerCallBtn" href="tel:" class="loyalty-btn-secondary" title="Call Member"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.63 3.38 2 2 0 0 1 3.6 1.18h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.73a16 16 0 0 0 6.29 6.29l.96-.96a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7a2 2 0 0 1 1.72 2.01z"/></svg></a>
+        <a id="drawerWhatsappBtn" href="https://wa.me/" target="_blank" class="loyalty-btn-secondary" title="WhatsApp Member"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></a>
+        <a id="drawerEmailBtn" href="mailto:" class="loyalty-btn-secondary" title="Email Member"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></a>
     </div>
 
     <!-- Drawer Navigation Tabs -->
@@ -1097,9 +1109,9 @@
                     <div id="drawerTierProgressBar" class="tier-progress-bar bronze" style="width:0%;"></div>
                 </div>
                 <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:var(--text-muted);">
-                    <span>🥉 Bronze (0)</span>
-                    <span>🥈 Silver (500)</span>
-                    <span>🥇 Gold (2,000+)</span>
+                    <span style="display:flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="#cd7f32" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg> Bronze (0)</span>
+                    <span style="display:flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="#94a3b8" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg> Silver (500)</span>
+                    <span style="display:flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" width="10" height="10" fill="#f59e0b" stroke="none"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg> Gold (2,000+)</span>
                 </div>
             </div>
 
@@ -1147,7 +1159,8 @@
             </div>
 
             <button type="button" class="loyalty-btn-secondary" style="width:100%;justify-content:center;margin-top:8px;" onclick="window.print()">
-                🖨️ Print Digital Member Pass
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                Print Digital Member Pass
             </button>
         </div>
 
@@ -1179,9 +1192,9 @@
         <div class="modal-body">
             <!-- Mode Switcher -->
             <div class="mode-segmented-control">
-                <button type="button" class="mode-btn active" id="modeBtnEarn" onclick="setModalMode('Earn')">🎁 Earn Points</button>
-                <button type="button" class="mode-btn" id="modeBtnRedeem" onclick="setModalMode('Redeem')">🏷️ Redeem Reward</button>
-                <button type="button" class="mode-btn" id="modeBtnAdjust" onclick="setModalMode('Adjust')">⚙️ Admin Adjust</button>
+                <button type="button" class="mode-btn active" id="modeBtnEarn" onclick="setModalMode('Earn')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg> Earn Points</button>
+                <button type="button" class="mode-btn" id="modeBtnRedeem" onclick="setModalMode('Redeem')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg> Redeem Reward</button>
+                <button type="button" class="mode-btn" id="modeBtnAdjust" onclick="setModalMode('Adjust')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M19.07 19.07l-1.41-1.41M4.93 19.07l1.41-1.41M4.93 4.93l1.41 1.41M21 12h-2M5 12H3M12 21v-2M12 5V3"/></svg> Admin Adjust</button>
             </div>
 
             <form method="post" asp-page-handler="ManagePoints" id="managePointsForm">
@@ -1212,8 +1225,8 @@
                             = 500 XAF Value
                         </div>
                     </div>
-                    <div id="modalBalanceWarning" style="color:#e11d48;font-size:0.8rem;margin-top:4px;display:none;">
-                        ⚠️ Warning: Requested points exceed member's available balance!
+                    <div id="modalBalanceWarning" style="color:#e11d48;font-size:0.8rem;margin-top:4px;display:none;display:flex;align-items:center;gap:5px;">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Warning: Requested points exceed member's available balance!
                     </div>
                 </div>
 
@@ -1234,7 +1247,7 @@
                 <div style="display:flex;gap:10px;justify-content:flex-end;">
                     <button type="button" class="loyalty-btn-secondary" onclick="closeManageModal()">Cancel</button>
                     <button type="submit" class="loyalty-btn-primary" id="modalSubmitBtn">
-                        🎁 Award Points
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg> Award Points
                     </button>
                 </div>
             </form>
@@ -1417,8 +1430,8 @@
                             <span class="badge" style="background:#059669;color:#fff;">ACTIVE</span>
                         </div>
                         <p style="font-size:0.82rem;color:var(--text-muted);margin:4px 0 8px 0;">${c.description || 'Exclusive loyalty reward promotion.'}</p>
-                        <div style="font-size:0.8rem;font-weight:600;color:var(--primary, #2563eb);">
-                            ${c.multiplierFactor ? `🔥 ${c.multiplierFactor}x Point Multiplier` : `🎁 +${c.bonusPoints} Bonus Points`}
+                        <div style="font-size:0.8rem;font-weight:600;color:var(--primary, #2563eb);display:flex;align-items:center;gap:5px;">
+                            ${c.multiplierFactor ? `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg> ${c.multiplierFactor}x Point Multiplier` : `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/></svg> +${c.bonusPoints} Bonus Points`}
                         </div>
                     </div>
                 `;
@@ -1494,15 +1507,15 @@
 
             if (mode === 'Earn') {
                 pointsLbl.innerText = 'Points to Award';
-                submitBtn.innerHTML = '🎁 Award Points';
+                submitBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block;vertical-align:middle;margin-right:5px;"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg> Award Points';
                 invGroup.style.display = 'block';
             } else if (mode === 'Redeem') {
                 pointsLbl.innerText = 'Points to Redeem';
-                submitBtn.innerHTML = '🏷️ Redeem Reward';
+                submitBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block;vertical-align:middle;margin-right:5px;"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg> Redeem Reward';
                 invGroup.style.display = 'none';
             } else {
                 pointsLbl.innerText = 'Points Adjustment (+ or -)';
-                submitBtn.innerHTML = '⚙️ Apply Adjustment';
+                submitBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block;vertical-align:middle;margin-right:5px;"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M19.07 19.07l-1.41-1.41M4.93 19.07l1.41-1.41M4.93 4.93l1.41 1.41M21 12h-2M5 12H3M12 21v-2M12 5V3"/></svg> Apply Adjustment';
                 invGroup.style.display = 'none';
             }
 
