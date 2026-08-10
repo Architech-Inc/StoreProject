@@ -35,6 +35,11 @@ public class ApiAuthenticationService : IAuthenticationService
         return await _client.PostAsync<LoginResponse>("/api/auth/login/phone", request, ct);
     }
 
+    public async Task<LoginResponse?> LoginWithBiometricsAsync(Guid userId, CancellationToken ct = default)
+    {
+        throw new NotSupportedException("Biometric login is handled via WebAuthnController flows in the API directly.");
+    }
+
     public async Task<LoginResponse?> RefreshTokenAsync(RefreshTokenRequest request, CancellationToken ct = default)
     {
         _logger.LogInformation("Refreshing authentication token");

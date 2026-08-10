@@ -36,4 +36,5 @@ public class User : BaseEntity
     public ICollection<StockMovement> StockMovements { get; set; } = new List<StockMovement>();
     public ICollection<CashierShift> OpenedShifts { get; set; } = new List<CashierShift>();
     public ICollection<CashierShift> ClosedShifts { get; set; } = new List<CashierShift>();
+    public ICollection<FidoCredential> FidoCredentials { get; set; } = new List<FidoCredential>();
 }

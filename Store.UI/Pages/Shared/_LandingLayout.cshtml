@@ -34,7 +34,7 @@
             <a href="#about">About</a>
         </nav>
         <div class="landing-actions">
-            @if (User.Identity?.IsAuthenticated == true)
+            @if (!string.IsNullOrEmpty(Context.Session.GetString("access_token")))
             {
                 <a href="/Dashboard" class="btn-glass">
                     Go to Dashboard

@@ -12,7 +12,7 @@
     <p class="hero-subtitle">Experience a fluid, real-time store management system. Unify your Point of Sale, Inventory, and Analytics into one premium platform.</p>
     
     <div class="hero-actions">
-        @if (User.Identity?.IsAuthenticated == true)
+        @if (Model.IsAuthenticated)
         {
             <a href="/Dashboard" class="btn-primary-glow">
                 Enter Workspace

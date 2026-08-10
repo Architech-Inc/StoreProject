@@ -72,6 +72,61 @@ public class AuthenticationService : IAuthenticationService
         return await AuthenticateUser(user, request.Password, ct);
     }
 
+    public async Task<LoginResponse?> LoginWithBiometricsAsync(Guid userId, CancellationToken ct = default)
+    {
+        var user = await _uow.Repository<User>().Query()
+            .Include(u => u.Role)
+            .Include(u => u.UserToken)
+            .FirstOrDefaultAsync(u => u.UserId == userId, ct);
+
+        if (user is null || user.Status == UserStatus.Banned || user.Status == UserStatus.Deleted)
+            return null;
+
+        // Skip password verification and just issue the tokens
+        var permissions = await GetPermissionClaimsAsync(user.RoleId, ct);
+        var (token, refreshToken, expiry, refreshExpiry) = GenerateTokens(user, permissions);
+
+        if (user.UserToken is null)
+        {
+            var newToken = new UserToken
+            {
+                UserId = user.UserId,
+                Token = token,
+                RefreshTokenHash = HashRefreshToken(refreshToken),
+                ExpiryDate = expiry,
+                RefreshTokenExpiryDate = refreshExpiry,
+                IsRevoked = false
+            };
+            await _uow.Repository<UserToken>().AddAsync(newToken, ct);
+        }
+        else
+        {
+            user.UserToken.Token = token;
+            user.UserToken.RefreshTokenHash = HashRefreshToken(refreshToken);
+            user.UserToken.ExpiryDate = expiry;
+            user.UserToken.RefreshTokenExpiryDate = refreshExpiry;
+            user.UserToken.IsRevoked = false;
+            _uow.Repository<UserToken>().Update(user.UserToken);
+        }
+
+        await _uow.SaveChangesAsync(ct);
+
+        return new LoginResponse
+        {
+            AccessToken = token,
+            RefreshToken = refreshToken,
+            AccessTokenExpiry = expiry,
+            RefreshTokenExpiry = refreshExpiry,
+            User = new AuthenticatedUserDto
+            {
+                UserId = user.UserId,
+                Username = user.Username,
+                Role = user.Role.Name,
+                ThumbnailUrl = user.ThumbnailUrl
+            }
+        };
+    }
+
     public async Task<LoginResponse?> RefreshTokenAsync(RefreshTokenRequest request, CancellationToken ct = default)
     {
         var principal = GetPrincipalFromExpiredToken(request.Token);

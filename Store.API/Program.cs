@@ -14,6 +14,7 @@ using Store.Models.DTOs.Operations;
 using Store.API.Infrastructure.Storage;
 using Microsoft.Extensions.FileProviders;
 using System.IO;
+using Fido2NetLib;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,6 +23,28 @@ builder.Services.AddStoreDbServices(builder.Configuration);
 builder.Services.AddArchitecture();
 builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
 builder.Services.AddScoped<Store.API.Infrastructure.Processing.IImageProcessorService, Store.API.Infrastructure.Processing.ImageProcessorService>();
+builder.Services.AddScoped<Store.Models.Interfaces.Services.IWebAuthnService, Store.API.Services.WebAuthnService>();
+builder.Services.AddMemoryCache();
+
+builder.Services.AddFido2(options =>
+{
+    options.ServerDomain = builder.Configuration["Fido2:ServerDomain"] ?? "localhost";
+    options.ServerName = "Store FIDO2 Authentication";
+    
+    // Support a single origin string or multiple comma-separated origins
+    var originConfig = builder.Configuration["Fido2:Origin"];
+    var origins = new HashSet<string>();
+    if (!string.IsNullOrWhiteSpace(originConfig))
+    {
+        foreach (var o in originConfig.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            origins.Add(o);
+    }
+    // Always include known UI ports as fallbacks for development
+    origins.Add("https://localhost:7258");
+    origins.Add("http://localhost:5135");
+    options.Origins = origins;
+    options.TimestampDriftTolerance = 300000;
+});
 
 // ─── JWT Authentication ───────────────────────────────────────────────────────
 var jwtKey = builder.Configuration["Jwt:Key"]

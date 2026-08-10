@@ -12,11 +12,13 @@ namespace Store.UI.Pages
             _logger = logger;
         }
 
+        public bool IsAuthenticated { get; set; }
+
         public IActionResult OnGet()
         {
-            // If the user is authenticated, we could theoretically redirect them directly to the Dashboard.
-            // However, a landing page is useful for logging out / returning to the root.
-            // We'll leave it as a standard page load and the UI handles the state.
+            var token = HttpContext.Session.GetString("access_token");
+            IsAuthenticated = !string.IsNullOrEmpty(token);
+            
             return Page();
         }
     }

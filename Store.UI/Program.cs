@@ -81,12 +81,14 @@ app.UseStaticFiles();
 
 app.Use(async (context, next) =>
 {
+    var targetBase = app.Configuration["ApiSettings:BaseUrl"]?.TrimEnd('/') ?? "https://localhost:7112";
+
     if (context.Request.Path.StartsWithSegments("/files", out var remainingPath))
     {
-        var targetBase = app.Configuration["ApiSettings:BaseUrl"]?.TrimEnd('/') ?? "https://localhost:7112";
         context.Response.Redirect($"{targetBase}/files{remainingPath}{context.Request.QueryString}");
         return;
     }
+    
     await next();
 });
 app.UseSession();
@@ -94,6 +96,64 @@ app.UseSession();
 app.UseRouting();
 
 app.MapRazorPages();
+
+app.MapPost("/api/webauthn/makeCredentialOptions", async (HttpContext httpContext, IHttpClientFactory factory, CancellationToken ct) =>
+{
+    var token = httpContext.Session.GetString("access_token");
+    if (string.IsNullOrWhiteSpace(token)) return Results.Unauthorized();
+    
+    var client = factory.CreateClient("StoreApi");
+    client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+    
+    var response = await client.PostAsync("/api/webauthn/makeCredentialOptions", null, ct);
+    var content = await response.Content.ReadAsStringAsync(ct);
+    return Results.Content(content, "application/json", System.Text.Encoding.UTF8, (int)response.StatusCode);
+});
+
+app.MapPost("/api/webauthn/makeCredential", async (HttpContext httpContext, IHttpClientFactory factory, System.Text.Json.JsonElement request, CancellationToken ct) =>
+{
+    var token = httpContext.Session.GetString("access_token");
+    if (string.IsNullOrWhiteSpace(token)) return Results.Unauthorized();
+    
+    var client = factory.CreateClient("StoreApi");
+    client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+    
+    var response = await client.PostAsJsonAsync("/api/webauthn/makeCredential", request, ct);
+    var content = await response.Content.ReadAsStringAsync(ct);
+    return Results.Content(content, "application/json", System.Text.Encoding.UTF8, (int)response.StatusCode);
+});
+
+app.MapPost("/api/webauthn/assertionOptions", async (IHttpClientFactory factory, System.Text.Json.JsonElement request, CancellationToken ct) =>
+{
+    var client = factory.CreateClient("StoreApi");
+    var response = await client.PostAsJsonAsync("/api/webauthn/assertionOptions", request, ct);
+    var content = await response.Content.ReadAsStringAsync(ct);
+    return Results.Content(content, "application/json", System.Text.Encoding.UTF8, (int)response.StatusCode);
+});
+
+app.MapPost("/api/webauthn/makeAssertion", async (HttpContext httpContext, IHttpClientFactory factory, System.Text.Json.JsonElement request, CancellationToken ct) =>
+{
+    var client = factory.CreateClient("StoreApi");
+    var response = await client.PostAsJsonAsync("/api/webauthn/makeAssertion", request, ct);
+    var content = await response.Content.ReadAsStringAsync(ct);
+    
+    if (response.IsSuccessStatusCode)
+    {
+        // Try to parse the login response to set the session token
+        try 
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(content);
+            if (doc.RootElement.TryGetProperty("data", out var dataElement) && 
+                dataElement.TryGetProperty("accessToken", out var tokenElement))
+            {
+                httpContext.Session.SetString("access_token", tokenElement.GetString() ?? "");
+            }
+        }
+        catch { }
+    }
+    
+    return Results.Content(content, "application/json", System.Text.Encoding.UTF8, (int)response.StatusCode);
+});
 
 app.MapGet("/api/scanner/resolve", async (HttpContext httpContext, IApiClientService apiClient, string code, CancellationToken ct) =>
 {
