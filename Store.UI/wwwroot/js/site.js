@@ -1237,77 +1237,94 @@
 
     // --- Custom AppDialog System ---
     window.AppDialog = {
-        _overlay: document.getElementById('appDialogOverlay'),
-        _title: document.getElementById('appDialogTitle'),
-        _message: document.getElementById('appDialogMessage'),
-        _icon: document.getElementById('appDialogIcon'),
-        _input: document.getElementById('appDialogInput'),
-        _cancelBtn: document.getElementById('appDialogCancel'),
-        _confirmBtn: document.getElementById('appDialogConfirm'),
-        _resolve: null,
-
         _cleanup: function() {
-            this._overlay.classList.remove('show');
+            const overlay = document.getElementById('appDialogOverlay');
+            if (!overlay) return;
+            const input = document.getElementById('appDialogInput');
+            const icon = document.getElementById('appDialogIcon');
+            const cancelBtn = document.getElementById('appDialogCancel');
+            const confirmBtn = document.getElementById('appDialogConfirm');
+
+            overlay.classList.remove('show');
             setTimeout(() => {
-                this._overlay.setAttribute('aria-hidden', 'true');
-                this._cancelBtn.onclick = null;
-                this._confirmBtn.onclick = null;
-                this._input.style.display = 'none';
-                this._input.value = '';
-                this._icon.className = 'dialog-icon';
-                this._confirmBtn.className = 'dialog-btn dialog-btn-confirm';
+                overlay.setAttribute('aria-hidden', 'true');
+                if (cancelBtn) cancelBtn.onclick = null;
+                if (confirmBtn) {
+                    confirmBtn.onclick = null;
+                    confirmBtn.className = 'dialog-btn dialog-btn-confirm';
+                }
+                if (input) {
+                    input.style.display = 'none';
+                    input.value = '';
+                }
+                if (icon) icon.className = 'dialog-icon';
             }, 200);
         },
 
         _show: function({ title, message, confirmText = 'Confirm', cancelText = 'Cancel', type = 'info', showCancel = true, isPrompt = false, defaultValue = '' }) {
             return new Promise((resolve) => {
-                this._resolve = resolve;
-                this._title.textContent = title || 'Confirm';
-                this._message.textContent = message || '';
+                const overlay = document.getElementById('appDialogOverlay');
+                const titleEl = document.getElementById('appDialogTitle');
+                const messageEl = document.getElementById('appDialogMessage');
+                const icon = document.getElementById('appDialogIcon');
+                const input = document.getElementById('appDialogInput');
+                const cancelBtn = document.getElementById('appDialogCancel');
+                const confirmBtn = document.getElementById('appDialogConfirm');
+
+                if (!overlay || !titleEl) {
+                    console.error('AppDialog elements not found in DOM');
+                    resolve(false);
+                    return;
+                }
+
+                titleEl.textContent = title || 'Confirm';
+                messageEl.textContent = message || '';
                 
                 // Icon and Theme
-                this._icon.className = `dialog-icon ${type}`;
-                this._confirmBtn.className = `dialog-btn dialog-btn-confirm ${type === 'danger' ? 'danger' : ''}`;
+                icon.className = `dialog-icon ${type}`;
+                confirmBtn.className = `dialog-btn dialog-btn-confirm ${type === 'danger' ? 'danger' : ''}`;
                 
                 let iconSvg = '';
                 if (type === 'danger') iconSvg = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>';
                 else if (type === 'warning') iconSvg = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>';
                 else if (type === 'success') iconSvg = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
                 else iconSvg = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
-                this._icon.innerHTML = iconSvg;
+                icon.innerHTML = iconSvg;
 
                 // Buttons
-                this._confirmBtn.textContent = confirmText;
-                this._cancelBtn.textContent = cancelText;
-                this._cancelBtn.style.display = showCancel ? 'inline-block' : 'none';
+                confirmBtn.textContent = confirmText;
+                cancelBtn.textContent = cancelText;
+                cancelBtn.style.display = showCancel ? 'inline-block' : 'none';
 
                 // Prompt Input
                 if (isPrompt) {
-                    this._input.style.display = 'block';
-                    this._input.value = defaultValue;
+                    input.style.display = 'block';
+                    input.value = defaultValue;
                 } else {
-                    this._input.style.display = 'none';
+                    input.style.display = 'none';
                 }
 
                 // Event Listeners
-                this._cancelBtn.onclick = () => {
+                cancelBtn.onclick = () => {
                     this._cleanup();
                     resolve(isPrompt ? null : false);
                 };
 
-                this._confirmBtn.onclick = () => {
+                confirmBtn.onclick = () => {
                     this._cleanup();
-                    resolve(isPrompt ? this._input.value : true);
+                    resolve(isPrompt ? input.value : true);
                 };
 
                 // Show
-                this._overlay.setAttribute('aria-hidden', 'false');
-                this._overlay.classList.add('show');
+                overlay.setAttribute('aria-hidden', 'false');
+                overlay.classList.add('show');
                 
-                if (isPrompt) this._input.focus();
-                else this._confirmBtn.focus();
+                if (isPrompt) input.focus();
+                else confirmBtn.focus();
             });
         },
+
+
 
         confirm: function(options) {
             if (typeof options === 'string') options = { message: options };
