@@ -367,3 +367,151 @@ body.landing-body {
         text-align: center;
     }
 }
+
+/* ============================================================
+   Auth Pages UI (Login, Forgot Password, Reset)
+   ============================================================ */
+.auth-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 120px 5% 60px;
+    box-sizing: border-box;
+    position: relative;
+    z-index: 10;
+}
+
+.auth-card {
+    background: var(--landing-glass-bg);
+    border: 1px solid var(--landing-glass-border);
+    border-radius: 24px;
+    padding: 40px;
+    width: 100%;
+    max-width: 420px;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    animation: fadeInUp 0.8s ease backwards;
+}
+
+.auth-header {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.auth-logo {
+    height: 48px;
+    margin-bottom: 16px;
+}
+
+.auth-header h2 {
+    font-size: 2rem;
+    margin: 0 0 8px;
+    font-weight: 700;
+}
+
+.auth-header p {
+    color: var(--landing-text-muted);
+    margin: 0;
+}
+
+.auth-form .form-group {
+    margin-bottom: 24px;
+}
+
+.auth-form label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--landing-text-muted);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.auth-form .form-control {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--landing-glass-border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    color: #fff;
+    font-size: 1rem;
+    box-sizing: border-box;
+    transition: all 0.2s;
+}
+
+.auth-form .form-control:focus {
+    outline: none;
+    border-color: var(--landing-brand);
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 0 3px var(--landing-brand-glow);
+}
+
+.auth-form .full-width {
+    width: 100%;
+    justify-content: center;
+}
+
+.auth-divider {
+    text-align: center;
+    position: relative;
+    margin: 32px 0;
+}
+
+.auth-divider::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--landing-glass-border);
+    z-index: 1;
+}
+
+.auth-divider span {
+    position: relative;
+    background: #111412; /* Approximation of glass on dark bg */
+    padding: 0 16px;
+    color: var(--landing-text-muted);
+    font-size: 0.9rem;
+    z-index: 2;
+    border-radius: 16px;
+}
+
+.forgot-password-link {
+    text-align: right;
+    margin-top: 8px;
+}
+
+.forgot-password-link a {
+    color: var(--landing-brand);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.forgot-password-link a:hover {
+    text-decoration: underline;
+}
+
+/* Form Validation Errors */
+.auth-error-banner {
+    background: rgba(209, 52, 56, 0.15);
+    border-left: 4px solid var(--landing-accent);
+    color: #ffb4b4;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 24px;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.field-validation-error {
+    color: #ffb4b4;
+    font-size: 0.85rem;
+    margin-top: 6px;
+    display: block;
+}

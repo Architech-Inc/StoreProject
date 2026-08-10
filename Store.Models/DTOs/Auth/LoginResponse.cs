@@ -16,4 +16,5 @@ public class AuthenticatedUserDto
     public string Role { get; set; } = string.Empty;
     public string? ThumbnailUrl { get; set; }
     public string? FullImageUrl { get; set; }
+    public bool RequiresPasswordChange { get; set; }
 }

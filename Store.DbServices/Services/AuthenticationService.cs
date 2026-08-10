@@ -122,7 +122,8 @@ public class AuthenticationService : IAuthenticationService
                 UserId = user.UserId,
                 Username = user.Username,
                 Role = user.Role.Name,
-                ThumbnailUrl = user.ThumbnailUrl
+                ThumbnailUrl = user.ThumbnailUrl,
+                RequiresPasswordChange = false // Biometrics bypasses password change
             }
         };
     }
@@ -261,7 +262,8 @@ public class AuthenticationService : IAuthenticationService
                 UserId = user.UserId,
                 Username = user.Username,
                 Role = user.Role.Name,
-                ThumbnailUrl = user.ThumbnailUrl
+                ThumbnailUrl = user.ThumbnailUrl,
+                RequiresPasswordChange = user.Password?.ForcePasswordChange ?? false
             }
         };
     }
