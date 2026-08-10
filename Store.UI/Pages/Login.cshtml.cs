@@ -55,16 +55,8 @@ public class LoginModel : PageModel
         HttpContext.Session.SetString("access_token", response.AccessToken);
         if (!string.IsNullOrEmpty(response.RefreshToken))
             HttpContext.Session.SetString("refresh_token", response.RefreshToken);
-        HttpContext.Session.SetString("username", response.User.Username);
-        HttpContext.Session.SetString("role", response.User.Role);
 
         _logger.LogInformation("User {Username} logged in successfully", Username);
-        
-        if (response.User.RequiresPasswordChange)
-        {
-            return RedirectToPage("/ForcePasswordChange");
-        }
-        
         return RedirectToPage("/Dashboard");
     }
 }

@@ -15,7 +15,6 @@ public class StoreDbContext : DbContext
     public DbSet<UserPassword> UserPasswords => Set<UserPassword>();
     public DbSet<UserToken> UserTokens => Set<UserToken>();
     public DbSet<FidoCredential> FidoCredentials => Set<FidoCredential>();
-    public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
 
     // ---- Personnel ----
     public DbSet<Department> Departments => Set<Department>();

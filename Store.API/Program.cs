@@ -24,7 +24,6 @@ builder.Services.AddArchitecture();
 builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
 builder.Services.AddScoped<Store.API.Infrastructure.Processing.IImageProcessorService, Store.API.Infrastructure.Processing.ImageProcessorService>();
 builder.Services.AddScoped<Store.Models.Interfaces.Services.IWebAuthnService, Store.API.Services.WebAuthnService>();
-builder.Services.AddHttpClient<Store.Models.Interfaces.Services.IEmailService, Store.API.Services.MailerSendEmailService>();
 builder.Services.AddMemoryCache();
 
 builder.Services.AddFido2(options =>

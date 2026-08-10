@@ -89,29 +89,6 @@ public class AuthController : ControllerBase
         return Ok(ApiResponse<object>.Ok(null!, "Logged out successfully."));
     }
 
-    [HttpPost("forgot-password")]
-    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request, CancellationToken ct)
-    {
-        await _dispatcher.SendAsync(new ForgotPasswordCommand(request), ct);
-        // Always return OK so attackers can't guess valid emails
-        return Ok(ApiResponse<object>.Ok(null!, "If an account with that email exists, a password reset link has been sent."));
-    }
-
-    [HttpPost("reset-password-confirm")]
-    public async Task<IActionResult> ResetPasswordConfirm([FromBody] ConfirmPasswordResetRequest request, CancellationToken ct)
-    {
-        var success = await _dispatcher.SendAsync(new ConfirmPasswordResetCommand(request), ct);
-        if (!success)
-        {
-            return BadRequest(ApiErrorResponse.From(
-                "invalid_token",
-                "Invalid or expired password reset token.",
-                traceId: HttpContext.TraceIdentifier));
-        }
-
-        return Ok(ApiResponse<object>.Ok(null!, "Password has been successfully reset."));
-    }
-
     [HttpPost("reset-password")]
     [Microsoft.AspNetCore.Authorization.Authorize]
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request, CancellationToken ct)
