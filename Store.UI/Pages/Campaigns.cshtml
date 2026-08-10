@@ -1,165 +1,513 @@
 @page
 @model StoreUI.Pages.CampaignsModel
 @{
-    ViewData["Title"] = "Loyalty Campaigns";
+    ViewData["Title"] = "Campaigns Hub";
     ViewData["ActivePage"] = "Campaigns";
-    ViewData["PageDescription"] = "Create and manage point multiplier and bonus campaigns for customer segments.";
+    ViewData["PageDescription"] = "Manage point multipliers, segment rewards, and seasonal loyalty promotions.";
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
+    <style>
+        .campaigns-container { max-width: 1400px; margin: 0 auto; color: var(--text-primary); }
+
+        /* KPI Cards */
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg, 12px); padding: 18px 20px; display: flex; align-items: center; gap: 16px; box-shadow: var(--shadow-sm); }
+        .kpi-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .kpi-icon.brand { background: var(--brand-soft); color: var(--brand); }
+        .kpi-icon.blue { background: rgba(59, 130, 246, 0.12); color: #2563eb; }
+        .kpi-icon.amber { background: rgba(245, 158, 11, 0.12); color: #d97706; }
+        .kpi-icon.purple { background: rgba(139, 92, 246, 0.12); color: #7c3aed; }
+        .kpi-val { font-size: 1.5rem; font-weight: 700; line-height: 1.2; color: var(--text-primary); }
+        .kpi-lbl { font-size: 0.82rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; margin-top: 2px; letter-spacing: 0.5px; }
+
+        /* Toolbar */
+        .ops-toolbar { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+        .ops-filter-group { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+        
+        /* Status Tabs */
+        .status-tabs { display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 2px; overflow-x: auto; }
+        .status-tab { padding: 8px 16px; font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); cursor: pointer; border-bottom: 2px solid transparent; text-decoration: none; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+        .status-tab:hover { color: var(--text-primary); }
+        .status-tab.active { color: var(--brand); border-bottom-color: var(--brand); }
+        .tab-badge { background: var(--border); color: var(--text-primary); font-size: 0.75rem; padding: 2px 6px; border-radius: 99px; }
+        .status-tab.active .tab-badge { background: var(--brand-soft); color: var(--brand); }
+
+        /* Grid View */
+        .campaign-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .campaign-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 16px; display: flex; flex-direction: column; gap: 12px; transition: transform 0.2s ease, box-shadow 0.2s ease; position: relative; }
+        .campaign-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+        
+        .card-head { display: flex; justify-content: space-between; align-items: flex-start; }
+        .card-title { font-size: 1.1rem; font-weight: 600; margin: 0; color: var(--text-primary); line-height: 1.3; }
+        .card-desc { font-size: 0.85rem; color: var(--text-secondary); margin: 4px 0 0 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        
+        .reward-pill { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 0.9rem; background: var(--brand-soft); color: var(--brand); }
+        
+        .card-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.85rem; padding: 12px 0; border-top: 1px dashed var(--border); border-bottom: 1px dashed var(--border); }
+        .meta-col { display: flex; flex-direction: column; gap: 2px; }
+        .meta-lbl { color: var(--text-secondary); font-size: 0.75rem; text-transform: uppercase; }
+        .meta-val { font-weight: 600; color: var(--text-primary); }
+        
+        .card-actions { display: flex; justify-content: space-between; align-items: center; margin-top: auto; }
+        .btn-group { display: flex; gap: 4px; }
+        .icon-btn { width: 32px; height: 32px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-secondary); transition: all 0.15s ease; padding: 0; }
+        .icon-btn:hover { background: var(--hover-bg, #f3f4f6); color: var(--text-primary); border-color: var(--text-secondary); }
+        .icon-btn.primary:hover { color: var(--brand); border-color: var(--brand); background: var(--brand-soft); }
+        .icon-btn.danger:hover { color: #dc2626; border-color: #f87171; background: #fef2f2; }
+
+        /* Simulator Widget */
+        .simulator-box { background: var(--background); border: 1px solid var(--brand-soft); border-radius: 8px; padding: 12px; margin-top: 16px; border-left: 4px solid var(--brand); }
+        .simulator-flex { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+        .simulator-val { font-size: 1.25rem; font-weight: 700; color: var(--brand); }
+        
+        /* Badges Override for no blue */
+        .badge { padding: 2px 8px; border-radius: 99px; font-size: 0.75rem; font-weight: 600; }
+        .badge-live { background: var(--brand-soft); color: var(--brand); }
+        .badge-sched { background: rgba(139, 92, 246, 0.12); color: #7c3aed; }
+        .badge-done { background: var(--border); color: var(--text-secondary); }
+        .badge-paused { background: rgba(245, 158, 11, 0.12); color: #d97706; }
+        
+        /* Modals */
+        .modal { max-width: 600px; width: 90%; }
+        .modal-body { padding: 20px; max-height: 75vh; overflow-y: auto; }
+        .modal-foot { padding: 16px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 12px; }
+        
+        .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .form-full { grid-column: 1 / -1; }
+        
+        /* Empty State */
+        .empty-state { padding: 40px 20px; text-align: center; border: 1px dashed var(--border); border-radius: var(--radius-lg); background: var(--surface); }
+        .empty-icon { width: 64px; height: 64px; border-radius: 50%; background: var(--brand-soft); color: var(--brand); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+    </style>
 }
 
-<div class="ops-page">
+<div class="campaigns-container">
 
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
     {
-        <div class="status @(Model.StatusMessage.StartsWith("Error") ? "error" : "ok")">
+        <div class="status @(Model.StatusMessage.StartsWith("Error") ? "error" : "ok")" style="margin-bottom: 16px;">
             @Model.StatusMessage
         </div>
     }
 
-    <section class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-            <h2 style="margin:0;">Campaigns <small style="font-weight:400;color:var(--ops-subtle);">@Model.Campaigns.Count total</small></h2>
-            <button type="button" onclick="openCreate()">+ New Campaign</button>
-        </div>
-
-        @if (!Model.Campaigns.Any())
-        {
-            <p style="color:var(--ops-subtle);padding:12px 0;">No campaigns created yet.</p>
-        }
-        else
-        {
-            <div style="overflow-x:auto;">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Type</th>
-                            <th>Target</th>
-                            <th>Multiplier / Bonus</th>
-                            <th>Start</th>
-                            <th>End</th>
-                            <th>Status</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var camp in Model.Campaigns)
-                        {
-                            <tr>
-                                <td><strong>@camp.Name</strong>
-                                    @if (camp.Description is not null)
-                                    {
-                                        <br /><small style="color:var(--ops-subtle);">@camp.Description</small>
-                                    }
-                                </td>
-                                <td>@camp.CampaignType</td>
-                                <td>@(camp.TargetSegment ?? "All")</td>
-                                <td>
-                                    @if (camp.CampaignType == "PointMultiplier")
-                                    {
-                                        <span>×@camp.MultiplierFactor</span>
-                                    }
-                                    else
-                                    {
-                                        <span>+@camp.BonusPoints pts</span>
-                                    }
-                                </td>
-                                <td>@camp.StartDate.ToString("yyyy-MM-dd")</td>
-                                <td>@camp.EndDate.ToString("yyyy-MM-dd")</td>
-                                <td>
-                                    @if (!camp.IsActive)
-                                    {
-                                        <span class="badge badge-gray">Inactive</span>
-                                    }
-                                    else if (camp.IsRunning)
-                                    {
-                                        <span class="badge badge-green">Live</span>
-                                    }
-                                    else if (camp.EndDate < DateTime.UtcNow)
-                                    {
-                                        <span class="badge badge-gray">Ended</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge badge-blue">Scheduled</span>
-                                    }
-                                </td>
-                                <td>
-                                    <div style="display:flex;gap:4px;">
-                                        <button type="button"
-                                            onclick="openEdit(@camp.LoyaltyCampaignId,'@Html.Raw(camp.Name.Replace("'","\\'"))','@Html.Raw((camp.Description ?? "").Replace("'","\\'"))','@camp.CampaignType','@(camp.TargetSegment ?? "")','@camp.MultiplierFactor','@camp.BonusPoints','@camp.StartDate.ToString("yyyy-MM-dd")','@camp.EndDate.ToString("yyyy-MM-dd")','@camp.IsActive.ToString().ToLower()')">Edit</button>
-                                        <form method="post" asp-page-handler="Delete" style="margin:0;">
-                                            @Html.AntiForgeryToken()
-                                            <input type="hidden" name="campaignId" value="@camp.LoyaltyCampaignId" />
-                                            <button type="submit" class="danger" onclick="return confirm('Delete @(camp.Name.Replace("'","\\'"))?')">Delete</button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
+    <!-- KPI Banner -->
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-icon brand">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
             </div>
-        }
-    </section>
+            <div>
+                <span class="kpi-val">@Model.LiveCampaignsCount</span>
+                <span class="kpi-lbl">Live Campaigns</span>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon purple">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            </div>
+            <div>
+                <span class="kpi-val">@Model.ScheduledCampaignsCount</span>
+                <span class="kpi-lbl">Scheduled</span>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon amber">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            </div>
+            <div>
+                <span class="kpi-val">@Model.TotalAudienceReach.ToString("N0")</span>
+                <span class="kpi-lbl">Targeted Reach</span>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon brand">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+            </div>
+            <div>
+                <span class="kpi-val">@(Model.PeakMultiplier > 0 ? $"×{Model.PeakMultiplier:0.0}" : "N/A")</span>
+                <span class="kpi-lbl">Peak Multiplier</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Tabs -->
+    <div class="status-tabs">
+        <a href="?StatusFilter=&ViewMode=@Model.ViewMode&SegmentFilter=@Model.SegmentFilter&TypeFilter=@Model.TypeFilter&SortBy=@Model.SortBy&Search=@Model.Search" class="status-tab @(string.IsNullOrEmpty(Model.StatusFilter) ? "active" : "")">
+            All <span class="tab-badge">@Model.CountAll</span>
+        </a>
+        <a href="?StatusFilter=Live&ViewMode=@Model.ViewMode&SegmentFilter=@Model.SegmentFilter&TypeFilter=@Model.TypeFilter&SortBy=@Model.SortBy&Search=@Model.Search" class="status-tab @(Model.StatusFilter == "Live" ? "active" : "")">
+            Live Now <span class="tab-badge">@Model.CountLive</span>
+        </a>
+        <a href="?StatusFilter=Scheduled&ViewMode=@Model.ViewMode&SegmentFilter=@Model.SegmentFilter&TypeFilter=@Model.TypeFilter&SortBy=@Model.SortBy&Search=@Model.Search" class="status-tab @(Model.StatusFilter == "Scheduled" ? "active" : "")">
+            Scheduled <span class="tab-badge">@Model.CountScheduled</span>
+        </a>
+        <a href="?StatusFilter=Completed&ViewMode=@Model.ViewMode&SegmentFilter=@Model.SegmentFilter&TypeFilter=@Model.TypeFilter&SortBy=@Model.SortBy&Search=@Model.Search" class="status-tab @(Model.StatusFilter == "Completed" ? "active" : "")">
+            Completed <span class="tab-badge">@Model.CountCompleted</span>
+        </a>
+        <a href="?StatusFilter=Inactive&ViewMode=@Model.ViewMode&SegmentFilter=@Model.SegmentFilter&TypeFilter=@Model.TypeFilter&SortBy=@Model.SortBy&Search=@Model.Search" class="status-tab @(Model.StatusFilter == "Inactive" ? "active" : "")">
+            Paused <span class="tab-badge">@Model.CountInactive</span>
+        </a>
+    </div>
+
+    <!-- Toolbar -->
+    <form method="get" class="ops-toolbar">
+        <input type="hidden" name="StatusFilter" value="@Model.StatusFilter" />
+        <input type="hidden" name="ViewMode" id="viewModeInput" value="@Model.ViewMode" />
+        
+        <div class="ops-filter-group">
+            <div style="position: relative; min-width: 200px;">
+                <svg style="position: absolute; left: 10px; top: 10px; color: var(--text-secondary);" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" name="Search" value="@Model.Search" placeholder="Search campaigns..." class="form-control" style="padding-left: 34px;" onchange="this.form.submit()" />
+            </div>
+            
+            <select name="SegmentFilter" class="form-control" onchange="this.form.submit()">
+                <option value="">All Segments</option>
+                <option value="Standard" selected="@(Model.SegmentFilter == "Standard")">Standard Only</option>
+                <option value="Wholesale" selected="@(Model.SegmentFilter == "Wholesale")">Wholesale Only</option>
+                <option value="Vip" selected="@(Model.SegmentFilter == "Vip")">VIP Only</option>
+            </select>
+            
+            <select name="TypeFilter" class="form-control" onchange="this.form.submit()">
+                <option value="">All Reward Types</option>
+                <option value="PointMultiplier" selected="@(Model.TypeFilter == "PointMultiplier")">Point Multipliers</option>
+                <option value="FixedBonusPoints" selected="@(Model.TypeFilter == "FixedBonusPoints")">Fixed Bonus</option>
+            </select>
+            
+            <select name="SortBy" class="form-control" onchange="this.form.submit()">
+                <option value="start_asc" selected="@(Model.SortBy == "start_asc")">Start Date (Soonest)</option>
+                <option value="start_desc" selected="@(Model.SortBy == "start_desc")">Start Date (Latest)</option>
+                <option value="multiplier_desc" selected="@(Model.SortBy == "multiplier_desc")">Highest Reward</option>
+                <option value="newest" selected="@(Model.SortBy == "newest")">Recently Created</option>
+            </select>
+        </div>
+        
+        <div class="ops-filter-group">
+            <div class="btn-group">
+                <button type="button" class="icon-btn @(Model.ViewMode == "grid" ? "active" : "")" style="@(Model.ViewMode == "grid" ? "background:var(--brand-soft);color:var(--brand);border-color:var(--brand);" : "")" onclick="document.getElementById('viewModeInput').value='grid'; this.form.submit();" title="Grid View">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                </button>
+                <button type="button" class="icon-btn @(Model.ViewMode == "table" ? "active" : "")" style="@(Model.ViewMode == "table" ? "background:var(--brand-soft);color:var(--brand);border-color:var(--brand);" : "")" onclick="document.getElementById('viewModeInput').value='table'; this.form.submit();" title="Table View">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                </button>
+            </div>
+            <a href="?handler=ExportCsv&StatusFilter=@Model.StatusFilter&SegmentFilter=@Model.SegmentFilter&TypeFilter=@Model.TypeFilter" class="button-secondary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                Export
+            </a>
+            <button type="button" class="button-primary" onclick="openCreate()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                New Campaign
+            </button>
+        </div>
+    </form>
+
+    @if (!Model.Campaigns.Any())
+    {
+        <div class="empty-state">
+            <div class="empty-icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>
+            </div>
+            <h3>No campaigns found</h3>
+            <p style="color:var(--text-secondary); max-width: 400px; margin: 8px auto 16px;">Create your first loyalty campaign to boost sales and reward customer segments.</p>
+            <button type="button" class="button-primary" onclick="openCreate()">Create Campaign</button>
+        </div>
+    }
+    else if (Model.ViewMode == "grid")
+    {
+        <div class="campaign-grid">
+            @foreach (var c in Model.Campaigns)
+            {
+                var now = DateTime.UtcNow;
+                var isLive = c.IsRunning;
+                var isSched = c.IsActive && c.StartDate > now;
+                var isDone = c.IsActive && c.EndDate < now;
+                var isPaused = !c.IsActive;
+
+                var daysLeft = isLive ? (c.EndDate - now).Days : 0;
+                var daysToStart = isSched ? (c.StartDate - now).Days : 0;
+
+                <div class="campaign-card">
+                    <div class="card-head">
+                        <div>
+                            <h3 class="card-title">@c.Name</h3>
+                            @if (!string.IsNullOrEmpty(c.Description))
+                            {
+                                <p class="card-desc">@c.Description</p>
+                            }
+                        </div>
+                        
+                        @if (isLive) { <span class="badge badge-live">Live</span> }
+                        else if (isSched) { <span class="badge badge-sched">Sched</span> }
+                        else if (isDone) { <span class="badge badge-done">Ended</span> }
+                        else { <span class="badge badge-paused">Paused</span> }
+                    </div>
+                    
+                    <div>
+                        <div class="reward-pill">
+                            @if (c.CampaignType == "PointMultiplier")
+                            {
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+                                <span>@(c.MultiplierFactor.ToString("0.0"))× Points</span>
+                            }
+                            else
+                            {
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                                <span>+@c.BonusPoints Bonus</span>
+                            }
+                        </div>
+                    </div>
+                    
+                    <div class="card-meta">
+                        <div class="meta-col">
+                            <span class="meta-lbl">Target Segment</span>
+                            <span class="meta-val" style="display:flex;align-items:center;gap:4px;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+                                @(string.IsNullOrEmpty(c.TargetSegment) ? "All Segments" : c.TargetSegment)
+                            </span>
+                        </div>
+                        <div class="meta-col">
+                            <span class="meta-lbl">Duration</span>
+                            <span class="meta-val" style="display:flex;align-items:center;gap:4px;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                @c.StartDate.ToString("MMM d") - @c.EndDate.ToString("MMM d")
+                            </span>
+                        </div>
+                    </div>
+                    
+                    @if (isLive)
+                    {
+                        <div style="font-size:0.8rem; color:var(--brand); display:flex; align-items:center; gap:4px;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                            Ends in @daysLeft days
+                        </div>
+                    }
+                    else if (isSched)
+                    {
+                        <div style="font-size:0.8rem; color:var(--text-secondary); display:flex; align-items:center; gap:4px;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                            Starts in @daysToStart days
+                        </div>
+                    }
+
+                    <div class="card-actions">
+                        <div class="btn-group">
+                            <form method="post" asp-page-handler="ToggleStatus" style="margin:0;">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="campaignId" value="@c.LoyaltyCampaignId" />
+                                <button type="submit" class="icon-btn primary" title="@(c.IsActive ? "Pause Campaign" : "Activate Campaign")">
+                                    @if (c.IsActive) { <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg> }
+                                    else { <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> }
+                                </button>
+                            </form>
+                            
+                            <form method="post" asp-page-handler="Clone" style="margin:0;">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="campaignId" value="@c.LoyaltyCampaignId" />
+                                <button type="submit" class="icon-btn primary" title="Clone / Duplicate (+7 days)" onclick="return confirm('Clone campaign and schedule for next week?')">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                </button>
+                            </form>
+                            
+                            <form method="post" asp-page-handler="Extend" style="margin:0;">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="campaignId" value="@c.LoyaltyCampaignId" />
+                                <input type="hidden" name="days" value="7" />
+                                <button type="submit" class="icon-btn primary" title="Extend by 7 Days">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="8 17 12 21 16 17"></polyline><line x1="12" y1="12" x2="12" y2="21"></line><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"></path></svg>
+                                </button>
+                            </form>
+                        </div>
+                        
+                        <div class="btn-group">
+                            <button type="button" class="icon-btn" title="Edit" onclick="openEdit(@c.LoyaltyCampaignId,'@Html.Raw(c.Name.Replace("'","\\'"))','@Html.Raw((c.Description ?? "").Replace("'","\\'"))','@c.CampaignType','@(c.TargetSegment ?? "")','@c.MultiplierFactor','@c.BonusPoints','@c.StartDate.ToString("yyyy-MM-dd")','@c.EndDate.ToString("yyyy-MM-dd")','@c.IsActive.ToString().ToLower()')">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            </button>
+                            <button type="button" class="icon-btn danger" title="Delete" onclick="confirmDelete(@c.LoyaltyCampaignId, '@Html.Raw(c.Name.Replace("'","\\'"))')">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="card-resource" style="overflow-x:auto;">
+            <table class="data-table" style="width:100%; border-collapse: collapse;">
+                <thead style="background:var(--surface); border-bottom: 2px solid var(--border);">
+                    <tr>
+                        <th style="padding:12px; text-align:left; font-size:0.85rem; color:var(--text-secondary);">Campaign Name</th>
+                        <th style="padding:12px; text-align:left; font-size:0.85rem; color:var(--text-secondary);">Reward</th>
+                        <th style="padding:12px; text-align:left; font-size:0.85rem; color:var(--text-secondary);">Audience</th>
+                        <th style="padding:12px; text-align:left; font-size:0.85rem; color:var(--text-secondary);">Dates</th>
+                        <th style="padding:12px; text-align:left; font-size:0.85rem; color:var(--text-secondary);">Status</th>
+                        <th style="padding:12px; text-align:right;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in Model.Campaigns)
+                    {
+                        var now = DateTime.UtcNow;
+                        var isLive = c.IsRunning;
+                        var isSched = c.IsActive && c.StartDate > now;
+                        var isDone = c.IsActive && c.EndDate < now;
+                        var isPaused = !c.IsActive;
+
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding:12px;">
+                                <strong style="color:var(--text-primary); display:block;">@c.Name</strong>
+                                @if(!string.IsNullOrEmpty(c.Description)) { <span style="font-size:0.8rem; color:var(--text-secondary);">@c.Description</span> }
+                            </td>
+                            <td style="padding:12px;">
+                                <div class="reward-pill" style="padding: 2px 8px; font-size:0.8rem;">
+                                    @(c.CampaignType == "PointMultiplier" ? $"{c.MultiplierFactor:0.0}× Pts" : $"+{c.BonusPoints} Pts")
+                                </div>
+                            </td>
+                            <td style="padding:12px; font-size:0.9rem;">
+                                @(string.IsNullOrEmpty(c.TargetSegment) ? "All Segments" : c.TargetSegment)
+                            </td>
+                            <td style="padding:12px; font-size:0.9rem; white-space:nowrap;">
+                                @c.StartDate.ToString("MMM d") - @c.EndDate.ToString("MMM d")
+                            </td>
+                            <td style="padding:12px;">
+                                @if (isLive) { <span class="badge badge-live">Live</span> }
+                                else if (isSched) { <span class="badge badge-sched">Scheduled</span> }
+                                else if (isDone) { <span class="badge badge-done">Ended</span> }
+                                else { <span class="badge badge-paused">Paused</span> }
+                            </td>
+                            <td style="padding:12px; text-align:right;">
+                                <div class="btn-group" style="justify-content:flex-end;">
+                                    <form method="post" asp-page-handler="ToggleStatus" style="margin:0;">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="campaignId" value="@c.LoyaltyCampaignId" />
+                                        <button type="submit" class="icon-btn primary" title="Toggle Status">
+                                            @if (c.IsActive) { <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg> }
+                                            else { <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> }
+                                        </button>
+                                    </form>
+                                    <button type="button" class="icon-btn" title="Edit" onclick="openEdit(@c.LoyaltyCampaignId,'@Html.Raw(c.Name.Replace("'","\\'"))','@Html.Raw((c.Description ?? "").Replace("'","\\'"))','@c.CampaignType','@(c.TargetSegment ?? "")','@c.MultiplierFactor','@c.BonusPoints','@c.StartDate.ToString("yyyy-MM-dd")','@c.EndDate.ToString("yyyy-MM-dd")','@c.IsActive.ToString().ToLower()')">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
 </div>
 
 <!-- ── Create Campaign Modal ───────────────────────────────── -->
 <div class="modal-overlay" id="campaignModal" hidden>
     <div class="modal" role="dialog" aria-labelledby="campModalTitle" aria-modal="true">
         <div class="modal-head">
-            <h3 id="campModalTitle">New Campaign</h3>
-            <button type="button" class="btn-close" onclick="closeCreate()" aria-label="Close">×</button>
+            <h3 id="campModalTitle" style="margin:0; font-size:1.25rem;">New Campaign</h3>
+            <button type="button" class="btn-close" onclick="closeCreate()" aria-label="Close">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
         </div>
 
         <form method="post" asp-page-handler="Create">
             @Html.AntiForgeryToken()
+            <div class="modal-body form-grid-2">
+                
+                <div class="form-full" style="background:var(--hover-bg, #f9fafb); padding:12px; border-radius:8px; border:1px solid var(--border); margin-bottom: 8px;">
+                    <label style="font-size:0.8rem; font-weight:600; color:var(--text-secondary); margin-bottom:4px; display:block;">Quick Presets</label>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button type="button" class="tab-badge" style="border:1px solid var(--border); cursor:pointer;" onclick="applyPreset('Double Points Weekend', 'PointMultiplier', 2.0, 0, '', 3)">Double Pts Weekend</button>
+                        <button type="button" class="tab-badge" style="border:1px solid var(--border); cursor:pointer;" onclick="applyPreset('VIP Flash Bonus', 'FixedBonusPoints', 1.0, 500, 'Vip', 7)">VIP +500 Pts</button>
+                        <button type="button" class="tab-badge" style="border:1px solid var(--border); cursor:pointer;" onclick="applyPreset('Wholesale Boost', 'PointMultiplier', 1.5, 0, 'Wholesale', 14)">Wholesale 1.5×</button>
+                    </div>
+                </div>
 
-            <label for="name">Campaign Name *</label>
-            <input asp-for="Name" id="name" required />
+                <div class="form-full">
+                    <label for="name">Campaign Name *</label>
+                    <input class="form-control" asp-for="Name" id="name" required placeholder="e.g., Summer Points Boost" />
+                </div>
 
-            <label for="description">Description</label>
-            <textarea asp-for="Description" id="description" rows="2"></textarea>
+                <div class="form-full">
+                    <label for="description">Description</label>
+                    <textarea class="form-control" asp-for="Description" id="description" rows="2" placeholder="Internal notes or campaign details..."></textarea>
+                </div>
 
-            <label for="campaignType">Campaign Type</label>
-            <select asp-for="CampaignType" id="campaignType" onchange="toggleCampaignFields(this,'')">
-                <option value="PointMultiplier">Point Multiplier</option>
-                <option value="FixedBonusPoints">Fixed Bonus Points</option>
-            </select>
+                <div>
+                    <label for="campaignType">Campaign Type</label>
+                    <select class="form-control" asp-for="CampaignType" id="campaignType" onchange="toggleCampaignFields(this,''); simulatePoints();">
+                        <option value="PointMultiplier">Point Multiplier</option>
+                        <option value="FixedBonusPoints">Fixed Bonus Points</option>
+                    </select>
+                </div>
 
-            <label for="targetSegment">Target Segment</label>
-            <select asp-for="TargetSegment" id="targetSegment">
-                <option value="">All Segments</option>
-                <option value="Standard">Standard</option>
-                <option value="Wholesale">Wholesale</option>
-                <option value="Vip">VIP</option>
-            </select>
+                <div>
+                    <label for="targetSegment">Target Segment</label>
+                    <select class="form-control" asp-for="TargetSegment" id="targetSegment">
+                        <option value="">All Segments</option>
+                        <option value="Standard">Standard</option>
+                        <option value="Wholesale">Wholesale</option>
+                        <option value="Vip">VIP</option>
+                    </select>
+                </div>
 
-            <div id="multiplierField">
-                <label for="multiplierFactor">Multiplier Factor (e.g. 2.0 = double points)</label>
-                <input asp-for="MultiplierFactor" id="multiplierFactor" type="number" step="0.01" min="0.01" max="100" />
+                <div id="multiplierField">
+                    <label for="multiplierFactor">Multiplier Factor</label>
+                    <input class="form-control" asp-for="MultiplierFactor" id="multiplierFactor" type="number" step="0.1" min="1.1" max="10" value="2.0" oninput="simulatePoints()" />
+                </div>
+
+                <div id="bonusField" hidden>
+                    <label for="bonusPoints">Bonus Points</label>
+                    <input class="form-control" asp-for="BonusPoints" id="bonusPoints" type="number" min="1" max="100000" value="500" oninput="simulatePoints()" />
+                </div>
+                
+                <div><!-- spacer for grid align --></div>
+
+                <div>
+                    <label for="startDate">Start Date *</label>
+                    <input class="form-control" asp-for="StartDate" id="startDate" type="date" required />
+                </div>
+
+                <div>
+                    <label for="endDate">End Date *</label>
+                    <input class="form-control" asp-for="EndDate" id="endDate" type="date" required />
+                </div>
+                
+                <div class="form-full simulator-box">
+                    <div style="font-size:0.8rem; font-weight:600; color:var(--text-secondary); margin-bottom:8px; text-transform:uppercase;">Live Points Simulator</div>
+                    <div class="simulator-flex">
+                        <div style="flex:1;">
+                            <label style="font-size:0.85rem;">Sample Spend (XAF)</label>
+                            <input type="number" class="form-control form-control-sm" id="simSpend" value="10000" step="1000" style="max-width:120px;" oninput="simulatePoints()">
+                        </div>
+                        <div style="font-size:1.5rem; color:var(--border);">→</div>
+                        <div style="flex:1; text-align:center;">
+                            <div style="font-size:0.8rem; color:var(--text-secondary);">Base Points</div>
+                            <div style="font-weight:600;" id="simBase">100</div>
+                        </div>
+                        <div style="font-size:1.5rem; color:var(--border);">+</div>
+                        <div style="flex:1; text-align:center;">
+                            <div style="font-size:0.8rem; color:var(--brand);">Campaign Reward</div>
+                            <div class="simulator-val" id="simReward">100</div>
+                        </div>
+                        <div style="font-size:1.5rem; color:var(--border);">=</div>
+                        <div style="flex:1; text-align:center;">
+                            <div style="font-size:0.8rem; font-weight:700;">Total Earned</div>
+                            <div style="font-weight:700; font-size:1.25rem;" id="simTotal">200</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-full" style="margin-top:8px;">
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;">
+                        <input asp-for="IsActive" type="checkbox" style="width:18px;height:18px;" />
+                        Active immediately
+                    </label>
+                </div>
             </div>
 
-            <div id="bonusField" hidden>
-                <label for="bonusPoints">Bonus Points</label>
-                <input asp-for="BonusPoints" id="bonusPoints" type="number" min="0" max="100000" />
-            </div>
-
-            <label for="startDate">Start Date *</label>
-            <input asp-for="StartDate" id="startDate" type="date" required />
-
-            <label for="endDate">End Date *</label>
-            <input asp-for="EndDate" id="endDate" type="date" required />
-
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
-                <input asp-for="IsActive" type="checkbox" />
-                Active
-            </label>
-
-            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;">
+            <div class="modal-foot">
                 <button type="button" class="button-command" onclick="closeCreate()">Cancel</button>
                 <button type="submit" class="button-primary">Create Campaign</button>
             </div>
@@ -171,56 +519,76 @@
 <div class="modal-overlay" id="editCampaignModal" hidden>
     <div class="modal" role="dialog" aria-labelledby="editCampModalTitle" aria-modal="true">
         <div class="modal-head">
-            <h3 id="editCampModalTitle">Edit Campaign</h3>
-            <button type="button" class="btn-close" onclick="closeEdit()" aria-label="Close">×</button>
+            <h3 id="editCampModalTitle" style="margin:0; font-size:1.25rem;">Edit Campaign</h3>
+            <button type="button" class="btn-close" onclick="closeEdit()" aria-label="Close">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
         </div>
 
         <form method="post" asp-page-handler="Edit">
             @Html.AntiForgeryToken()
             <input type="hidden" asp-for="EditCampaignId" id="editCampaignId" />
+            
+            <div class="modal-body form-grid-2">
+                <div class="form-full">
+                    <label for="editName">Campaign Name *</label>
+                    <input class="form-control" asp-for="EditName" id="editName" required />
+                </div>
 
-            <label for="editName">Campaign Name *</label>
-            <input asp-for="EditName" id="editName" required />
+                <div class="form-full">
+                    <label for="editDescription">Description</label>
+                    <textarea class="form-control" asp-for="EditDescription" id="editDescription" rows="2"></textarea>
+                </div>
 
-            <label for="editDescription">Description</label>
-            <textarea asp-for="EditDescription" id="editDescription" rows="2"></textarea>
+                <div>
+                    <label for="editCampaignType">Campaign Type</label>
+                    <select class="form-control" asp-for="EditCampaignType" id="editCampaignType" onchange="toggleCampaignFields(this,'edit')">
+                        <option value="PointMultiplier">Point Multiplier</option>
+                        <option value="FixedBonusPoints">Fixed Bonus Points</option>
+                    </select>
+                </div>
 
-            <label for="editCampaignType">Campaign Type</label>
-            <select asp-for="EditCampaignType" id="editCampaignType" onchange="toggleCampaignFields(this,'edit')">
-                <option value="PointMultiplier">Point Multiplier</option>
-                <option value="FixedBonusPoints">Fixed Bonus Points</option>
-            </select>
+                <div>
+                    <label for="editTargetSegment">Target Segment</label>
+                    <select class="form-control" asp-for="EditTargetSegment" id="editTargetSegment">
+                        <option value="">All Segments</option>
+                        <option value="Standard">Standard</option>
+                        <option value="Wholesale">Wholesale</option>
+                        <option value="Vip">VIP</option>
+                    </select>
+                </div>
 
-            <label for="editTargetSegment">Target Segment</label>
-            <select asp-for="EditTargetSegment" id="editTargetSegment">
-                <option value="">All Segments</option>
-                <option value="Standard">Standard</option>
-                <option value="Wholesale">Wholesale</option>
-                <option value="Vip">VIP</option>
-            </select>
+                <div id="editMultiplierField">
+                    <label for="editMultiplierFactor">Multiplier Factor</label>
+                    <input class="form-control" asp-for="EditMultiplierFactor" id="editMultiplierFactor" type="number" step="0.1" min="1.1" max="10" />
+                </div>
 
-            <div id="editMultiplierField">
-                <label for="editMultiplierFactor">Multiplier Factor</label>
-                <input asp-for="EditMultiplierFactor" id="editMultiplierFactor" type="number" step="0.01" min="0.01" max="100" />
+                <div id="editBonusField" hidden>
+                    <label for="editBonusPoints">Bonus Points</label>
+                    <input class="form-control" asp-for="EditBonusPoints" id="editBonusPoints" type="number" min="1" max="100000" />
+                </div>
+                
+                <div><!-- spacer --></div>
+
+                <div>
+                    <label for="editStartDate">Start Date *</label>
+                    <input class="form-control" asp-for="EditStartDate" id="editStartDate" type="date" required />
+                </div>
+
+                <div>
+                    <label for="editEndDate">End Date *</label>
+                    <input class="form-control" asp-for="EditEndDate" id="editEndDate" type="date" required />
+                </div>
+
+                <div class="form-full" style="margin-top:8px;">
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;">
+                        <input asp-for="EditIsActive" id="editIsActive" type="checkbox" style="width:18px;height:18px;" />
+                        Active
+                    </label>
+                </div>
             </div>
 
-            <div id="editBonusField" hidden>
-                <label for="editBonusPoints">Bonus Points</label>
-                <input asp-for="EditBonusPoints" id="editBonusPoints" type="number" min="0" max="100000" />
-            </div>
-
-            <label for="editStartDate">Start Date *</label>
-            <input asp-for="EditStartDate" id="editStartDate" type="date" required />
-
-            <label for="editEndDate">End Date *</label>
-            <input asp-for="EditEndDate" id="editEndDate" type="date" required />
-
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
-                <input asp-for="EditIsActive" id="editIsActive" type="checkbox" />
-                Active
-            </label>
-
-            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;">
+            <div class="modal-foot">
                 <button type="button" class="button-command" onclick="closeEdit()">Cancel</button>
                 <button type="submit" class="button-primary">Save Changes</button>
             </div>
@@ -228,10 +596,46 @@
     </div>
 </div>
 
+<!-- ── Delete Confirmation Modal ──────────────────────────── -->
+<div class="modal-overlay" id="deleteModal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" style="max-width: 400px; text-align: center;">
+        <div class="modal-body" style="padding-top: 32px;">
+            <div style="width:56px; height:56px; border-radius:50%; background:#fef2f2; color:#dc2626; display:inline-flex; align-items:center; justify-content:center; margin-bottom:16px;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            </div>
+            <h3 style="margin:0 0 8px 0; font-size:1.25rem;">Delete Campaign</h3>
+            <p style="color:var(--text-secondary); font-size:0.95rem; margin:0 0 24px 0;">
+                Are you sure you want to delete <strong id="delCampName" style="color:var(--text-primary);"></strong>? This action cannot be undone.
+            </p>
+            
+            <form method="post" asp-page-handler="Delete" style="display:flex; gap:12px; justify-content:center;">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="campaignId" id="delCampId" />
+                <input type="hidden" name="ViewMode" value="@Model.ViewMode" />
+                <button type="button" class="button-command" style="flex:1;" onclick="closeDelete()">Cancel</button>
+                <button type="submit" class="button-primary" style="flex:1; background:#dc2626; border-color:#dc2626; color:white;">Delete</button>
+            </form>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
 <script>
 const createModal = document.getElementById('campaignModal');
 const editModal   = document.getElementById('editCampaignModal');
+const deleteModal = document.getElementById('deleteModal');
+
+// Init dates
+document.addEventListener("DOMContentLoaded", () => {
+    if(!document.getElementById('startDate').value) {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('startDate').value = today;
+        const nextWeek = new Date();
+        nextWeek.setDate(nextWeek.getDate() + 7);
+        document.getElementById('endDate').value = nextWeek.toISOString().split('T')[0];
+    }
+    simulatePoints();
+});
 
 function openCreate() {
     createModal.removeAttribute('hidden');
@@ -239,22 +643,47 @@ function openCreate() {
 }
 function closeCreate() { createModal.setAttribute('hidden', ''); }
 
+function applyPreset(name, type, mult, bonus, segment, days) {
+    document.getElementById('name').value = name;
+    document.getElementById('campaignType').value = type;
+    document.getElementById('targetSegment').value = segment;
+    document.getElementById('multiplierFactor').value = mult;
+    document.getElementById('bonusPoints').value = bonus;
+    
+    const start = new Date();
+    document.getElementById('startDate').value = start.toISOString().split('T')[0];
+    const end = new Date();
+    end.setDate(start.getDate() + days);
+    document.getElementById('endDate').value = end.toISOString().split('T')[0];
+    
+    toggleCampaignFields(document.getElementById('campaignType'), '');
+    simulatePoints();
+}
+
 function openEdit(id, name, description, type, segment, multiplier, bonus, startDate, endDate, isActive) {
-    document.getElementById('editCampaignId').value  = id;
-    document.getElementById('editName').value        = name;
+    document.getElementById('editCampaignId').value = id;
+    document.getElementById('editName').value = name;
     document.getElementById('editDescription').value = description;
-    document.getElementById('editCampaignType').value    = type;
-    document.getElementById('editTargetSegment').value   = segment;
+    document.getElementById('editCampaignType').value = type;
+    document.getElementById('editTargetSegment').value = segment;
     document.getElementById('editMultiplierFactor').value = multiplier;
-    document.getElementById('editBonusPoints').value      = bonus;
+    document.getElementById('editBonusPoints').value = bonus;
     document.getElementById('editStartDate').value = startDate;
-    document.getElementById('editEndDate').value   = endDate;
+    document.getElementById('editEndDate').value = endDate;
     document.getElementById('editIsActive').checked = isActive === 'true';
+    
     toggleCampaignFields(document.getElementById('editCampaignType'), 'edit');
     editModal.removeAttribute('hidden');
     document.getElementById('editName').focus();
 }
 function closeEdit() { editModal.setAttribute('hidden', ''); }
+
+function confirmDelete(id, name) {
+    document.getElementById('delCampId').value = id;
+    document.getElementById('delCampName').innerText = name;
+    deleteModal.removeAttribute('hidden');
+}
+function closeDelete() { deleteModal.setAttribute('hidden', ''); }
 
 function toggleCampaignFields(sel, prefix) {
     const p = prefix ? prefix.charAt(0).toUpperCase() + prefix.slice(1) : '';
@@ -269,11 +698,32 @@ function toggleCampaignFields(sel, prefix) {
     }
 }
 
-[createModal, editModal].forEach(m => {
-    m.addEventListener('click', e => { if (e.target === m) { closeCreate(); closeEdit(); } });
+function simulatePoints() {
+    const spend = parseFloat(document.getElementById('simSpend').value) || 0;
+    const type = document.getElementById('campaignType').value;
+    const basePts = Math.floor(spend / 100); // standard 1 pt per 100
+    
+    document.getElementById('simBase').innerText = basePts;
+    
+    let reward = 0;
+    if(type === 'PointMultiplier') {
+        const mult = parseFloat(document.getElementById('multiplierFactor').value) || 1;
+        reward = Math.floor(basePts * mult) - basePts;
+    } else {
+        reward = parseInt(document.getElementById('bonusPoints').value) || 0;
+    }
+    
+    document.getElementById('simReward').innerText = reward;
+    document.getElementById('simTotal').innerText = basePts + reward;
+}
+
+[createModal, editModal, deleteModal].forEach(m => {
+    if (m) {
+        m.addEventListener('click', e => { if (e.target === m) { closeCreate(); closeEdit(); closeDelete(); } });
+    }
 });
 document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { closeCreate(); closeEdit(); }
+    if (e.key === 'Escape') { closeCreate(); closeEdit(); closeDelete(); }
 });
 </script>
 }
