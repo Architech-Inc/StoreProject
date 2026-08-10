@@ -8,6 +8,7 @@ namespace StoreUI.Pages;
 public class ProfileModel : SecurePageModel
 {
     private readonly IUserService _userService;
+    private readonly IEmployeeService _employeeService;
     private readonly IApiClientService _apiClient;
     private readonly IFileService _fileService;
     private readonly ILogger<ProfileModel> _logger;
@@ -17,6 +18,13 @@ public class ProfileModel : SecurePageModel
     public string? CurrentStatus { get; private set; }
     public string? CurrentAvatarPath { get; private set; }
     public string? CurrentFullAvatarPath { get; private set; }
+    
+    // Employee Identity Data
+    public string? EmployeeFullName { get; private set; }
+    public string? EmployeeDepartment { get; private set; }
+    public string? EmployeeGender { get; private set; }
+    public string? EmployeeDateEmployed { get; private set; }
+
     [TempData] public string? StatusMessage { get; set; }
 
     [BindProperty] public string? CurrentPassword { get; set; }
@@ -26,11 +34,13 @@ public class ProfileModel : SecurePageModel
 
     public ProfileModel(
         IUserService userService,
+        IEmployeeService employeeService,
         IApiClientService apiClient,
         IFileService fileService,
         ILogger<ProfileModel> logger)
     {
         _userService = userService;
+        _employeeService = employeeService;
         _apiClient = apiClient;
         _fileService = fileService;
         _logger = logger;
@@ -71,6 +81,26 @@ public class ProfileModel : SecurePageModel
                     CurrentStatus = user.Status.ToString();
                     CurrentAvatarPath = user.ThumbnailUrl ?? user.FullImageUrl;
                     CurrentFullAvatarPath = user.FullImageUrl ?? user.ThumbnailUrl;
+
+                    // Fetch associated Employee data if available
+                    if (user.EmployeeId.HasValue)
+                    {
+                        try
+                        {
+                            var emp = await _employeeService.GetByIdAsync(user.EmployeeId.Value, ct);
+                            if (emp != null)
+                            {
+                                EmployeeFullName = emp.FullName;
+                                EmployeeDepartment = emp.DepartmentName ?? "Unassigned";
+                                EmployeeGender = emp.Gender.ToString();
+                                EmployeeDateEmployed = emp.DateEmployed.ToString("MMM dd, yyyy");
+                            }
+                        }
+                        catch (Exception empEx)
+                        {
+                            _logger.LogWarning(empEx, "Failed to load employee details for User {UserId}", userId);
+                        }
+                    }
                 }
             }
             catch (Exception ex)
