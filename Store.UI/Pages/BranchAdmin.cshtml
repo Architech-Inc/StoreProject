@@ -146,7 +146,7 @@
                                 <form method="post" asp-page-handler="Revoke" style="display:inline">
                                     <input type="hidden" name="assignmentId" value="@a.UserBranchRoleId" />
                                     <button type="submit" class="btn btn-sm btn-danger"
-                                            onclick="return confirm('Remove this assignment?')">
+                                            data-confirm="Remove this assignment?" data-confirm-type="danger">
                                         Revoke
                                     </button>
                                 </form>

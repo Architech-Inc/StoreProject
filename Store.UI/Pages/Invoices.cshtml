@@ -1556,7 +1556,7 @@
             });
 
             if (items.length === 0) {
-                alert('Please select at least 1 item quantity to refund.');
+                await window.AppDialog.alert({title: 'Validation', message: 'Please select at least 1 item quantity to refund.', type: 'warning'});
                 return;
             }
 
@@ -1588,7 +1588,7 @@
                 showToast('Refund and return processed successfully!', 'success');
                 setTimeout(() => window.location.reload(), 1000);
             } catch (err) {
-                alert(`Error: ${err.message}`);
+                await window.AppDialog.alert({title: 'Error', message: `Error: ${err.message}`, type: 'danger'});
             } finally {
                 btn.disabled = false;
                 btn.textContent = 'Process Return & Refund';
@@ -1643,7 +1643,7 @@
                 showToast('Payment recorded successfully!', 'success');
                 setTimeout(() => window.location.reload(), 800);
             } catch (err) {
-                alert(`Error: ${err.message}`);
+                await window.AppDialog.alert({title: 'Error', message: `Error: ${err.message}`, type: 'danger'});
             } finally {
                 btn.disabled = false;
                 btn.textContent = 'Record Payment';
@@ -1687,7 +1687,7 @@
                     iframe.contentWindow.print();
                 }, 400);
             } catch (err) {
-                alert(`Print error: ${err.message}`);
+                await window.AppDialog.alert({title: 'Print Error', message: `Print error: ${err.message}`, type: 'danger'});
             }
         }
 

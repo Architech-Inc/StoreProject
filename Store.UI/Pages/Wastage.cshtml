@@ -86,7 +86,7 @@
                                 <td>@e.RecordedByUser</td>
                                 <td>@e.DateCreated.ToLocalTime().ToString("dd MMM yyyy HH:mm")</td>
                                 <td>
-                                    <form method="post" asp-page-handler="Delete" onsubmit="return confirm('Delete this wastage entry?')">
+                                    <form method="post" asp-page-handler="Delete" data-confirm="Delete this wastage entry?" data-confirm-type="danger">
                                         <input type="hidden" name="DeleteEntryId" value="@e.WastageEntryId" />
                                         <button type="submit" class="button-command danger">Delete</button>
                                     </form>

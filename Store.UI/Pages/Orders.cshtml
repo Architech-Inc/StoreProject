@@ -76,7 +76,7 @@
                                 <form method="post" asp-page-handler="Receive" style="margin:0;">
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="orderId" value="@o.OrderId" />
-                                    <button type="submit" class="ok" onclick="return confirm('Mark order @o.OrderNumber as received?')">Receive</button>
+                                    <button type="submit" class="ok" data-confirm="Mark order @o.OrderNumber as received?" data-confirm-type="success">Receive</button>
                                 </form>
                             }
                             @if (o.Status == OrderStatus.Draft || o.Status == OrderStatus.Pending)
@@ -84,7 +84,7 @@
                                 <form method="post" asp-page-handler="Cancel" style="margin:0;">
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="orderId" value="@o.OrderId" />
-                                    <button type="submit" class="danger" onclick="return confirm('Cancel order @o.OrderNumber?')">Cancel</button>
+                                    <button type="submit" class="danger" data-confirm="Cancel order @o.OrderNumber?" data-confirm-type="danger">Cancel</button>
                                 </form>
                             }
                         </td>

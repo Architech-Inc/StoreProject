@@ -91,8 +91,7 @@
                                     <form method="post" asp-page-handler="Remove" style="margin:0;">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="employeeId" value="@e.EmployeeId" />
-                                        <button type="submit" class="danger"
-                                                onclick="return confirm('Remove @(e.FullName.Replace("'", "\\'")) from staff?')">Remove</button>
+                                        <button type="submit" class="button-command danger" data-confirm="Remove @e.FullName from staff?" data-confirm-type="danger">Remove</button>
                                     </form>
                                 </td>
                             </tr>

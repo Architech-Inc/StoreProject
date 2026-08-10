@@ -1235,6 +1235,144 @@
         window.BarcodeScannerService.init();
     }
 
+    // --- Custom AppDialog System ---
+    window.AppDialog = {
+        _overlay: document.getElementById('appDialogOverlay'),
+        _title: document.getElementById('appDialogTitle'),
+        _message: document.getElementById('appDialogMessage'),
+        _icon: document.getElementById('appDialogIcon'),
+        _input: document.getElementById('appDialogInput'),
+        _cancelBtn: document.getElementById('appDialogCancel'),
+        _confirmBtn: document.getElementById('appDialogConfirm'),
+        _resolve: null,
+
+        _cleanup: function() {
+            this._overlay.classList.remove('show');
+            setTimeout(() => {
+                this._overlay.setAttribute('aria-hidden', 'true');
+                this._cancelBtn.onclick = null;
+                this._confirmBtn.onclick = null;
+                this._input.style.display = 'none';
+                this._input.value = '';
+                this._icon.className = 'dialog-icon';
+                this._confirmBtn.className = 'dialog-btn dialog-btn-confirm';
+            }, 200);
+        },
+
+        _show: function({ title, message, confirmText = 'Confirm', cancelText = 'Cancel', type = 'info', showCancel = true, isPrompt = false, defaultValue = '' }) {
+            return new Promise((resolve) => {
+                this._resolve = resolve;
+                this._title.textContent = title || 'Confirm';
+                this._message.textContent = message || '';
+                
+                // Icon and Theme
+                this._icon.className = `dialog-icon ${type}`;
+                this._confirmBtn.className = `dialog-btn dialog-btn-confirm ${type === 'danger' ? 'danger' : ''}`;
+                
+                let iconSvg = '';
+                if (type === 'danger') iconSvg = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>';
+                else if (type === 'warning') iconSvg = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>';
+                else if (type === 'success') iconSvg = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
+                else iconSvg = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
+                this._icon.innerHTML = iconSvg;
+
+                // Buttons
+                this._confirmBtn.textContent = confirmText;
+                this._cancelBtn.textContent = cancelText;
+                this._cancelBtn.style.display = showCancel ? 'inline-block' : 'none';
+
+                // Prompt Input
+                if (isPrompt) {
+                    this._input.style.display = 'block';
+                    this._input.value = defaultValue;
+                } else {
+                    this._input.style.display = 'none';
+                }
+
+                // Event Listeners
+                this._cancelBtn.onclick = () => {
+                    this._cleanup();
+                    resolve(isPrompt ? null : false);
+                };
+
+                this._confirmBtn.onclick = () => {
+                    this._cleanup();
+                    resolve(isPrompt ? this._input.value : true);
+                };
+
+                // Show
+                this._overlay.setAttribute('aria-hidden', 'false');
+                this._overlay.classList.add('show');
+                
+                if (isPrompt) this._input.focus();
+                else this._confirmBtn.focus();
+            });
+        },
+
+        confirm: function(options) {
+            if (typeof options === 'string') options = { message: options };
+            return this._show({ ...options, showCancel: true, isPrompt: false });
+        },
+
+        alert: function(options) {
+            if (typeof options === 'string') options = { message: options };
+            return this._show({ ...options, showCancel: false, isPrompt: false, type: options.type || 'warning', confirmText: options.confirmText || 'OK' });
+        },
+
+        prompt: function(options) {
+            if (typeof options === 'string') options = { message: options };
+            return this._show({ ...options, showCancel: true, isPrompt: true });
+        }
+    };
+
+    // Global Interceptor for data-confirm
+    document.addEventListener('click', (e) => {
+        const confirmTarget = e.target.closest('[data-confirm]');
+        if (confirmTarget) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const message = confirmTarget.getAttribute('data-confirm');
+            const title = confirmTarget.getAttribute('data-confirm-title') || 'Confirm';
+            const type = confirmTarget.getAttribute('data-confirm-type') || 'warning';
+            
+            window.AppDialog.confirm({ title, message, type }).then(confirmed => {
+                if (confirmed) {
+                    // Temporarily remove data-confirm so we don't loop
+                    const oldConfirm = confirmTarget.getAttribute('data-confirm');
+                    confirmTarget.removeAttribute('data-confirm');
+                    
+                    if (confirmTarget.form) {
+                        // If it's a submit button, append its value to the form before submitting
+                        if (confirmTarget.name) {
+                            const hidden = document.createElement('input');
+                            hidden.type = 'hidden';
+                            hidden.name = confirmTarget.name;
+                            hidden.value = confirmTarget.value || '';
+                            confirmTarget.form.appendChild(hidden);
+                        }
+                        
+                        // Check if the form has an onsubmit handler that we need to bypass or trigger
+                        // The safest way to submit the form is calling requestSubmit if available
+                        if (confirmTarget.form.requestSubmit) {
+                            confirmTarget.form.requestSubmit(confirmTarget);
+                        } else {
+                            confirmTarget.form.submit();
+                        }
+                    } else if (confirmTarget.tagName === 'A' && confirmTarget.href) {
+                        window.location.href = confirmTarget.href;
+                    } else {
+                        // Otherwise, just click it
+                        confirmTarget.click();
+                    }
+                    
+                    // Restore attribute
+                    setTimeout(() => confirmTarget.setAttribute('data-confirm', oldConfirm), 50);
+                }
+            });
+        }
+    }, true); // Use capture phase to intercept before inline onclicks run
+
 })();
 
 

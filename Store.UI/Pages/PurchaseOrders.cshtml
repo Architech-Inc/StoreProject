@@ -84,7 +84,7 @@
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="ActionPurchaseOrderId" value="@po.PurchaseOrderId" />
                                     <button class="btn btn-outline-danger btn-sm" type="submit"
-                                            onclick="return confirm('Cancel this PO?')">Cancel</button>
+                                            data-confirm="Cancel this PO?" data-confirm-type="danger">Cancel</button>
                                 </form>
                             }
                             @if (po.Status == "Submitted")
@@ -98,7 +98,7 @@
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="ActionPurchaseOrderId" value="@po.PurchaseOrderId" />
                                     <button class="btn btn-outline-danger btn-sm" type="submit"
-                                            onclick="return confirm('Cancel this PO?')">Cancel</button>
+                                            data-confirm="Cancel this PO?" data-confirm-type="danger">Cancel</button>
                                 </form>
                             }
                             @if (po.Status == "Approved" || po.Status == "PartiallyReceived")

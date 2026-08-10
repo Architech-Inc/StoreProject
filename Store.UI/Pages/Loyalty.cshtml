@@ -1401,9 +1401,9 @@
             document.getElementById('drawerSegmentBadge').innerText = m.segment;
 
             // Contact Links
-            document.getElementById('drawerCallBtn').href = m.primaryPhone ? `tel:${m.primaryPhone}` : 'javascript:alert("No phone recorded")';
-            document.getElementById('drawerWhatsappBtn').href = m.primaryPhone ? `https://wa.me/${m.primaryPhone.replace(/\D/g,'')}` : 'javascript:alert("No phone recorded")';
-            document.getElementById('drawerEmailBtn').href = m.primaryEmail ? `mailto:${m.primaryEmail}` : 'javascript:alert("No email recorded")';
+            document.getElementById('drawerCallBtn').href = m.primaryPhone ? `tel:${m.primaryPhone}` : 'javascript:window.AppDialog.alert({title:\'Warning\',message:\'No phone recorded\',type:\'warning\'})';
+            document.getElementById('drawerWhatsappBtn').href = m.primaryPhone ? `https://wa.me/${m.primaryPhone.replace(/\D/g,'')}` : 'javascript:window.AppDialog.alert({title:\'Warning\',message:\'No phone recorded\',type:\'warning\'})';
+            document.getElementById('drawerEmailBtn').href = m.primaryEmail ? `mailto:${m.primaryEmail}` : 'javascript:window.AppDialog.alert({title:\'Warning\',message:\'No email recorded\',type:\'warning\'})';
 
             // Points & Valuation
             document.getElementById('drawerPointsVal').innerHTML = `${Number(m.points).toLocaleString()} <small>pts</small>`;

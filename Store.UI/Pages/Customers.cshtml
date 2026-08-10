@@ -1161,7 +1161,7 @@
             <form method="post" asp-page-handler="Delete" id="drawerDeleteForm" style="margin:0;">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="customerId" id="drawerDeleteCustId" />
-                <button type="submit" class="crm-btn-danger" onclick="return confirm('Are you sure you want to permanently remove this customer profile?')">
+                <button type="submit" class="crm-btn-danger" data-confirm="Are you sure you want to permanently remove this customer profile?" data-confirm-type="danger">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                     <span>Delete</span>
                 </button>
@@ -1429,7 +1429,7 @@ async function submitLoyaltyAdjust() {
     const reason = document.getElementById('loyaltyReason').value;
 
     if (isNaN(points) || points === 0) {
-        alert('Please enter a valid non-zero points value.');
+        await window.AppDialog.alert({title: 'Validation', message: 'Please enter a valid non-zero points value.', type: 'warning'});
         return;
     }
 
@@ -1458,10 +1458,10 @@ async function submitLoyaltyAdjust() {
             // Refresh drawer
             await openDrawer(currentCustomerData.customerId);
         } else {
-            alert(data.message || 'Failed to adjust points.');
+            await window.AppDialog.alert({title: 'Error', message: data.message || 'Failed to adjust points.', type: 'danger'});
         }
     } catch (err) {
-        alert('Network error adjusting loyalty points: ' + err.message);
+        await window.AppDialog.alert({title: 'Network Error', message: 'Network error adjusting loyalty points: ' + err.message, type: 'danger'});
     } finally {
         btn.disabled = false;
         btn.textContent = 'Save Adjustment';
@@ -1497,7 +1497,7 @@ async function openDrawer(customerId) {
         const result = await res.json();
 
         if (!result.success || !result.customer) {
-            alert('Failed to load customer profile details.');
+            await window.AppDialog.alert({title: 'Error', message: 'Failed to load customer profile details.', type: 'danger'});
             closeDrawer();
             return;
         }
@@ -1628,7 +1628,7 @@ async function openDrawer(customerId) {
         document.getElementById('drawerPosSaleBtn').href = `/Pos?customerId=${c.customerId}`;
 
     } catch (err) {
-        alert('Error fetching customer profile: ' + err.message);
+        await window.AppDialog.alert({title: 'Error', message: 'Error fetching customer profile: ' + err.message, type: 'danger'});
         closeDrawer();
     }
 }

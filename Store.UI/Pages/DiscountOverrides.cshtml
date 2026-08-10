@@ -108,7 +108,7 @@
                                                     data-request-id="@r.DiscountOverrideRequestId"
                                                     title="Reject">Reject</button>
                                             <form method="post" asp-page-handler="Cancel"
-                                                  onsubmit="return confirm('Cancel this override request?')">
+                                                  data-confirm="Cancel this override request?" data-confirm-type="danger">
                                                 @Html.AntiForgeryToken()
                                                 <input type="hidden" name="CancelRequestId" value="@r.DiscountOverrideRequestId" />
                                                 <button type="submit" class="button-command" title="Cancel">Cancel</button>

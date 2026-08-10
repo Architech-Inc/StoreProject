@@ -20,6 +20,24 @@
     <!-- Smart Scanner Hub & Floating FAB -->
     <partial name="_SmartScanHub" />
     
+    <!-- Global AppDialog Modal -->
+    <div class="dialog-overlay" id="appDialogOverlay" aria-hidden="true">
+        <div class="dialog-box" role="dialog" aria-modal="true" aria-labelledby="appDialogTitle">
+            <div class="dialog-head">
+                <div class="dialog-icon" id="appDialogIcon"></div>
+                <h3 class="dialog-title" id="appDialogTitle">Confirm</h3>
+            </div>
+            <div class="dialog-body">
+                <p id="appDialogMessage"></p>
+                <input type="text" id="appDialogInput" class="dialog-prompt-input" style="display:none;" />
+            </div>
+            <div class="dialog-foot">
+                <button type="button" class="dialog-btn dialog-btn-cancel" id="appDialogCancel">Cancel</button>
+                <button type="button" class="dialog-btn dialog-btn-confirm" id="appDialogConfirm">Confirm</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Global Crop Modal -->
     <div class="modal-overlay" id="globalCropModal" hidden>
         <div class="modal" role="dialog" aria-modal="true" style="max-width: 600px; width: 90%;">

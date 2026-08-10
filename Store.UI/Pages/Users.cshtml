@@ -98,7 +98,7 @@
                                             <form method="post" asp-page-handler="Suspend" style="margin:0;">
                                                 @Html.AntiForgeryToken()
                                                 <input type="hidden" name="userId" value="@u.UserId" />
-                                                <button type="submit" class="button-command danger" onclick="return confirm('Suspend account @u.Username.Replace("'", "\\'")?')">Suspend</button>
+                                                <button type="submit" class="button-command danger" data-confirm="Suspend account @u.Username?" data-confirm-type="warning">Suspend</button>
                                             </form>
                                         }
                                     </div>

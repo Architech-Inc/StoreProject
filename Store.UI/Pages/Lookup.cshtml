@@ -68,7 +68,7 @@
                                     <form method="post" asp-page-handler="DeleteCategory" style="margin:0;">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="id" value="@c.CategoryId" />
-                                        <button type="submit" class="danger" onclick="return confirm('Delete category &quot;@Html.Raw(c.Name.Replace("\"","\\\""))&quot;?')">Delete</button>
+                                        <button type="submit" class="danger" data-confirm="Delete category @c.Name?" data-confirm-type="danger">Delete</button>
                                     </form>
                                 </td>
                             </tr>
@@ -111,7 +111,7 @@
                                     <form method="post" asp-page-handler="DeleteUnit" style="margin:0;">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="id" value="@u.UnitId" />
-                                        <button type="submit" class="danger" onclick="return confirm('Delete unit &quot;@Html.Raw(u.Name.Replace("\"","\\\""))&quot;?')">Delete</button>
+                                        <button type="submit" class="danger" data-confirm="Delete unit @u.Name?" data-confirm-type="danger">Delete</button>
                                     </form>
                                 </td>
                             </tr>
@@ -153,7 +153,7 @@
                                     <form method="post" asp-page-handler="DeleteDepartment" style="margin:0;">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="id" value="@d.DepartmentId" />
-                                        <button type="submit" class="danger" onclick="return confirm('Delete department &quot;@Html.Raw(d.Name.Replace("\"","\\\""))&quot;?')">Delete</button>
+                                        <button type="submit" class="danger" data-confirm="Delete department @d.Name?" data-confirm-type="danger">Delete</button>
                                     </form>
                                 </td>
                             </tr>
