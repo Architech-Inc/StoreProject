@@ -215,13 +215,25 @@ public class AuthenticationService : IAuthenticationService
 
     public async Task<bool> LogoutAsync(Guid userId, CancellationToken ct = default)
     {
+        var user = await _uow.Repository<User>().Query()
+            .FirstOrDefaultAsync(u => u.UserId == userId, ct);
+            
+        if (user is null) return false;
+
+        // Changing the security stamp invalidates all existing stateless JWTs
+        user.SecurityStamp = Guid.NewGuid();
+        _uow.Repository<User>().Update(user);
+
+        // Also revoke the active refresh token
         var userToken = await _uow.Repository<UserToken>().Query()
             .FirstOrDefaultAsync(t => t.UserId == userId, ct);
 
-        if (userToken is null) return false;
+        if (userToken is not null)
+        {
+            userToken.IsRevoked = true;
+            _uow.Repository<UserToken>().Update(userToken);
+        }
 
-        userToken.IsRevoked = true;
-        _uow.Repository<UserToken>().Update(userToken);
         await _uow.SaveChangesAsync(ct);
         return true;
     }
@@ -369,7 +381,8 @@ public class AuthenticationService : IAuthenticationService
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new(JwtRegisteredClaimNames.Iat,
                 DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(),
-                ClaimValueTypes.Integer64)
+                ClaimValueTypes.Integer64),
+            new("stamp", user.SecurityStamp.ToString())
         };
 
         foreach (var permission in permissions)

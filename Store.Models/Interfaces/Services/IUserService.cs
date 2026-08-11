@@ -20,4 +20,5 @@ public interface IUserService
     Task<Enable2FAResponse> Enable2FAAsync(Guid userId, CancellationToken ct = default);
     Task<bool> Verify2FAAsync(Guid userId, Verify2FARequest request, CancellationToken ct = default);
     Task<IReadOnlyCollection<AuditLogDto>> GetRecentActivityAsync(Guid userId, CancellationToken ct = default);
+    Task<bool> RevokeAllSessionsAsync(CancellationToken ct = default);
 }

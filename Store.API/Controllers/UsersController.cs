@@ -190,4 +190,20 @@ public class UsersController : ControllerBase
         var result = await _dispatcher.SendAsync(new GetRecentActivityQuery(userId), ct);
         return Ok(ApiResponse<IReadOnlyCollection<AuditLogDto>>.Ok(result));
     }
+
+    [HttpPost("profile/sessions/revoke")]
+    public async Task<IActionResult> RevokeAllSessions(CancellationToken ct)
+    {
+        var userIdClaim = User.FindFirst("uid")?.Value;
+        if (!Guid.TryParse(userIdClaim, out var userId))
+            return Unauthorized(ApiErrorResponse.From("unauthorized", "Unauthorized.", traceId: HttpContext.TraceIdentifier));
+
+        var success = await _dispatcher.SendAsync(new RevokeAllSessionsCommand(userId), ct);
+        if (!success)
+        {
+            return BadRequest(ApiErrorResponse.From("revoke_failed", "Failed to revoke sessions.", traceId: HttpContext.TraceIdentifier));
+        }
+
+        return Ok(ApiResponse<object>.Ok(null!, "All sessions revoked successfully."));
+    }
 }

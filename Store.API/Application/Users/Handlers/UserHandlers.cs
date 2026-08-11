@@ -161,3 +161,20 @@ public class GetRecentActivityHandler : IRequestHandler<GetRecentActivityQuery, 
     public Task<IReadOnlyCollection<AuditLogDto>> HandleAsync(GetRecentActivityQuery request, CancellationToken ct = default)
         => _usersPort.GetRecentActivityAsync(request.UserId, ct);
 }
+
+public class RevokeAllSessionsHandler : IRequestHandler<RevokeAllSessionsCommand, bool>
+{
+    private readonly Store.Models.Interfaces.Services.IAuthenticationService _authService;
+    private readonly Store.Models.Interfaces.Services.IUserService _userService;
+
+    public RevokeAllSessionsHandler(Store.Models.Interfaces.Services.IAuthenticationService authService, Store.Models.Interfaces.Services.IUserService userService)
+    {
+        _authService = authService;
+        _userService = userService;
+    }
+
+    public async Task<bool> HandleAsync(RevokeAllSessionsCommand request, CancellationToken ct = default)
+    {
+        return await _authService.LogoutAsync(request.UserId, ct);
+    }
+}

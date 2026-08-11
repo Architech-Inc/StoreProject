@@ -228,4 +228,9 @@ public class UserService : IUserService
             DateCreated = l.DateCreated
         }).ToList();
     }
+
+    public Task<bool> RevokeAllSessionsAsync(CancellationToken ct = default)
+    {
+        throw new NotImplementedException("Handled by AuthenticationService directly on the API side.");
+    }
 }

@@ -15,6 +15,7 @@ using Store.API.Infrastructure.Storage;
 using Microsoft.Extensions.FileProviders;
 using System.IO;
 using Fido2NetLib;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -77,6 +78,32 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidAudience = jwtAudience,
             ValidateLifetime = true,
             ClockSkew = TimeSpan.FromSeconds(30)
+        };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
+            {
+                var uow = context.HttpContext.RequestServices.GetRequiredService<Store.Models.Interfaces.IUnitOfWork>();
+                var userIdStr = context.Principal?.FindFirst("uid")?.Value;
+                var stampStr = context.Principal?.FindFirst("stamp")?.Value;
+
+                if (Guid.TryParse(userIdStr, out var userId) && Guid.TryParse(stampStr, out var stamp))
+                {
+                    var user = await uow.Repository<Store.Models.Entities.User>().Query()
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(u => u.UserId == userId);
+
+                    if (user == null || user.SecurityStamp != stamp || user.Status != Store.Models.Enums.UserStatus.Active)
+                    {
+                        context.Fail("Security stamp is invalid or user is not active.");
+                    }
+                }
+                else
+                {
+                    context.Fail("Token does not contain required claims.");
+                }
+            }
         };
     });
 

@@ -337,4 +337,31 @@ public class ProfileModel : SecurePageModel
 
         return RedirectToPage();
     }
+
+    public async Task<IActionResult> OnPostRevokeSessionsAsync(CancellationToken ct)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return GoToLogin();
+
+        _apiClient.SetToken(token);
+
+        try
+        {
+            var success = await _userService.RevokeAllSessionsAsync(ct);
+            if (success)
+            {
+                TempData["StatusMessage"] = "All sessions revoked. Please log in again.";
+                return RedirectToPage("/Logout");
+            }
+            
+            TempData["StatusMessage"] = "Error: Failed to revoke sessions.";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to revoke sessions");
+            TempData["StatusMessage"] = "Error: Failed to revoke sessions.";
+        }
+
+        return RedirectToPage();
+    }
 }

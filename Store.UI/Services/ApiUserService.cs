@@ -107,4 +107,10 @@ public class ApiUserService : IUserService
         var result = await _client.GetAsync<IReadOnlyCollection<AuditLogDto>>("/api/users/profile/activity", ct);
         return result ?? Array.Empty<AuditLogDto>();
     }
+
+    public async Task<bool> RevokeAllSessionsAsync(CancellationToken ct = default)
+    {
+        var result = await _client.PostAsync<object>("/api/users/profile/sessions/revoke", null, ct);
+        return result != null;
+    }
 }

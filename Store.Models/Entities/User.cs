@@ -22,6 +22,9 @@ public class User : BaseEntity
     public bool TwoFactorEnabled { get; set; }
     public string? TwoFactorSecret { get; set; }
 
+    // Session Management
+    public Guid SecurityStamp { get; set; } = Guid.NewGuid();
+
     // Navigation properties
     public Employee? Employee { get; set; }
     public Role Role { get; set; } = null!;
