@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Store.Models.DTOs.Auth;
 using Store.Models.Interfaces.Services;
+using Microsoft.Extensions.Configuration;
 
 namespace Store.API.Controllers;
 
@@ -12,17 +13,25 @@ public class PasswordRecoveryController : ControllerBase
 {
     private readonly IPasswordRecoveryService _passwordRecoveryService;
     private readonly ILogger<PasswordRecoveryController> _logger;
+    private readonly IConfiguration _config;
 
-    public PasswordRecoveryController(IPasswordRecoveryService passwordRecoveryService, ILogger<PasswordRecoveryController> logger)
+    public PasswordRecoveryController(IPasswordRecoveryService passwordRecoveryService, ILogger<PasswordRecoveryController> logger, IConfiguration config)
     {
         _passwordRecoveryService = passwordRecoveryService;
         _logger = logger;
+        _config = config;
     }
 
     [HttpPost("request")]
     public async Task<IActionResult> RequestOtp([FromBody] RequestOtpRequest request, CancellationToken ct)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
+
+        var method = _config["Auth:PasswordRecoveryMethod"] ?? "Both";
+        if (method.Equals("TempPassword", StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequest(new { success = false, message = "OTP recovery is disabled." });
+        }
 
         var result = await _passwordRecoveryService.RequestOtpAsync(request.Username, ct);
         // We always return Ok to prevent user enumeration attacks
