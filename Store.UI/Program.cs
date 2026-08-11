@@ -181,4 +181,30 @@ app.MapGet("/api/scanner/resolve", async (HttpContext httpContext, IApiClientSer
     return Results.Ok(result);
 });
 
+app.MapGet("/api/settings/{*key}", async (HttpContext httpContext, IHttpClientFactory factory, string key, CancellationToken ct) =>
+{
+    var token = httpContext.Session.GetString("access_token");
+    if (string.IsNullOrWhiteSpace(token)) return Results.Unauthorized();
+    
+    var client = factory.CreateClient("StoreApi");
+    client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+    
+    var response = await client.GetAsync($"/api/settings/{Uri.EscapeDataString(key)}", ct);
+    var content = await response.Content.ReadAsStringAsync(ct);
+    return Results.Content(content, "application/json", System.Text.Encoding.UTF8, (int)response.StatusCode);
+});
+
+app.MapPut("/api/settings/{*key}", async (HttpContext httpContext, IHttpClientFactory factory, string key, System.Text.Json.JsonElement request, CancellationToken ct) =>
+{
+    var token = httpContext.Session.GetString("access_token");
+    if (string.IsNullOrWhiteSpace(token)) return Results.Unauthorized();
+    
+    var client = factory.CreateClient("StoreApi");
+    client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+    
+    var response = await client.PutAsJsonAsync($"/api/settings/{Uri.EscapeDataString(key)}", request, ct);
+    var content = await response.Content.ReadAsStringAsync(ct);
+    return Results.Content(content, "application/json", System.Text.Encoding.UTF8, (int)response.StatusCode);
+});
+
 app.Run();

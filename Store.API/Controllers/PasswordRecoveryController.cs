@@ -13,13 +13,13 @@ public class PasswordRecoveryController : ControllerBase
 {
     private readonly IPasswordRecoveryService _passwordRecoveryService;
     private readonly ILogger<PasswordRecoveryController> _logger;
-    private readonly IConfiguration _config;
+    private readonly ISystemSettingService _systemSettings;
 
-    public PasswordRecoveryController(IPasswordRecoveryService passwordRecoveryService, ILogger<PasswordRecoveryController> logger, IConfiguration config)
+    public PasswordRecoveryController(IPasswordRecoveryService passwordRecoveryService, ILogger<PasswordRecoveryController> logger, ISystemSettingService systemSettings)
     {
         _passwordRecoveryService = passwordRecoveryService;
         _logger = logger;
-        _config = config;
+        _systemSettings = systemSettings;
     }
 
     [HttpPost("request")]
@@ -27,7 +27,7 @@ public class PasswordRecoveryController : ControllerBase
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
 
-        var method = _config["Auth:PasswordRecoveryMethod"] ?? "Both";
+        var method = await _systemSettings.GetSettingAsync("Auth:PasswordRecoveryMethod", ct) ?? "Both";
         if (method.Equals("TempPassword", StringComparison.OrdinalIgnoreCase))
         {
             return BadRequest(new { success = false, message = "OTP recovery is disabled." });

@@ -57,6 +57,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IDiscountOverrideService, DiscountOverrideService>();
         services.AddScoped<IPurchaseOrderService, PurchaseOrderService>();
         services.AddScoped<ICashVarianceService, CashVarianceService>();
+        services.AddScoped<ISystemSettingService, SystemSettingService>();
 
         return services;
     }

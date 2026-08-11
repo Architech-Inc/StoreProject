@@ -5,6 +5,7 @@ using Store.API.Application.Users.Requests;
 using Store.API.Contracts;
 using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Users;
+using Store.Models.Interfaces.Services;
 
 namespace Store.API.Controllers;
 
@@ -14,8 +15,13 @@ namespace Store.API.Controllers;
 public class UsersController : ControllerBase
 {
     private readonly IRequestDispatcher _dispatcher;
+    private readonly ISystemSettingService _systemSettings;
 
-    public UsersController(IRequestDispatcher dispatcher) => _dispatcher = dispatcher;
+    public UsersController(IRequestDispatcher dispatcher, ISystemSettingService systemSettings)
+    {
+        _dispatcher = dispatcher;
+        _systemSettings = systemSettings;
+    }
 
     [HttpGet]
     [Authorize(Roles = "Admin,Manager")]
@@ -116,6 +122,12 @@ public class UsersController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> IssueTempPassword(Guid id, CancellationToken ct)
     {
+        var method = await _systemSettings.GetSettingAsync("Auth:PasswordRecoveryMethod", ct) ?? "Both";
+        if (method.Equals("OTP", StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequest(ApiErrorResponse.From("disabled", "Temporary password issuing is disabled by system settings.", traceId: HttpContext.TraceIdentifier));
+        }
+
         var tempPassword = await _dispatcher.SendAsync(new IssueTempPasswordCommand(id), ct);
         if (string.IsNullOrEmpty(tempPassword))
         {

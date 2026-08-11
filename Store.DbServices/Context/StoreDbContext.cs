@@ -91,6 +91,7 @@ public class StoreDbContext : DbContext
     public DbSet<Document> Documents => Set<Document>();
     public DbSet<CashierShift> CashierShifts => Set<CashierShift>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
+    public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
 
     // ---- Branches ----
     public DbSet<Branch> Branches => Set<Branch>();
@@ -122,6 +123,14 @@ public class StoreDbContext : DbContext
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(StoreDbContext).Assembly);
 
         ConfigureOperationalRelationships(modelBuilder);
+
+        modelBuilder.Entity<SystemSetting>().HasData(new SystemSetting
+        {
+            SettingKey = "Auth:PasswordRecoveryMethod",
+            SettingValue = "Both",
+            Description = "Determines allowed password recovery methods (OTP, TempPassword, Both)",
+            LastModified = DateTime.UtcNow
+        });
 
         // Keep legacy-style schema naming: lower snake_case for table and column names.
         ApplySnakeCaseNaming(modelBuilder);
