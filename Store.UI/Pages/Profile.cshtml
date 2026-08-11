@@ -220,20 +220,44 @@
         </div>
     </div>
 
-    <!-- Security & Password -->
+    <!-- Security & Authentication -->
     <div class="form-card">
         <h2>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
             Security & Authentication
         </h2>
         
-        <form method="post" asp-page-handler="ChangePassword" autocomplete="off">
+        <p style="color: var(--text-secondary); margin-bottom: 20px;">Manage your account security settings and authentication devices.</p>
+
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <button type="button" class="btn-primary" style="background:var(--surface); border-color:var(--border); color: var(--text-primary) !important;" data-open-blade="passwordBlade">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-secondary)"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                Change Password
+            </button>
+            
+            <button type="button" class="btn-primary" style="background:var(--ops-primary, #0078d4); border-color:var(--ops-primary, #0078d4); color: white;" onclick="registerBiometrics()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 0 0-10 10v2a10 10 0 0 0 10 10 10 10 0 0 0 10-10v-2a10 10 0 0 0-10-10z"></path><path d="M12 6v6l4 2"></path></svg>
+                Register Device for Biometrics
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Change Password Blade ────────────────────────────────── -->
+<div class="blade-overlay" id="passwordBladeOverlay"></div>
+<div class="blade" id="passwordBlade" data-overlay-id="passwordBladeOverlay">
+    <div class="blade-header">
+        <h3>Change Password</h3>
+        <button type="button" class="btn-close" data-close-blade="passwordBlade" aria-label="Close">×</button>
+    </div>
+    <div class="blade-body">
+        <form method="post" asp-page-handler="ChangePassword" autocomplete="off" id="changePasswordForm">
             @Html.AntiForgeryToken()
 
-            <div class="form-grid-2">
-                <div class="form-group form-full">
+            <div class="form-grid" style="grid-template-columns: 1fr; gap: 16px;">
+                <div class="form-group">
                     <label for="currentPassword">Current Password <span style="color:red">*</span></label>
-                    <input type="password" id="currentPassword" name="CurrentPassword" class="form-control" required autocomplete="current-password" placeholder="Enter your current password" style="max-width: 400px;" />
+                    <input type="password" id="currentPassword" name="CurrentPassword" class="form-control" required autocomplete="current-password" placeholder="Enter your current password" />
                 </div>
 
                 <div class="form-group">
@@ -246,24 +270,18 @@
                     <input type="password" id="confirmPassword" name="ConfirmPassword" class="form-control" required minlength="8" autocomplete="new-password" placeholder="Repeat new password" />
                 </div>
                 
-                <div class="form-full" id="passwordMatchError" style="color:var(--ops-red);font-size:0.88rem;display:none;font-weight:600;padding-top:4px;">
+                <div id="passwordMatchError" style="color:var(--ops-red);font-size:0.88rem;display:none;font-weight:600;">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
                     Passwords do not match.
                 </div>
-
-                <div class="form-full" style="margin-top:10px; display: flex; gap: 10px;">
-                    <button type="submit" class="btn-primary" id="btnChangePassword">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                        Update Password
-                    </button>
-                    
-                    <button type="button" class="btn-primary" style="background:var(--ops-primary, #0078d4); border-color:var(--ops-primary, #0078d4); color: white;" onclick="registerBiometrics()">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 0 0-10 10v2a10 10 0 0 0 10 10 10 10 0 0 0 10-10v-2a10 10 0 0 0-10-10z"></path><path d="M12 6v6l4 2"></path></svg>
-                        Register Device for Biometrics
-                    </button>
-                </div>
             </div>
         </form>
+    </div>
+    <div class="blade-footer">
+        <button type="button" class="button-secondary" data-close-blade="passwordBlade">Cancel</button>
+        <button type="submit" form="changePasswordForm" class="button-primary" id="btnChangePassword">
+            Update Password
+        </button>
     </div>
 </div>
 
