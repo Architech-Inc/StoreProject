@@ -13,6 +13,10 @@ public class User : BaseEntity
     public UserStatus Status { get; set; } = UserStatus.NotVerified;
     public string? ThumbnailUrl { get; set; }
     public string? FullImageUrl { get; set; }
+    
+    // Account Lockout
+    public int FailedLoginAttempts { get; set; }
+    public DateTime? LockoutEnd { get; set; }
 
     // Navigation properties
     public Employee? Employee { get; set; }
