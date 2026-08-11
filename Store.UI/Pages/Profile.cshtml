@@ -139,6 +139,13 @@
         .status-alert { padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; font-weight: 500; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; }
         .status-alert.error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
         .status-alert.ok { background: var(--brand-soft); color: var(--brand); border: 1px solid var(--brand-border, #b7d9b7); }
+        
+        .activity-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
+        .activity-table th { text-align: left; padding: 10px; border-bottom: 1px solid var(--border); color: var(--text-secondary); font-weight: 600; }
+        .activity-table td { padding: 12px 10px; border-bottom: 1px solid var(--border); color: var(--text-primary); }
+        .activity-table tr:last-child td { border-bottom: none; }
+        
+        .qr-container { background: #fff; padding: 16px; border-radius: 8px; display: inline-block; border: 1px solid var(--border); }
     </style>
 }
 
@@ -220,25 +227,106 @@
         </div>
     </div>
 
-    <!-- Security & Authentication -->
-    <div class="form-card">
-        <h2>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-            Security & Authentication
-        </h2>
-        
-        <p style="color: var(--text-secondary); margin-bottom: 20px;">Manage your account security settings and authentication devices.</p>
-
-        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-            <button type="button" class="btn-primary" style="background:var(--surface); border-color:var(--border); color: var(--text-primary) !important;" data-open-blade="passwordBlade">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-secondary)"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                Change Password
-            </button>
+    <div class="form-grid-2">
+        <!-- Contact Information -->
+        <div class="form-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                    Contact Information
+                </h2>
+                <button type="button" class="btn-primary" style="background:var(--surface); border-color:var(--border); color: var(--text-primary) !important; padding: 6px 12px; font-size: 0.8rem;" data-open-blade="contactsBlade">
+                    Edit
+                </button>
+            </div>
             
-            <button type="button" class="btn-primary" style="background:var(--ops-primary, #0078d4); border-color:var(--ops-primary, #0078d4); color: white;" onclick="registerBiometrics()">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 0 0-10 10v2a10 10 0 0 0 10 10 10 10 0 0 0 10-10v-2a10 10 0 0 0-10-10z"></path><path d="M12 6v6l4 2"></path></svg>
-                Register Device for Biometrics
-            </button>
+            <div class="meta-item" style="margin-bottom: 12px;">
+                <span class="meta-lbl">Primary Email</span>
+                <span class="meta-val">@(Model.PrimaryEmail ?? "Not set")</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-lbl">Primary Phone</span>
+                <span class="meta-val">@(Model.PrimaryPhone ?? "Not set")</span>
+            </div>
+        </div>
+
+        <!-- Security & Authentication -->
+        <div class="form-card">
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                Security & Authentication
+            </h2>
+            
+            <p style="color: var(--text-secondary); margin-bottom: 20px;">Manage your account security settings and authentication devices.</p>
+
+            <div style="display: flex; gap: 12px; flex-wrap: wrap; flex-direction: column;">
+                <button type="button" class="btn-primary" style="background:var(--surface); border-color:var(--border); color: var(--text-primary) !important; width: 100%; justify-content: flex-start;" data-open-blade="passwordBlade">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-secondary)"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                    Change Password
+                </button>
+                
+                @if (Model.TwoFactorEnabled)
+                {
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding: 12px 16px; border: 1px solid var(--border); border-radius: 8px; background: var(--brand-soft);">
+                        <div style="display:flex; align-items:center; gap: 8px; font-weight: 600; color: var(--brand);">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                            Two-Factor Authentication is Enabled
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <button type="button" class="btn-primary" style="background:var(--surface); border-color:var(--border); color: var(--text-primary) !important; width: 100%; justify-content: flex-start;" data-open-blade="twoFactorBlade">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                        Set up Two-Factor Authentication
+                    </button>
+                }
+
+                <button type="button" class="btn-primary" style="background:var(--ops-primary, #0078d4); border-color:var(--ops-primary, #0078d4); color: white; width: 100%; justify-content: flex-start;" onclick="registerBiometrics()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 0 0-10 10v2a10 10 0 0 0 10 10 10 10 0 0 0 10-10v-2a10 10 0 0 0-10-10z"></path><path d="M12 6v6l4 2"></path></svg>
+                    Register Device for Biometrics
+                </button>
+            </div>
+        </div>
+        
+        <!-- Recent Activity -->
+        <div class="form-card form-full">
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                Recent Activity
+            </h2>
+            <div style="overflow-x: auto;">
+                <table class="activity-table">
+                    <thead>
+                        <tr>
+                            <th>Action</th>
+                            <th>Details</th>
+                            <th>Date & Time</th>
+                            <th>IP Address</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.RecentActivity.Any())
+                        {
+                            foreach (var log in Model.RecentActivity)
+                            {
+                                <tr>
+                                    <td style="font-weight: 600;">@log.Action</td>
+                                    <td>@log.Details</td>
+                                    <td>@log.DateCreated.ToString("g")</td>
+                                    <td>@(log.IpAddress ?? "Unknown")</td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="4" style="text-align: center; color: var(--text-secondary); padding: 20px;">No recent activity found.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
@@ -285,6 +373,97 @@
     </div>
 </div>
 
+<!-- ── Edit Contacts Blade ────────────────────────────────── -->
+<div class="blade-overlay" id="contactsBladeOverlay"></div>
+<div class="blade" id="contactsBlade" data-overlay-id="contactsBladeOverlay">
+    <div class="blade-header">
+        <h3>Update Contact Information</h3>
+        <button type="button" class="btn-close" data-close-blade="contactsBlade" aria-label="Close">×</button>
+    </div>
+    <div class="blade-body">
+        <form method="post" asp-page-handler="UpdateContacts" autocomplete="off" id="updateContactsForm">
+            @Html.AntiForgeryToken()
+
+            <div class="form-grid" style="grid-template-columns: 1fr; gap: 16px;">
+                <div class="form-group">
+                    <label for="primaryEmail">Primary Email</label>
+                    <input type="email" id="primaryEmail" asp-for="PrimaryEmail" class="form-control" placeholder="example@architech.inc" />
+                </div>
+
+                <div class="form-group">
+                    <label for="primaryPhone">Primary Phone</label>
+                    <input type="tel" id="primaryPhone" asp-for="PrimaryPhone" class="form-control" placeholder="+1234567890" />
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="blade-footer">
+        <button type="button" class="button-secondary" data-close-blade="contactsBlade">Cancel</button>
+        <button type="submit" form="updateContactsForm" class="button-primary">
+            Save Changes
+        </button>
+    </div>
+</div>
+
+<!-- ── Setup 2FA Blade ────────────────────────────────── -->
+<div class="blade-overlay" id="twoFactorBladeOverlay"></div>
+<div class="blade" id="twoFactorBlade" data-overlay-id="twoFactorBladeOverlay">
+    <div class="blade-header">
+        <h3>Two-Factor Authentication Setup</h3>
+        <button type="button" class="btn-close" data-close-blade="twoFactorBlade" aria-label="Close">×</button>
+    </div>
+    <div class="blade-body" style="text-align: center;">
+        @if (string.IsNullOrEmpty(Model.TwoFactorSharedKey))
+        {
+            <p style="margin-bottom: 20px; color: var(--text-secondary);">
+                Two-factor authentication adds an extra layer of security to your account.
+                To set it up, you'll need an authenticator app like Google Authenticator or Microsoft Authenticator.
+            </p>
+            <form method="post" asp-page-handler="Enable2FA">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn-primary" style="width: 100%;">
+                    Start Setup
+                </button>
+            </form>
+        }
+        else
+        {
+            <h4 style="margin-bottom: 12px;">Scan the QR Code</h4>
+            <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 20px;">
+                Open your authenticator app and scan this QR code, or manually enter the secret key below.
+            </p>
+            
+            <div class="qr-container">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=@Uri.EscapeDataString(Model.TwoFactorAuthenticatorUri ?? "")" alt="QR Code" width="200" height="200" />
+            </div>
+            
+            <div style="margin: 20px 0; background: var(--background); padding: 12px; border-radius: 8px; border: 1px solid var(--border); font-family: monospace; font-size: 1.1rem; letter-spacing: 1px;">
+                @Model.TwoFactorSharedKey
+            </div>
+
+            <hr style="border:none; border-top: 1px solid var(--border); margin: 24px 0;" />
+            
+            <h4 style="margin-bottom: 12px;">Verify Code</h4>
+            <form method="post" asp-page-handler="Verify2FA" autocomplete="off" id="verify2FAForm">
+                @Html.AntiForgeryToken()
+                <div class="form-group" style="text-align: left;">
+                    <label for="VerificationCode">Verification Code</label>
+                    <input type="text" id="VerificationCode" name="VerificationCode" class="form-control" required minlength="6" maxlength="6" autocomplete="one-time-code" placeholder="123456" style="text-align: center; font-size: 1.25rem; letter-spacing: 4px;" />
+                </div>
+            </form>
+        }
+    </div>
+    <div class="blade-footer">
+        <button type="button" class="button-secondary" data-close-blade="twoFactorBlade">Close</button>
+        @if (!string.IsNullOrEmpty(Model.TwoFactorSharedKey))
+        {
+            <button type="submit" form="verify2FAForm" class="button-primary">
+                Verify & Enable
+            </button>
+        }
+    </div>
+</div>
+
 @section Scripts {
 <script src="~/js/webauthn.js" asp-append-version="true"></script>
 <script>
@@ -320,6 +499,21 @@
             }
         }
     });
+    // Open 2FA blade automatically if there is a shared key (post-back)
+    @if (!string.IsNullOrEmpty(Model.TwoFactorSharedKey))
+    {
+        <text>
+        setTimeout(() => {
+            const overlay = document.getElementById('twoFactorBladeOverlay');
+            const blade = document.getElementById('twoFactorBlade');
+            if (overlay && blade) {
+                overlay.classList.add('active');
+                blade.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+        }, 100);
+        </text>
+    }
 })();
 </script>
 }

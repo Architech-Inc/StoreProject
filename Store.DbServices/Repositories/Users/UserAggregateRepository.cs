@@ -88,7 +88,83 @@ public class UserAggregateRepository : IUserAggregateRepository
 
         return user?.ThumbnailUrl;
     }
+    public async Task<User?> GetUserWithContactsAsync(Guid userId, CancellationToken ct = default)
+    {
+        return await _context.Users
+            .Include(u => u.Emails).ThenInclude(ue => ue.Email)
+            .Include(u => u.Phones).ThenInclude(up => up.Phone)
+            .FirstOrDefaultAsync(u => u.UserId == userId, ct);
+    }
+
+    public async Task UpdateUserContactsAsync(User user, string? email, string? phone, CancellationToken ct = default)
+    {
+        // Handle Email
+        var currentPrimaryEmail = user.Emails.FirstOrDefault(e => e.IsPrimary);
+        if (email != null)
+        {
+            if (currentPrimaryEmail == null)
+            {
+                user.Emails.Add(new Store.Models.Entities.Contacts.UserEmail
+                {
+                    IsPrimary = true,
+                    Email = new Store.Models.Entities.Contacts.Email { Address = email.Trim(), Type = Store.Models.Enums.EmailType.Personal }
+                });
+            }
+            else if (currentPrimaryEmail.Email.Address != email.Trim())
+            {
+                currentPrimaryEmail.Email.Address = email.Trim();
+            }
+        }
+        else if (currentPrimaryEmail != null)
+        {
+            _context.UserEmails.Remove(currentPrimaryEmail);
+            _context.Emails.Remove(currentPrimaryEmail.Email);
+        }
+
+        // Handle Phone
+        var currentPrimaryPhone = user.Phones.FirstOrDefault(p => p.IsPrimary);
+        if (phone != null)
+        {
+            if (currentPrimaryPhone == null)
+            {
+                var defaultCountry = await _context.Countries.FirstOrDefaultAsync(ct);
+                var countryId = defaultCountry?.CountryId ?? 1; // Fallback
+                
+                user.Phones.Add(new Store.Models.Entities.Contacts.UserPhone
+                {
+                    IsPrimary = true,
+                    Phone = new Store.Models.Entities.Contacts.Phone { Number = phone.Trim(), CountryId = countryId, Type = Store.Models.Enums.PhoneType.Mobile }
+                });
+            }
+            else if (currentPrimaryPhone.Phone.Number != phone.Trim())
+            {
+                currentPrimaryPhone.Phone.Number = phone.Trim();
+            }
+        }
+        else if (currentPrimaryPhone != null)
+        {
+            _context.UserPhones.Remove(currentPrimaryPhone);
+            _context.Phones.Remove(currentPrimaryPhone.Phone);
+        }
+
+        _context.Users.Update(user);
+    }
 
     public async Task SaveChangesAsync(CancellationToken ct = default)
         => await _context.SaveChangesAsync(ct);
+
+    public async Task AddAuditLogAsync(AuditLog log, CancellationToken ct = default)
+    {
+        await _context.AuditLogs.AddAsync(log, ct);
+    }
+
+    public async Task<IReadOnlyCollection<AuditLog>> GetRecentActivityAsync(Guid userId, int limit = 10, CancellationToken ct = default)
+    {
+        return await _context.AuditLogs
+            .AsNoTracking()
+            .Where(a => a.UserId == userId)
+            .OrderByDescending(a => a.DateCreated)
+            .Take(limit)
+            .ToListAsync(ct);
+    }
 }

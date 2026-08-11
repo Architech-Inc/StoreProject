@@ -14,4 +14,10 @@ public interface IUserService
     Task<string?> GetAvatarByUsernameAsync(string username, CancellationToken ct = default);
     Task<string?> IssueTempPasswordAsync(Guid userId, CancellationToken ct = default);
     Task<bool> DeleteAsync(Guid userId, CancellationToken ct = default);
+    Task<bool> UpdateContactsAsync(Guid userId, UpdateUserContactsRequest request, CancellationToken ct = default);
+    
+    // 2FA & Security
+    Task<Enable2FAResponse> Enable2FAAsync(Guid userId, CancellationToken ct = default);
+    Task<bool> Verify2FAAsync(Guid userId, Verify2FARequest request, CancellationToken ct = default);
+    Task<IReadOnlyCollection<AuditLogDto>> GetRecentActivityAsync(Guid userId, CancellationToken ct = default);
 }

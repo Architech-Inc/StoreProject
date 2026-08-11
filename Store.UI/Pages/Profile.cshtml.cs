@@ -25,6 +25,17 @@ public class ProfileModel : SecurePageModel
     public string? EmployeeGender { get; private set; }
     public string? EmployeeDateEmployed { get; private set; }
 
+    public bool TwoFactorEnabled { get; private set; }
+    public IReadOnlyCollection<AuditLogDto> RecentActivity { get; private set; } = Array.Empty<AuditLogDto>();
+
+    // 2FA Setup state
+    [TempData] public string? TwoFactorSharedKey { get; set; }
+    [TempData] public string? TwoFactorAuthenticatorUri { get; set; }
+
+    // Contact Data
+    [BindProperty] public string? PrimaryEmail { get; set; }
+    [BindProperty] public string? PrimaryPhone { get; set; }
+
     [TempData] public string? StatusMessage { get; set; }
 
     [BindProperty] public string? CurrentPassword { get; set; }
@@ -81,6 +92,8 @@ public class ProfileModel : SecurePageModel
                     CurrentStatus = user.Status.ToString();
                     CurrentAvatarPath = user.ThumbnailUrl ?? user.FullImageUrl;
                     CurrentFullAvatarPath = user.FullImageUrl ?? user.ThumbnailUrl;
+                    PrimaryEmail = user.PrimaryEmail;
+                    PrimaryPhone = user.PrimaryPhone;
 
                     // Fetch associated Employee data if available
                     if (user.EmployeeId.HasValue)
@@ -101,6 +114,9 @@ public class ProfileModel : SecurePageModel
                             _logger.LogWarning(empEx, "Failed to load employee details for User {UserId}", userId);
                         }
                     }
+
+                    TwoFactorEnabled = user.TwoFactorEnabled;
+                    RecentActivity = await _userService.GetRecentActivityAsync(userId, ct);
                 }
             }
             catch (Exception ex)
@@ -222,6 +238,103 @@ public class ProfileModel : SecurePageModel
             TempData["StatusMessage"] = "Error: Failed to upload avatar.";
         }
         
+        return RedirectToPage();
+    }
+
+    public async Task<IActionResult> OnPostUpdateContactsAsync(CancellationToken ct)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return GoToLogin();
+
+        var userIdStr = JwtPermissionReader.GetClaim(token, "uid");
+        if (!Guid.TryParse(userIdStr, out var userId))
+        {
+            TempData["StatusMessage"] = "Error: Could not identify current user. Please log in again.";
+            return RedirectToPage();
+        }
+
+        try
+        {
+            var request = new UpdateUserContactsRequest
+            {
+                Email = PrimaryEmail,
+                Phone = PrimaryPhone
+            };
+
+            var success = await _userService.UpdateContactsAsync(userId, request, ct);
+
+            TempData["StatusMessage"] = success
+                ? "Contacts updated successfully."
+                : "Error: Failed to update contacts.";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update contacts for user {UserId}", userIdStr);
+            TempData["StatusMessage"] = "Error: Failed to update contacts.";
+        }
+
+        return RedirectToPage();
+    }
+
+    public async Task<IActionResult> OnPostEnable2FAAsync(CancellationToken ct)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return GoToLogin();
+
+        var userIdStr = JwtPermissionReader.GetClaim(token, "uid");
+        if (!Guid.TryParse(userIdStr, out var userId))
+            return RedirectToPage();
+
+        try
+        {
+            var response = await _userService.Enable2FAAsync(userId, ct);
+            TwoFactorSharedKey = response.SharedKey;
+            TwoFactorAuthenticatorUri = response.AuthenticatorUri;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to initiate 2FA for user {UserId}", userId);
+            TempData["StatusMessage"] = "Error: Failed to setup 2FA.";
+        }
+
+        return RedirectToPage();
+    }
+
+    public async Task<IActionResult> OnPostVerify2FAAsync([FromForm] string VerificationCode, CancellationToken ct)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return GoToLogin();
+
+        var userIdStr = JwtPermissionReader.GetClaim(token, "uid");
+        if (!Guid.TryParse(userIdStr, out var userId))
+            return RedirectToPage();
+
+        if (string.IsNullOrWhiteSpace(VerificationCode) || VerificationCode.Length != 6)
+        {
+            TempData["StatusMessage"] = "Error: Invalid verification code.";
+            return RedirectToPage();
+        }
+
+        try
+        {
+            var success = await _userService.Verify2FAAsync(userId, new Verify2FARequest { Code = VerificationCode }, ct);
+            if (success)
+            {
+                TempData["StatusMessage"] = "Two-factor authentication successfully enabled.";
+                TwoFactorSharedKey = null;
+                TwoFactorAuthenticatorUri = null;
+            }
+            else
+            {
+                TempData["StatusMessage"] = "Error: Invalid verification code.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to verify 2FA for user {UserId}", userId);
+            TempData["StatusMessage"] = "Error: Failed to verify 2FA code.";
+        }
+
         return RedirectToPage();
     }
 }

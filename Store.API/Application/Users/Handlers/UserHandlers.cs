@@ -109,3 +109,55 @@ public class IssueTempPasswordHandler : IRequestHandler<IssueTempPasswordCommand
     public Task<string> HandleAsync(IssueTempPasswordCommand request, CancellationToken ct = default)
         => _usersPort.IssueTempPasswordAsync(request.UserId, ct);
 }
+
+public class UpdateUserContactsHandler : IRequestHandler<UpdateUserContactsCommand, bool>
+{
+    private readonly IUsersPort _usersPort;
+
+    public UpdateUserContactsHandler(IUsersPort usersPort)
+    {
+        _usersPort = usersPort;
+    }
+
+    public Task<bool> HandleAsync(UpdateUserContactsCommand request, CancellationToken ct = default)
+        => _usersPort.UpdateContactsAsync(request.UserId, request.Request, ct);
+}
+
+public class Enable2FAHandler : IRequestHandler<Enable2FACommand, Enable2FAResponse>
+{
+    private readonly IUsersPort _usersPort;
+
+    public Enable2FAHandler(IUsersPort usersPort)
+    {
+        _usersPort = usersPort;
+    }
+
+    public Task<Enable2FAResponse> HandleAsync(Enable2FACommand request, CancellationToken ct = default)
+        => _usersPort.Enable2FAAsync(request.UserId, ct);
+}
+
+public class Verify2FAHandler : IRequestHandler<Verify2FACommand, bool>
+{
+    private readonly IUsersPort _usersPort;
+
+    public Verify2FAHandler(IUsersPort usersPort)
+    {
+        _usersPort = usersPort;
+    }
+
+    public Task<bool> HandleAsync(Verify2FACommand request, CancellationToken ct = default)
+        => _usersPort.Verify2FAAsync(request.UserId, request.Request, ct);
+}
+
+public class GetRecentActivityHandler : IRequestHandler<GetRecentActivityQuery, IReadOnlyCollection<AuditLogDto>>
+{
+    private readonly IUsersPort _usersPort;
+
+    public GetRecentActivityHandler(IUsersPort usersPort)
+    {
+        _usersPort = usersPort;
+    }
+
+    public Task<IReadOnlyCollection<AuditLogDto>> HandleAsync(GetRecentActivityQuery request, CancellationToken ct = default)
+        => _usersPort.GetRecentActivityAsync(request.UserId, ct);
+}

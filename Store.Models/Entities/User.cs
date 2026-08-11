@@ -18,6 +18,10 @@ public class User : BaseEntity
     public int FailedLoginAttempts { get; set; }
     public DateTime? LockoutEnd { get; set; }
 
+    // 2FA Security
+    public bool TwoFactorEnabled { get; set; }
+    public string? TwoFactorSecret { get; set; }
+
     // Navigation properties
     public Employee? Employee { get; set; }
     public Role Role { get; set; } = null!;

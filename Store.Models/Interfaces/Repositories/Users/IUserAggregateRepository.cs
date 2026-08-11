@@ -11,8 +11,12 @@ public interface IUserAggregateRepository
     Task<User?> GetByIdForUpdateAsync(Guid userId, CancellationToken ct = default);
     Task AddUserAsync(User user, CancellationToken ct = default);
     void UpdateUser(User user);
+    Task<User?> GetUserWithContactsAsync(Guid userId, CancellationToken ct = default);
+    Task UpdateUserContactsAsync(User user, string? email, string? phone, CancellationToken ct = default);
     Task<UserPassword?> GetUserPasswordAsync(Guid userId, CancellationToken ct = default);
     void UpdateUserPassword(UserPassword userPassword);
     Task<string?> GetAvatarByUsernameAsync(string username, CancellationToken ct = default);
+    Task AddAuditLogAsync(AuditLog log, CancellationToken ct = default);
+    Task<IReadOnlyCollection<AuditLog>> GetRecentActivityAsync(Guid userId, int limit = 10, CancellationToken ct = default);
     Task SaveChangesAsync(CancellationToken ct = default);
 }

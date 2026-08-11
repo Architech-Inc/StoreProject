@@ -118,6 +118,22 @@ public class UsersController : ControllerBase
         return Ok(ApiResponse<UserDto>.Ok(user, "Avatar updated."));
     }
 
+    [HttpPut("profile/contacts")]
+    public async Task<IActionResult> UpdateContacts([FromBody] UpdateUserContactsRequest request, CancellationToken ct)
+    {
+        var userIdClaim = User.FindFirst("uid")?.Value;
+        if (!Guid.TryParse(userIdClaim, out var userId))
+            return Unauthorized(ApiErrorResponse.From("unauthorized", "Unauthorized.", traceId: HttpContext.TraceIdentifier));
+
+        var success = await _dispatcher.SendAsync(new UpdateUserContactsCommand(userId, request), ct);
+        if (!success)
+        {
+            return NotFound(ApiErrorResponse.From("not_found", "User not found.", traceId: HttpContext.TraceIdentifier));
+        }
+
+        return Ok(ApiResponse<object>.Ok(null!, "Contacts updated."));
+    }
+
     [HttpPost("{id:guid}/issue-temp-password")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> IssueTempPassword(Guid id, CancellationToken ct)
@@ -135,5 +151,43 @@ public class UsersController : ControllerBase
         }
 
         return Ok(ApiResponse<string>.Ok(tempPassword, "Temporary password issued. User must change it on next login."));
+    }
+
+    [HttpPost("profile/2fa/enable")]
+    public async Task<IActionResult> Enable2FA(CancellationToken ct)
+    {
+        var userIdClaim = User.FindFirst("uid")?.Value;
+        if (!Guid.TryParse(userIdClaim, out var userId))
+            return Unauthorized(ApiErrorResponse.From("unauthorized", "Unauthorized.", traceId: HttpContext.TraceIdentifier));
+
+        var result = await _dispatcher.SendAsync(new Enable2FACommand(userId), ct);
+        return Ok(ApiResponse<Enable2FAResponse>.Ok(result, "2FA setup initiated."));
+    }
+
+    [HttpPost("profile/2fa/verify")]
+    public async Task<IActionResult> Verify2FA([FromBody] Verify2FARequest request, CancellationToken ct)
+    {
+        var userIdClaim = User.FindFirst("uid")?.Value;
+        if (!Guid.TryParse(userIdClaim, out var userId))
+            return Unauthorized(ApiErrorResponse.From("unauthorized", "Unauthorized.", traceId: HttpContext.TraceIdentifier));
+
+        var success = await _dispatcher.SendAsync(new Verify2FACommand(userId, request), ct);
+        if (!success)
+        {
+            return BadRequest(ApiErrorResponse.From("invalid_code", "Invalid 2FA code.", traceId: HttpContext.TraceIdentifier));
+        }
+
+        return Ok(ApiResponse<object>.Ok(null!, "2FA verified and enabled successfully."));
+    }
+
+    [HttpGet("profile/activity")]
+    public async Task<IActionResult> GetRecentActivity(CancellationToken ct)
+    {
+        var userIdClaim = User.FindFirst("uid")?.Value;
+        if (!Guid.TryParse(userIdClaim, out var userId))
+            return Unauthorized(ApiErrorResponse.From("unauthorized", "Unauthorized.", traceId: HttpContext.TraceIdentifier));
+
+        var result = await _dispatcher.SendAsync(new GetRecentActivityQuery(userId), ct);
+        return Ok(ApiResponse<IReadOnlyCollection<AuditLogDto>>.Ok(result));
     }
 }

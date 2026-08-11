@@ -1,3 +1,4 @@
+using OtpNet;
 using Store.Models.DTOs.Users;
 using Store.Models.DTOs.Common;
 using Store.Models.Entities;
@@ -19,8 +20,16 @@ public class UserService : IUserService
     public async Task<UserDto?> GetByIdAsync(Guid userId, CancellationToken ct = default)
     {
         var user = await _users.GetByIdWithRoleEmployeeAsync(userId, asNoTracking: true, ct);
+        if (user == null) return null;
 
-        return user is null ? null : MapToDto(user);
+        var userWithContacts = await _users.GetUserWithContactsAsync(userId, ct);
+        if (userWithContacts != null)
+        {
+            user.Emails = userWithContacts.Emails;
+            user.Phones = userWithContacts.Phones;
+        }
+
+        return MapToDto(user);
     }
 
     public async Task<PagedResult<UserDto>> GetAllAsync(PagedRequest request, CancellationToken ct = default)
@@ -90,6 +99,16 @@ public class UserService : IUserService
         throw new NotImplementedException("Use UpdateAsync instead for direct DB service calls.");
     }
 
+    public async Task<bool> UpdateContactsAsync(Guid userId, UpdateUserContactsRequest request, CancellationToken ct = default)
+    {
+        var user = await _users.GetUserWithContactsAsync(userId, ct);
+        if (user == null) return false;
+
+        await _users.UpdateUserContactsAsync(user, request.Email, request.Phone, ct);
+        await _users.SaveChangesAsync(ct);
+        return true;
+    }
+
     public async Task<bool> DeleteAsync(Guid userId, CancellationToken ct = default)
     {
         var user = await _users.GetByIdForUpdateAsync(userId, ct);
@@ -132,14 +151,81 @@ public class UserService : IUserService
         RoleName = u.Role?.Name,
         EmployeeId = u.EmployeeId,
         Status = u.Status,
+        TwoFactorEnabled = u.TwoFactorEnabled,
         ThumbnailUrl = u.ThumbnailUrl,
         FullImageUrl = u.FullImageUrl,
-        DateCreated = u.DateCreated
+        DateCreated = u.DateCreated,
+        PrimaryEmail = u.Emails?.FirstOrDefault(e => e.IsPrimary)?.Email?.Address,
+        PrimaryPhone = u.Phones?.FirstOrDefault(p => p.IsPrimary)?.Phone?.Number
     };
 
     public Task<string?> IssueTempPasswordAsync(Guid userId, CancellationToken ct = default)
     {
         // This is handled via MediatR and IUsersPort directly using IPasswordRecoveryService
         throw new NotImplementedException("Use IPasswordRecoveryService for this operation on the backend.");
+    }
+
+    public async Task<Enable2FAResponse> Enable2FAAsync(Guid userId, CancellationToken ct = default)
+    {
+        var user = await _users.GetByIdForUpdateAsync(userId, ct);
+        if (user == null) throw new InvalidOperationException("User not found.");
+
+        var key = KeyGeneration.GenerateRandomKey(20);
+        var base32Key = Base32Encoding.ToString(key);
+
+        user.TwoFactorSecret = base32Key;
+        // TwoFactorEnabled remains false until verified
+        _users.UpdateUser(user);
+        await _users.SaveChangesAsync(ct);
+
+        var issuer = "Architech-Inc StoreProject";
+        var uri = $"otpauth://totp/{Uri.EscapeDataString(issuer)}:{Uri.EscapeDataString(user.Username)}?secret={base32Key}&issuer={Uri.EscapeDataString(issuer)}";
+
+        return new Enable2FAResponse
+        {
+            SharedKey = base32Key,
+            AuthenticatorUri = uri
+        };
+    }
+
+    public async Task<bool> Verify2FAAsync(Guid userId, Verify2FARequest request, CancellationToken ct = default)
+    {
+        var user = await _users.GetByIdForUpdateAsync(userId, ct);
+        if (user == null || string.IsNullOrEmpty(user.TwoFactorSecret)) return false;
+
+        var totp = new Totp(Base32Encoding.ToBytes(user.TwoFactorSecret));
+        var valid = totp.VerifyTotp(request.Code, out long timeStepMatched, window: new VerificationWindow(2, 2));
+
+        if (valid)
+        {
+            user.TwoFactorEnabled = true;
+            _users.UpdateUser(user);
+            
+            await _users.AddAuditLogAsync(new AuditLog
+            {
+                UserId = userId,
+                Action = "2FA Enabled",
+                Details = "Two-factor authentication was successfully enabled."
+            }, ct);
+            
+            await _users.SaveChangesAsync(ct);
+            return true;
+        }
+
+        return false;
+    }
+
+    public async Task<IReadOnlyCollection<AuditLogDto>> GetRecentActivityAsync(Guid userId, CancellationToken ct = default)
+    {
+        var logs = await _users.GetRecentActivityAsync(userId, 10, ct);
+        return logs.Select(l => new AuditLogDto
+        {
+            Id = l.AuditLogId,
+            Action = l.Action,
+            Details = l.Details,
+            IpAddress = l.IpAddress,
+            UserAgent = l.UserAgent,
+            DateCreated = l.DateCreated
+        }).ToList();
     }
 }

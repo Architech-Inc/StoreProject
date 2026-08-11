@@ -55,8 +55,14 @@ public class ApiUserService : IUserService
 
     public async Task<bool> ChangePasswordAsync(Guid userId, ChangePasswordRequest request, CancellationToken ct = default)
     {
-        var result = await _client.PostAsync<bool?>($"/api/users/{userId}/change-password", request, ct);
+        var result = await _client.PostAsync<bool?>($"/api/users/change-password", request, ct);
         return result.HasValue && result.Value;
+    }
+
+    public async Task<bool> UpdateContactsAsync(Guid userId, UpdateUserContactsRequest request, CancellationToken ct = default)
+    {
+        var result = await _client.PutAsync<object>("/api/users/profile/contacts", request, ct);
+        return result != null;
     }
 
     public async Task<bool> DeleteAsync(Guid userId, CancellationToken ct = default)
@@ -82,5 +88,23 @@ public class ApiUserService : IUserService
         {
             return null;
         }
+    }
+
+    public async Task<Enable2FAResponse> Enable2FAAsync(Guid userId, CancellationToken ct = default)
+    {
+        var result = await _client.PostAsync<Enable2FAResponse>("/api/users/profile/2fa/enable", null, ct);
+        return result ?? throw new InvalidOperationException("Failed to initiate 2FA.");
+    }
+
+    public async Task<bool> Verify2FAAsync(Guid userId, Verify2FARequest request, CancellationToken ct = default)
+    {
+        var result = await _client.PostAsync<object>("/api/users/profile/2fa/verify", request, ct);
+        return result != null;
+    }
+
+    public async Task<IReadOnlyCollection<AuditLogDto>> GetRecentActivityAsync(Guid userId, CancellationToken ct = default)
+    {
+        var result = await _client.GetAsync<IReadOnlyCollection<AuditLogDto>>("/api/users/profile/activity", ct);
+        return result ?? Array.Empty<AuditLogDto>();
     }
 }

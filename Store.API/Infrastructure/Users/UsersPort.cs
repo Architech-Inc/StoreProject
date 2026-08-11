@@ -28,6 +28,9 @@ public class UsersPort : IUsersPort
     public Task<UserDto?> UpdateAsync(Guid userId, UpdateUserRequest request, CancellationToken ct = default)
         => _userService.UpdateAsync(userId, request, ct);
 
+    public Task<bool> UpdateContactsAsync(Guid userId, UpdateUserContactsRequest request, CancellationToken ct = default)
+        => _userService.UpdateContactsAsync(userId, request, ct);
+
     public Task<bool> DeleteAsync(Guid userId, CancellationToken ct = default)
         => _userService.DeleteAsync(userId, ct);
 
@@ -39,4 +42,13 @@ public class UsersPort : IUsersPort
 
     public Task<string> IssueTempPasswordAsync(Guid userId, CancellationToken ct = default)
         => _passwordRecoveryService.IssueTempPasswordAsync(userId, ct);
+
+    public Task<Enable2FAResponse> Enable2FAAsync(Guid userId, CancellationToken ct = default)
+        => _userService.Enable2FAAsync(userId, ct);
+
+    public Task<bool> Verify2FAAsync(Guid userId, Verify2FARequest request, CancellationToken ct = default)
+        => _userService.Verify2FAAsync(userId, request, ct);
+
+    public Task<IReadOnlyCollection<AuditLogDto>> GetRecentActivityAsync(Guid userId, CancellationToken ct = default)
+        => _userService.GetRecentActivityAsync(userId, ct);
 }

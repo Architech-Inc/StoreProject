@@ -88,6 +88,7 @@ public class StoreDbContext : DbContext
     public DbSet<Otp> Otps => Set<Otp>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<ChangeLog> ChangeLogs => Set<ChangeLog>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<Document> Documents => Set<Document>();
     public DbSet<CashierShift> CashierShifts => Set<CashierShift>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();

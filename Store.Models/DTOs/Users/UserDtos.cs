@@ -14,6 +14,9 @@ public class UserDto
     public string? ThumbnailUrl { get; set; }
     public string? FullImageUrl { get; set; }
     public DateTime DateCreated { get; set; }
+    public string? PrimaryEmail { get; set; }
+    public string? PrimaryPhone { get; set; }
+    public bool TwoFactorEnabled { get; set; }
 }
 
 public class CreateUserRequest
@@ -54,4 +57,35 @@ public class ChangePasswordRequest
 
     [Required, Compare(nameof(NewPassword))]
     public string ConfirmPassword { get; set; } = string.Empty;
+}
+
+public class UpdateUserContactsRequest
+{
+    [EmailAddress, StringLength(254)]
+    public string? Email { get; set; }
+
+    [Phone, StringLength(50)]
+    public string? Phone { get; set; }
+}
+
+public class Enable2FAResponse
+{
+    public string SharedKey { get; set; } = string.Empty;
+    public string AuthenticatorUri { get; set; } = string.Empty;
+}
+
+public class Verify2FARequest
+{
+    [Required, StringLength(6, MinimumLength = 6)]
+    public string Code { get; set; } = string.Empty;
+}
+
+public class AuditLogDto
+{
+    public long Id { get; set; }
+    public string Action { get; set; } = string.Empty;
+    public string? Details { get; set; }
+    public string? IpAddress { get; set; }
+    public string? UserAgent { get; set; }
+    public DateTime DateCreated { get; set; }
 }
