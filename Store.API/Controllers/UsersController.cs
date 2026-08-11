@@ -111,4 +111,17 @@ public class UsersController : ControllerBase
 
         return Ok(ApiResponse<UserDto>.Ok(user, "Avatar updated."));
     }
+
+    [HttpPost("{id:guid}/issue-temp-password")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> IssueTempPassword(Guid id, CancellationToken ct)
+    {
+        var tempPassword = await _dispatcher.SendAsync(new IssueTempPasswordCommand(id), ct);
+        if (string.IsNullOrEmpty(tempPassword))
+        {
+            return NotFound(ApiErrorResponse.From("not_found", "User not found or unable to issue password.", traceId: HttpContext.TraceIdentifier));
+        }
+
+        return Ok(ApiResponse<string>.Ok(tempPassword, "Temporary password issued. User must change it on next login."));
+    }
 }

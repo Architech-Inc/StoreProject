@@ -77,10 +77,45 @@ public class AuthenticationService : IAuthenticationService
         var user = await _uow.Repository<User>().Query()
             .Include(u => u.Role)
             .Include(u => u.UserToken)
+            .Include(u => u.Password)
             .FirstOrDefaultAsync(u => u.UserId == userId, ct);
 
         if (user is null || user.Status == UserStatus.Banned || user.Status == UserStatus.Deleted)
             return null;
+
+        // Check if account is locked out
+        if (user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTime.UtcNow)
+        {
+            return new LoginResponse
+            {
+                IsLockedOut = true,
+                LockoutRemainingMinutes = (int)Math.Ceiling((user.LockoutEnd.Value - DateTime.UtcNow).TotalMinutes)
+            };
+        }
+
+        // On successful biometric login, clear any lockout
+        if (user.FailedLoginAttempts > 0 || user.LockoutEnd.HasValue)
+        {
+            user.FailedLoginAttempts = 0;
+            user.LockoutEnd = null;
+            _uow.Repository<User>().Update(user);
+            await _uow.SaveChangesAsync(ct);
+        }
+
+        if (user.Password != null && (user.Password.ForcePasswordChange || (user.Password.TempPasswordExpiresAt.HasValue && user.Password.TempPasswordExpiresAt.Value < DateTime.UtcNow)))
+        {
+            return new LoginResponse
+            {
+                RequiresPasswordReset = true,
+                User = new AuthenticatedUserDto
+                {
+                    UserId = user.UserId,
+                    Username = user.Username,
+                    Role = user.Role.Name,
+                    ThumbnailUrl = user.ThumbnailUrl
+                }
+            };
+        }
 
         // Skip password verification and just issue the tokens
         var permissions = await GetPermissionClaimsAsync(user.RoleId, ct);
@@ -219,8 +254,52 @@ public class AuthenticationService : IAuthenticationService
         if (user.Password is null) return null;
         if (user.Status == UserStatus.Banned || user.Status == UserStatus.Deleted) return null;
 
+        // Check if account is locked out
+        if (user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTime.UtcNow)
+        {
+            return new LoginResponse
+            {
+                IsLockedOut = true,
+                LockoutRemainingMinutes = (int)Math.Ceiling((user.LockoutEnd.Value - DateTime.UtcNow).TotalMinutes)
+            };
+        }
+
         if (!BCrypt.Net.BCrypt.EnhancedVerify(password, user.Password.PasswordHash))
+        {
+            user.FailedLoginAttempts++;
+            if (user.FailedLoginAttempts >= 5)
+            {
+                user.LockoutEnd = DateTime.UtcNow.AddMinutes(15);
+            }
+            _uow.Repository<User>().Update(user);
+            await _uow.SaveChangesAsync(ct);
             return null;
+        }
+
+        // On successful password, clear any lockout
+        if (user.FailedLoginAttempts > 0 || user.LockoutEnd.HasValue)
+        {
+            user.FailedLoginAttempts = 0;
+            user.LockoutEnd = null;
+            _uow.Repository<User>().Update(user);
+            await _uow.SaveChangesAsync(ct);
+        }
+
+        if (user.Password.ForcePasswordChange || (user.Password.TempPasswordExpiresAt.HasValue && user.Password.TempPasswordExpiresAt.Value < DateTime.UtcNow))
+        {
+            return new LoginResponse
+            {
+                RequiresPasswordReset = true,
+                User = new AuthenticatedUserDto
+                {
+                    UserId = user.UserId,
+                    Username = user.Username,
+                    Role = user.Role.Name,
+                    ThumbnailUrl = user.ThumbnailUrl,
+                    FullImageUrl = user.FullImageUrl
+                }
+            };
+        }
 
         var permissions = await GetPermissionClaimsAsync(user.RoleId, ct);
         var (token, refreshToken, expiry, refreshExpiry) = GenerateTokens(user, permissions);

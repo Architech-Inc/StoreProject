@@ -14,5 +14,8 @@ public class UserPassword : BaseEntity
     /// <summary>BCrypt hash (includes salt). Never store plain-text here.</summary>
     public string PasswordHash { get; set; } = string.Empty;
 
+    public bool ForcePasswordChange { get; set; }
+    public DateTime? TempPasswordExpiresAt { get; set; }
+
     public User User { get; set; } = null!;
 }

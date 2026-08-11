@@ -78,3 +78,29 @@ public class RefreshTokenRequest
     [Required]
     public string RefreshToken { get; set; } = string.Empty;
 }
+
+public class RequestOtpRequest
+{
+    [Required]
+    public string Username { get; set; } = string.Empty;
+}
+
+public class VerifyOtpRequest
+{
+    [Required]
+    public string Username { get; set; } = string.Empty;
+    [Required]
+    public string OtpCode { get; set; } = string.Empty;
+}
+
+public class RecoverPasswordWithTokenRequest
+{
+    [Required]
+    public string Token { get; set; } = string.Empty;
+
+    [Required, StringLength(128, MinimumLength = 8)]
+    public string NewPassword { get; set; } = string.Empty;
+
+    [Required, Compare(nameof(NewPassword))]
+    public string ConfirmPassword { get; set; } = string.Empty;
+}

@@ -1,0 +1,72 @@
+@page "/ForgotPassword/Verify"
+@model StoreUI.Pages.ForgotPassword.VerifyModel
+@{
+    ViewData["Title"] = "Verify OTP";
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Verify OTP</title>
+    <link rel="icon" type="image/png" href="~/images/clarkstore.png" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+<div class="auth-page">
+    <div id="welcomeView">
+        <div class="viewNameSpace">
+            <img src="~/images/clarkstore.png" alt="logo" class="ns-image">
+            <h2>Verify OTP</h2>
+        </div>
+
+        @if (!string.IsNullOrEmpty(Model?.ErrorMessage))
+        {
+            <p class="auth-error">@Model.ErrorMessage</p>
+        }
+        else
+        {
+            <p style="text-align:center; font-size:14px; margin-bottom:12px;">We've sent a 6-digit OTP to your registered contact method.</p>
+        }
+
+        <div class="formArea">
+            <form method="post" id="verifyForm" novalidate>
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="Username" />
+                <div class="formSection">
+                    <label for="inputOtp">One-Time Password</label>
+                    <input title="otp code" tabindex="0" type="text" asp-for="OtpCode" id="inputOtp"
+                           autocomplete="one-time-code" minlength="6" maxlength="6" placeholder="123456" required />
+                    <span asp-validation-for="OtpCode" style="color:var(--error); font-size:12px;"></span>
+                </div>
+                
+                <div class="formSection LDiv">
+                    <button type="submit" id="verifyBtn" class="resetbtn">
+                        <span id="btnText">Verify</span>
+                        <div id="btnSpinner" class="spinner" style="display: none;"></div>
+                    </button>
+                </div>
+                
+                <p class="forgot_pass">
+                    <a href="/ForgotPassword">Request new OTP</a>
+                </p>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('verifyForm').addEventListener('submit', function() {
+        var btnText = document.getElementById('btnText');
+        var spinner = document.getElementById('btnSpinner');
+        var btn = document.getElementById('verifyBtn');
+        
+        btnText.textContent = 'Verifying...';
+        spinner.style.display = 'inline-block';
+        btn.disabled = true;
+    });
+</script>
+</body>
+</html>

@@ -147,4 +147,29 @@ public class UsersModel : SecurePageModel
 
         return RedirectToPage();
     }
+
+    public async Task<IActionResult> OnPostIssuePasswordAsync(Guid userId, CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        _apiClient.SetToken(token);
+
+        try
+        {
+            var tempPwd = await _userService.IssueTempPasswordAsync(userId, ct);
+            if (!string.IsNullOrEmpty(tempPwd))
+            {
+                StatusMessage = $"Temporary password issued: {tempPwd}";
+            }
+            else
+            {
+                StatusMessage = "Error: Failed to issue temporary password.";
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: {ex.Message}";
+        }
+
+        return RedirectToPage();
+    }
 }

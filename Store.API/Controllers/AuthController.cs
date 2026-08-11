@@ -4,6 +4,7 @@ using Store.API.Application.Auth.Requests;
 using Store.API.Contracts;
 using Store.Models.DTOs.Auth;
 using Store.Models.DTOs.Common;
+using Store.API.Application.Users.Requests;
 
 namespace Store.API.Controllers;
 
@@ -103,5 +104,14 @@ public class AuthController : ControllerBase
         }
 
         return Ok(ApiResponse<object>.Ok(null!, "Password changed successfully."));
+    }
+
+    [HttpGet("avatar/{username}")]
+    [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+    public async Task<IActionResult> GetAvatar(string username, CancellationToken ct)
+    {
+        var avatarUrl = await _dispatcher.SendAsync(new GetUserAvatarQuery(username), ct);
+        // We return generic admin.png if user has no custom avatar or user doesn't exist
+        return Ok(ApiResponse<string>.Ok(avatarUrl ?? "/images/admin.png"));
     }
 }
