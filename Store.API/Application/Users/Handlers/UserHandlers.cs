@@ -83,3 +83,29 @@ public class ChangeUserPasswordHandler : IRequestHandler<ChangeUserPasswordComma
     public Task<bool> HandleAsync(ChangeUserPasswordCommand request, CancellationToken ct = default)
         => _usersPort.ChangePasswordAsync(request.UserId, request.Request, ct);
 }
+
+public class GetUserAvatarHandler : IRequestHandler<GetUserAvatarQuery, string?>
+{
+    private readonly IUsersPort _usersPort;
+
+    public GetUserAvatarHandler(IUsersPort usersPort)
+    {
+        _usersPort = usersPort;
+    }
+
+    public Task<string?> HandleAsync(GetUserAvatarQuery request, CancellationToken ct = default)
+        => _usersPort.GetAvatarAsync(request.Username, ct);
+}
+
+public class IssueTempPasswordHandler : IRequestHandler<IssueTempPasswordCommand, string>
+{
+    private readonly IUsersPort _usersPort;
+
+    public IssueTempPasswordHandler(IUsersPort usersPort)
+    {
+        _usersPort = usersPort;
+    }
+
+    public Task<string> HandleAsync(IssueTempPasswordCommand request, CancellationToken ct = default)
+        => _usersPort.IssueTempPasswordAsync(request.UserId, ct);
+}

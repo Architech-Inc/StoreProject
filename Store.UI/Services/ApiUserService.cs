@@ -61,6 +61,26 @@ public class ApiUserService : IUserService
 
     public async Task<bool> DeleteAsync(Guid userId, CancellationToken ct = default)
     {
-        return await _client.DeleteAsync($"/api/users/{userId}", ct);
+        var result = await _client.DeleteAsync($"/api/users/{userId}", ct);
+        return result;
+    }
+
+    public async Task<string?> GetAvatarByUsernameAsync(string username, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(username)) return null;
+        var result = await _client.GetAsync<string>($"/api/auth/avatar/{Uri.EscapeDataString(username.Trim())}", ct);
+        return result;
+    }
+
+    public async Task<string?> IssueTempPasswordAsync(Guid userId, CancellationToken ct = default)
+    {
+        try 
+        {
+            return await _client.PostAsync<string>($"/api/users/{userId}/issue-temp-password", null, ct);
+        }
+        catch
+        {
+            return null;
+        }
     }
 }

@@ -44,11 +44,33 @@ public class LoginModel : PageModel
         var request = new LoginRequest { Username = Username, Password = Password };
         var response = await _authService.LoginAsync(request);
 
-        if (response is null || string.IsNullOrWhiteSpace(response.AccessToken))
+        if (response is null)
         {
             ErrorMessage = "Login failed. Please check your credentials.";
             _logger.LogWarning("Failed login attempt for user: {Username}", Username);
             return Page();
+        }
+
+        if (response.IsLockedOut)
+        {
+            ErrorMessage = $"Account locked. Try again in {response.LockoutRemainingMinutes} minutes.";
+            _logger.LogWarning("Locked account login attempt for user: {Username}", Username);
+            return Page();
+        }
+
+        if (string.IsNullOrWhiteSpace(response.AccessToken) && !response.RequiresPasswordReset)
+        {
+            ErrorMessage = "Login failed. Please check your credentials.";
+            _logger.LogWarning("Failed login attempt for user: {Username}", Username);
+            return Page();
+        }
+
+        if (response.RequiresPasswordReset)
+        {
+            // Store a temporary flag in session for the force reset page to know who to reset
+            HttpContext.Session.SetString("force_reset_userId", response.User.UserId.ToString());
+            HttpContext.Session.SetString("force_reset_username", response.User.Username);
+            return RedirectToPage("/ForceResetPassword");
         }
 
         // Store token in session

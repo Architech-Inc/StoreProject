@@ -44,6 +44,7 @@ builder.Services.AddScoped<IUserService, ApiUserService>();
 builder.Services.AddScoped<IEmployeeService, ApiEmployeeService>();
 builder.Services.AddScoped<ICustomerService, ApiCustomerService>();
 builder.Services.AddScoped<IItemService, ApiItemService>();
+builder.Services.AddScoped<IApiPasswordRecoveryService, ApiPasswordRecoveryService>();
 builder.Services.AddScoped<IInvoiceService, ApiInvoiceService>();
 builder.Services.AddScoped<IOrderService, ApiOrderService>();
 builder.Services.AddScoped<ILoyaltyCampaignService, ApiCampaignService>();
@@ -152,6 +153,14 @@ app.MapPost("/api/webauthn/makeAssertion", async (HttpContext httpContext, IHttp
         catch { }
     }
     
+    return Results.Content(content, "application/json", System.Text.Encoding.UTF8, (int)response.StatusCode);
+});
+
+app.MapGet("/api/auth/avatar/{username}", async (IHttpClientFactory factory, string username, CancellationToken ct) =>
+{
+    var client = factory.CreateClient("StoreApi");
+    var response = await client.GetAsync($"/api/auth/avatar/{username}", ct);
+    var content = await response.Content.ReadAsStringAsync(ct);
     return Results.Content(content, "application/json", System.Text.Encoding.UTF8, (int)response.StatusCode);
 });
 

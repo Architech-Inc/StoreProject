@@ -11,4 +11,6 @@ public interface IUsersPort
     Task<UserDto?> UpdateAsync(Guid userId, UpdateUserRequest request, CancellationToken ct = default);
     Task<bool> DeleteAsync(Guid userId, CancellationToken ct = default);
     Task<bool> ChangePasswordAsync(Guid userId, ChangePasswordRequest request, CancellationToken ct = default);
+    Task<string?> GetAvatarAsync(string username, CancellationToken ct = default);
+    Task<string> IssueTempPasswordAsync(Guid userId, CancellationToken ct = default);
 }

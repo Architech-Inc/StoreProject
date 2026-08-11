@@ -15,3 +15,7 @@ public record UpdateUserCommand(Guid UserId, UpdateUserRequest Request) : IReque
 public record DeleteUserCommand(Guid UserId) : IRequest<bool>;
 
 public record ChangeUserPasswordCommand(Guid UserId, ChangePasswordRequest Request) : IRequest<bool>;
+
+public record GetUserAvatarQuery(string Username) : IRequest<string?>;
+
+public record IssueTempPasswordCommand(Guid UserId) : IRequest<string>;

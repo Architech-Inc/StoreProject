@@ -74,7 +74,20 @@ public class UserAggregateRepository : IUserAggregateRepository
         => _context.UserPasswords.FirstOrDefaultAsync(p => p.UserId == userId, ct);
 
     public void UpdateUserPassword(UserPassword userPassword)
-        => _context.UserPasswords.Update(userPassword);
+    {
+        _context.UserPasswords.Update(userPassword);
+    }
+
+    public async Task<string?> GetAvatarByUsernameAsync(string username, CancellationToken ct = default)
+    {
+        var user = await _context.Users
+            .AsNoTracking()
+            .Where(u => u.Username.ToLower() == username.ToLower())
+            .Select(u => new { u.ThumbnailUrl })
+            .FirstOrDefaultAsync(ct);
+
+        return user?.ThumbnailUrl;
+    }
 
     public async Task SaveChangesAsync(CancellationToken ct = default)
         => await _context.SaveChangesAsync(ct);

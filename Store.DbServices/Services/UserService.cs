@@ -103,6 +103,12 @@ public class UserService : IUserService
         return true;
     }
 
+    public async Task<string?> GetAvatarByUsernameAsync(string username, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(username)) return null;
+        return await _users.GetAvatarByUsernameAsync(username.Trim(), ct);
+    }
+
     public async Task<bool> ChangePasswordAsync(Guid userId, ChangePasswordRequest request, CancellationToken ct = default)
     {
         var userPassword = await _users.GetUserPasswordAsync(userId, ct);
@@ -127,7 +133,13 @@ public class UserService : IUserService
         EmployeeId = u.EmployeeId,
         Status = u.Status,
         ThumbnailUrl = u.ThumbnailUrl,
-            FullImageUrl = u.FullImageUrl,
+        FullImageUrl = u.FullImageUrl,
         DateCreated = u.DateCreated
     };
+
+    public Task<string?> IssueTempPasswordAsync(Guid userId, CancellationToken ct = default)
+    {
+        // This is handled via MediatR and IUsersPort directly using IPasswordRecoveryService
+        throw new NotImplementedException("Use IPasswordRecoveryService for this operation on the backend.");
+    }
 }

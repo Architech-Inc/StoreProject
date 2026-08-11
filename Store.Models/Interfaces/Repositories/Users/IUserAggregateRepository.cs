@@ -13,5 +13,6 @@ public interface IUserAggregateRepository
     void UpdateUser(User user);
     Task<UserPassword?> GetUserPasswordAsync(Guid userId, CancellationToken ct = default);
     void UpdateUserPassword(UserPassword userPassword);
+    Task<string?> GetAvatarByUsernameAsync(string username, CancellationToken ct = default);
     Task SaveChangesAsync(CancellationToken ct = default);
 }
