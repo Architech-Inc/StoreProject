@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Store.DbServices.Context;
 
@@ -11,9 +12,11 @@ using Store.DbServices.Context;
 namespace Store.DbServices.Migrations
 {
     [DbContext(typeof(StoreDbContext))]
-    partial class StoreDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260812143244_ContactChangeRequests")]
+    partial class ContactChangeRequests
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -552,10 +555,8 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("longtext")
                         .HasColumnName("new_phone");
 
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("varchar(50)")
+                    b.Property<int>("Status")
+                        .HasColumnType("int")
                         .HasColumnName("status");
 
                     b.Property<Guid>("UserId")
@@ -3761,7 +3762,7 @@ namespace Store.DbServices.Migrations
                         {
                             SettingKey = "Auth:PasswordRecoveryMethod",
                             Description = "Determines allowed password recovery methods (OTP, TempPassword, Both)",
-                            LastModified = new DateTime(2026, 8, 12, 23, 5, 0, 982, DateTimeKind.Utc).AddTicks(828),
+                            LastModified = new DateTime(2026, 8, 12, 14, 32, 43, 398, DateTimeKind.Utc).AddTicks(5887),
                             SettingValue = "Both"
                         });
                 });

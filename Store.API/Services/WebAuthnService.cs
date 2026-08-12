@@ -168,4 +168,33 @@ public class WebAuthnService : IWebAuthnService
 
         return (res, fidoCred.UserId);
     }
+
+    public async Task<List<Store.Models.DTOs.Auth.FidoCredentialDto>> GetCredentialsAsync(Guid userId, CancellationToken ct = default)
+    {
+        var credentials = await _dbContext.FidoCredentials
+            .Where(c => c.UserId == userId)
+            .Select(c => new Store.Models.DTOs.Auth.FidoCredentialDto
+            {
+                Id = c.Id,
+                CredentialType = c.CredType,
+                RegistrationDate = c.RegDate,
+                AaGuid = c.AaGuid.ToString()
+            })
+            .ToListAsync(ct);
+
+        return credentials;
+    }
+
+    public async Task<bool> RemoveCredentialAsync(Guid userId, int credentialId, CancellationToken ct = default)
+    {
+        var credential = await _dbContext.FidoCredentials
+            .FirstOrDefaultAsync(c => c.Id == credentialId && c.UserId == userId, ct);
+
+        if (credential == null) return false;
+
+        _dbContext.FidoCredentials.Remove(credential);
+        await _dbContext.SaveChangesAsync(ct);
+
+        return true;
+    }
 }

@@ -25,5 +25,6 @@ public record UpdateUserContactsCommand(Guid UserId, UpdateUserContactsRequest R
 
 public record Enable2FACommand(Guid UserId) : IRequest<Enable2FAResponse>;
 public record Verify2FACommand(Guid UserId, Verify2FARequest Request) : IRequest<bool>;
+public record Disable2FACommand(Guid UserId) : IRequest<bool>;
 public record GetRecentActivityQuery(Guid UserId) : IRequest<IReadOnlyCollection<AuditLogDto>>;
 public record RevokeAllSessionsCommand(Guid UserId) : IRequest<bool>;

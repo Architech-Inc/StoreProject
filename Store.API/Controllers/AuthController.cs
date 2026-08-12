@@ -61,6 +61,21 @@ public class AuthController : ControllerBase
         return Ok(ApiResponse<LoginResponse>.Ok(result));
     }
 
+    [HttpPost("login/2fa")]
+    public async Task<IActionResult> Login2FA([FromBody] Login2FARequest request, CancellationToken ct)
+    {
+        var result = await _dispatcher.SendAsync(new Login2FACommand(request), ct);
+        if (result is null)
+        {
+            return Unauthorized(ApiErrorResponse.From(
+                "invalid_2fa",
+                "Invalid 2FA code or expired token.",
+                traceId: HttpContext.TraceIdentifier));
+        }
+
+        return Ok(ApiResponse<LoginResponse>.Ok(result));
+    }
+
     [HttpPost("refresh")]
     public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request, CancellationToken ct)
     {

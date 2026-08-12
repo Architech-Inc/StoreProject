@@ -35,6 +35,12 @@ public class ApiAuthenticationService : IAuthenticationService
         return await _client.PostAsync<LoginResponse>("/api/auth/login/phone", request, ct);
     }
 
+    public async Task<LoginResponse?> Login2FAAsync(Login2FARequest request, CancellationToken ct = default)
+    {
+        _logger.LogInformation("Logging in with 2FA token");
+        return await _client.PostAsync<LoginResponse>("/api/auth/login/2fa", request, ct);
+    }
+
     public async Task<LoginResponse?> LoginWithBiometricsAsync(Guid userId, CancellationToken ct = default)
     {
         throw new NotSupportedException("Biometric login is handled via WebAuthnController flows in the API directly.");

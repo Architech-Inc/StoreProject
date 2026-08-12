@@ -14,3 +14,5 @@ public record RefreshTokenCommand(RefreshTokenRequest Request) : IRequest<LoginR
 public record LogoutCommand(Guid UserId) : IRequest<bool>;
 
 public record ResetPasswordCommand(ResetPasswordRequest Request) : IRequest<bool>;
+
+public record Login2FACommand(Login2FARequest Request) : IRequest<LoginResponse?>;

@@ -178,3 +178,18 @@ public class RevokeAllSessionsHandler : IRequestHandler<RevokeAllSessionsCommand
         return await _authService.LogoutAsync(request.UserId, ct);
     }
 }
+
+public class Disable2FAHandler : IRequestHandler<Disable2FACommand, bool>
+{
+    private readonly Store.Models.Interfaces.Services.IUserService _userService;
+
+    public Disable2FAHandler(Store.Models.Interfaces.Services.IUserService userService)
+    {
+        _userService = userService;
+    }
+
+    public async Task<bool> HandleAsync(Disable2FACommand request, CancellationToken ct = default)
+    {
+        return await _userService.Disable2FAAsync(request.UserId, ct);
+    }
+}

@@ -7,6 +7,8 @@ public class LoginResponse
     public DateTime AccessTokenExpiry { get; set; }
     public DateTime RefreshTokenExpiry { get; set; }
     public bool RequiresPasswordReset { get; set; }
+    public bool RequiresTwoFactor { get; set; }
+    public string? TwoFactorToken { get; set; }
     public bool IsLockedOut { get; set; }
     public int LockoutRemainingMinutes { get; set; }
     public AuthenticatedUserDto User { get; set; } = null!;

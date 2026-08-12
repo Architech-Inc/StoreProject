@@ -212,6 +212,76 @@ public class AuthenticationService : IAuthenticationService
             }
         };
     }
+    public async Task<LoginResponse?> Login2FAAsync(Login2FARequest request, CancellationToken ct = default)
+    {
+        var principal = GetPrincipalFromTempToken(request.TwoFactorToken);
+        if (principal is null) return null;
+
+        if (principal.FindFirst("2fa_pending")?.Value != "true")
+            return null;
+
+        var userIdClaim = principal.FindFirst("uid")?.Value;
+        if (!Guid.TryParse(userIdClaim, out var userId)) return null;
+
+        var user = await _uow.Repository<User>().Query()
+            .Include(u => u.Role)
+            .Include(u => u.UserToken)
+            .FirstOrDefaultAsync(u => u.UserId == userId, ct);
+
+        if (user is null || user.Status != UserStatus.Active || !user.TwoFactorEnabled || string.IsNullOrWhiteSpace(user.TwoFactorSecret))
+            return null;
+
+        // Verify the code
+        var totp = new OtpNet.Totp(OtpNet.Base32Encoding.ToBytes(user.TwoFactorSecret));
+        var isValid = totp.VerifyTotp(request.Code, out long timeStepMatched, window: new OtpNet.VerificationWindow(2, 2));
+
+        if (!isValid)
+            return null;
+
+        // Code is valid, issue real tokens
+        var permissions = await GetPermissionClaimsAsync(user.RoleId, ct);
+        var (token, refreshToken, expiry, refreshExpiry) = GenerateTokens(user, permissions);
+
+        if (user.UserToken is null)
+        {
+            var newToken = new UserToken
+            {
+                UserId = user.UserId,
+                Token = token,
+                RefreshTokenHash = HashRefreshToken(refreshToken),
+                ExpiryDate = expiry,
+                RefreshTokenExpiryDate = refreshExpiry,
+                IsRevoked = false
+            };
+            await _uow.Repository<UserToken>().AddAsync(newToken, ct);
+        }
+        else
+        {
+            user.UserToken.Token = token;
+            user.UserToken.RefreshTokenHash = HashRefreshToken(refreshToken);
+            user.UserToken.ExpiryDate = expiry;
+            user.UserToken.RefreshTokenExpiryDate = refreshExpiry;
+            user.UserToken.IsRevoked = false;
+            _uow.Repository<UserToken>().Update(user.UserToken);
+        }
+
+        await _uow.SaveChangesAsync(ct);
+
+        return new LoginResponse
+        {
+            AccessToken = token,
+            RefreshToken = refreshToken,
+            AccessTokenExpiry = expiry,
+            RefreshTokenExpiry = refreshExpiry,
+            User = new AuthenticatedUserDto
+            {
+                UserId = user.UserId,
+                Username = user.Username,
+                Role = user.Role.Name,
+                ThumbnailUrl = user.ThumbnailUrl
+            }
+        };
+    }
 
     public async Task<bool> LogoutAsync(Guid userId, CancellationToken ct = default)
     {
@@ -302,6 +372,23 @@ public class AuthenticationService : IAuthenticationService
             return new LoginResponse
             {
                 RequiresPasswordReset = true,
+                User = new AuthenticatedUserDto
+                {
+                    UserId = user.UserId,
+                    Username = user.Username,
+                    Role = user.Role.Name,
+                    ThumbnailUrl = user.ThumbnailUrl,
+                    FullImageUrl = user.FullImageUrl
+                }
+            };
+        }
+
+        if (user.TwoFactorEnabled)
+        {
+            return new LoginResponse
+            {
+                RequiresTwoFactor = true,
+                TwoFactorToken = Generate2FATempToken(user.UserId),
                 User = new AuthenticatedUserDto
                 {
                     UserId = user.UserId,
@@ -474,6 +561,64 @@ public class AuthenticationService : IAuthenticationService
         var aBytes = Encoding.UTF8.GetBytes(a);
         var bBytes = Encoding.UTF8.GetBytes(b);
         return CryptographicOperations.FixedTimeEquals(aBytes, bBytes);
+    }
+
+    private ClaimsPrincipal? GetPrincipalFromTempToken(string token)
+    {
+        var jwtKey = _config["Jwt:Key"] ?? throw new InvalidOperationException("JWT key not configured.");
+        var issuer = _config["Jwt:Issuer"];
+        var audience = _config["Jwt:Audience"];
+
+        var tokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(jwtKey)),
+            ValidateIssuer = !string.IsNullOrEmpty(issuer),
+            ValidIssuer = issuer,
+            ValidateAudience = !string.IsNullOrEmpty(audience),
+            ValidAudience = audience,
+            ValidateLifetime = true // We want it to fail if expired!
+        };
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        try
+        {
+            var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out var securityToken);
+            if (securityToken is not JwtSecurityToken jwtSecurityToken ||
+                !jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
+                return null;
+
+            return principal;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private string Generate2FATempToken(Guid userId)
+    {
+        var jwtKey = _config["Jwt:Key"] ?? throw new InvalidOperationException("JWT key not configured.");
+        var issuer = _config["Jwt:Issuer"];
+        var audience = _config["Jwt:Audience"];
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var key = Encoding.ASCII.GetBytes(jwtKey);
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            Subject = new ClaimsIdentity(new[]
+            {
+                new Claim("uid", userId.ToString()),
+                new Claim("2fa_pending", "true")
+            }),
+            Expires = DateTime.UtcNow.AddMinutes(5),
+            Issuer = issuer,
+            Audience = audience,
+            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+        };
+
+        var token = tokenHandler.CreateToken(tokenDescriptor);
+        return tokenHandler.WriteToken(token);
     }
 
     private ClaimsPrincipal? GetPrincipalFromExpiredToken(string token)

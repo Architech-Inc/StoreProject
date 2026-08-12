@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 
@@ -12,19 +12,7 @@ namespace Store.DbServices.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<bool>(
-                name: "two_factor_enabled",
-                table: "user",
-                type: "tinyint(1)",
-                nullable: false,
-                defaultValue: false);
-
-            migrationBuilder.AddColumn<string>(
-                name: "two_factor_secret",
-                table: "user",
-                type: "longtext",
-                nullable: true)
-                .Annotation("MySql:CharSet", "utf8mb4");
+            // two_factor_enabled and two_factor_secret already exist in the database schema.
 
             migrationBuilder.CreateTable(
                 name: "audit_log",
@@ -32,7 +20,7 @@ namespace Store.DbServices.Migrations
                 {
                     audit_log_id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
-                    user_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    user_id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "utf8mb4_general_ci"),
                     action = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     details = table.Column<string>(type: "longtext", nullable: true)
@@ -75,13 +63,6 @@ namespace Store.DbServices.Migrations
             migrationBuilder.DropTable(
                 name: "audit_log");
 
-            migrationBuilder.DropColumn(
-                name: "two_factor_enabled",
-                table: "user");
-
-            migrationBuilder.DropColumn(
-                name: "two_factor_secret",
-                table: "user");
 
             migrationBuilder.UpdateData(
                 table: "system_setting",

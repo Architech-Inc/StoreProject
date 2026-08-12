@@ -2,19 +2,24 @@ using OtpNet;
 using Store.Models.DTOs.Users;
 using Store.Models.DTOs.Common;
 using Store.Models.Entities;
+using Store.DbServices.Context;
+using Store.Models.Entities.Contacts;
 using Store.Models.Enums;
 using Store.Models.Interfaces.Repositories.Users;
 using Store.Models.Interfaces.Services;
+using Microsoft.EntityFrameworkCore;
 
 namespace Store.DbServices.Services;
 
 public class UserService : IUserService
 {
     private readonly IUserAggregateRepository _users;
+    private readonly StoreDbContext _db;
 
-    public UserService(IUserAggregateRepository users)
+    public UserService(IUserAggregateRepository users, StoreDbContext db)
     {
         _users = users;
+        _db = db;
     }
 
     public async Task<UserDto?> GetByIdAsync(Guid userId, CancellationToken ct = default)
@@ -215,6 +220,26 @@ public class UserService : IUserService
         return false;
     }
 
+    public async Task<bool> Disable2FAAsync(Guid userId, CancellationToken ct = default)
+    {
+        var user = await _users.GetByIdForUpdateAsync(userId, ct);
+        if (user == null) return false;
+
+        user.TwoFactorEnabled = false;
+        user.TwoFactorSecret = null;
+        _users.UpdateUser(user);
+
+        await _users.AddAuditLogAsync(new AuditLog
+        {
+            UserId = userId,
+            Action = "Security",
+            Details = "Disabled Two-Factor Authentication"
+        }, ct);
+
+        await _users.SaveChangesAsync(ct);
+        return true;
+    }
+
     public async Task<IReadOnlyCollection<AuditLogDto>> GetRecentActivityAsync(Guid userId, CancellationToken ct = default)
     {
         var logs = await _users.GetRecentActivityAsync(userId, 10, ct);
@@ -232,5 +257,174 @@ public class UserService : IUserService
     public Task<bool> RevokeAllSessionsAsync(CancellationToken ct = default)
     {
         throw new NotImplementedException("Handled by AuthenticationService directly on the API side.");
+    }
+
+    public async Task<ContactChangeRequestDto> RequestContactChangeAsync(Guid userId, CreateContactChangeDto request, CancellationToken ct = default)
+    {
+        var existingRequest = await _db.ContactChangeRequests
+            .FirstOrDefaultAsync(r => r.UserId == userId && (r.Status == ContactChangeStatus.PendingVerification || r.Status == ContactChangeStatus.PendingApproval), ct);
+
+        if (existingRequest != null)
+        {
+            throw new InvalidOperationException("You already have a pending contact change request.");
+        }
+
+        var changeRequest = new ContactChangeRequest
+        {
+            UserId = userId,
+            NewEmail = request.NewEmail,
+            NewPhone = request.NewPhone,
+            VerificationToken = Guid.NewGuid().ToString("N"),
+            Status = ContactChangeStatus.PendingVerification
+        };
+
+        _db.ContactChangeRequests.Add(changeRequest);
+        await _db.SaveChangesAsync(ct);
+
+        return new ContactChangeRequestDto
+        {
+            Id = changeRequest.Id,
+            UserId = changeRequest.UserId,
+            NewEmail = changeRequest.NewEmail,
+            NewPhone = changeRequest.NewPhone,
+            Status = changeRequest.Status,
+            DateCreated = changeRequest.DateCreated
+        };
+    }
+
+    public async Task<bool> VerifyContactChangeAsync(string token, CancellationToken ct = default)
+    {
+        var request = await _db.ContactChangeRequests
+            .FirstOrDefaultAsync(r => r.VerificationToken == token && r.Status == ContactChangeStatus.PendingVerification, ct);
+
+        if (request == null) return false;
+
+        request.Status = ContactChangeStatus.PendingApproval;
+        request.VerifiedAt = DateTime.UtcNow;
+        request.VerificationToken = null; // Token consumed
+
+        await _db.SaveChangesAsync(ct);
+        return true;
+    }
+
+    public async Task<IReadOnlyCollection<ContactChangeRequestDto>> GetPendingContactChangesAsync(CancellationToken ct = default)
+    {
+        var requests = await _db.ContactChangeRequests
+            .Include(r => r.User)
+            .Where(r => r.Status == ContactChangeStatus.PendingApproval || r.Status == ContactChangeStatus.PendingVerification)
+            .OrderByDescending(r => r.DateCreated)
+            .Select(r => new ContactChangeRequestDto
+            {
+                Id = r.Id,
+                UserId = r.UserId,
+                Username = r.User.Username,
+                NewEmail = r.NewEmail,
+                NewPhone = r.NewPhone,
+                Status = r.Status,
+                DateCreated = r.DateCreated,
+                VerifiedAt = r.VerifiedAt
+            })
+            .ToListAsync(ct);
+
+        return requests;
+    }
+
+    public async Task<IReadOnlyCollection<ContactChangeRequestDto>> GetPendingContactChangesByUserIdAsync(Guid userId, CancellationToken ct = default)
+    {
+        var requests = await _db.ContactChangeRequests
+            .Include(r => r.User)
+            .Where(r => r.UserId == userId && (r.Status == ContactChangeStatus.PendingApproval || r.Status == ContactChangeStatus.PendingVerification))
+            .OrderByDescending(r => r.DateCreated)
+            .Select(r => new ContactChangeRequestDto
+            {
+                Id = r.Id,
+                UserId = r.UserId,
+                Username = r.User.Username,
+                NewEmail = r.NewEmail,
+                NewPhone = r.NewPhone,
+                Status = r.Status,
+                DateCreated = r.DateCreated,
+                VerifiedAt = r.VerifiedAt
+            })
+            .ToListAsync(ct);
+
+        return requests;
+    }
+
+    public async Task<bool> ApproveContactChangeAsync(Guid requestId, Guid approvedById, CancellationToken ct = default)
+    {
+        var request = await _db.ContactChangeRequests
+            .Include(r => r.User)
+            .FirstOrDefaultAsync(r => r.Id == requestId && r.Status == ContactChangeStatus.PendingApproval, ct);
+
+        if (request == null) return false;
+
+        request.Status = ContactChangeStatus.Approved;
+        request.ApprovedAt = DateTime.UtcNow;
+        request.ApprovedById = approvedById;
+
+        // Apply the actual changes to the user
+        // We will just update primary email/phone for now by updating UserContacts through existing service
+        var updateContactsRequest = new UpdateUserContactsRequest
+        {
+            Email = request.NewEmail,
+            Phone = request.NewPhone
+        };
+        
+        await UpdateContactsAsync(request.UserId, updateContactsRequest, ct);
+        
+        await _db.SaveChangesAsync(ct);
+        return true;
+    }
+
+    public async Task<bool> RejectContactChangeAsync(Guid requestId, Guid rejectedById, CancellationToken ct = default)
+    {
+        var request = await _db.ContactChangeRequests
+            .FirstOrDefaultAsync(r => r.Id == requestId && (r.Status == ContactChangeStatus.PendingApproval || r.Status == ContactChangeStatus.PendingVerification), ct);
+
+        if (request == null) return false;
+
+        request.Status = ContactChangeStatus.Rejected;
+        request.ApprovedAt = DateTime.UtcNow;
+        request.ApprovedById = rejectedById; // Store who rejected it in the same field
+
+        await _db.SaveChangesAsync(ct);
+        return true;
+    }
+
+    public async Task<bool> CancelContactChangeAsync(Guid requestId, Guid userId, CancellationToken ct = default)
+    {
+        var request = await _db.ContactChangeRequests
+            .FirstOrDefaultAsync(r => r.Id == requestId && r.UserId == userId && 
+                (r.Status == ContactChangeStatus.PendingApproval || r.Status == ContactChangeStatus.PendingVerification), ct);
+
+        if (request == null) return false;
+
+        request.Status = ContactChangeStatus.Cancelled;
+
+        await _db.SaveChangesAsync(ct);
+        return true;
+    }
+
+    public async Task<IReadOnlyCollection<ContactChangeRequestDto>> GetContactChangeHistoryAsync(CancellationToken ct = default)
+    {
+        var requests = await _db.ContactChangeRequests
+            .Include(r => r.User)
+            .Where(r => r.Status == ContactChangeStatus.Approved || r.Status == ContactChangeStatus.Rejected || r.Status == ContactChangeStatus.Cancelled)
+            .OrderByDescending(r => r.DateCreated)
+            .Select(r => new ContactChangeRequestDto
+            {
+                Id = r.Id,
+                UserId = r.UserId,
+                Username = r.User.Username,
+                NewEmail = r.NewEmail,
+                NewPhone = r.NewPhone,
+                Status = r.Status,
+                DateCreated = r.DateCreated,
+                VerifiedAt = r.VerifiedAt
+            })
+            .ToListAsync(ct);
+
+        return requests;
     }
 }

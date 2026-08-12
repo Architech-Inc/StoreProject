@@ -16,6 +16,9 @@ public class UsersModel : SecurePageModel
     public IReadOnlyList<UserDto> Users { get; private set; } = Array.Empty<UserDto>();
     public int TotalUsers { get; private set; }
     public string? SearchQuery { get; private set; }
+    
+    public int PendingContactChangesCount { get; private set; }
+    
     public int PageNumber { get; private set; } = 1;
     public int PageSize { get; private set; } = 25;
     public int TotalPages => (int)Math.Ceiling((double)TotalUsers / PageSize);
@@ -59,6 +62,10 @@ public class UsersModel : SecurePageModel
         var result = await _userService.GetAllAsync(request, ct);
         Users = result.Items?.ToList() ?? new List<UserDto>();
         TotalUsers = result.TotalCount;
+        
+        var pendingChanges = await _userService.GetPendingContactChangesAsync(ct);
+        PendingContactChangesCount = pendingChanges.Count(p => p.Status == ContactChangeStatus.PendingApproval);
+
         return Page();
     }
 

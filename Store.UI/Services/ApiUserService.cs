@@ -55,14 +55,12 @@ public class ApiUserService : IUserService
 
     public async Task<bool> ChangePasswordAsync(Guid userId, ChangePasswordRequest request, CancellationToken ct = default)
     {
-        var result = await _client.PostAsync<bool?>($"/api/users/change-password", request, ct);
-        return result.HasValue && result.Value;
+        return await _client.PostAsync($"/api/users/change-password", request, ct);
     }
 
     public async Task<bool> UpdateContactsAsync(Guid userId, UpdateUserContactsRequest request, CancellationToken ct = default)
     {
-        var result = await _client.PutAsync<object>("/api/users/profile/contacts", request, ct);
-        return result != null;
+        return await _client.PutAsync("/api/users/profile/contacts", request, ct);
     }
 
     public async Task<bool> DeleteAsync(Guid userId, CancellationToken ct = default)
@@ -98,8 +96,12 @@ public class ApiUserService : IUserService
 
     public async Task<bool> Verify2FAAsync(Guid userId, Verify2FARequest request, CancellationToken ct = default)
     {
-        var result = await _client.PostAsync<object>("/api/users/profile/2fa/verify", request, ct);
-        return result != null;
+        return await _client.PostAsync("/api/users/profile/2fa/verify", request, ct);
+    }
+
+    public async Task<bool> Disable2FAAsync(Guid userId, CancellationToken ct = default)
+    {
+        return await _client.PostAsync("/api/users/profile/2fa/disable", null, ct);
     }
 
     public async Task<IReadOnlyCollection<AuditLogDto>> GetRecentActivityAsync(Guid userId, CancellationToken ct = default)
@@ -110,7 +112,50 @@ public class ApiUserService : IUserService
 
     public async Task<bool> RevokeAllSessionsAsync(CancellationToken ct = default)
     {
-        var result = await _client.PostAsync<object>("/api/users/profile/sessions/revoke", null, ct);
-        return result != null;
+        return await _client.PostAsync("/api/users/profile/sessions/revoke", null, ct);
+    }
+
+    public async Task<ContactChangeRequestDto> RequestContactChangeAsync(Guid userId, CreateContactChangeDto request, CancellationToken ct = default)
+    {
+        var result = await _client.PostAsync<ContactChangeRequestDto>("/api/users/profile/contact-change", request, ct);
+        return result ?? throw new InvalidOperationException("Failed to request contact change.");
+    }
+
+    public async Task<bool> VerifyContactChangeAsync(string token, CancellationToken ct = default)
+    {
+        return await _client.GetAsync<bool>($"/api/users/profile/contact-change/verify?token={Uri.EscapeDataString(token)}", ct);
+    }
+
+    public async Task<IReadOnlyCollection<ContactChangeRequestDto>> GetPendingContactChangesAsync(CancellationToken ct = default)
+    {
+        var result = await _client.GetAsync<IReadOnlyCollection<ContactChangeRequestDto>>("/api/users/contact-changes/pending", ct);
+        return result ?? Array.Empty<ContactChangeRequestDto>();
+    }
+
+    public async Task<IReadOnlyCollection<ContactChangeRequestDto>> GetPendingContactChangesByUserIdAsync(Guid userId, CancellationToken ct = default)
+    {
+        var all = await GetPendingContactChangesAsync(ct);
+        return all.Where(r => r.UserId == userId).ToList(); // Because API doesn't have a specific user route right now
+    }
+
+    public async Task<bool> ApproveContactChangeAsync(Guid requestId, Guid approvedById, CancellationToken ct = default)
+    {
+        return await _client.PostAsync($"/api/users/contact-changes/{requestId}/approve", null, ct);
+    }
+
+    public async Task<bool> RejectContactChangeAsync(Guid requestId, Guid rejectedById, CancellationToken ct = default)
+    {
+        return await _client.PostAsync($"/api/users/contact-changes/{requestId}/reject", null, ct);
+    }
+
+    public async Task<bool> CancelContactChangeAsync(Guid requestId, Guid userId, CancellationToken ct = default)
+    {
+        return await _client.PostAsync($"/api/users/contact-changes/{requestId}/cancel", null, ct);
+    }
+
+    public async Task<IReadOnlyCollection<ContactChangeRequestDto>> GetContactChangeHistoryAsync(CancellationToken ct = default)
+    {
+        var result = await _client.GetAsync<IReadOnlyCollection<ContactChangeRequestDto>>("/api/users/contact-changes/history", ct);
+        return result ?? Array.Empty<ContactChangeRequestDto>();
     }
 }

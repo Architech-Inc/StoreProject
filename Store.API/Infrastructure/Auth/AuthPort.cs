@@ -22,6 +22,9 @@ public class AuthPort : IAuthPort
     public Task<LoginResponse?> LoginWithPhoneAsync(LoginWithPhoneRequest request, CancellationToken ct = default)
         => _authService.LoginWithPhoneAsync(request, ct);
 
+    public Task<LoginResponse?> Login2FAAsync(Login2FARequest request, CancellationToken ct = default)
+        => _authService.Login2FAAsync(request, ct);
+
     public Task<LoginResponse?> LoginWithBiometricsAsync(Guid userId, CancellationToken ct = default)
         => _authService.LoginWithBiometricsAsync(userId, ct);
 

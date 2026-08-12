@@ -23,6 +23,7 @@ public class StoreDbContext : DbContext
     public DbSet<Employee> Employees => Set<Employee>();
 
     // ---- Contacts ----
+    public DbSet<ContactChangeRequest> ContactChangeRequests => Set<ContactChangeRequest>();
     public DbSet<Email> Emails => Set<Email>();
     public DbSet<Phone> Phones => Set<Phone>();
     public DbSet<UserEmail> UserEmails => Set<UserEmail>();

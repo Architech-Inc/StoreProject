@@ -27,6 +27,7 @@ public class ProfileModel : SecurePageModel
 
     public bool TwoFactorEnabled { get; private set; }
     public IReadOnlyCollection<AuditLogDto> RecentActivity { get; private set; } = Array.Empty<AuditLogDto>();
+    public List<Store.Models.DTOs.Auth.FidoCredentialDto> RegisteredPasskeys { get; private set; } = new();
 
     // 2FA Setup state
     [TempData] public string? TwoFactorSharedKey { get; set; }
@@ -35,6 +36,8 @@ public class ProfileModel : SecurePageModel
     // Contact Data
     [BindProperty] public string? PrimaryEmail { get; set; }
     [BindProperty] public string? PrimaryPhone { get; set; }
+
+    public IReadOnlyCollection<ContactChangeRequestDto> PendingContactChanges { get; private set; } = Array.Empty<ContactChangeRequestDto>();
 
     [TempData] public string? StatusMessage { get; set; }
 
@@ -82,52 +85,64 @@ public class ProfileModel : SecurePageModel
 
         if (Guid.TryParse(userIdStr, out var userId))
         {
-            try
-            {
-                var user = await _userService.GetByIdAsync(userId, ct);
-                if (user is not null)
-                {
-                    CurrentUsername = user.Username;
-                    CurrentRoleName = user.RoleName;
-                    CurrentStatus = user.Status.ToString();
-                    CurrentAvatarPath = user.ThumbnailUrl ?? user.FullImageUrl;
-                    CurrentFullAvatarPath = user.FullImageUrl ?? user.ThumbnailUrl;
-                    PrimaryEmail = user.PrimaryEmail;
-                    PrimaryPhone = user.PrimaryPhone;
-
-                    // Fetch associated Employee data if available
-                    if (user.EmployeeId.HasValue)
-                    {
-                        try
-                        {
-                            var emp = await _employeeService.GetByIdAsync(user.EmployeeId.Value, ct);
-                            if (emp != null)
-                            {
-                                EmployeeFullName = emp.FullName;
-                                EmployeeDepartment = emp.DepartmentName ?? "Unassigned";
-                                EmployeeGender = emp.Gender.ToString();
-                                EmployeeDateEmployed = emp.DateEmployed.ToString("MMM dd, yyyy");
-                            }
-                        }
-                        catch (Exception empEx)
-                        {
-                            _logger.LogWarning(empEx, "Failed to load employee details for User {UserId}", userId);
-                        }
-                    }
-
-                    TwoFactorEnabled = user.TwoFactorEnabled;
-                    RecentActivity = await _userService.GetRecentActivityAsync(userId, ct);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to load user profile for {UserId}", userId);
-                // Use JWT data as fallback — don't fail page load
-                CurrentRoleName = JwtPermissionReader.GetClaim(token, "role");
-            }
+            await LoadProfileDataAsync(userId, token, ct);
         }
 
         return Page();
+    }
+
+    private async Task LoadProfileDataAsync(Guid userId, string token, CancellationToken ct)
+    {
+        try
+        {
+            var user = await _userService.GetByIdAsync(userId, ct);
+            if (user is not null)
+            {
+                CurrentUsername = user.Username;
+                CurrentRoleName = user.RoleName;
+                CurrentStatus = user.Status.ToString();
+                CurrentAvatarPath = user.ThumbnailUrl ?? user.FullImageUrl;
+                CurrentFullAvatarPath = user.FullImageUrl ?? user.ThumbnailUrl;
+                PrimaryEmail = user.PrimaryEmail;
+                PrimaryPhone = user.PrimaryPhone;
+
+                if (user.EmployeeId.HasValue)
+                {
+                    try
+                    {
+                        var emp = await _employeeService.GetByIdAsync(user.EmployeeId.Value, ct);
+                        if (emp != null)
+                        {
+                            EmployeeFullName = emp.FullName;
+                            EmployeeDepartment = emp.DepartmentName ?? "Unassigned";
+                            EmployeeGender = emp.Gender.ToString();
+                            EmployeeDateEmployed = emp.DateEmployed.ToString("MMM dd, yyyy");
+                        }
+                    }
+                    catch (Exception empEx)
+                    {
+                        _logger.LogWarning(empEx, "Failed to load employee details for User {UserId}", userId);
+                    }
+                }
+
+                TwoFactorEnabled = user.TwoFactorEnabled;
+                RecentActivity = await _userService.GetRecentActivityAsync(userId, ct);
+                
+                var passkeysResponse = await _apiClient.GetAsync<List<Store.Models.DTOs.Auth.FidoCredentialDto>>("api/webauthn/credentials", ct);
+                if (passkeysResponse != null)
+                {
+                    RegisteredPasskeys = passkeysResponse;
+                }
+
+                var pendingChanges = await _userService.GetPendingContactChangesByUserIdAsync(userId, ct);
+                PendingContactChanges = pendingChanges ?? Array.Empty<ContactChangeRequestDto>();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to load user profile for {UserId}", userId);
+            CurrentRoleName = JwtPermissionReader.GetClaim(token, "role");
+        }
     }
 
     public async Task<IActionResult> OnPostChangePasswordAsync(CancellationToken ct)
@@ -246,6 +261,8 @@ public class ProfileModel : SecurePageModel
         if (!TryGetSecurityContext(out var token, out _))
             return GoToLogin();
 
+        _apiClient.SetToken(token);
+
         var userIdStr = JwtPermissionReader.GetClaim(token, "uid");
         if (!Guid.TryParse(userIdStr, out var userId))
         {
@@ -281,6 +298,8 @@ public class ProfileModel : SecurePageModel
         if (!TryGetSecurityContext(out var token, out _))
             return GoToLogin();
 
+        _apiClient.SetToken(token);
+
         var userIdStr = JwtPermissionReader.GetClaim(token, "uid");
         if (!Guid.TryParse(userIdStr, out var userId))
             return RedirectToPage();
@@ -290,11 +309,44 @@ public class ProfileModel : SecurePageModel
             var response = await _userService.Enable2FAAsync(userId, ct);
             TwoFactorSharedKey = response.SharedKey;
             TwoFactorAuthenticatorUri = response.AuthenticatorUri;
+            await LoadProfileDataAsync(userId, token, ct);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to initiate 2FA for user {UserId}", userId);
-            TempData["StatusMessage"] = "Error: Failed to setup 2FA.";
+            StatusMessage = "Error: An unexpected error occurred.";
+        }
+
+        return Page();
+    }
+
+    public async Task<IActionResult> OnPostDisable2FAAsync(CancellationToken ct)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return GoToLogin();
+
+        _apiClient.SetToken(token);
+
+        var userIdStr = JwtPermissionReader.GetClaim(token, "uid");
+        if (!Guid.TryParse(userIdStr, out var userId))
+            return RedirectToPage();
+
+        try
+        {
+            var success = await _userService.Disable2FAAsync(userId, ct);
+            if (success)
+            {
+                TempData["StatusMessage"] = "Two-factor authentication successfully disabled.";
+            }
+            else
+            {
+                TempData["StatusMessage"] = "Error: Failed to disable 2FA.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to disable 2FA for user {UserId}", userId);
+            TempData["StatusMessage"] = "Error: Failed to disable 2FA.";
         }
 
         return RedirectToPage();
@@ -304,6 +356,8 @@ public class ProfileModel : SecurePageModel
     {
         if (!TryGetSecurityContext(out var token, out _))
             return GoToLogin();
+
+        _apiClient.SetToken(token);
 
         var userIdStr = JwtPermissionReader.GetClaim(token, "uid");
         if (!Guid.TryParse(userIdStr, out var userId))
@@ -338,6 +392,38 @@ public class ProfileModel : SecurePageModel
         return RedirectToPage();
     }
 
+    public async Task<IActionResult> OnPostRemovePasskeyAsync([FromForm] int credentialId, CancellationToken ct)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return GoToLogin();
+
+        _apiClient.SetToken(token);
+
+        var userIdStr = JwtPermissionReader.GetClaim(token, "uid");
+        if (!Guid.TryParse(userIdStr, out var userId))
+            return RedirectToPage();
+
+        try
+        {
+            var result = await _apiClient.DeleteAsync($"api/webauthn/credentials/{credentialId}", ct);
+            if (result)
+            {
+                TempData["StatusMessage"] = "Passkey removed successfully.";
+            }
+            else
+            {
+                TempData["StatusMessage"] = "Error: Failed to remove passkey.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to remove passkey {CredentialId} for user {UserId}", credentialId, userId);
+            TempData["StatusMessage"] = "Error: An unexpected error occurred.";
+        }
+
+        return RedirectToPage(null, null, "security");
+    }
+
     public async Task<IActionResult> OnPostRevokeSessionsAsync(CancellationToken ct)
     {
         if (!TryGetSecurityContext(out var token, out _))
@@ -360,6 +446,71 @@ public class ProfileModel : SecurePageModel
         {
             _logger.LogError(ex, "Failed to revoke sessions");
             TempData["StatusMessage"] = "Error: Failed to revoke sessions.";
+        }
+
+        return RedirectToPage();
+    }
+
+    public async Task<IActionResult> OnPostRequestContactChangeAsync(CancellationToken ct)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return GoToLogin();
+
+        var userIdStr = JwtPermissionReader.GetClaim(token, "uid");
+        if (!Guid.TryParse(userIdStr, out var userId))
+        {
+            TempData["StatusMessage"] = "Error: Could not identify current user. Please log in again.";
+            return RedirectToPage();
+        }
+
+        _apiClient.SetToken(token);
+
+        try
+        {
+            var req = new CreateContactChangeDto
+            {
+                NewEmail = PrimaryEmail,
+                NewPhone = PrimaryPhone
+            };
+
+            await _userService.RequestContactChangeAsync(userId, req, ct);
+            TempData["StatusMessage"] = "Contact change requested successfully. Please check your email/phone for verification.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["StatusMessage"] = $"Error: {ex.Message}";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to request contact change for {UserId}", userId);
+            TempData["StatusMessage"] = "Error: Could not request contact change.";
+        }
+
+        return RedirectToPage();
+    }
+
+    public async Task<IActionResult> OnPostCancelContactChangeAsync(Guid requestId, CancellationToken ct)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return GoToLogin();
+
+        var userIdStr = JwtPermissionReader.GetClaim(token, "uid");
+        if (!Guid.TryParse(userIdStr, out var userId))
+            return RedirectToPage();
+
+        _apiClient.SetToken(token);
+
+        try
+        {
+            var success = await _userService.CancelContactChangeAsync(requestId, userId, ct);
+            TempData["StatusMessage"] = success 
+                ? "Pending contact change request cancelled successfully." 
+                : "Error: Could not cancel the request. It may have already been processed.";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to cancel contact change for {UserId}", userId);
+            TempData["StatusMessage"] = "Error: Could not cancel contact change.";
         }
 
         return RedirectToPage();

@@ -146,6 +146,28 @@ public class ApiClientService : IApiClientService
         }
     }
 
+    public async Task<bool> PutAsync(string endpoint, object? data, CancellationToken ct = default)
+    {
+        try
+        {
+            var json = JsonSerializer.Serialize(data);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var response = await _httpClient.PutAsync(endpoint, content, ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("PUT {Endpoint} returned {StatusCode}", endpoint, response.StatusCode);
+                return false;
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error calling PUT {Endpoint}", endpoint);
+            return false;
+        }
+    }
+
     public async Task<bool> DeleteAsync(string endpoint, CancellationToken ct = default)
     {
         try
@@ -172,15 +194,17 @@ public class ApiClientService : IApiClientService
 
     private static T? DeserializeResponse<T>(string content)
     {
-        var apiResponse = JsonSerializer.Deserialize<ApiResponse<T>>(content, JsonOptions);
-        if (apiResponse is not null)
+        try
         {
-            if (apiResponse.Success)
+            var apiResponse = JsonSerializer.Deserialize<ApiResponse<T>>(content, JsonOptions);
+            if (apiResponse is not null && apiResponse.Success)
             {
                 return apiResponse.Data;
             }
-
-            return default;
+        }
+        catch (JsonException)
+        {
+            // Fallback for endpoints that don't return an ApiResponse envelope
         }
 
         return JsonSerializer.Deserialize<T>(content, JsonOptions);

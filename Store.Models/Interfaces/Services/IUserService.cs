@@ -19,6 +19,17 @@ public interface IUserService
     // 2FA & Security
     Task<Enable2FAResponse> Enable2FAAsync(Guid userId, CancellationToken ct = default);
     Task<bool> Verify2FAAsync(Guid userId, Verify2FARequest request, CancellationToken ct = default);
+    Task<bool> Disable2FAAsync(Guid userId, CancellationToken ct = default);
     Task<IReadOnlyCollection<AuditLogDto>> GetRecentActivityAsync(Guid userId, CancellationToken ct = default);
     Task<bool> RevokeAllSessionsAsync(CancellationToken ct = default);
+
+    // Contact Change Workflow
+    Task<ContactChangeRequestDto> RequestContactChangeAsync(Guid userId, CreateContactChangeDto request, CancellationToken ct = default);
+    Task<bool> VerifyContactChangeAsync(string token, CancellationToken ct = default);
+    Task<IReadOnlyCollection<ContactChangeRequestDto>> GetPendingContactChangesAsync(CancellationToken ct = default);
+    Task<IReadOnlyCollection<ContactChangeRequestDto>> GetPendingContactChangesByUserIdAsync(Guid userId, CancellationToken ct = default);
+    Task<bool> ApproveContactChangeAsync(Guid requestId, Guid approvedById, CancellationToken ct = default);
+    Task<bool> RejectContactChangeAsync(Guid requestId, Guid rejectedById, CancellationToken ct = default);
+    Task<bool> CancelContactChangeAsync(Guid requestId, Guid userId, CancellationToken ct = default);
+    Task<IReadOnlyCollection<ContactChangeRequestDto>> GetContactChangeHistoryAsync(CancellationToken ct = default);
 }

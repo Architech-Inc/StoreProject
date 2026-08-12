@@ -25,6 +25,9 @@ public interface IApiClientService
     /// <summary>PUT request to API</summary>
     Task<T?> PutAsync<T>(string endpoint, object? data, CancellationToken ct = default);
 
+    /// <summary>PUT request where only success/failure is needed</summary>
+    Task<bool> PutAsync(string endpoint, object? data, CancellationToken ct = default);
+
     /// <summary>DELETE request to API</summary>
     Task<bool> DeleteAsync(string endpoint, CancellationToken ct = default);
 

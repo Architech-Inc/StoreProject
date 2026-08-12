@@ -48,4 +48,7 @@ public class User : BaseEntity
     public ICollection<CashierShift> OpenedShifts { get; set; } = new List<CashierShift>();
     public ICollection<CashierShift> ClosedShifts { get; set; } = new List<CashierShift>();
     public ICollection<FidoCredential> FidoCredentials { get; set; } = new List<FidoCredential>();
+    
+    public ICollection<ContactChangeRequest> ContactChangeRequests { get; set; } = new List<ContactChangeRequest>();
+    public ICollection<ContactChangeRequest> ApprovedContactChanges { get; set; } = new List<ContactChangeRequest>();
 }

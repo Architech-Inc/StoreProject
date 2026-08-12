@@ -44,6 +44,19 @@ public class LoginWithPhoneHandler : IRequestHandler<LoginWithPhoneCommand, Logi
         => _authPort.LoginWithPhoneAsync(request.Request, ct);
 }
 
+public class Login2FAHandler : IRequestHandler<Login2FACommand, LoginResponse?>
+{
+    private readonly IAuthPort _authPort;
+
+    public Login2FAHandler(IAuthPort authPort)
+    {
+        _authPort = authPort;
+    }
+
+    public Task<LoginResponse?> HandleAsync(Login2FACommand request, CancellationToken ct = default)
+        => _authPort.Login2FAAsync(request.Request, ct);
+}
+
 public class RefreshTokenHandler : IRequestHandler<RefreshTokenCommand, LoginResponse?>
 {
     private readonly IAuthPort _authPort;

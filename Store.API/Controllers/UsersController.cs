@@ -16,11 +16,13 @@ public class UsersController : ControllerBase
 {
     private readonly IRequestDispatcher _dispatcher;
     private readonly ISystemSettingService _systemSettings;
+    private readonly IUserService _userService;
 
-    public UsersController(IRequestDispatcher dispatcher, ISystemSettingService systemSettings)
+    public UsersController(IRequestDispatcher dispatcher, ISystemSettingService systemSettings, IUserService userService)
     {
         _dispatcher = dispatcher;
         _systemSettings = systemSettings;
+        _userService = userService;
     }
 
     [HttpGet]
@@ -180,6 +182,22 @@ public class UsersController : ControllerBase
         return Ok(ApiResponse<object>.Ok(null!, "2FA verified and enabled successfully."));
     }
 
+    [HttpPost("profile/2fa/disable")]
+    public async Task<IActionResult> Disable2FA(CancellationToken ct)
+    {
+        var userIdClaim = User.FindFirst("uid")?.Value;
+        if (!Guid.TryParse(userIdClaim, out var userId))
+            return Unauthorized(ApiErrorResponse.From("unauthorized", "Unauthorized.", traceId: HttpContext.TraceIdentifier));
+
+        var success = await _dispatcher.SendAsync(new Disable2FACommand(userId), ct);
+        if (!success)
+        {
+            return BadRequest(ApiErrorResponse.From("disable_2fa_failed", "Failed to disable 2FA.", traceId: HttpContext.TraceIdentifier));
+        }
+
+        return Ok(ApiResponse<object>.Ok(null!, "2FA disabled successfully."));
+    }
+
     [HttpGet("profile/activity")]
     public async Task<IActionResult> GetRecentActivity(CancellationToken ct)
     {
@@ -205,5 +223,103 @@ public class UsersController : ControllerBase
         }
 
         return Ok(ApiResponse<object>.Ok(null!, "All sessions revoked successfully."));
+    }
+
+    // --- Contact Change Endpoints ---
+    [HttpPost("profile/contact-change")]
+    public async Task<IActionResult> RequestContactChange([FromBody] CreateContactChangeDto request, CancellationToken ct)
+    {
+        var userIdClaim = User.FindFirst("uid")?.Value;
+        if (!Guid.TryParse(userIdClaim, out var userId))
+            return Unauthorized(ApiErrorResponse.From("unauthorized", "Unauthorized.", traceId: HttpContext.TraceIdentifier));
+
+        try
+        {
+            var result = await _userService.RequestContactChangeAsync(userId, request, ct);
+            
+            // In a real app, here we would send an email/SMS with the verification link.
+            // For demonstration, we'll return the result directly.
+            return Ok(ApiResponse<ContactChangeRequestDto>.Ok(result, "Contact change requested. Please verify your new contact info."));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ApiErrorResponse.From("pending_request_exists", ex.Message, traceId: HttpContext.TraceIdentifier));
+        }
+    }
+
+    [AllowAnonymous]
+    [HttpGet("profile/contact-change/verify")]
+    public async Task<IActionResult> VerifyContactChange([FromQuery] string token, CancellationToken ct)
+    {
+        if (string.IsNullOrEmpty(token))
+            return BadRequest(ApiErrorResponse.From("invalid_token", "Verification token is required."));
+
+        var success = await _userService.VerifyContactChangeAsync(token, ct);
+        if (!success)
+            return BadRequest(ApiErrorResponse.From("verification_failed", "Invalid or expired verification token."));
+
+        // Redirect to UI or return success
+        // In an API we'll return a success response, and the UI should handle the token via a separate page or API call.
+        return Ok(ApiResponse<object>.Ok(null!, "Contact information verified. Waiting for administrator approval."));
+    }
+
+    [HttpGet("contact-changes/pending")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> GetPendingContactChanges(CancellationToken ct)
+    {
+        var requests = await _userService.GetPendingContactChangesAsync(ct);
+        return Ok(ApiResponse<IReadOnlyCollection<ContactChangeRequestDto>>.Ok(requests));
+    }
+
+    [HttpPost("contact-changes/{id}/approve")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> ApproveContactChange(Guid id, CancellationToken ct)
+    {
+        var userIdClaim = User.FindFirst("uid")?.Value;
+        if (!Guid.TryParse(userIdClaim, out var adminId))
+            return Unauthorized();
+
+        var success = await _userService.ApproveContactChangeAsync(id, adminId, ct);
+        if (!success)
+            return BadRequest(ApiErrorResponse.From("approve_failed", "Failed to approve request or request not found."));
+
+        return Ok(ApiResponse<object>.Ok(null!, "Contact change approved successfully."));
+    }
+
+    [HttpPost("contact-changes/{id}/reject")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> RejectContactChange(Guid id, CancellationToken ct)
+    {
+        var userIdClaim = User.FindFirst("uid")?.Value;
+        if (!Guid.TryParse(userIdClaim, out var adminId))
+            return Unauthorized();
+
+        var success = await _userService.RejectContactChangeAsync(id, adminId, ct);
+        if (!success)
+            return BadRequest(ApiErrorResponse.From("reject_failed", "Failed to reject request or request not found."));
+
+        return Ok(ApiResponse<object>.Ok(null!, "Contact change rejected successfully."));
+    }
+
+    [HttpPost("contact-changes/{id}/cancel")]
+    public async Task<IActionResult> CancelContactChange(Guid id, CancellationToken ct)
+    {
+        var userIdClaim = User.FindFirst("uid")?.Value;
+        if (!Guid.TryParse(userIdClaim, out var userId))
+            return Unauthorized();
+
+        var success = await _userService.CancelContactChangeAsync(id, userId, ct);
+        if (!success)
+            return BadRequest(ApiErrorResponse.From("cancel_failed", "Failed to cancel request or request not found."));
+
+        return Ok(ApiResponse<object>.Ok(null!, "Contact change cancelled successfully."));
+    }
+
+    [HttpGet("contact-changes/history")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> GetContactChangeHistory(CancellationToken ct)
+    {
+        var requests = await _userService.GetContactChangeHistoryAsync(ct);
+        return Ok(ApiResponse<IReadOnlyCollection<ContactChangeRequestDto>>.Ok(requests));
     }
 }

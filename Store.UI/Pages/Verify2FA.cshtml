@@ -1,0 +1,42 @@
+@page
+@model StoreUI.Pages.Verify2FAModel
+@{
+    ViewData["Title"] = "Verify Two-Factor Authentication";
+    Layout = "_Layout"; // Use standard layout if applicable, or custom login layout if needed
+}
+
+<div class="auth-wrapper" style="display:flex; justify-content:center; align-items:center; min-height: 80vh;">
+    <div class="auth-card" style="width:100%; max-width:400px; padding:30px; background:var(--surface); border:1px solid var(--border); border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.05); text-align:center;">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" style="margin-bottom:20px;">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+        </svg>
+
+        <h2 style="margin-bottom:10px;">Two-Factor Verification</h2>
+        <p style="color:var(--text-secondary); margin-bottom:24px; font-size:0.9rem;">
+            Enter the 6-digit code from your authenticator app to continue.
+        </p>
+
+        @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+        {
+            <div class="alert alert-danger" style="color:var(--ops-red); background:#fef2f2; border:1px solid #fecaca; padding:12px; border-radius:6px; margin-bottom:20px; font-size:0.9rem;">
+                @Model.ErrorMessage
+            </div>
+        }
+
+        <form method="post" autocomplete="off">
+            @Html.AntiForgeryToken()
+            <div class="form-group" style="text-align:left; margin-bottom:20px;">
+                <label for="code" style="display:block; margin-bottom:8px; font-weight:600;">Verification Code</label>
+                <input type="text" id="code" asp-for="Code" class="form-control" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); font-size:1.2rem; letter-spacing:4px; text-align:center;" maxlength="6" inputmode="numeric" required autofocus />
+            </div>
+
+            <button type="submit" class="btn-primary" style="width:100%; padding:12px; background:var(--brand); color:white; border:none; border-radius:6px; font-weight:600; cursor:pointer;">
+                Verify & Log In
+            </button>
+        </form>
+
+        <div style="margin-top:24px; font-size:0.85rem;">
+            <a href="/Login" style="color:var(--brand); text-decoration:none;">Cancel and return to login</a>
+        </div>
+    </div>
+</div>

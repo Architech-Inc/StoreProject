@@ -58,11 +58,17 @@ public class LoginModel : PageModel
             return Page();
         }
 
-        if (string.IsNullOrWhiteSpace(response.AccessToken) && !response.RequiresPasswordReset)
+        if (string.IsNullOrWhiteSpace(response.AccessToken) && !response.RequiresPasswordReset && !response.RequiresTwoFactor)
         {
             ErrorMessage = "Login failed. Please check your credentials.";
             _logger.LogWarning("Failed login attempt for user: {Username}", Username);
             return Page();
+        }
+
+        if (response.RequiresTwoFactor)
+        {
+            TempData["TwoFactorToken"] = response.TwoFactorToken;
+            return RedirectToPage("/Verify2FA");
         }
 
         if (response.RequiresPasswordReset)

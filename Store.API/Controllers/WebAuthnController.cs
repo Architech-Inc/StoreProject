@@ -91,4 +91,45 @@ public class WebAuthnController : ControllerBase
             return BadRequest(new { message = ex.Message });
         }
     }
+
+    [Authorize]
+    [HttpGet("credentials")]
+    public async Task<IActionResult> GetCredentials(CancellationToken ct)
+    {
+        try
+        {
+            var userIdString = User.FindFirstValue("uid") ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdString, out var userId))
+                return Unauthorized(new { message = "Invalid user token" });
+
+            var credentials = await _webAuthnService.GetCredentialsAsync(userId, ct);
+            return Ok(Store.Models.DTOs.Common.ApiResponse<List<Store.Models.DTOs.Auth.FidoCredentialDto>>.Ok(credentials));
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [Authorize]
+    [HttpDelete("credentials/{id}")]
+    public async Task<IActionResult> DeleteCredential(int id, CancellationToken ct)
+    {
+        try
+        {
+            var userIdString = User.FindFirstValue("uid") ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdString, out var userId))
+                return Unauthorized(new { message = "Invalid user token" });
+
+            var success = await _webAuthnService.RemoveCredentialAsync(userId, id, ct);
+            if (!success)
+                return NotFound(new { message = "Credential not found" });
+
+            return Ok(Store.Models.DTOs.Common.ApiResponse<object>.Ok(null!, "Credential removed."));
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
 }
