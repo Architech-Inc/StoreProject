@@ -1,8 +1,48 @@
 @using Store.Models.DTOs.Operations
 @using StoreUI.Services
+@inject Store.Models.Interfaces.Services.IUserService UserService
+@inject Store.Models.Interfaces.Services.IEmployeeService EmployeeService
+@inject StoreUI.Services.IApiClientService ApiClient
 @{
     var token = Context.Session.GetString("access_token") ?? string.Empty;
     var perms = JwtPermissionReader.GetPermissions(token);
+    var username = JwtPermissionReader.GetClaim(token, "sub") ?? "User";
+    var userRole = JwtPermissionReader.GetClaim(token, "http://schemas.microsoft.com/ws/2008/06/identity/claims/role") ?? "Staff";
+
+    string displayName = username;
+    string avatarUrl = "/images/admin.png";
+    string employeeInfo = "";
+
+    if (!string.IsNullOrEmpty(token))
+    {
+        ApiClient.SetToken(token);
+        var userIdStr = JwtPermissionReader.GetClaim(token, "uid");
+        if (Guid.TryParse(userIdStr, out var userId))
+        {
+            try
+            {
+                var currentUser = await UserService.GetByIdAsync(userId, default);
+                if (currentUser != null)
+                {
+                    avatarUrl = currentUser.ThumbnailUrl ?? currentUser.FullImageUrl ?? "/images/admin.png";
+                    if (currentUser.EmployeeId.HasValue)
+                    {
+                        var emp = await EmployeeService.GetByIdAsync(currentUser.EmployeeId.Value, default);
+                        if (emp != null)
+                        {
+                            if (!string.IsNullOrWhiteSpace(emp.FirstName))
+                            {
+                                displayName = emp.FirstName;
+                            }
+                            employeeInfo = $"Emp: {emp.DepartmentName ?? "Unassigned"}";
+                        }
+                    }
+                }
+            }
+            catch { }
+        }
+    }
+
     var canInventoryRead = perms.Contains(PermissionKeys.InventoryRead);
     var canPricingRead   = perms.Contains(PermissionKeys.PricingRead);
     var canCashRead      = perms.Contains(PermissionKeys.CashRead);
@@ -41,69 +81,109 @@
 
             <nav class="main-nav">
                 <span class="nav-section-label">Store</span>
-                <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Dashboard" ? "active" : "")" href="/Dashboard">Dashboard</a>
-                <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Pos" ? "active" : "")" href="/Pos">POS Terminal</a>
-                <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Catalog" ? "active" : "")" href="/Catalog">Item Catalog</a>
-                <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Customers" ? "active" : "")" href="/Customers">Customers</a>
-                <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Invoices" ? "active" : "")" href="/Invoices">Invoices</a>
-                <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Suppliers" ? "active" : "")" href="/Suppliers">Suppliers</a>
-                <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Loyalty" ? "active" : "")" href="/Loyalty">Loyalty</a>
-                <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Campaigns" ? "active" : "")" href="/Campaigns">Campaigns</a>
-                <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Profile" ? "active" : "")" href="/Profile">My Profile</a>
+                <a class="nav-link" href="/Dashboard">Dashboard</a>
+                <a class="nav-link" href="/Pos">POS Terminal</a>
+                <a class="nav-link" href="/Catalog">Item Catalog</a>
+                <a class="nav-link" href="/Customers">Customers</a>
+                <a class="nav-link" href="/Invoices">Invoices</a>
+                <a class="nav-link" href="/Suppliers">Suppliers</a>
+                <a class="nav-link" href="/Loyalty">Loyalty</a>
+                <a class="nav-link" href="/Campaigns">Campaigns</a>
+
                 @if (hasOpsSection)
                 {
                     <hr class="nav-divider" />
-                    <span class="nav-section-label">Operations</span>
-                }
-                @if (canInventoryRead)
-                {
-                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Employees" ? "active" : "")" href="/Employees">Employees</a>
-                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "InventoryOps" ? "active" : "")" href="/InventoryOps">Inventory Ops</a>
-                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "BatchTracking" ? "active" : "")" href="/BatchTracking">Batch &amp; Expiry</a>
-                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "StockTransfers" ? "active" : "")" href="/StockTransfers">Stock Transfers</a>
-                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Wastage" ? "active" : "")" href="/Wastage">Wastage Log</a>
-                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "PurchaseOrders" ? "active" : "")" href="/PurchaseOrders">Purchase Orders</a>
-                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "AuditLog" ? "active" : "")" href="/AuditLog">Audit Log</a>
-                }
-                @if (canPricingRead)
-                {
-                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Discounts" ? "active" : "")" href="/Discounts">Discount Rules</a>
-                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "DiscountOverrides" ? "active" : "")" href="/DiscountOverrides">Discount Overrides</a>
-                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "PricingOps" ? "active" : "")" href="/PricingOps">Pricing Ops</a>
-                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "PromotionEffectiveness" ? "active" : "")" href="/PromotionEffectiveness">Promo Effectiveness</a>
-                }
-                @if (canCashRead || canReportsRead)
-                {
-                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "CashReports" ? "active" : "")" href="/CashReports">Cash &amp; Reports</a>
-                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Reconciliation" ? "active" : "")" href="/Reconciliation">Day-End Reconciliation</a>
-                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "CashVariance" ? "active" : "")" href="/CashVariance">Cash Variance</a>
-                }
-                @if (canPaymentsRead)
-                {
-                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Payments" ? "active" : "")" href="/Payments">Payments</a>
+                    <div class="nav-section" id="nav-section-ops">
+                        <div class="nav-section-header" onclick="toggleNavSection('nav-section-ops')">
+                            <span class="nav-section-label">Operations</span>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </div>
+                        <div class="nav-section-content">
+                            @if (canInventoryRead)
+                            {
+                                <a class="nav-link" href="/Employees">Employees</a>
+                                <a class="nav-link" href="/InventoryOps">Inventory Ops</a>
+                                <a class="nav-link" href="/BatchTracking">Batch &amp; Expiry</a>
+                                <a class="nav-link" href="/StockTransfers">Stock Transfers</a>
+                                <a class="nav-link" href="/Wastage">Wastage Log</a>
+                                <a class="nav-link" href="/PurchaseOrders">Purchase Orders</a>
+                                <a class="nav-link" href="/AuditLog">Audit Log</a>
+                            }
+                            @if (canPricingRead)
+                            {
+                                <a class="nav-link" href="/Discounts">Discount Rules</a>
+                                <a class="nav-link" href="/DiscountOverrides">Discount Overrides</a>
+                                <a class="nav-link" href="/PricingOps">Pricing Ops</a>
+                                <a class="nav-link" href="/PromotionEffectiveness">Promo Effectiveness</a>
+                            }
+                            @if (canCashRead || canReportsRead)
+                            {
+                                <a class="nav-link" href="/CashReports">Cash &amp; Reports</a>
+                                <a class="nav-link" href="/Reconciliation">Day-End Reconciliation</a>
+                                <a class="nav-link" href="/CashVariance">Cash Variance</a>
+                            }
+                            @if (canPaymentsRead)
+                            {
+                                <a class="nav-link" href="/Payments">Payments</a>
+                            }
+                        </div>
+                    </div>
                 }
                 @if (hasAdminSection)
                 {
                     <hr class="nav-divider" />
-                    <span class="nav-section-label">Admin</span>
-                }
-                @if (canAdminBranches)
-                {
-                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "BranchAdmin" ? "active" : "")" href="/BranchAdmin">Branch Admin</a>
-                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "BranchDashboard" ? "active" : "")" href="/BranchDashboard">Branch Dashboard</a>
-                }
-                @if (canAdminRoles)
-                {
-                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Users" ? "active" : "")" href="/Users">Users</a>
-                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Lookup" ? "active" : "")" href="/Lookup">Lookup Data</a>
-                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "RoleMatrix" ? "active" : "")" href="/RoleMatrix">Role Matrix</a>
-                    <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "CommunicationLogs" ? "active" : "")" href="/CommunicationLogs">Comm Logs</a>
+                    <div class="nav-section" id="nav-section-admin">
+                        <div class="nav-section-header" onclick="toggleNavSection('nav-section-admin')">
+                            <span class="nav-section-label">Admin</span>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </div>
+                        <div class="nav-section-content">
+                            @if (canAdminBranches)
+                            {
+                                <a class="nav-link" href="/BranchAdmin">Branch Admin</a>
+                                <a class="nav-link" href="/BranchDashboard">Branch Dashboard</a>
+                            }
+                            @if (canAdminRoles)
+                            {
+                                <a class="nav-link" href="/Users">Users</a>
+                                <a class="nav-link" href="/Lookup">Lookup Data</a>
+                                <a class="nav-link" href="/RoleMatrix">Role Matrix</a>
+                                <a class="nav-link" href="/CommunicationLogs">Comm Logs</a>
+                            }
+                        </div>
+                    </div>
                 }
             </nav>
 
-            <form method="post" asp-page="/Logout" class="logout-form">
-                <button type="submit" class="logout-btn">Sign Out</button>
-            </form>
+            <div class="user-profile-block">
+                <button type="button" class="user-profile-btn" id="userMenuBtn" aria-expanded="false" aria-haspopup="true">
+                    <img src="@avatarUrl" class="user-avatar" alt="@displayName" onerror="this.src='/images/admin.png'" />
+                    <div class="user-info">
+                        <span class="user-name">@displayName</span>
+                        <span class="user-role">@userRole</span>
+                    </div>
+                </button>
+                <div class="user-context-menu" id="userContextMenu" role="menu">
+                    @if (!string.IsNullOrEmpty(employeeInfo))
+                    {
+                        <div class="context-menu-item" style="cursor: default; background: transparent; padding-top: 4px; padding-bottom: 4px;">
+                            <small style="color: var(--sidebar-muted);">@employeeInfo</small>
+                        </div>
+                        <div class="context-menu-divider"></div>
+                    }
+                    <a href="/Profile" class="context-menu-item" role="menuitem">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        My Profile
+                    </a>
+                    <div class="context-menu-divider"></div>
+                    <form method="post" asp-page="/Logout" style="margin:0;">
+                        <button type="submit" class="context-menu-item danger" role="menuitem">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                            Sign Out
+                        </button>
+                    </form>
+                </div>
+            </div>
         </aside>
 
         <main class="app-main" role="main">
@@ -212,11 +292,74 @@
             menuToggle?.setAttribute('aria-expanded', collapsed ? 'true' : 'false');
         });
 
-        // Highlight active nav link based on current path
+        // Deep linking and active state based on URL
         const currentPath = window.location.pathname.toLowerCase();
+        let activeLink = null;
+        let longestMatch = 0;
+
         document.querySelectorAll('.nav-link').forEach(link => {
-            if (link.getAttribute('href')?.toLowerCase() === currentPath) {
-                link.classList.add('active');
+            const href = link.getAttribute('href')?.toLowerCase();
+            if (href && currentPath.startsWith(href) && href.length > longestMatch) {
+                // Ignore "/" matching everything incorrectly if we had a "/" nav link
+                if (href !== "/" || currentPath === "/") {
+                    longestMatch = href.length;
+                    activeLink = link;
+                }
+            }
+        });
+
+        if (activeLink) {
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            activeLink.classList.add('active');
+
+            const parentSection = activeLink.closest('.nav-section');
+            if (parentSection) {
+                parentSection.classList.add('expanded');
+                localStorage.setItem(parentSection.id, 'expanded');
+            }
+
+            setTimeout(() => {
+                activeLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 150);
+        }
+
+        // Setup User Context Menu Toggle
+        const userMenuBtn = document.getElementById('userMenuBtn');
+        const userContextMenu = document.getElementById('userContextMenu');
+        if (userMenuBtn && userContextMenu) {
+            userMenuBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isOpen = userContextMenu.classList.contains('open');
+                userContextMenu.classList.toggle('open', !isOpen);
+                userMenuBtn.setAttribute('aria-expanded', !isOpen);
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!userMenuBtn.contains(e.target) && !userContextMenu.contains(e.target)) {
+                    userContextMenu.classList.remove('open');
+                    userMenuBtn.setAttribute('aria-expanded', 'false');
+                }
+            });
+        }
+
+        // Setup Expandable Sections
+        window.toggleNavSection = (id) => {
+            const section = document.getElementById(id);
+            if (section) {
+                const isExpanded = section.classList.toggle('expanded');
+                localStorage.setItem(id, isExpanded ? 'expanded' : 'collapsed');
+            }
+        };
+
+        // Restore section state from localStorage on load
+        document.querySelectorAll('.nav-section').forEach(section => {
+            if (section.id) {
+                const state = localStorage.getItem(section.id);
+                if (state === 'expanded') {
+                    section.classList.add('expanded');
+                } else if (state === 'collapsed') {
+                    section.classList.remove('expanded');
+                }
             }
         });
     })();
