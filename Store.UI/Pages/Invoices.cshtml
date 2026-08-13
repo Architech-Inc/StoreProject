@@ -1439,6 +1439,12 @@
                             <span>Amount Tendered:</span>
                             <span>${Number(inv.amountTendered).toLocaleString('fr-CM')} XAF</span>
                         </div>
+                        ${inv.changeGiven > 0 ? `
+                            <div class="inv-totals-row" style="font-weight: 600;">
+                                <span>Change Given:</span>
+                                <span>${Number(inv.changeGiven).toLocaleString('fr-CM')} XAF</span>
+                            </div>
+                        ` : ''}
                         ${inv.outstandingBalance > 0 ? `
                             <div class="inv-totals-row" style="color: #dc2626; font-weight: 700;">
                                 <span>Outstanding Debt:</span>
@@ -1865,6 +1871,12 @@
                             <td>Amount Paid:</td>
                             <td style="text-align: right; font-weight: bold; color: #059669;">${Number(inv.amountTendered).toLocaleString('fr-CM')} XAF</td>
                         </tr>
+                        ${inv.changeGiven > 0 ? `
+                            <tr>
+                                <td>Change Given:</td>
+                                <td style="text-align: right; font-weight: bold;">${Number(inv.changeGiven).toLocaleString('fr-CM')} XAF</td>
+                            </tr>
+                        ` : ''}
                         ${inv.outstandingBalance > 0 ? `
                             <tr>
                                 <td style="color: #dc2626; font-weight: bold;">Balance Due:</td>

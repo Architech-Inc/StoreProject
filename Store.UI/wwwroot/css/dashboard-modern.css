@@ -7,16 +7,13 @@
 }
 
 .app-sidebar {
-    background: rgba(31, 47, 37, 0.7);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    background: linear-gradient(180deg, var(--sidebar-grad-start) 0%, var(--sidebar-grad-end) 100%);
     color: var(--nav-text);
     padding: var(--space-6) var(--space-4);
     display: flex;
     flex-direction: column;
     gap: var(--space-6);
     border-right: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
     max-height: 100dvh;
     overflow: hidden;
     overscroll-behavior: contain;
@@ -35,7 +32,6 @@
     background: var(--surface);
     object-fit: contain;
     padding: 4px;
-    box-shadow: 0 4px 12px rgba(1, 156, 1, 0.3);
 }
 
 .brand-block strong {
@@ -62,27 +58,18 @@
     text-decoration: none;
     padding: 10px 12px;
     border-radius: var(--radius-sm);
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    border: 1px solid transparent;
 }
 
 .nav-link:hover,
 .nav-link:focus-visible {
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.12);
     color: var(--nav-text);
     outline: none;
-    transform: translateX(4px);
-    border-color: rgba(255, 255, 255, 0.1);
 }
 
 .nav-link.active {
-    background: rgba(1, 156, 1, 0.15);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    background: rgba(1, 156, 1, 0.25);
     color: var(--nav-text);
-    border: 1px solid rgba(1, 156, 1, 0.4);
-    box-shadow: 0 4px 12px rgba(1, 156, 1, 0.2);
-    font-weight: 600;
 }
 
 .nav-section-label {
@@ -124,12 +111,11 @@
 }
 
 .app-main {
-    padding: 0 var(--space-6) var(--space-6) var(--space-6);
+    padding: var(--space-6);
     display: flex;
     flex-direction: column;
     gap: var(--space-5);
     min-height: 0;
-    overflow-y: auto;
 }
 
 .app-content {
@@ -143,15 +129,6 @@
     display: flex;
     align-items: center;
     gap: var(--space-4);
-    position: sticky;
-    top: 0;
-    margin: 0 calc(var(--space-6) * -1);
-    padding: var(--space-6) var(--space-6) var(--space-4);
-    background: rgba(240, 243, 241, 0.85);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border-bottom: 1px solid var(--border-soft);
-    z-index: 50;
 }
 
 .topbar h1 {
@@ -449,11 +426,6 @@ th {
     }
 
     .app-main {
-        padding: 0 var(--space-4) var(--space-4);
-    }
-
-    .topbar {
-        margin: 0 calc(var(--space-4) * -1);
         padding: var(--space-4);
     }
 
@@ -464,14 +436,12 @@ th {
 
 @media (max-width: 768px) {
     .app-main {
-        padding: 0 var(--space-3) var(--space-3);
+        padding: var(--space-3);
     }
 
     .topbar {
         flex-direction: column;
         gap: var(--space-2);
-        margin: 0 calc(var(--space-3) * -1);
-        padding: var(--space-3);
     }
 
     .topbar h1 {
