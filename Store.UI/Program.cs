@@ -24,10 +24,10 @@ builder.Services.AddSession(options =>
 });
 
 // API HttpClient with JWT token handling
-var apiBaseUrl = builder.Configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7112";
+var internalApiUrl = builder.Configuration["ApiSettings:InternalBaseUrl"] ?? builder.Configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7112";
 builder.Services.AddHttpClient("StoreApi", client =>
 {
-    client.BaseAddress = new Uri(apiBaseUrl);
+    client.BaseAddress = new Uri(internalApiUrl);
     client.Timeout = TimeSpan.FromSeconds(20);
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 });
@@ -83,7 +83,8 @@ app.UseStaticFiles();
 
 app.Use(async (context, next) =>
 {
-    var targetBase = app.Configuration["ApiSettings:BaseUrl"]?.TrimEnd('/') ?? "https://localhost:7112";
+    var externalApiUrl = app.Configuration["ApiSettings:ExternalBaseUrl"] ?? app.Configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7112";
+    var targetBase = externalApiUrl.TrimEnd('/');
 
     if (context.Request.Path.StartsWithSegments("/files", out var remainingPath))
     {
