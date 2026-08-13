@@ -209,7 +209,7 @@
                 
                 <form method="post" asp-page-handler="UploadAvatar" enctype="multipart/form-data" id="avatarForm">
                     @Html.AntiForgeryToken()
-                    <input type="file" name="AvatarUpload" id="avatarInput" accept="image/*" data-crop="true" style="display:none;" />
+                    <input type="file" name="AvatarUpload" id="avatarInput" accept="image/*" data-crop="true" data-crop-auto-submit="true" style="display:none;" />
                 </form>
             </div>
 

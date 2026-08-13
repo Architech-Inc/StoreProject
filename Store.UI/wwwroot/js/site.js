@@ -315,6 +315,10 @@
                 setHiddenInput('CropY', data.y);
                 setHiddenInput('CropW', data.width);
                 setHiddenInput('CropH', data.height);
+
+                if (currentCropInput.dataset.cropAutoSubmit === 'true') {
+                    form.submit();
+                }
             }
             closeCropModal();
         }
