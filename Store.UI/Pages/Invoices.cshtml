@@ -1328,8 +1328,7 @@
                             <thead>
                                 <tr>
                                     <th>Method</th>
-                                    <th>Tendered</th>
-                                    <th>Change</th>
+                                    <th>Amount Applied</th>
                                     <th>Reference</th>
                                     <th>Recorded</th>
                                 </tr>
@@ -1338,8 +1337,7 @@
                                 ${inv.tenders.map(t => `
                                     <tr>
                                         <td><strong>${t.paymentTypeDisplay || t.paymentType}</strong></td>
-                                        <td style="color: #059669; font-weight: 600;">${Number(t.amountTendered).toLocaleString('fr-CM')} XAF</td>
-                                        <td>${t.changeGiven > 0 ? Number(t.changeGiven).toLocaleString('fr-CM') + ' XAF' : '—'}</td>
+                                        <td style="color: #059669; font-weight: 600;">${Number(t.amount).toLocaleString('fr-CM')} XAF</td>
                                         <td style="color: var(--text-secondary);">${escapeHtml(t.reference || '—')}</td>
                                         <td style="font-size: 0.76rem; color: var(--text-secondary);">${new Date(t.dateCreated).toLocaleString()}</td>
                                     </tr>
