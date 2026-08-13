@@ -1,0 +1,153 @@
+@page
+@model StoreUI.Pages.CommunicationLogsModel
+@{
+    ViewData["Title"] = "Communication Logs";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Communication Logs</h2>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form method="get" class="row gx-2 gy-2 align-items-center">
+            <div class="col-auto">
+                <select name="channel" class="form-select" asp-for="Channel">
+                    <option value="">All Channels</option>
+                    <option value="Email">Email</option>
+                    <option value="Sms">SMS</option>
+                    <option value="WhatsApp">WhatsApp</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <select name="status" class="form-select" asp-for="Status">
+                    <option value="">All Statuses</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Sent">Sent</option>
+                    <option value="Delivered">Delivered</option>
+                    <option value="Failed">Failed</option>
+                    <option value="Retrying">Retrying</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary">Filter</button>
+                <a asp-page="/CommunicationLogs" class="btn btn-outline-secondary">Clear</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Date Sent</th>
+                    <th>Channel</th>
+                    <th>Recipient</th>
+                    <th>Status</th>
+                    <th>Retry Count</th>
+                    <th>Payload Preview</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Logs.Any())
+                {
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-muted">No communication logs found.</td>
+                    </tr>
+                }
+                else
+                {
+                    foreach (var log in Model.Logs)
+                    {
+                        <tr>
+                            <td>@log.DateCreated.ToString("g")</td>
+                            <td>
+                                @if (log.Channel == Store.Models.Enums.CommunicationChannel.Email) { <span class="badge bg-primary">Email</span> }
+                                else if (log.Channel == Store.Models.Enums.CommunicationChannel.Sms) { <span class="badge bg-info text-dark">SMS</span> }
+                                else { <span class="badge bg-success">WhatsApp</span> }
+                            </td>
+                            <td>@log.Recipient</td>
+                            <td>
+                                @if (log.Status == Store.Models.Enums.CommunicationStatus.Sent || log.Status == Store.Models.Enums.CommunicationStatus.Delivered)
+                                {
+                                    <span class="text-success"><i class="bi bi-check-circle-fill me-1"></i> @log.Status</span>
+                                }
+                                else if (log.Status == Store.Models.Enums.CommunicationStatus.Failed)
+                                {
+                                    <span class="text-danger" title="@log.ErrorMessage"><i class="bi bi-x-circle-fill me-1"></i> @log.Status</span>
+                                }
+                                else
+                                {
+                                    <span class="text-warning"><i class="bi bi-hourglass-split me-1"></i> @log.Status</span>
+                                }
+                            </td>
+                            <td>@log.RetryCount</td>
+                            <td class="text-truncate" style="max-width: 200px;" title="@log.Payload">
+                                @log.Payload
+                            </td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#logModal-@log.Id">
+                                    Details
+                                </button>
+
+                                <!-- Details Modal -->
+                                <div class="modal fade" id="logModal-@log.Id" tabindex="-1">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Log Details</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p><strong>ID:</strong> @log.Id</p>
+                                                <p><strong>Channel:</strong> @log.Channel</p>
+                                                <p><strong>Recipient:</strong> @log.Recipient</p>
+                                                <p><strong>Date:</strong> @log.DateCreated.ToString("O")</p>
+                                                <p><strong>Status:</strong> @log.Status</p>
+                                                @if (!string.IsNullOrEmpty(log.ErrorMessage))
+                                                {
+                                                    <div class="alert alert-danger">
+                                                        <strong>Error:</strong> @log.ErrorMessage
+                                                    </div>
+                                                }
+                                                <div class="bg-light p-3 rounded">
+                                                    <strong>Payload:</strong><br/>
+                                                    <pre class="mb-0 mt-2" style="white-space: pre-wrap;">@log.Payload</pre>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+    
+    @if (Model.TotalPages > 1)
+    {
+        <div class="card-footer bg-white border-top-0 pt-3">
+            <nav>
+                <ul class="pagination mb-0 justify-content-end">
+                    <li class="page-item @(Model.PageNumber == 1 ? "disabled" : "")">
+                        <a class="page-link" asp-page="./CommunicationLogs" asp-route-page="@(Model.PageNumber - 1)" asp-route-channel="@Model.Channel" asp-route-status="@Model.Status">Previous</a>
+                    </li>
+                    <li class="page-item disabled">
+                        <span class="page-link">Page @Model.PageNumber of @Model.TotalPages</span>
+                    </li>
+                    <li class="page-item @(Model.PageNumber == Model.TotalPages ? "disabled" : "")">
+                        <a class="page-link" asp-page="./CommunicationLogs" asp-route-page="@(Model.PageNumber + 1)" asp-route-channel="@Model.Channel" asp-route-status="@Model.Status">Next</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    }
+</div>

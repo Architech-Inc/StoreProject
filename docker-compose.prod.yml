@@ -15,6 +15,18 @@ services:
     networks:
       - store-network
 
+  store-mongodb:
+    image: mongo:latest
+    container_name: store-mongodb
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    volumes:
+      - store-mongodb-data:/data/db
+    networks:
+      - store-network
+
   store-api:
     build:
       context: .
@@ -24,12 +36,14 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ConnectionStrings__Default=${STORE_CONNECTION_STRING}
+      - MongoDB__ConnectionString=${STORE_MONGO_CONNECTION_STRING}
       - Jwt__Key=${STORE_JWT_SECRET}
       - Payments__MoMoCallbackKey=${STORE_MOMO_CALLBACK_KEY}
       - Cors__AllowedOrigins__0=http://store.157.173.112.19.nip.io
       - Cors__AllowedOrigins__1=https://store.157.173.112.19.nip.io
     depends_on:
       - store-mysql
+      - store-mongodb
     networks:
       - store-network
       - proxy-network
@@ -59,6 +73,7 @@ services:
 
 volumes:
   store-mysql-data:
+  store-mongodb-data:
 
 networks:
   store-network:

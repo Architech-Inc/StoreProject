@@ -58,6 +58,7 @@ builder.Services.AddScoped<ICashVarianceService, ApiCashVarianceService>();
 builder.Services.AddScoped<ISupplierService, ApiSupplierService>();
 builder.Services.AddScoped<ILoyaltyService, ApiLoyaltyService>();
 builder.Services.AddScoped<IFileService, ApiFileService>();
+builder.Services.AddScoped<IApiCommunicationLogService, ApiCommunicationLogService>();
 
 var app = builder.Build();
 

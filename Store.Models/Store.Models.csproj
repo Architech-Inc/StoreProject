@@ -10,6 +10,7 @@
   <!-- Pure domain layer: no EF Core, no ASP.NET Core dependencies -->
   <ItemGroup>
     <PackageReference Include="Fido2" Version="4.0.1" />
+    <PackageReference Include="MongoDB.Bson" Version="3.11.0" />
     <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
   </ItemGroup>
 

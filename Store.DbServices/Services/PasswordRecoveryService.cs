@@ -12,10 +12,12 @@ namespace Store.DbServices.Services;
 public class PasswordRecoveryService : IPasswordRecoveryService
 {
     private readonly IUnitOfWork _uow;
+    private readonly INotificationService _notificationService;
 
-    public PasswordRecoveryService(IUnitOfWork uow)
+    public PasswordRecoveryService(IUnitOfWork uow, INotificationService notificationService)
     {
         _uow = uow;
+        _notificationService = notificationService;
     }
 
     public async Task<bool> RequestOtpAsync(string username, CancellationToken ct = default)
@@ -41,7 +43,27 @@ public class PasswordRecoveryService : IPasswordRecoveryService
         await _uow.Repository<Otp>().AddAsync(otp, ct);
         await _uow.SaveChangesAsync(ct);
 
-        // TODO: Send OTP via NotificationService (Email/SMS)
+        // Fetch user's primary contact details to send OTP
+        var userWithContacts = await _uow.Repository<User>().Query()
+            .Include(u => u.Emails).ThenInclude(e => e.Email)
+            .Include(u => u.Phones).ThenInclude(p => p.Phone)
+            .FirstOrDefaultAsync(u => u.UserId == user.UserId, ct);
+
+        var primaryEmail = userWithContacts?.Emails?.FirstOrDefault(e => e.IsPrimary)?.Email?.Address 
+                           ?? userWithContacts?.Emails?.FirstOrDefault()?.Email?.Address;
+        
+        var primaryPhone = userWithContacts?.Phones?.FirstOrDefault(p => p.IsPrimary)?.Phone?.Number
+                           ?? userWithContacts?.Phones?.FirstOrDefault()?.Phone?.Number;
+
+        if (!string.IsNullOrWhiteSpace(primaryEmail))
+        {
+            await _notificationService.SendEmailAsync(primaryEmail, "Password Recovery OTP", $"Your OTP is: {otpCode}", user.UserId, ct);
+        }
+        else if (!string.IsNullOrWhiteSpace(primaryPhone))
+        {
+            await _notificationService.SendSmsAsync(primaryPhone, $"Your Store password recovery OTP is: {otpCode}", user.UserId, ct);
+        }
+
         return true;
     }
 

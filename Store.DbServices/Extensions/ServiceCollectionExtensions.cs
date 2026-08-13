@@ -11,6 +11,7 @@ using Store.Models.Interfaces;
 using Store.Models.Interfaces.Repositories;
 using Store.Models.Interfaces.Repositories.Users;
 using Store.Models.Interfaces.Services;
+using Store.DbServices.Workers;
 
 namespace Store.DbServices.Extensions;
 
@@ -58,6 +59,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPurchaseOrderService, PurchaseOrderService>();
         services.AddScoped<ICashVarianceService, CashVarianceService>();
         services.AddScoped<ISystemSettingService, SystemSettingService>();
+        services.AddScoped<ICommunicationLogService, CommunicationLogService>();
+        services.AddScoped<INotificationService, NotificationService>();
+        
+        services.AddHostedService<OfflineLogSyncWorker>();
 
         return services;
     }
