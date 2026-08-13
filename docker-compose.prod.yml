@@ -53,8 +53,8 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=proxy-network"
-      - "traefik.http.routers.storeapi.rule=Host(`api.store.157.173.112.19.nip.io`)"
-      - "traefik.http.services.storeapi.loadbalancer.server.port=8080"
+      - "traefik.http.routers.storeproject-storeapi.rule=Host(`api.store.157.173.112.19.nip.io`)"
+      - "traefik.http.services.storeproject-storeapi.loadbalancer.server.port=8080"
 
   store-ui:
     build:
@@ -74,8 +74,8 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=proxy-network"
-      - "traefik.http.routers.storeui.rule=Host(`store.157.173.112.19.nip.io`)"
-      - "traefik.http.services.storeui.loadbalancer.server.port=8080"
+      - "traefik.http.routers.storeproject-storeui.rule=Host(`store.157.173.112.19.nip.io`)"
+      - "traefik.http.services.storeproject-storeui.loadbalancer.server.port=8080"
 
 volumes:
   store-mysql-data:
