@@ -46,6 +46,7 @@ services:
       - store-mongodb
     volumes:
       - store-dataprotection-keys:/root/.aspnet/DataProtection-Keys
+      - store-uploads:/app/Uploads
     networks:
       - store-network
       - proxy-network
@@ -80,6 +81,7 @@ volumes:
   store-mysql-data:
   store-mongodb-data:
   store-dataprotection-keys:
+  store-uploads:
 
 networks:
   store-network:
