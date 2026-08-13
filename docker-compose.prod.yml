@@ -39,8 +39,8 @@ services:
       - MongoDB__ConnectionString=${STORE_MONGO_CONNECTION_STRING}
       - Jwt__Key=${STORE_JWT_SECRET}
       - Payments__MoMoCallbackKey=${STORE_MOMO_CALLBACK_KEY}
-      - Cors__AllowedOrigins__0=http://store.157.173.112.19.nip.io
-      - Cors__AllowedOrigins__1=https://store.157.173.112.19.nip.io
+      - Cors__AllowedOrigins__0=http://store.157.173.112.19.nip.io:18080
+      - Cors__AllowedOrigins__1=https://store.157.173.112.19.nip.io:18443
     depends_on:
       - store-mysql
       - store-mongodb
@@ -65,7 +65,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ApiSettings__InternalBaseUrl=http://store-api:8080
-      - ApiSettings__ExternalBaseUrl=http://api.store.157.173.112.19.nip.io
+      - ApiSettings__ExternalBaseUrl=http://api.store.157.173.112.19.nip.io:18080
     volumes:
       - store-dataprotection-keys:/root/.aspnet/DataProtection-Keys
     networks:
