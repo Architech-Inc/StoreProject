@@ -26,6 +26,7 @@ builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
 builder.Services.AddScoped<Store.API.Infrastructure.Processing.IImageProcessorService, Store.API.Infrastructure.Processing.ImageProcessorService>();
 builder.Services.AddScoped<Store.Models.Interfaces.Services.IWebAuthnService, Store.API.Services.WebAuthnService>();
 builder.Services.AddMemoryCache();
+builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddFido2(options =>
 {

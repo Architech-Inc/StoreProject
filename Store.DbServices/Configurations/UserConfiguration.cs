@@ -30,10 +30,10 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .HasForeignKey<UserPassword>(p => p.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // One-to-one: User → Token
-        builder.HasOne(u => u.UserToken)
+        // One-to-many: User → Tokens
+        builder.HasMany(u => u.UserTokens)
             .WithOne(t => t.User)
-            .HasForeignKey<UserToken>(t => t.UserId)
+            .HasForeignKey(t => t.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
         // Many-to-one: User → Role
@@ -66,11 +66,14 @@ public class UserTokenConfiguration : IEntityTypeConfiguration<UserToken>
     public void Configure(EntityTypeBuilder<UserToken> builder)
     {
         builder.HasKey(t => t.UserTokenId);
-        builder.HasIndex(t => t.UserId).IsUnique();
+        builder.HasIndex(t => t.UserId);
 
         builder.Property(t => t.Token).IsRequired().HasMaxLength(2000);
         builder.Property(t => t.RefreshTokenHash).IsRequired().HasMaxLength(256);
         builder.Property(t => t.ExpiryDate).IsRequired();
         builder.Property(t => t.RefreshTokenExpiryDate).IsRequired();
+        builder.Property(t => t.IpAddress).HasMaxLength(45);
+        builder.Property(t => t.UserAgent).HasMaxLength(500);
+        builder.Property(t => t.DeviceName).HasMaxLength(100);
     }
 }

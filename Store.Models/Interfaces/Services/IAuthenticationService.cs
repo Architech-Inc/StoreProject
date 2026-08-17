@@ -11,5 +11,6 @@ public interface IAuthenticationService
     Task<LoginResponse?> LoginWithBiometricsAsync(Guid userId, CancellationToken ct = default);
     Task<LoginResponse?> RefreshTokenAsync(RefreshTokenRequest request, CancellationToken ct = default);
     Task<bool> LogoutAsync(Guid userId, CancellationToken ct = default);
+    Task<bool> RevokeAllSessionsAsync(Guid userId, CancellationToken ct = default);
     Task<bool> ResetPasswordAsync(ResetPasswordRequest request, CancellationToken ct = default);
 }

@@ -26,6 +26,38 @@ public class EmployeeService : IEmployeeService
         return emp is null ? null : MapToDto(emp);
     }
 
+    public async Task<Employee360Dto?> Get360ByIdAsync(Guid employeeId, CancellationToken ct = default)
+    {
+        var emp = await _uow.Repository<Employee>().Query()
+            .Include(e => e.Department)
+            .Include(e => e.Salary)
+            .Include(e => e.Emails).ThenInclude(ee => ee.Email)
+            .Include(e => e.Phones).ThenInclude(ep => ep.Phone)
+            .Include(e => e.Users).ThenInclude(u => u.Role)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(e => e.EmployeeId == employeeId, ct);
+
+        if (emp is null) return null;
+
+        var dto = new Employee360Dto
+        {
+            Profile = MapToDto(emp),
+            Emails = emp.Emails.Select(ee => ee.Email.Address).ToList(),
+            Phones = emp.Phones.Select(ep => ep.Phone.Number).ToList(),
+            Users = emp.Users.Select(u => new Store.Models.DTOs.Users.UserDto 
+            {
+                UserId = u.UserId,
+                Username = u.Username,
+                RoleId = u.RoleId,
+                RoleName = u.Role?.Name,
+                Status = u.Status,
+                DateCreated = u.DateCreated
+            }).ToList()
+        };
+
+        return dto;
+    }
+
     public async Task<PagedResult<EmployeeDto>> GetAllAsync(PagedRequest request, CancellationToken ct = default)
     {
         var query = _uow.Repository<Employee>().Query()

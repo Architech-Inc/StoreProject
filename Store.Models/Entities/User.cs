@@ -29,7 +29,7 @@ public class User : BaseEntity
     public Employee? Employee { get; set; }
     public Role Role { get; set; } = null!;
     public UserPassword? Password { get; set; }
-    public UserToken? UserToken { get; set; }
+    public ICollection<UserToken> UserTokens { get; set; } = new List<UserToken>();
 
     public ICollection<UserEmail> Emails { get; set; } = new List<UserEmail>();
     public ICollection<UserPhone> Phones { get; set; } = new List<UserPhone>();

@@ -22,5 +22,11 @@ public class UserToken : BaseEntity
     public DateTime RefreshTokenExpiryDate { get; set; }
     public bool IsRevoked { get; set; }
 
+    public string? IpAddress { get; set; }
+    public string? UserAgent { get; set; }
+    public string? DeviceName { get; set; }
+    public DateTime DateCreated { get; set; } = DateTime.UtcNow;
+    public DateTime LastActive { get; set; } = DateTime.UtcNow;
+
     public User User { get; set; } = null!;
 }

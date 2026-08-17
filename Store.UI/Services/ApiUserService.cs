@@ -21,6 +21,11 @@ public class ApiUserService : IUserService
         return await _client.GetAsync<UserDto>($"/api/users/{userId}", ct);
     }
 
+    public async Task<User360Dto?> Get360ByIdAsync(Guid userId, CancellationToken ct = default)
+    {
+        return await _client.GetAsync<User360Dto>($"/api/users/{userId}/360", ct);
+    }
+
     public async Task<PagedResult<UserDto>> GetAllAsync(PagedRequest request, CancellationToken ct = default)
     {
         var qs = $"?page={request.Page}&pageSize={request.PageSize}";
@@ -110,9 +115,20 @@ public class ApiUserService : IUserService
         return result ?? Array.Empty<AuditLogDto>();
     }
 
+    public async Task<IReadOnlyCollection<UserSessionDto>> GetActiveSessionsAsync(Guid userId, CancellationToken ct = default)
+    {
+        var result = await _client.GetAsync<IReadOnlyCollection<UserSessionDto>>($"/api/users/{userId}/sessions", ct);
+        return result ?? Array.Empty<UserSessionDto>();
+    }
+
     public async Task<bool> RevokeAllSessionsAsync(CancellationToken ct = default)
     {
         return await _client.PostAsync("/api/users/profile/sessions/revoke", null, ct);
+    }
+
+    public async Task<bool> RevokeAllSessionsAsync(Guid userId, CancellationToken ct = default)
+    {
+        return await _client.PostAsync($"/api/users/{userId}/sessions/revoke", null, ct);
     }
 
     public async Task<ContactChangeRequestDto> RequestContactChangeAsync(Guid userId, CreateContactChangeDto request, CancellationToken ct = default)

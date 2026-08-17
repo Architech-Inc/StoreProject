@@ -58,6 +58,12 @@ public class ApiAuthenticationService : IAuthenticationService
         return await _client.PostAsync("/api/auth/logout", null, ct);
     }
 
+    public async Task<bool> RevokeAllSessionsAsync(Guid userId, CancellationToken ct = default)
+    {
+        _logger.LogInformation("Revoking all sessions for user {UserId}", userId);
+        return await _client.PostAsync($"/api/auth/revoke-all/{userId}", null, ct);
+    }
+
     public async Task<bool> ResetPasswordAsync(ResetPasswordRequest request, CancellationToken ct = default)
     {
         _logger.LogInformation("Resetting password for user");

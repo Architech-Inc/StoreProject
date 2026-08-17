@@ -21,6 +21,11 @@ public class ApiEmployeeService : IEmployeeService
         return await _client.GetAsync<EmployeeDto>($"/api/employees/{employeeId}", ct);
     }
 
+    public async Task<Employee360Dto?> Get360ByIdAsync(Guid employeeId, CancellationToken ct = default)
+    {
+        return await _client.GetAsync<Employee360Dto>($"/api/employees/{employeeId}/360", ct);
+    }
+
     public async Task<PagedResult<EmployeeDto>> GetAllAsync(PagedRequest request, CancellationToken ct = default)
     {
         var qs = $"?page={request.Page}&pageSize={request.PageSize}&includeInactive={request.IncludeInactive.ToString().ToLower()}";

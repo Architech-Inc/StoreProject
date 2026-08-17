@@ -47,13 +47,15 @@ public class EmployeesModel : SecurePageModel
         _fileService = fileService;
     }
 
+    [BindProperty(SupportsGet = true)] public string? SearchQuery { get; set; }
+
     public async Task<IActionResult> OnGetAsync(int page = 1, CancellationToken ct = default)
     {
         if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
         _apiClient.SetToken(token);
 
         PageNumber = Math.Max(1, page);
-        var result = await _employeeService.GetAllAsync(new PagedRequest { Page = PageNumber, PageSize = PageSize, IncludeInactive = true }, ct);
+        var result = await _employeeService.GetAllAsync(new PagedRequest { Page = PageNumber, PageSize = PageSize, IncludeInactive = true, SearchTerm = SearchQuery }, ct);
         Employees = result.Items?.ToList() ?? new List<EmployeeDto>();
         TotalEmployees = result.TotalCount;
 
@@ -137,15 +139,65 @@ public class EmployeesModel : SecurePageModel
         return RedirectToPage();
     }
 
-    public async Task<IActionResult> OnPostRemoveAsync(Guid employeeId, CancellationToken ct = default)
+    public async Task<IActionResult> OnGetEmployeeDrawerAsync(Guid id, CancellationToken ct)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return new JsonResult(new { success = false, message = "Unauthorized" }) { StatusCode = 401 };
+
+        _apiClient.SetToken(token);
+
+        try
+        {
+            var employee360 = await _apiClient.GetAsync<Employee360Dto>($"/api/employees/{id}/360", ct);
+            if (employee360 == null)
+                return new JsonResult(new { success = false, message = "Employee not found." }) { StatusCode = 404 };
+
+            return new JsonResult(new { success = true, employee360 });
+        }
+        catch (Exception ex)
+        {
+            return new JsonResult(new { success = false, message = ex.Message }) { StatusCode = 500 };
+        }
+    }
+
+    public async Task<IActionResult> OnPostTerminateAsync(Guid employeeId, CancellationToken ct = default)
     {
         if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
         _apiClient.SetToken(token);
 
         try
         {
-            var ok = await _employeeService.DeleteAsync(employeeId, ct);
-            StatusMessage = ok ? "Employee removed." : "Error: Employee not found.";
+            var existing = await _employeeService.GetByIdAsync(employeeId, ct);
+            if (existing == null)
+            {
+                StatusMessage = "Error: Employee not found.";
+                return RedirectToPage();
+            }
+
+            if (existing.Status == EmployeeStatus.Pending)
+            {
+                // Hard delete is safe for Pending (e.g. mistaken entry)
+                var ok = await _employeeService.DeleteAsync(employeeId, ct);
+                StatusMessage = ok ? "Pending employee removed completely." : "Error removing pending employee.";
+            }
+            else
+            {
+                // Soft delete / terminate for active staff
+                var update = new UpdateEmployeeRequest
+                {
+                    FirstName = existing.FirstName,
+                    MiddleName = existing.MiddleName,
+                    LastName = existing.LastName,
+                    Gender = existing.Gender,
+                    DateOfBirth = existing.DateOfBirth,
+                    DepartmentId = existing.DepartmentId,
+                    Status = EmployeeStatus.Fired,
+                    ThumbnailUrl = existing.ThumbnailUrl,
+                    FullImageUrl = existing.FullImageUrl
+                };
+                var updated = await _employeeService.UpdateAsync(employeeId, update, ct);
+                StatusMessage = updated != null ? $"Employee '{existing.FullName}' has been terminated." : "Error terminating employee.";
+            }
         }
         catch (Exception ex)
         {

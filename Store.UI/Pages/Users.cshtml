@@ -88,9 +88,9 @@
                                     {
                                         <div style="width:32px;height:32px;border-radius:50%;background-color:var(--ops-border);display:inline-block;"></div>
                                     }
+                                <td>
+                                    <strong style="cursor:pointer;color:var(--brand, #019c01);" onclick="openUserDrawer('@u.UserId')">@u.Username</strong>
                                 </td>
-                                <td><strong>@u.Username</strong></td>
-                                <td>@(u.RoleName ?? u.RoleId.ToString())</td>
                                 <td>
                                     @if (u.Status == Store.Models.Enums.UserStatus.Active)
                                     {
@@ -239,8 +239,88 @@
     </div>
 </div>
 
+<!-- ── User 360 Slide-Over Drawer ───────────────────────────── -->
+<div class="crm-drawer-backdrop" id="userDrawerBackdrop" onclick="closeUserDrawer()"></div>
+<aside class="crm-drawer" id="userDrawer" aria-label="User 360 Profile">
+    <div class="crm-drawer-header">
+        <div style="display:flex;gap:14px;align-items:center;">
+            <div class="drawer-avatar" id="drawerUserInitials" style="width:48px;height:48px;border-radius:50%;background:#e5e7eb;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:1.2rem;">--</div>
+            <div>
+                <h3 id="drawerUsername" style="margin:0 0 4px 0;font-size:1.25rem;">Username</h3>
+                <span id="drawerRoleBadge" class="badge badge-blue">Role</span>
+                <span id="drawerStatusBadge" class="badge badge-green">Active</span>
+            </div>
+        </div>
+        <button type="button" class="drawer-close-btn" onclick="closeUserDrawer()" title="Close Drawer">&times;</button>
+    </div>
+
+    <!-- Quick Actions -->
+    <div style="padding:16px; display:flex; gap:8px; border-bottom:1px solid var(--border);">
+        <button type="button" class="button-primary" style="flex:1;" onclick="alert('Manage settings not implemented')">Manage Settings</button>
+        <form method="post" asp-page-handler="RevokeSessions" style="flex:1; margin:0; display:flex;">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="userId" id="revokeSessionsUserId" />
+            <button type="submit" class="button-secondary" style="flex:1; width:100%;" id="drawerRevokeSessionsBtn" data-confirm="Revoke all active sessions for this user?" data-confirm-type="warning">Revoke Sessions</button>
+        </form>
+    </div>
+
+    <div class="drawer-nav-tabs">
+        <button type="button" class="drawer-tab-btn active" onclick="switchUserTab(event, 'tabUserOverview')">Overview</button>
+        <button type="button" class="drawer-tab-btn" onclick="switchUserTab(event, 'tabUserActivity')">Activity Log</button>
+        <button type="button" class="drawer-tab-btn" onclick="switchUserTab(event, 'tabUserChanges')">Contact Changes</button>
+        <button type="button" class="drawer-tab-btn" onclick="switchUserTab(event, 'tabUserSessions')">Active Sessions</button>
+    </div>
+
+    <div class="crm-drawer-body">
+        <!-- Tab 1: Overview -->
+        <div id="tabUserOverview" class="drawer-tab-content active" style="display:block;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+                <div style="background:var(--canvas); padding:16px; border-radius:8px; border:1px solid var(--border);">
+                    <div style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:4px;">Date Created</div>
+                    <div id="drawerDateCreated" style="font-weight:600;">--</div>
+                </div>
+                <div style="background:var(--canvas); padding:16px; border-radius:8px; border:1px solid var(--border);">
+                    <div style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:4px;">2FA Status</div>
+                    <div id="drawer2FAStatus" style="font-weight:600;">--</div>
+                </div>
+            </div>
+
+            <h4>Contact Details</h4>
+            <div style="background:var(--canvas); padding:16px; border-radius:8px; border:1px solid var(--border); margin-bottom:16px;">
+                <div style="margin-bottom:8px;"><strong>Email:</strong> <span id="drawerEmail">--</span></div>
+                <div><strong>Phone:</strong> <span id="drawerPhone">--</span></div>
+            </div>
+
+            <h4>Linked Employee</h4>
+            <div id="drawerLinkedEmployee" style="background:var(--canvas); padding:16px; border-radius:8px; border:1px solid var(--border);">
+                <span style="color:var(--text-secondary);">No linked employee.</span>
+            </div>
+        </div>
+
+        <!-- Tab 2: Activity Log -->
+        <div id="tabUserActivity" class="drawer-tab-content" style="display:none;">
+            <div id="drawerActivityList" style="display:flex; flex-direction:column; gap:8px;">
+                <div style="text-align:center; color:var(--text-secondary); padding:20px;">No recent activity.</div>
+            </div>
+        </div>
+
+        <!-- Tab 3: Contact Changes -->
+        <div id="tabUserChanges" class="drawer-tab-content" style="display:none;">
+            <div id="drawerChangesList" style="display:flex; flex-direction:column; gap:8px;">
+                <div style="text-align:center; color:var(--text-secondary); padding:20px;">No pending contact changes.</div>
+            </div>
+        </div>
+
+        <!-- Tab 4: Active Sessions -->
+        <div id="tabUserSessions" class="drawer-tab-content" style="display:none;">
+            <div id="drawerSessionsList" style="display:flex; flex-direction:column; gap:8px;">
+                <div style="text-align:center; color:var(--text-secondary); padding:20px;">No active sessions.</div>
+            </div>
+        </div>
+    </div>
+</aside>
+
 @section Scripts {
-    <script>
         document.addEventListener('DOMContentLoaded', () => {
             const openNewBtn = document.querySelector('[data-open-blade="userBlade"]');
             const blade = document.getElementById('userBlade');
@@ -349,5 +429,130 @@
                 }
             };
         });
+        // User 360 Drawer Logic
+        async function openUserDrawer(userId) {
+            const backdrop = document.getElementById('userDrawerBackdrop');
+            const drawer = document.getElementById('userDrawer');
+            
+            // Show loading state (optional: reset fields)
+            document.getElementById('drawerUsername').textContent = 'Loading...';
+            document.getElementById('drawerUserInitials').textContent = '--';
+            document.getElementById('drawerRoleBadge').textContent = '...';
+            document.getElementById('drawerStatusBadge').textContent = '...';
+            
+            backdrop.classList.add('active');
+            drawer.classList.add('active');
+            
+            try {
+                const response = await fetch(`?handler=UserDrawer&id=${userId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const profile = data.profile;
+                    
+                    // Header
+                    document.getElementById('revokeSessionsUserId').value = userId;
+                    document.getElementById('drawerUsername').textContent = profile.username;
+                    document.getElementById('drawerUserInitials').textContent = profile.username.substring(0, 2).toUpperCase();
+                    
+                    const roleBadge = document.getElementById('drawerRoleBadge');
+                    roleBadge.textContent = profile.roleName || 'Unknown';
+                    
+                    const statusBadge = document.getElementById('drawerStatusBadge');
+                    statusBadge.textContent = profile.status === 1 ? 'Active' : (profile.status === 2 ? 'Suspended' : 'Deleted');
+                    statusBadge.className = 'badge ' + (profile.status === 1 ? 'badge-green' : 'badge-red');
+                    
+                    // Overview Tab
+                    document.getElementById('drawerDateCreated').textContent = new Date(profile.dateCreated).toLocaleDateString();
+                    document.getElementById('drawer2FAStatus').textContent = profile.twoFactorEnabled ? 'Enabled' : 'Disabled';
+                    document.getElementById('drawerEmail').textContent = profile.primaryEmail || 'None';
+                    document.getElementById('drawerPhone').textContent = profile.primaryPhone || 'None';
+                    
+                    // Linked Employee
+                    const linkedEmpDiv = document.getElementById('drawerLinkedEmployee');
+                    if (data.linkedEmployee) {
+                        linkedEmpDiv.innerHTML = `
+                            <div style="margin-bottom:4px;"><strong>${data.linkedEmployee.firstName} ${data.linkedEmployee.lastName}</strong></div>
+                            <div style="font-size:0.85rem; color:var(--text-secondary);">Date Employed: ${new Date(data.linkedEmployee.dateEmployed).toLocaleDateString()}</div>
+                        `;
+                    } else {
+                        linkedEmpDiv.innerHTML = '<span style="color:var(--text-secondary);">No linked employee.</span>';
+                    }
+                    
+                    // Activity Log
+                    const activityList = document.getElementById('drawerActivityList');
+                    if (data.recentActivity && data.recentActivity.length > 0) {
+                        activityList.innerHTML = data.recentActivity.map(a => `
+                            <div style="background:var(--canvas); padding:12px; border-radius:6px; border:1px solid var(--border);">
+                                <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                                    <strong>${a.action}</strong>
+                                    <span style="font-size:0.75rem; color:var(--text-secondary);">${new Date(a.dateCreated).toLocaleString()}</span>
+                                </div>
+                                <div style="font-size:0.85rem;">${a.details || ''}</div>
+                                <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:4px;">IP: ${a.ipAddress || 'Unknown'}</div>
+                            </div>
+                        `).join('');
+                    } else {
+                        activityList.innerHTML = '<div style="text-align:center; color:var(--text-secondary); padding:20px;">No recent activity.</div>';
+                    }
+                    
+                    // Contact Changes
+                    const changesList = document.getElementById('drawerChangesList');
+                    if (data.pendingContactChanges && data.pendingContactChanges.length > 0) {
+                        changesList.innerHTML = data.pendingContactChanges.map(c => `
+                            <div style="background:var(--canvas); padding:12px; border-radius:6px; border:1px solid var(--border);">
+                                <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                                    <strong>Status: ${c.status}</strong>
+                                    <span style="font-size:0.75rem; color:var(--text-secondary);">${new Date(c.dateCreated).toLocaleDateString()}</span>
+                                </div>
+                                <div style="font-size:0.85rem;">
+                                    ${c.newEmail ? `New Email: ${c.newEmail}<br/>` : ''}
+                                    ${c.newPhone ? `New Phone: ${c.newPhone}` : ''}
+                                </div>
+                            </div>
+                        `).join('');
+                    } else {
+                        changesList.innerHTML = '<div style="text-align:center; color:var(--text-secondary); padding:20px;">No pending contact changes.</div>';
+                    }
+                    
+                    // Active Sessions
+                    const sessionsList = document.getElementById('drawerSessionsList');
+                    if (data.activeSessions && data.activeSessions.length > 0) {
+                        sessionsList.innerHTML = data.activeSessions.map(s => `
+                            <div style="background:var(--canvas); padding:12px; border-radius:6px; border:1px solid var(--border);">
+                                <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                                    <strong>${s.deviceName || 'Unknown Device'}</strong>
+                                    <span style="font-size:0.75rem; color:var(--text-secondary);">${new Date(s.lastActive).toLocaleString()}</span>
+                                </div>
+                                <div style="font-size:0.85rem;">
+                                    IP: ${s.ipAddress || 'Unknown'}<br/>
+                                    <span style="color:var(--text-secondary); font-size:0.8rem; word-break:break-all;">${s.userAgent || 'Unknown Browser'}</span>
+                                </div>
+                            </div>
+                        `).join('');
+                    } else {
+                        sessionsList.innerHTML = '<div style="text-align:center; color:var(--text-secondary); padding:20px;">No active sessions.</div>';
+                    }
+                    
+                } else {
+                    console.error("Failed to load User 360 Data");
+                    document.getElementById('drawerUsername').textContent = "Error loading user";
+                }
+            } catch (err) {
+                console.error("Error fetching user drawer:", err);
+            }
+        }
+
+        function closeUserDrawer() {
+            document.getElementById('userDrawerBackdrop').classList.remove('active');
+            document.getElementById('userDrawer').classList.remove('active');
+        }
+
+        function switchUserTab(event, tabId) {
+            document.querySelectorAll('#userDrawer .drawer-tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('#userDrawer .drawer-tab-content').forEach(c => c.style.display = 'none');
+            
+            event.currentTarget.classList.add('active');
+            document.getElementById(tabId).style.display = 'block';
+        }
     </script>
 }
