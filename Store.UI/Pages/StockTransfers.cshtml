@@ -118,7 +118,7 @@
 <div id="createBlade" class="blade" data-overlay-id="createBladeOverlay">
     <div class="blade-header">
         <h3>New Stock Transfer</h3>
-        <button type="button" class="btn-close" data-close-blade="createBlade">&times;</button>
+        <button type="button" class="btn-close" data-close-blade="createBlade" aria-label="Close new transfer">&times;</button>
     </div>
     <form method="post" asp-page-handler="Create" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
         @Html.AntiForgeryToken()
