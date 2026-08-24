@@ -73,7 +73,7 @@
                                 <td>
                                     @if (!string.IsNullOrEmpty(e.ThumbnailUrl))
                                     {
-                                        <img src="@e.ThumbnailUrl" alt="Photo" style="width:32px;height:32px;border-radius:50%;object-fit:cover;cursor:pointer;" onclick="viewImage('@(e.FullImageUrl ?? e.ThumbnailUrl)')" />
+                                        <img src="@e.ThumbnailUrl" alt="Photo" style="width:32px;height:32px;border-radius:50%;object-fit:cover;cursor:pointer;" loading="lazy" width="32" height="32" onclick="viewImage('@(e.FullImageUrl ?? e.ThumbnailUrl)')" />
                                     }
                                     else
                                     {
@@ -360,7 +360,7 @@
                 const initials = (c.fullName || 'EM').split(' ').map(s => s[0]).slice(0, 2).join('');
                 const avatarWrap = document.getElementById('drawerAvatarWrap');
                 if (c.thumbnailUrl) {
-                    avatarWrap.innerHTML = `<img src="${c.thumbnailUrl}" alt="${c.fullName}" class="crm-avatar" style="width:56px;height:56px;object-fit:cover;" />`;
+                    avatarWrap.innerHTML = `<img src="${c.thumbnailUrl}" alt="${c.fullName}" class="crm-avatar" style="width:56px;height:56px;object-fit:cover;" loading="lazy" width="56" height="56" />`;
                 } else {
                     avatarWrap.innerHTML = `<div class="crm-avatar" style="width:56px;height:56px;font-size:1.2rem;">${initials}</div>`;
                 }

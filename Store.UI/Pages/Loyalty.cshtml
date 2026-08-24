@@ -896,7 +896,7 @@
                             <div class="loyalty-card-top">
                                 @if (!string.IsNullOrWhiteSpace(m.ThumbnailUrl))
                                 {
-                                    <img src="@m.ThumbnailUrl" alt="@m.FullName" class="member-avatar" />
+                                    <img src="@m.ThumbnailUrl" alt="@m.FullName" class="member-avatar" loading="lazy" />
                                 }
                                 else
                                 {

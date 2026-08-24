@@ -1044,7 +1044,7 @@
             }
 
             const thumbnailHtml = res.thumbnailUrl
-                ? `<img src="${res.thumbnailUrl}" class="scan-entity-img" alt="${res.title}" />`
+                ? `<img src="${res.thumbnailUrl}" class="scan-entity-img" alt="${res.title}" loading="lazy" />`
                 : `<div class="scan-entity-icon-ph">🏷️</div>`;
 
             content.innerHTML = `
