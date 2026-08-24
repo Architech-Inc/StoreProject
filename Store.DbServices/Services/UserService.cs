@@ -1,5 +1,6 @@
 using OtpNet;
 using Store.Models.DTOs.Users;
+using Store.Models.DTOs.Employees;
 using Store.Models.DTOs.Common;
 using Store.Models.Entities;
 using Store.DbServices.Context;
@@ -35,6 +36,41 @@ public class UserService : IUserService
         }
 
         return MapToDto(user);
+    }
+
+    public async Task<User360Dto?> Get360ByIdAsync(Guid userId, CancellationToken ct = default)
+    {
+        var profile = await GetByIdAsync(userId, ct);
+        if (profile == null) return null;
+
+        var dto = new User360Dto
+        {
+            Profile = profile,
+            RecentActivity = await GetRecentActivityAsync(userId, ct),
+            PendingContactChanges = await GetPendingContactChangesByUserIdAsync(userId, ct),
+            ActiveSessions = await GetActiveSessionsAsync(userId, ct)
+        };
+
+        if (profile.EmployeeId.HasValue)
+        {
+            dto.LinkedEmployee = await _db.Employees
+                .AsNoTracking()
+                .Where(e => e.EmployeeId == profile.EmployeeId.Value)
+                .Select(e => new EmployeeDto
+                {
+                    EmployeeId = e.EmployeeId,
+                    FirstName = e.FirstName,
+                    MiddleName = e.MiddleName,
+                    LastName = e.LastName,
+                    Gender = e.Gender,
+                    DateEmployed = e.DateEmployed,
+                    Status = e.Status,
+                    DateCreated = e.DateCreated
+                })
+                .FirstOrDefaultAsync(ct);
+        }
+
+        return dto;
     }
 
     public async Task<PagedResult<UserDto>> GetAllAsync(PagedRequest request, CancellationToken ct = default)
@@ -254,7 +290,33 @@ public class UserService : IUserService
         }).ToList();
     }
 
+    public async Task<IReadOnlyCollection<Store.Models.DTOs.Auth.UserSessionDto>> GetActiveSessionsAsync(Guid userId, CancellationToken ct = default)
+    {
+        var sessions = await _db.UserTokens
+            .AsNoTracking()
+            .Where(t => t.UserId == userId && !t.IsRevoked && t.RefreshTokenExpiryDate > DateTime.UtcNow)
+            .OrderByDescending(t => t.LastActive)
+            .Select(t => new Store.Models.DTOs.Auth.UserSessionDto
+            {
+                SessionId = t.UserTokenId,
+                IpAddress = t.IpAddress,
+                UserAgent = t.UserAgent,
+                DeviceName = t.DeviceName,
+                DateCreated = t.DateCreated,
+                LastActive = t.LastActive,
+                IsRevoked = t.IsRevoked
+            })
+            .ToListAsync(ct);
+            
+        return sessions;
+    }
+
     public Task<bool> RevokeAllSessionsAsync(CancellationToken ct = default)
+    {
+        throw new NotImplementedException("Handled by AuthenticationService directly on the API side.");
+    }
+
+    public Task<bool> RevokeAllSessionsAsync(Guid userId, CancellationToken ct = default)
     {
         throw new NotImplementedException("Handled by AuthenticationService directly on the API side.");
     }

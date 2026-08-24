@@ -61,7 +61,7 @@
                 <label for="barcodeInput">Barcode</label>
                 <div class="scanner-input-wrap">
                     <input id="barcodeInput" type="text" placeholder="Scan or type barcode then press Enter" autocomplete="off" />
-                    <button type="button" class="btn btn-primary" id="barcodeAddBtn">Add</button>
+                    <button type="button" class="button-primary" id="barcodeAddBtn">Add</button>
                 </div>
             </div>
 
@@ -146,7 +146,7 @@
 
                 <form id="checkoutForm" method="post">
                     @Html.AntiForgeryToken()
-                    <button type="submit" id="checkoutBtn" class="btn btn-primary">Complete Checkout</button>
+                    <button type="submit" id="checkoutBtn" class="button-primary">Complete Checkout</button>
                 </form>
 
                 <div id="offlineQueueBanner" class="offline-queue-banner" hidden>
@@ -164,7 +164,7 @@
 <div id="receiptBlade" class="blade" data-overlay-id="receiptBladeOverlay">
     <div class="blade-header">
         <h3 id="receiptTitle">Receipt</h3>
-        <button type="button" class="btn-close" id="receiptCloseBtn">&times;</button>
+        <button type="button" class="btn-close" id="receiptCloseBtn" aria-label="Close receipt">&times;</button>
     </div>
     <div id="receiptContent" class="blade-body receipt-content"></div>
     <div class="blade-footer">
@@ -414,7 +414,8 @@
     }
 
     // amountTenderedInput shim for legacy suspend/resume compatibility
-    const amountTenderedInput = { value: '0', addEventListener: () => {} };
+    const amountTenderedInput = (typeof window.amountTenderedInput !== 'undefined') ? window.amountTenderedInput : { value: '0', addEventListener: () => {} };
+    if (typeof window.amountTenderedInput === 'undefined') { window.amountTenderedInput = amountTenderedInput; }
 
     function getSubtotal() {
         let total = 0;

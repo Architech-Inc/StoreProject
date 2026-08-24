@@ -20,13 +20,31 @@
         </div>
     }
 
-    <section class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+    <div class="filter-bar" style="margin-bottom: 24px; justify-content: space-between;">
+        <form method="get" class="filter-row">
+            <div class="filter-group">
+                <label>Search Employees:</label>
+                <div style="display:flex; gap:8px;">
+                    <input type="search" name="search" value="@Model.SearchQuery" placeholder="Name, Dept, etc..." />
+                    <button type="submit" class="button-secondary">Search</button>
+                </div>
+            </div>
+        </form>
+        <div style="display:flex; gap:8px;">
+            <button class="button-primary" type="button" data-open-blade="empBlade" onclick="openCreate()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="margin-right:4px;">
+                    <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"/>
+                </svg> New Employee
+            </button>
+        </div>
+    </div>
+
+    <section class="card" style="padding:0; overflow:hidden;">
+        <div style="padding:16px; display:flex;justify-content:space-between;align-items:center; border-bottom:1px solid var(--ops-border);">
             <h2 style="margin:0;">
                 Staff Records
-                <small style="font-weight:400;color:var(--ops-subtle);">@Model.TotalEmployees total</small>
+                <small style="font-weight:400;color:var(--ops-subtle);margin-left:8px;">@Model.TotalEmployees total</small>
             </h2>
-            <button type="button" onclick="openCreate()">+ New Employee</button>
         </div>
 
         @if (!Model.Employees.Any())
@@ -35,7 +53,7 @@
         }
         else
         {
-            <div style="overflow-x:auto;">
+            <div class="table-wrap" style="margin:0; border:none; border-radius:0;">
                 <table>
                     <thead>
                         <tr>
@@ -62,7 +80,9 @@
                                         <div style="width:32px;height:32px;border-radius:50%;background-color:var(--ops-border);display:inline-block;"></div>
                                     }
                                 </td>
-                                <td><strong>@e.FullName</strong></td>
+                                <td>
+                                    <strong style="cursor:pointer; color:var(--accent); text-decoration:underline;" onclick="openDrawer('@e.EmployeeId')">@e.FullName</strong>
+                                </td>
                                 <td>@e.Gender</td>
                                 <td>@(e.DepartmentName ?? "—")</td>
                                 <td>@e.DateEmployed.ToString("yyyy-MM-dd")</td>
@@ -71,28 +91,42 @@
                                     {
                                         <span class="badge badge-green">Active</span>
                                     }
+                                    else if (e.Status == EmployeeStatus.Pending)
+                                    {
+                                        <span class="badge badge-info" style="background:#f59e0b;color:#fff;">Pending</span>
+                                    }
+                                    else if (e.Status == EmployeeStatus.Fired || e.Status == EmployeeStatus.Suspended || e.Status == EmployeeStatus.Sanctioned)
+                                    {
+                                        <span class="badge badge-red">@e.Status</span>
+                                    }
                                     else
                                     {
                                         <span class="badge badge-gray">@e.Status</span>
                                     }
                                 </td>
-                                <td style="display:flex;gap:4px;flex-wrap:nowrap;">
-                                    <button type="button" onclick="openEdit(@System.Text.Json.JsonSerializer.Serialize(new {
-                                        employeeId = e.EmployeeId,
-                                        firstName = e.FirstName,
-                                        middleName = e.MiddleName,
-                                        lastName = e.LastName,
-                                        gender = e.Gender.ToString(),
-                                        dob = e.DateOfBirth?.ToString("yyyy-MM-dd"),
-                                        dateEmployed = e.DateEmployed.ToString("yyyy-MM-dd"),
-                                        departmentId = e.DepartmentId,
-                                        status = e.Status.ToString()
-                                    }))">Edit</button>
-                                    <form method="post" asp-page-handler="Remove" style="margin:0;">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="employeeId" value="@e.EmployeeId" />
-                                        <button type="submit" class="button-command danger" data-confirm="Remove @e.FullName from staff?" data-confirm-type="danger">Remove</button>
-                                    </form>
+                                <td>
+                                    <div style="display:flex; gap:4px; flex-wrap:nowrap;">
+                                        <button type="button" class="button-secondary" onclick="openEdit(@System.Text.Json.JsonSerializer.Serialize(new {
+                                            employeeId = e.EmployeeId,
+                                            firstName = e.FirstName,
+                                            middleName = e.MiddleName,
+                                            lastName = e.LastName,
+                                            gender = e.Gender.ToString(),
+                                            dob = e.DateOfBirth?.ToString("yyyy-MM-dd"),
+                                            dateEmployed = e.DateEmployed.ToString("yyyy-MM-dd"),
+                                            departmentId = e.DepartmentId,
+                                            status = e.Status.ToString()
+                                        }))">Edit</button>
+                                        
+                                        @if (e.Status != EmployeeStatus.Fired)
+                                        {
+                                            <form method="post" asp-page-handler="Terminate" style="margin:0;">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="employeeId" value="@e.EmployeeId" />
+                                                <button type="submit" class="button-command danger" data-confirm="@(e.Status == EmployeeStatus.Pending ? $"Permanently delete {e.FullName}?" : $"Terminate employment for {e.FullName}?")" data-confirm-type="danger">@(e.Status == EmployeeStatus.Pending ? "Delete" : "Terminate")</button>
+                                            </form>
+                                        }
+                                    </div>
                                 </td>
                             </tr>
                         }
@@ -102,93 +136,304 @@
 
             @if (Model.TotalPages > 1)
             {
-                <nav class="pagination" aria-label="Employee pages">
-                    @if (Model.PageNumber > 1)
-                    {
-                        <a href="?page=@(Model.PageNumber - 1)">‹ Prev</a>
-                    }
-                    <span class="active">@Model.PageNumber / @Model.TotalPages</span>
-                    @if (Model.PageNumber < Model.TotalPages)
-                    {
-                        <a href="?page=@(Model.PageNumber + 1)">Next ›</a>
-                    }
-                </nav>
+                <div style="padding:16px;">
+                    <nav class="pagination" aria-label="Employee pages">
+                        @if (Model.PageNumber > 1)
+                        {
+                            <a href="?page=@(Model.PageNumber - 1)&search=@Uri.EscapeDataString(Model.SearchQuery ?? "")">‹ Prev</a>
+                        }
+                        <span class="active">@Model.PageNumber / @Model.TotalPages</span>
+                        @if (Model.PageNumber < Model.TotalPages)
+                        {
+                            <a href="?page=@(Model.PageNumber + 1)&search=@Uri.EscapeDataString(Model.SearchQuery ?? "")">Next ›</a>
+                        }
+                    </nav>
+                </div>
             }
         }
     </section>
 </div>
 
-<!-- ── Create/Edit Employee Modal ────────────────────────── -->
-<div class="modal-overlay" id="empModal" hidden>
-    <div class="modal" role="dialog" aria-labelledby="empModalTitle" aria-modal="true">
-        <div class="modal-head">
-            <h3 id="empModalTitle">New Employee</h3>
-            <button type="button" class="btn-close" onclick="closeModal()" aria-label="Close">×</button>
-        </div>
-        <form method="post" asp-page-handler="Save" enctype="multipart/form-data">
+<!-- ── Create/Edit Employee Blade ────────────────────────────────── -->
+<div class="blade-overlay" id="empBladeOverlay"></div>
+<div class="blade" id="empBlade" data-overlay-id="empBladeOverlay">
+    <div class="blade-header">
+        <h3 id="empBladeTitle">New Employee</h3>
+        <button type="button" class="btn-close" data-close-blade="empBlade" aria-label="Close">×</button>
+    </div>
+    <div class="blade-body">
+        <form method="post" asp-page-handler="Save" id="empForm" enctype="multipart/form-data">
             @Html.AntiForgeryToken()
             <input type="hidden" asp-for="EditEmployeeId" id="editEmpId" />
+            <input type="hidden" asp-for="CropX" id="cropX" />
+            <input type="hidden" asp-for="CropY" id="cropY" />
+            <input type="hidden" asp-for="CropW" id="cropW" />
+            <input type="hidden" asp-for="CropH" id="cropH" />
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 12px;">
+            <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap: 16px;">
                 <div>
-                    <label for="firstNameF">First Name *</label>
+                    <label for="firstNameF">First Name <span style="color:var(--ops-danger);">*</span></label>
                     <input asp-for="EmpFirstName" id="firstNameF" required maxlength="100" />
                 </div>
                 <div>
                     <label for="middleNameF">Middle Name</label>
                     <input asp-for="EmpMiddleName" id="middleNameF" maxlength="100" />
                 </div>
+                <div style="grid-column: span 2;">
+                    <label for="lastNameF">Last Name <span style="color:var(--ops-danger);">*</span></label>
+                    <input asp-for="EmpLastName" id="lastNameF" required maxlength="100" />
+                </div>
+                <div>
+                    <label for="genderF">Gender</label>
+                    <select asp-for="EmpGender" id="genderF">
+                        <option value="NotSpecified">Not Specified</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="dobF">Date of Birth</label>
+                    <input asp-for="EmpDateOfBirth" id="dobF" type="date" />
+                </div>
+                <div>
+                    <label for="dateEmpF">Date Employed <span style="color:var(--ops-danger);">*</span></label>
+                    <input asp-for="EmpDateEmployed" id="dateEmpF" type="date" required />
+                </div>
+                <div>
+                    <label for="deptF">Department</label>
+                    <select asp-for="EmpDepartmentId" id="deptF">
+                        <option value="">— None —</option>
+                        @foreach (var d in Model.Departments)
+                        {
+                            <option value="@d.DepartmentId">@d.Name</option>
+                        }
+                    </select>
+                </div>
             </div>
 
-            <label for="lastNameF">Last Name *</label>
-            <input asp-for="EmpLastName" id="lastNameF" required maxlength="100" />
-
-            <label for="genderF">Gender</label>
-            <select asp-for="EmpGender" id="genderF">
-                <option value="NotSpecified">Not Specified</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-            </select>
-
-            <label for="dobF">Date of Birth</label>
-            <input asp-for="EmpDateOfBirth" id="dobF" type="date" />
-
-            <label for="dateEmpF">Date Employed *</label>
-            <input asp-for="EmpDateEmployed" id="dateEmpF" type="date" required />
-
-            <label for="deptF">Department</label>
-            <select asp-for="EmpDepartmentId" id="deptF">
-                <option value="">— None —</option>
-                @foreach (var d in Model.Departments)
-                {
-                    <option value="@d.DepartmentId">@d.Name</option>
-                }
-            </select>
-
-            <div id="statusRowEmp" style="display:none;">
+            <div id="statusRowEmp" style="display:none; margin-top:16px;">
                 <label for="statusEmp">Status</label>
                 <select asp-for="EmpStatus" id="statusEmp">
+                    <option value="Pending">Pending</option>
                     <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                    <option value="OnLeave">On Leave</option>
+                    <option value="Suspended">Suspended</option>
+                    <option value="Sanctioned">Sanctioned</option>
+                    <option value="Fired">Fired</option>
+                    <option value="Volunteered">Volunteered</option>
                 </select>
             </div>
             
-            <label for="empImage">Photo</label>
-            <input type="file" asp-for="ImageUpload" id="empImage" accept="image/*" data-crop="true" />
+            <div style="margin-top:16px;">
+                <label for="empImage">Photo</label>
+                <input type="file" asp-for="ImageUpload" id="empImage" accept="image/*" data-crop="true" />
+            </div>
 
-            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
-                <button type="button" class="button-command" onclick="closeModal()">Cancel</button>
+            <div class="form-actions" style="margin-top:24px; display:flex; justify-content:flex-end; gap:8px;">
+                <button type="button" class="button-secondary" data-close-blade="empBlade">Cancel</button>
                 <button type="submit" class="button-primary" id="empSubmitBtn">Add Employee</button>
             </div>
         </form>
     </div>
 </div>
 
+
+<!-- ═════════════════════════════════════════════════════════ -->
+<!-- ── Employee 360 Slide-Over Drawer ─────────────────────── -->
+<!-- ═════════════════════════════════════════════════════════ -->
+<div class="crm-drawer-backdrop" id="drawerBackdrop" onclick="closeDrawer()"></div>
+<aside class="crm-drawer" id="employeeDrawer" aria-label="Employee 360 Profile">
+    
+    <!-- Drawer Header -->
+    <div class="crm-drawer-header">
+        <div style="display:flex;gap:14px;align-items:center;">
+            <div id="drawerAvatarWrap"></div>
+            <div>
+                <h3 id="drawerEmployeeName" style="margin:0;font-size:1.25rem;">Loading...</h3>
+                <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
+                    <span id="drawerStatusBadge" class="badge">Active</span>
+                    <span id="drawerDeptText" style="font-size:0.85rem;color:var(--text-secondary);">Department</span>
+                </div>
+            </div>
+        </div>
+        <button type="button" class="btn-close" onclick="closeDrawer()" aria-label="Close">×</button>
+    </div>
+
+    <!-- Drawer Body -->
+    <div class="crm-drawer-body">
+
+        <!-- KPI Strip -->
+        <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:10px;background:var(--canvas);padding:14px;border-radius:12px;border:1px solid var(--border);">
+            <div>
+                <div style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;">Employed</div>
+                <div id="drawerDateEmployed" style="font-size:1.15rem;font-weight:700;color:var(--text-primary);margin-top:2px;">-</div>
+            </div>
+            <div>
+                <div style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;">Gender</div>
+                <div id="drawerGender" style="font-size:1.15rem;font-weight:700;color:var(--text-primary);margin-top:2px;">-</div>
+            </div>
+            <div>
+                <div style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;">Salary Grade</div>
+                <div id="drawerSalary" style="font-size:1.15rem;font-weight:700;color:var(--text-primary);margin-top:2px;">-</div>
+            </div>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="crm-tabs" style="margin-top:24px;">
+            <button type="button" class="crm-tab-btn active" onclick="switchDrawerTab('tab-emp-profile', this)">Profile</button>
+            <button type="button" class="crm-tab-btn" onclick="switchDrawerTab('tab-emp-contacts', this)">Contacts <span class="badge" id="contactCountTab" style="margin-left:4px;">0</span></button>
+            <button type="button" class="crm-tab-btn" onclick="switchDrawerTab('tab-emp-users', this)">System Access <span class="badge" id="userCountTab" style="margin-left:4px;">0</span></button>
+        </div>
+
+        <!-- Tab 1: Profile Details -->
+        <div id="tab-emp-profile" class="crm-tab-pane active" style="margin-top:16px;">
+            <div style="background:var(--canvas);padding:16px;border-radius:12px;border:1px solid var(--border);">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                    <div>
+                        <div style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;margin-bottom:4px;">Date of Birth</div>
+                        <div id="drawerDob" style="font-weight:500;">Not Specified</div>
+                    </div>
+                    <div>
+                        <div style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;margin-bottom:4px;">NID Number</div>
+                        <div id="drawerNid" style="font-weight:500;">Not Specified</div>
+                    </div>
+                    <div>
+                        <div style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;margin-bottom:4px;">Date Created</div>
+                        <div id="drawerDateCreated" style="font-weight:500;">-</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 2: Contacts -->
+        <div id="tab-emp-contacts" class="crm-tab-pane" style="margin-top:16px;">
+            <div id="drawerContactsList">
+                <p style="color:var(--text-secondary);font-size:0.85rem;">Loading contacts...</p>
+            </div>
+        </div>
+
+        <!-- Tab 3: System Access (Users) -->
+        <div id="tab-emp-users" class="crm-tab-pane" style="margin-top:16px;">
+            <div id="drawerUsersList">
+                <p style="color:var(--text-secondary);font-size:0.85rem;">Loading users...</p>
+            </div>
+        </div>
+
+    </div>
+</aside>
+
 @section Scripts {
     <script>
+        function switchDrawerTab(tabId, btn) {
+            document.querySelectorAll('.crm-tab-pane').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.crm-tab-btn').forEach(b => b.classList.remove('active'));
+            const target = document.getElementById(tabId);
+            if (target) target.classList.add('active');
+            if (btn) btn.classList.add('active');
+        }
+
+        async function openDrawer(employeeId) {
+            const drawer = document.getElementById('employeeDrawer');
+            const backdrop = document.getElementById('drawerBackdrop');
+            drawer.classList.add('active');
+            backdrop.classList.add('active');
+
+            document.getElementById('drawerEmployeeName').textContent = 'Loading...';
+            
+            try {
+                const res = await fetch(`?handler=EmployeeDrawer&id=${employeeId}`);
+                const data = await res.json();
+
+                if (!data.success || !data.employee360) {
+                    await window.AppDialog.alert({title: 'Error', message: data.message || 'Failed to load.', type: 'danger'});
+                    closeDrawer();
+                    return;
+                }
+
+                const c = data.employee360.profile;
+                const emails = data.employee360.emails || [];
+                const phones = data.employee360.phones || [];
+                const users = data.employee360.users || [];
+
+                document.getElementById('drawerEmployeeName').textContent = c.fullName;
+                document.getElementById('drawerDeptText').textContent = c.departmentName || 'No Department';
+                
+                const initials = (c.fullName || 'EM').split(' ').map(s => s[0]).slice(0, 2).join('');
+                const avatarWrap = document.getElementById('drawerAvatarWrap');
+                if (c.thumbnailUrl) {
+                    avatarWrap.innerHTML = `<img src="${c.thumbnailUrl}" alt="${c.fullName}" class="crm-avatar" style="width:56px;height:56px;object-fit:cover;" />`;
+                } else {
+                    avatarWrap.innerHTML = `<div class="crm-avatar" style="width:56px;height:56px;font-size:1.2rem;">${initials}</div>`;
+                }
+
+                // Badge
+                const statusBadge = document.getElementById('drawerStatusBadge');
+                statusBadge.textContent = c.status;
+                if (c.status === 'Active') statusBadge.className = 'badge badge-green';
+                else if (c.status === 'Pending') statusBadge.className = 'badge badge-info';
+                else if (c.status === 'Fired' || c.status === 'Suspended' || c.status === 'Sanctioned') statusBadge.className = 'badge badge-red';
+                else statusBadge.className = 'badge badge-gray';
+
+                // KPIs
+                document.getElementById('drawerDateEmployed').textContent = c.dateEmployed ? new Date(c.dateEmployed).toLocaleDateString() : '-';
+                document.getElementById('drawerGender').textContent = c.gender || '-';
+                document.getElementById('drawerSalary').textContent = c.salaryGrade || '-';
+
+                // Profile Tab
+                document.getElementById('drawerDob').textContent = c.dateOfBirth ? new Date(c.dateOfBirth).toLocaleDateString() : 'Not Specified';
+                document.getElementById('drawerNid').textContent = c.nidNumber || 'Not Specified';
+                document.getElementById('drawerDateCreated').textContent = c.dateCreated ? new Date(c.dateCreated).toLocaleDateString() : '-';
+
+                // Contacts Tab
+                document.getElementById('contactCountTab').textContent = (emails.length + phones.length).toString();
+                const contactsList = document.getElementById('drawerContactsList');
+                let contactHtml = '';
+                if (!emails.length && !phones.length) {
+                    contactHtml = '<p style="color:var(--text-secondary);font-size:0.85rem;">No contact details found.</p>';
+                } else {
+                    emails.forEach(e => {
+                        contactHtml += `<div style="padding:10px;background:var(--canvas);border-radius:8px;border:1px solid var(--border);margin-bottom:8px;">
+                            <div style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;">Email</div>
+                            <div style="font-weight:500;">${e}</div>
+                        </div>`;
+                    });
+                    phones.forEach(p => {
+                        contactHtml += `<div style="padding:10px;background:var(--canvas);border-radius:8px;border:1px solid var(--border);margin-bottom:8px;">
+                            <div style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;">Phone</div>
+                            <div style="font-weight:500;">${p}</div>
+                        </div>`;
+                    });
+                }
+                contactsList.innerHTML = contactHtml;
+
+                // Users Tab
+                document.getElementById('userCountTab').textContent = users.length.toString();
+                const usersList = document.getElementById('drawerUsersList');
+                if (!users.length) {
+                    usersList.innerHTML = '<p style="color:var(--text-secondary);font-size:0.85rem;">No system access accounts linked.</p>';
+                } else {
+                    usersList.innerHTML = users.map(u => `
+                        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:var(--canvas);border-radius:8px;border:1px solid var(--border);margin-bottom:8px;">
+                            <div>
+                                <div style="font-weight:600;">${u.username}</div>
+                                <div style="color:var(--text-secondary);font-size:0.75rem;">Role: ${u.roleName || 'None'}</div>
+                            </div>
+                            <span class="badge ${u.status === 'Active' ? 'badge-green' : 'badge-red'}">${u.status}</span>
+                        </div>
+                    `).join('');
+                }
+            } catch (err) {
+                await window.AppDialog.alert({title: 'Error', message: 'Error fetching profile: ' + err.message, type: 'danger'});
+                closeDrawer();
+            }
+        }
+
+        function closeDrawer() {
+            document.getElementById('employeeDrawer').classList.remove('active');
+            document.getElementById('drawerBackdrop').classList.remove('active');
+        }
+
         function openCreate() {
-            document.getElementById('empModalTitle').textContent = 'New Employee';
+            document.getElementById('empBladeTitle').textContent = 'New Employee';
             document.getElementById('editEmpId').value = '';
             document.getElementById('firstNameF').value = '';
             document.getElementById('middleNameF').value = '';
@@ -199,11 +444,11 @@
             document.getElementById('deptF').value = '';
             document.getElementById('statusRowEmp').style.display = 'none';
             document.getElementById('empSubmitBtn').textContent = 'Add Employee';
-            document.getElementById('empModal').hidden = false;
+            // document.querySelector('[data-open-blade="empBlade"]').click(); // Not needed if trigger is data-open-blade
         }
 
         function openEdit(data) {
-            document.getElementById('empModalTitle').textContent = 'Edit Employee';
+            document.getElementById('empBladeTitle').textContent = 'Edit Employee';
             document.getElementById('editEmpId').value = data.employeeId;
             document.getElementById('firstNameF').value = data.firstName;
             document.getElementById('middleNameF').value = data.middleName || '';
@@ -215,14 +460,15 @@
             document.getElementById('statusEmp').value = data.status;
             document.getElementById('statusRowEmp').style.display = '';
             document.getElementById('empSubmitBtn').textContent = 'Save Changes';
-            document.getElementById('empModal').hidden = false;
+            
+            // Trigger blade open
+            const overlay = document.getElementById('empBladeOverlay');
+            const blade = document.getElementById('empBlade');
+            if (overlay && blade) {
+                overlay.classList.add('visible');
+                blade.classList.add('visible');
+            }
         }
-
-        function closeModal() { document.getElementById('empModal').hidden = true; }
-
-        document.getElementById('empModal').addEventListener('click', function(e) {
-            if (e.target === this) closeModal();
-        });
     </script>
 }
 

@@ -1051,7 +1051,7 @@
                 <div id="drawerSupplierReg" class="supplier-reg-pill">REG: —</div>
             </div>
         </div>
-        <button class="supplier-drawer-close" onclick="closeSupplierDrawer()">&times;</button>
+        <button class="supplier-drawer-close" onclick="closeSupplierDrawer()" aria-label="Close supplier drawer">&times;</button>
     </div>
 
     <div class="supplier-drawer-body">
@@ -1186,7 +1186,7 @@
         <form method="post" asp-page-handler="Create" enctype="multipart/form-data">
             <div class="modal-custom-header">
                 <h4 style="margin:0; font-size:1.15rem;">Register New Supplier</h4>
-                <button type="button" class="supplier-drawer-close" onclick="closeCreateModal()">&times;</button>
+                <button type="button" class="supplier-drawer-close" onclick="closeCreateModal()" aria-label="Close create supplier modal">&times;</button>
             </div>
             <div class="modal-custom-body">
                 <!-- Avatar & Basic Details -->
@@ -1301,7 +1301,7 @@
             <input type="hidden" asp-for="EditSupplierId" id="editSupplierId" />
             <div class="modal-custom-header">
                 <h4 style="margin:0; font-size:1.15rem;">Edit Supplier Profile</h4>
-                <button type="button" class="supplier-drawer-close" onclick="closeEditModal()">&times;</button>
+                <button type="button" class="supplier-drawer-close" onclick="closeEditModal()" aria-label="Close edit supplier modal">&times;</button>
             </div>
             <div class="modal-custom-body">
                 <!-- Avatar & Basic Details -->

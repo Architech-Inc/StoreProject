@@ -30,6 +30,14 @@ public class EmployeesController : ControllerBase
         return Ok(ApiResponse<EmployeeDto>.Ok(employee));
     }
 
+    [HttpGet("{id:guid}/360")]
+    public async Task<IActionResult> Get360ById(Guid id, CancellationToken ct)
+    {
+        var employee360 = await _employeeService.Get360ByIdAsync(id, ct);
+        if (employee360 is null) return NotFound(ApiResponse<object>.Fail("Employee not found."));
+        return Ok(ApiResponse<Employee360Dto>.Ok(employee360));
+    }
+
     [HttpPost]
     [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> Create([FromBody] CreateEmployeeRequest request, CancellationToken ct)

@@ -179,4 +179,40 @@ public class UsersModel : SecurePageModel
 
         return RedirectToPage();
     }
+
+    public async Task<IActionResult> OnPostRevokeSessionsAsync(Guid userId, CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        _apiClient.SetToken(token);
+
+        try
+        {
+            await _userService.RevokeAllSessionsAsync(userId, ct);
+            StatusMessage = "All active sessions revoked successfully.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: {ex.Message}";
+        }
+
+        return RedirectToPage();
+    }
+
+    public async Task<IActionResult> OnGetUserDrawerAsync(Guid id, CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _)) return Unauthorized();
+        _apiClient.SetToken(token);
+
+        try
+        {
+            var user360 = await _userService.Get360ByIdAsync(id, ct);
+            if (user360 == null) return NotFound();
+
+            return new JsonResult(user360);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { error = ex.Message });
+        }
+    }
 }

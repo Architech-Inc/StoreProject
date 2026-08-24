@@ -20,18 +20,20 @@ public class AuthenticationService : IAuthenticationService
 {
     private readonly IUnitOfWork _uow;
     private readonly IConfiguration _config;
+    private readonly Microsoft.AspNetCore.Http.IHttpContextAccessor _httpContextAccessor;
 
-    public AuthenticationService(IUnitOfWork uow, IConfiguration config)
+    public AuthenticationService(IUnitOfWork uow, IConfiguration config, Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor)
     {
         _uow = uow;
         _config = config;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public async Task<LoginResponse?> LoginAsync(LoginRequest request, CancellationToken ct = default)
     {
         var user = await _uow.Repository<User>().Query()
             .Include(u => u.Password)
-            .Include(u => u.UserToken)
+            .Include(u => u.UserTokens)
             .Include(u => u.Role)
             .FirstOrDefaultAsync(u => u.Username == request.Username.Trim(), ct);
 
@@ -48,7 +50,7 @@ public class AuthenticationService : IAuthenticationService
 
         var user = await _uow.Repository<User>().Query()
             .Include(u => u.Password)
-            .Include(u => u.UserToken)
+            .Include(u => u.UserTokens)
             .Include(u => u.Role)
             .FirstOrDefaultAsync(u => u.UserId == userEmail.UserId, ct);
 
@@ -65,7 +67,7 @@ public class AuthenticationService : IAuthenticationService
 
         var user = await _uow.Repository<User>().Query()
             .Include(u => u.Password)
-            .Include(u => u.UserToken)
+            .Include(u => u.UserTokens)
             .Include(u => u.Role)
             .FirstOrDefaultAsync(u => u.UserId == userPhone.UserId, ct);
 
@@ -76,7 +78,7 @@ public class AuthenticationService : IAuthenticationService
     {
         var user = await _uow.Repository<User>().Query()
             .Include(u => u.Role)
-            .Include(u => u.UserToken)
+            .Include(u => u.UserTokens)
             .Include(u => u.Password)
             .FirstOrDefaultAsync(u => u.UserId == userId, ct);
 
@@ -121,29 +123,25 @@ public class AuthenticationService : IAuthenticationService
         var permissions = await GetPermissionClaimsAsync(user.RoleId, ct);
         var (token, refreshToken, expiry, refreshExpiry) = GenerateTokens(user, permissions);
 
-        if (user.UserToken is null)
-        {
-            var newToken = new UserToken
-            {
-                UserId = user.UserId,
-                Token = token,
-                RefreshTokenHash = HashRefreshToken(refreshToken),
-                ExpiryDate = expiry,
-                RefreshTokenExpiryDate = refreshExpiry,
-                IsRevoked = false
-            };
-            await _uow.Repository<UserToken>().AddAsync(newToken, ct);
-        }
-        else
-        {
-            user.UserToken.Token = token;
-            user.UserToken.RefreshTokenHash = HashRefreshToken(refreshToken);
-            user.UserToken.ExpiryDate = expiry;
-            user.UserToken.RefreshTokenExpiryDate = refreshExpiry;
-            user.UserToken.IsRevoked = false;
-            _uow.Repository<UserToken>().Update(user.UserToken);
-        }
+        var context = _httpContextAccessor.HttpContext;
+        var ipAddress = context?.Connection?.RemoteIpAddress?.ToString();
+        var userAgent = context?.Request?.Headers["User-Agent"].ToString();
 
+        var newToken = new UserToken
+        {
+            UserId = user.UserId,
+            Token = token,
+            RefreshTokenHash = HashRefreshToken(refreshToken),
+            ExpiryDate = expiry,
+            RefreshTokenExpiryDate = refreshExpiry,
+            IsRevoked = false,
+            IpAddress = ipAddress,
+            UserAgent = userAgent,
+            DateCreated = DateTime.UtcNow,
+            LastActive = DateTime.UtcNow
+        };
+        
+        user.UserTokens.Add(newToken);
         await _uow.SaveChangesAsync(ct);
 
         return new LoginResponse
@@ -171,7 +169,7 @@ public class AuthenticationService : IAuthenticationService
         if (!Guid.TryParse(userIdClaim, out var userId)) return null;
 
         var userToken = await _uow.Repository<UserToken>().Query()
-            .FirstOrDefaultAsync(t => t.UserId == userId && !t.IsRevoked, ct);
+            .FirstOrDefaultAsync(t => t.UserId == userId && t.Token == request.Token && !t.IsRevoked, ct);
 
         if (userToken is null) return null;
         if (userToken.RefreshTokenExpiryDate < DateTime.UtcNow) return null;
@@ -225,7 +223,7 @@ public class AuthenticationService : IAuthenticationService
 
         var user = await _uow.Repository<User>().Query()
             .Include(u => u.Role)
-            .Include(u => u.UserToken)
+            .Include(u => u.UserTokens)
             .FirstOrDefaultAsync(u => u.UserId == userId, ct);
 
         if (user is null || user.Status != UserStatus.Active || !user.TwoFactorEnabled || string.IsNullOrWhiteSpace(user.TwoFactorSecret))
@@ -242,29 +240,25 @@ public class AuthenticationService : IAuthenticationService
         var permissions = await GetPermissionClaimsAsync(user.RoleId, ct);
         var (token, refreshToken, expiry, refreshExpiry) = GenerateTokens(user, permissions);
 
-        if (user.UserToken is null)
-        {
-            var newToken = new UserToken
-            {
-                UserId = user.UserId,
-                Token = token,
-                RefreshTokenHash = HashRefreshToken(refreshToken),
-                ExpiryDate = expiry,
-                RefreshTokenExpiryDate = refreshExpiry,
-                IsRevoked = false
-            };
-            await _uow.Repository<UserToken>().AddAsync(newToken, ct);
-        }
-        else
-        {
-            user.UserToken.Token = token;
-            user.UserToken.RefreshTokenHash = HashRefreshToken(refreshToken);
-            user.UserToken.ExpiryDate = expiry;
-            user.UserToken.RefreshTokenExpiryDate = refreshExpiry;
-            user.UserToken.IsRevoked = false;
-            _uow.Repository<UserToken>().Update(user.UserToken);
-        }
+        var context = _httpContextAccessor.HttpContext;
+        var ipAddress = context?.Connection?.RemoteIpAddress?.ToString();
+        var userAgent = context?.Request?.Headers["User-Agent"].ToString();
 
+        var newToken = new UserToken
+        {
+            UserId = user.UserId,
+            Token = token,
+            RefreshTokenHash = HashRefreshToken(refreshToken),
+            ExpiryDate = expiry,
+            RefreshTokenExpiryDate = refreshExpiry,
+            IsRevoked = false,
+            IpAddress = ipAddress,
+            UserAgent = userAgent,
+            DateCreated = DateTime.UtcNow,
+            LastActive = DateTime.UtcNow
+        };
+        
+        user.UserTokens.Add(newToken);
         await _uow.SaveChangesAsync(ct);
 
         return new LoginResponse
@@ -285,6 +279,33 @@ public class AuthenticationService : IAuthenticationService
 
     public async Task<bool> LogoutAsync(Guid userId, CancellationToken ct = default)
     {
+        var authHeader = _httpContextAccessor.HttpContext?.Request?.Headers["Authorization"].FirstOrDefault();
+        var token = authHeader?.StartsWith("Bearer ") == true ? authHeader.Substring("Bearer ".Length).Trim() : null;
+
+        if (string.IsNullOrEmpty(token)) return false;
+
+        var userToken = await _uow.Repository<UserToken>().Query()
+            .FirstOrDefaultAsync(t => t.UserId == userId && t.Token == token, ct);
+
+        if (userToken is not null)
+        {
+            userToken.IsRevoked = true;
+            _uow.Repository<UserToken>().Update(userToken);
+            await _uow.SaveChangesAsync(ct);
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Revokes all active sessions for a specific user and forces them to re-authenticate everywhere.
+    /// </summary>
+    /// <param name="userId">The unique identifier of the user.</param>
+    /// <param name="ct">The cancellation token.</param>
+    /// <returns>True if successful, otherwise false.</returns>
+    public async Task<bool> RevokeAllSessionsAsync(Guid userId, CancellationToken ct = default)
+    {
         var user = await _uow.Repository<User>().Query()
             .FirstOrDefaultAsync(u => u.UserId == userId, ct);
             
@@ -294,14 +315,15 @@ public class AuthenticationService : IAuthenticationService
         user.SecurityStamp = Guid.NewGuid();
         _uow.Repository<User>().Update(user);
 
-        // Also revoke the active refresh token
-        var userToken = await _uow.Repository<UserToken>().Query()
-            .FirstOrDefaultAsync(t => t.UserId == userId, ct);
+        // Also revoke all active refresh tokens
+        var userTokens = await _uow.Repository<UserToken>().Query()
+            .Where(t => t.UserId == userId && !t.IsRevoked)
+            .ToListAsync(ct);
 
-        if (userToken is not null)
+        foreach (var t in userTokens)
         {
-            userToken.IsRevoked = true;
-            _uow.Repository<UserToken>().Update(userToken);
+            t.IsRevoked = true;
+            _uow.Repository<UserToken>().Update(t);
         }
 
         await _uow.SaveChangesAsync(ct);
@@ -403,28 +425,25 @@ public class AuthenticationService : IAuthenticationService
         var permissions = await GetPermissionClaimsAsync(user.RoleId, ct);
         var (token, refreshToken, expiry, refreshExpiry) = GenerateTokens(user, permissions);
 
-        if (user.UserToken is null)
+        var context = _httpContextAccessor.HttpContext;
+        var ipAddress = context?.Connection?.RemoteIpAddress?.ToString();
+        var userAgent = context?.Request?.Headers["User-Agent"].ToString();
+
+        var newToken = new UserToken
         {
-            var newToken = new UserToken
-            {
-                UserId = user.UserId,
-                Token = token,
-                RefreshTokenHash = HashRefreshToken(refreshToken),
-                ExpiryDate = expiry,
-                RefreshTokenExpiryDate = refreshExpiry,
-                IsRevoked = false
-            };
-            await _uow.Repository<UserToken>().AddAsync(newToken, ct);
-        }
-        else
-        {
-            user.UserToken.Token = token;
-            user.UserToken.RefreshTokenHash = HashRefreshToken(refreshToken);
-            user.UserToken.ExpiryDate = expiry;
-            user.UserToken.RefreshTokenExpiryDate = refreshExpiry;
-            user.UserToken.IsRevoked = false;
-            _uow.Repository<UserToken>().Update(user.UserToken);
-        }
+            UserId = user.UserId,
+            Token = token,
+            RefreshTokenHash = HashRefreshToken(refreshToken),
+            ExpiryDate = expiry,
+            RefreshTokenExpiryDate = refreshExpiry,
+            IsRevoked = false,
+            IpAddress = ipAddress,
+            UserAgent = userAgent,
+            DateCreated = DateTime.UtcNow,
+            LastActive = DateTime.UtcNow
+        };
+        
+        user.UserTokens.Add(newToken);
 
         await _uow.SaveChangesAsync(ct);
 

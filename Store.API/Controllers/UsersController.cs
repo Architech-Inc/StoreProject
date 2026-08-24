@@ -45,6 +45,18 @@ public class UsersController : ControllerBase
         return Ok(ApiResponse<UserDto>.Ok(user));
     }
 
+    [HttpGet("{id:guid}/360")]
+    public async Task<IActionResult> Get360ById(Guid id, CancellationToken ct)
+    {
+        var user360 = await _userService.Get360ByIdAsync(id, ct);
+        if (user360 is null)
+        {
+            return NotFound(ApiErrorResponse.From("not_found", "User not found.", traceId: HttpContext.TraceIdentifier));
+        }
+
+        return Ok(ApiResponse<User360Dto>.Ok(user360));
+    }
+
     [HttpPost]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Create([FromBody] CreateUserRequest request, CancellationToken ct)
@@ -217,6 +229,19 @@ public class UsersController : ControllerBase
             return Unauthorized(ApiErrorResponse.From("unauthorized", "Unauthorized.", traceId: HttpContext.TraceIdentifier));
 
         var success = await _dispatcher.SendAsync(new RevokeAllSessionsCommand(userId), ct);
+        if (!success)
+        {
+            return BadRequest(ApiErrorResponse.From("revoke_failed", "Failed to revoke sessions.", traceId: HttpContext.TraceIdentifier));
+        }
+
+        return Ok(ApiResponse<object>.Ok(null!, "All sessions revoked successfully."));
+    }
+
+    [HttpPost("{id}/sessions/revoke")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> RevokeUserSessions(Guid id, CancellationToken ct)
+    {
+        var success = await _dispatcher.SendAsync(new RevokeAllSessionsCommand(id), ct);
         if (!success)
         {
             return BadRequest(ApiErrorResponse.From("revoke_failed", "Failed to revoke sessions.", traceId: HttpContext.TraceIdentifier));
