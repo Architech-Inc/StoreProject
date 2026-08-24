@@ -840,7 +840,7 @@
                                 <div class="crm-avatar-wrap">
                                     @if (!string.IsNullOrEmpty(c.ThumbnailUrl))
                                     {
-                                        <img src="@c.ThumbnailUrl" alt="@c.FullName" class="crm-avatar" />
+                                        <img src="@c.ThumbnailUrl" alt="@c.FullName" class="crm-avatar" loading="lazy" />
                                     }
                                     else
                                     {
@@ -943,7 +943,7 @@
                                     <td>
                                         @if (!string.IsNullOrEmpty(c.ThumbnailUrl))
                                         {
-                                            <img src="@c.ThumbnailUrl" alt="@c.FullName" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" />
+                                            <img src="@c.ThumbnailUrl" alt="@c.FullName" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" loading="lazy" width="32" height="32" />
                                         }
                                         else
                                         {
@@ -1511,7 +1511,7 @@ async function openDrawer(customerId) {
         
         const avatarWrap = document.getElementById('drawerAvatarWrap');
         if (c.thumbnailUrl) {
-            avatarWrap.innerHTML = `<img src="${c.thumbnailUrl}" alt="${c.fullName}" class="crm-avatar" style="width:56px;height:56px;" />`;
+            avatarWrap.innerHTML = `<img src="${c.thumbnailUrl}" alt="${c.fullName}" class="crm-avatar" style="width:56px;height:56px;" loading="lazy" width="56" height="56" />`;
         } else {
             avatarWrap.innerHTML = `<div class="crm-avatar" style="width:56px;height:56px;font-size:1.2rem;">${initials}</div>`;
         }

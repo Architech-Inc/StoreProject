@@ -196,7 +196,7 @@
             <div class="profile-avatar-wrapper" onclick="document.getElementById('avatarInput').click()">
                 @if (!string.IsNullOrEmpty(Model.CurrentAvatarPath))
                 {
-                    <img src="@Model.CurrentAvatarPath" alt="Avatar" />
+                    <img src="@Model.CurrentAvatarPath" alt="Avatar" loading="lazy" />
                 }
                 else
                 {

@@ -901,7 +901,7 @@
                                 <div class="supplier-avatar" style="width:36px; height:36px; font-size:0.85rem;">
                                     @if (!string.IsNullOrEmpty(s.ThumbnailUrl))
                                     {
-                                        <img src="@s.ThumbnailUrl" alt="@s.Name" />
+                                        <img src="@s.ThumbnailUrl" alt="@s.Name" loading="lazy" />
                                     }
                                     else
                                     {
@@ -973,7 +973,7 @@
                             <div class="supplier-avatar">
                                 @if (!string.IsNullOrEmpty(s.ThumbnailUrl))
                                 {
-                                    <img src="@s.ThumbnailUrl" alt="@s.Name" />
+                                    <img src="@s.ThumbnailUrl" alt="@s.Name" loading="lazy" />
                                 }
                                 else
                                 {
@@ -1597,7 +1597,7 @@
 
             const avatarWrap = document.getElementById('drawerAvatarWrap');
             if (p.thumbnailUrl) {
-                avatarWrap.innerHTML = `<img src="${p.thumbnailUrl}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover;" />`;
+                avatarWrap.innerHTML = `<img src="${p.thumbnailUrl}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover;" loading="lazy" />`;
             } else {
                 avatarWrap.innerHTML = `<span>${initials}</span>`;
             }
