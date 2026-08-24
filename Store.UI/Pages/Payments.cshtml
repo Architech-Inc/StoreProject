@@ -40,7 +40,7 @@
                 <label>To <input type="date" name="to" value="@Model.ToDate?.ToString("yyyy-MM-dd")" class="form-control form-control-sm" /></label>
                 <input type="hidden" name="status" value="@((int?)Model.StatusFilter)" />
                 <input type="hidden" name="page" value="1" />
-                <button type="submit" class="btn btn-sm btn-primary">Filter</button>
+                <button type="submit" class="button-primary btn-sm">Filter</button>
             </form>
         </div>
         @if (Model.Settlement is not null)
@@ -103,7 +103,7 @@
                         <option value="@((int)s)" selected="@(Model.StatusFilter == s)">@StatusLabel(s.ToString())</option>
                     }
                 </select>
-                <button type="submit" class="btn btn-sm btn-primary">Filter</button>
+                <button type="submit" class="button-primary btn-sm">Filter</button>
             </form>
         </div>
 
@@ -148,12 +148,12 @@
             <div class="pagination">
                 @if (Model.CurrentPage > 1)
                 {
-                    <a href="?page=@(Model.CurrentPage - 1)&status=@((int?)Model.StatusFilter)&from=@Model.FromDate?.ToString("yyyy-MM-dd")&to=@Model.ToDate?.ToString("yyyy-MM-dd")" class="btn btn-sm btn-outline">Previous</a>
+                    <a href="?page=@(Model.CurrentPage - 1)&status=@((int?)Model.StatusFilter)&from=@Model.FromDate?.ToString("yyyy-MM-dd")&to=@Model.ToDate?.ToString("yyyy-MM-dd")" class="button-command btn-sm">Previous</a>
                 }
                 <span class="page-info">Page @Model.CurrentPage</span>
                 @if (Model.Transactions.Count == Model.PageSize)
                 {
-                    <a href="?page=@(Model.CurrentPage + 1)&status=@((int?)Model.StatusFilter)&from=@Model.FromDate?.ToString("yyyy-MM-dd")&to=@Model.ToDate?.ToString("yyyy-MM-dd")" class="btn btn-sm btn-outline">Next</a>
+                    <a href="?page=@(Model.CurrentPage + 1)&status=@((int?)Model.StatusFilter)&from=@Model.FromDate?.ToString("yyyy-MM-dd")&to=@Model.ToDate?.ToString("yyyy-MM-dd")" class="button-command btn-sm">Next</a>
                 }
             </div>
         }
