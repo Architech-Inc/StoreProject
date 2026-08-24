@@ -356,7 +356,7 @@
                     </div>
                     @if (Model.TwoFactorEnabled)
                     {
-                        <button type="button" class="btn-danger" data-open-blade="disable2FABlade">Disable</button>
+                        <button type="button" class="button-command danger" data-open-blade="disable2FABlade">Disable</button>
                     }
                     else
                     {
@@ -396,7 +396,7 @@
                                     </td>
                                     <td>@key.RegistrationDate.ToString("MMM dd, yyyy HH:mm")</td>
                                     <td style="text-align: right;">
-                                        <button type="button" class="btn-danger" style="padding: 6px 12px; font-size: 0.8rem;" onclick="openRemovePasskeyBlade('@key.Id')">Remove</button>
+                                        <button type="button" class="button-command danger" style="padding: 6px 12px; font-size: 0.8rem;" onclick="openRemovePasskeyBlade('@key.Id')">Remove</button>
                                     </td>
                                 </tr>
                             }
@@ -418,7 +418,7 @@
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                     Recent Activity
                 </h2>
-                <button type="button" class="btn-danger" style="padding: 6px 16px;" data-open-blade="revokeSessionsBlade">Sign Out All</button>
+                <button type="button" class="button-command danger" style="padding: 6px 16px;" data-open-blade="revokeSessionsBlade">Sign Out All</button>
             </div>
             
             <div style="overflow-x: auto; border: 1px solid var(--border); border-radius: 12px;">
@@ -597,7 +597,7 @@
     </div>
     <div class="blade-footer">
         <button type="button" class="btn-secondary" data-close-blade="disable2FABlade">Cancel</button>
-        <button type="submit" form="disable2FAForm" class="btn-danger">Yes, Disable</button>
+        <button type="submit" form="disable2FAForm" class="button-command danger">Yes, Disable</button>
     </div>
 </div>
 
@@ -618,7 +618,7 @@
     </div>
     <div class="blade-footer">
         <button type="button" class="btn-secondary" data-close-blade="revokeSessionsBlade">Cancel</button>
-        <button type="submit" form="revokeSessionsForm" class="btn-danger">Sign Out All</button>
+        <button type="submit" form="revokeSessionsForm" class="button-command danger">Sign Out All</button>
     </div>
 </div>
 
@@ -640,7 +640,7 @@
     </div>
     <div class="blade-footer">
         <button type="button" class="btn-secondary" data-close-blade="removePasskeyBlade">Cancel</button>
-        <button type="submit" form="removePasskeyForm" class="btn-danger">Yes, Remove</button>
+        <button type="submit" form="removePasskeyForm" class="button-command danger">Yes, Remove</button>
     </div>
 </div>
 

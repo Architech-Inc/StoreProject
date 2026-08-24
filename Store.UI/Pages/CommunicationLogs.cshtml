@@ -31,7 +31,7 @@
             </div>
             <div class="col-auto">
             <button type="submit" class="button-primary">Filter</button>
-                <a asp-page="/CommunicationLogs" class="btn btn-outline-secondary">Clear</a>
+                <a asp-page="/CommunicationLogs" class="button-command">Clear</a>
             </div>
         </form>
     </div>
@@ -89,7 +89,7 @@
                                 @log.Payload
                             </td>
                             <td>
-                                <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#logModal-@log.Id">
+                                <button type="button" class="button-command btn-sm" data-bs-toggle="modal" data-bs-target="#logModal-@log.Id">
                                     Details
                                 </button>
 
@@ -119,7 +119,7 @@
                                                 </div>
                                             </div>
                                             <div class="modal-footer">
-                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                                <button type="button" class="button-secondary" data-bs-dismiss="modal">Close</button>
                                             </div>
                                         </div>
                                     </div>

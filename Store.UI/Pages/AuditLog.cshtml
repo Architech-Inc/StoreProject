@@ -100,13 +100,13 @@
         @if (Model.CurrentPage > 1)
         {
             <a href="?page=@(Model.CurrentPage - 1)@(Model.TypeFilter.HasValue ? "&type=" + (int)Model.TypeFilter.Value : "")"
-               class="btn btn-sm btn-secondary">&#8592; Prev</a>
+               class="button-secondary btn-sm">&#8592; Prev</a>
         }
         <span class="pagination-info">Page @Model.CurrentPage</span>
         @if (Model.Movements.Count == Model.PageSize)
         {
             <a href="?page=@(Model.CurrentPage + 1)@(Model.TypeFilter.HasValue ? "&type=" + (int)Model.TypeFilter.Value : "")"
-               class="btn btn-sm btn-secondary">Next &#8594;</a>
+               class="button-secondary btn-sm">Next &#8594;</a>
         }
     </div>
 </div>

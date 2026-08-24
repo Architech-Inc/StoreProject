@@ -28,7 +28,7 @@
         </select>
     </div>
     <div class="col-auto">
-        <button class="btn btn-secondary btn-sm" type="submit">Filter</button>
+        <button class="button-secondary btn-sm" type="submit">Filter</button>
     </div>
 </form>
 
@@ -78,13 +78,12 @@
                                 <form method="post" asp-page-handler="Submit">
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="ActionPurchaseOrderId" value="@po.PurchaseOrderId" />
-                                    <button class="btn btn-outline-info btn-sm" type="submit">Submit</button>
+                                    <button class="button-command btn-sm" type="submit">Submit</button>
                                 </form>
                                 <form method="post" asp-page-handler="Cancel">
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="ActionPurchaseOrderId" value="@po.PurchaseOrderId" />
-                                    <button class="btn btn-outline-danger btn-sm" type="submit"
-                                            data-confirm="Cancel this PO?" data-confirm-type="danger">Cancel</button>
+                                    <button class="button-command danger btn-sm" type="submit" data-confirm="Cancel this PO?" data-confirm-type="danger">Cancel</button>
                                 </form>
                             }
                             @if (po.Status == "Submitted")
@@ -92,13 +91,12 @@
                                 <form method="post" asp-page-handler="Approve">
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="ActionPurchaseOrderId" value="@po.PurchaseOrderId" />
-                                    <button class="btn btn-outline-primary btn-sm" type="submit">Approve</button>
+                                    <button class="button-command btn-sm" type="submit">Approve</button>
                                 </form>
                                 <form method="post" asp-page-handler="Cancel">
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="ActionPurchaseOrderId" value="@po.PurchaseOrderId" />
-                                    <button class="btn btn-outline-danger btn-sm" type="submit"
-                                            data-confirm="Cancel this PO?" data-confirm-type="danger">Cancel</button>
+                                    <button class="button-command danger btn-sm" type="submit" data-confirm="Cancel this PO?" data-confirm-type="danger">Cancel</button>
                                 </form>
                             }
                             @if (po.Status == "Approved" || po.Status == "PartiallyReceived")

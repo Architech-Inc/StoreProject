@@ -36,9 +36,9 @@
             <p>Fast checkout flow for supermarket operations.</p>
         </div>
         <div class="pos-top-actions">
-            <a class="btn btn-secondary" href="/Dashboard">Back to Dashboard</a>
+            <a class="button-secondary" href="/Dashboard">Back to Dashboard</a>
             <form method="post" asp-page-handler="Logout">
-                <button type="submit" class="btn btn-danger">Sign Out</button>
+                <button type="submit" class="danger">Sign Out</button>
             </form>
         </div>
     </header>
@@ -72,7 +72,7 @@
             <div class="panel-head">
                 <h2>Cart</h2>
                 <div class="cart-head-actions">
-                    <button type="button" class="btn btn-secondary" id="suspendSaleBtn">Suspend</button>
+                    <button type="button" class="button-secondary" id="suspendSaleBtn">Suspend</button>
                     <button type="button" class="btn btn-warning" id="clearCartBtn">Clear</button>
                 </div>
             </div>
@@ -113,7 +113,7 @@
                 <div class="field-row">
                     <div class="tender-head">
                         <label>Payment</label>
-                        <button type="button" class="btn btn-secondary tender-add-btn" id="addTenderLineBtn">+ Add</button>
+                        <button type="button" class="button-secondary tender-add-btn" id="addTenderLineBtn">+ Add</button>
                     </div>
                     <div id="tenderLinesContainer"></div>
                     <div class="tender-summary">
@@ -139,8 +139,8 @@
                         <select id="suspendedSaleSelect">
                             <option value="">No suspended sale</option>
                         </select>
-                        <button type="button" class="btn btn-secondary" id="resumeSaleBtn">Resume</button>
-                        <button type="button" class="btn btn-danger" id="deleteSuspendedBtn">Delete</button>
+                        <button type="button" class="button-secondary" id="resumeSaleBtn">Resume</button>
+                        <button type="button" class="danger" id="deleteSuspendedBtn">Delete</button>
                     </div>
                 </div>
 
@@ -151,7 +151,7 @@
 
                 <div id="offlineQueueBanner" class="offline-queue-banner" hidden>
                     <span id="offlineQueueCount"></span>
-                    <button type="button" id="syncQueueBtn" class="btn btn-secondary">Sync Now</button>
+                    <button type="button" id="syncQueueBtn" class="button-secondary">Sync Now</button>
                 </div>
 
                 <div id="checkoutMessage" class="checkout-message" role="status" aria-live="polite"></div>

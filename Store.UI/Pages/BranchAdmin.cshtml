@@ -76,7 +76,7 @@
                                 }
                             </td>
                             <td>
-                                <button type="button" class="btn btn-sm"
+                                <button type="button" class="button-secondary btn-sm"
                                         onclick="fillBranchForm(@b.BranchId, '@Html.Raw(Html.Encode(b.Code))', '@Html.Raw(Html.Encode(b.Name))', '@Html.Raw(Html.Encode(b.Address ?? ""))', @(b.IsActive ? "true" : "false"))">
                                     Edit
                                 </button>
@@ -145,7 +145,7 @@
                             <td>
                                 <form method="post" asp-page-handler="Revoke" style="display:inline">
                                     <input type="hidden" name="assignmentId" value="@a.UserBranchRoleId" />
-                                    <button type="submit" class="btn btn-sm btn-danger"
+                                    <button type="submit" class="button-command danger btn-sm"
                                             data-confirm="Remove this assignment?" data-confirm-type="danger">
                                         Revoke
                                     </button>
