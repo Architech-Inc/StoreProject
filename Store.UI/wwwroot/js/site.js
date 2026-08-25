@@ -8,11 +8,29 @@
         .replace(/'/g, '&#039;');
 
     // --- Unified modal system (legacy .modalView + .modal-overlay) ---
+    const focusRestoreMap = new WeakMap();
+    const focusableSelector = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+    const getFocusableElements = (container) => {
+        if (!container) return [];
+        return [...container.querySelectorAll(focusableSelector)]
+            .filter(el => !el.hasAttribute('hidden') && !el.closest('[hidden]') && !el.disabled && el.offsetParent !== null);
+    };
+
+    const restoreFocus = (target) => {
+        if (target && typeof target.focus === 'function') {
+            requestAnimationFrame(() => target.focus());
+        }
+    };
+
     const closeAllModals = () => {
         document.querySelectorAll('.modalView.show').forEach(m => m.classList.remove('show'));
         document.querySelectorAll('.modal-overlay:not([hidden])').forEach(m => {
             // Keep global crop/viewer open state managed separately unless explicitly closed
             if (m.id === 'globalCropModal' || m.id === 'globalImageViewerModal') return;
+            const restoreTarget = focusRestoreMap.get(m);
+            if (restoreTarget) restoreFocus(restoreTarget);
+            focusRestoreMap.delete(m);
             m.hidden = true;
         });
     };
@@ -21,11 +39,16 @@
         if (!id) return;
         const target = document.getElementById(id);
         if (!target) return;
+        focusRestoreMap.set(target, document.activeElement instanceof HTMLElement ? document.activeElement : null);
         if (target.classList.contains('modal-overlay')) {
             target.hidden = false;
+            const firstFocusable = getFocusableElements(target)[0];
+            if (firstFocusable) firstFocusable.focus();
         } else {
             closeAllModals();
             target.classList.add('show');
+            const firstFocusable = getFocusableElements(target)[0];
+            if (firstFocusable) firstFocusable.focus();
         }
     };
 
@@ -36,6 +59,9 @@
         }
         const target = document.getElementById(id);
         if (!target) return;
+        const restoreTarget = focusRestoreMap.get(target);
+        if (restoreTarget) restoreFocus(restoreTarget);
+        focusRestoreMap.delete(target);
         if (target.classList.contains('modal-overlay')) {
             target.hidden = true;
         } else {
@@ -68,7 +94,41 @@
         }
     });
 
+    const trapFocusInDialog = (event) => {
+        if (event.key !== 'Tab') return;
+
+        const openDialog = document.querySelector('.modal-overlay:not([hidden]), .modalView.show, .blade.open');
+        if (!openDialog) return;
+
+        const focusable = getFocusableElements(openDialog);
+        if (!focusable.length) {
+            event.preventDefault();
+            openDialog.focus?.();
+            return;
+        }
+
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+            return;
+        }
+
+        if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+            return;
+        }
+
+        if (!openDialog.contains(document.activeElement)) {
+            event.preventDefault();
+            first.focus();
+        }
+    };
+
     document.addEventListener('keydown', (e) => {
+        trapFocusInDialog(e);
         if (e.key === 'Escape') {
             closeAllModals();
             // Close any open blades
@@ -105,20 +165,61 @@
     }
 
     // --- Toasts ---
-    window.showToast = (type, message) => {
+    window.copyTextToClipboard = async (text, options = {}) => {
+        const {
+            successMessage = 'Copied to clipboard.',
+            errorMessage = 'Unable to copy to clipboard.',
+            target = null,
+            successText = '✓ Copied!'
+        } = options;
+
+        try {
+            if (!text && text !== 0) {
+                throw new Error('No text provided');
+            }
+            await navigator.clipboard.writeText(String(text));
+
+            if (target && typeof target.focus === 'function') {
+                const previousText = target.dataset.originalLabel || target.textContent;
+                target.dataset.originalLabel = previousText;
+                target.textContent = successText;
+                target.classList.add('is-copied');
+                setTimeout(() => {
+                    target.textContent = previousText;
+                    target.classList.remove('is-copied');
+                }, 1800);
+            }
+
+            window.showToast?.('success', successMessage);
+            return true;
+        } catch (error) {
+            console.error('Clipboard copy failed:', error);
+            window.showToast?.('error', errorMessage);
+            return false;
+        }
+    };
+
+    window.showToast = (type, message, options = {}) => {
         const container = document.getElementById('toast-container');
         if (!container) return;
 
-        const safeType = type === 'error' ? 'error' : 'success';
+        const allowedTypes = ['success', 'error', 'warning', 'info'];
+        const safeType = allowedTypes.includes(type) ? type : 'info';
         const toast = document.createElement('div');
         toast.className = `toast toast-${safeType}`;
         toast.setAttribute('role', 'status');
+        toast.setAttribute('aria-live', 'polite');
 
-        const icon = safeType === 'success' ? '✓' : '!';
+        const iconMap = { success: '✓', error: '!', warning: '⚠', info: 'i' };
+        const icon = iconMap[safeType] ?? 'i';
+        const actionLabel = options.actionLabel || '';
+        const actionHandler = typeof options.actionHandler === 'function' ? options.actionHandler : null;
+        const duration = Number.isFinite(options.duration) ? options.duration : 5000;
 
         toast.innerHTML = `
             <div class="toast-icon" aria-hidden="true">${icon}</div>
             <div class="toast-message">${escapeHtml(message)}</div>
+            ${actionLabel ? `<button type="button" class="toast-action" aria-label="${escapeHtml(actionLabel)}">${escapeHtml(actionLabel)}</button>` : ''}
             <button type="button" class="toast-close" aria-label="Close">&times;</button>
         `;
 
@@ -129,12 +230,33 @@
         });
 
         const dismiss = () => {
+            if (!toast.isConnected) return;
             toast.classList.remove('show');
             setTimeout(() => toast.remove(), 300);
         };
 
+        toast.addEventListener('mouseenter', () => {
+            if (toast.dataset.dismissTimer) {
+                clearTimeout(Number(toast.dataset.dismissTimer));
+            }
+        });
+
+        toast.addEventListener('mouseleave', () => {
+            if (toast.dataset.dismissTimer) {
+                toast.dataset.dismissTimer = String(setTimeout(dismiss, 1500));
+            }
+        });
+
         toast.querySelector('.toast-close')?.addEventListener('click', dismiss);
-        setTimeout(dismiss, 5000);
+        const actionButton = toast.querySelector('.toast-action');
+        if (actionButton && actionHandler) {
+            actionButton.addEventListener('click', () => {
+                actionHandler();
+                dismiss();
+            });
+        }
+
+        toast.dataset.dismissTimer = String(setTimeout(dismiss, duration));
     };
 
     // Auto-surface server TempData / status banners as toasts
@@ -150,6 +272,7 @@
     window.openBlade = (id) => {
         const blade = document.getElementById(id);
         if (!blade) return;
+        focusRestoreMap.set(blade, document.activeElement instanceof HTMLElement ? document.activeElement : null);
         const overlayId = blade.getAttribute('data-overlay-id');
         if (overlayId) {
             const overlay = document.getElementById(overlayId);
@@ -158,11 +281,16 @@
         // Also support overlay linked via data-blade-id
         document.querySelectorAll(`.blade-overlay[data-blade-id="${id}"]`).forEach(o => o.classList.add('open'));
         blade.classList.add('open');
+        const firstFocusable = getFocusableElements(blade)[0];
+        if (firstFocusable) firstFocusable.focus();
     };
 
     window.closeBlade = (id) => {
         const blade = document.getElementById(id);
         if (!blade) return;
+        const restoreTarget = focusRestoreMap.get(blade);
+        if (restoreTarget) restoreFocus(restoreTarget);
+        focusRestoreMap.delete(blade);
         const overlayId = blade.getAttribute('data-overlay-id');
         if (overlayId) {
             const overlay = document.getElementById(overlayId);
