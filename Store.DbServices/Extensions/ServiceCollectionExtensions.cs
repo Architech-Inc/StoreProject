@@ -61,6 +61,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISystemSettingService, SystemSettingService>();
         services.AddScoped<ICommunicationLogService, CommunicationLogService>();
         services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<IAuditLogService, AuditLogService>();
         
         services.AddHostedService<OfflineLogSyncWorker>();
 
