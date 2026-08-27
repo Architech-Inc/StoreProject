@@ -1,138 +1,235 @@
 using Microsoft.AspNetCore.Mvc;
+using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Discounts;
+using Store.Models.DTOs.Operations;
 using Store.Models.Enums;
-using Store.Models.Interfaces.Services;
 using StoreUI.Services;
 
 namespace StoreUI.Pages;
 
 public class DiscountsModel : SecurePageModel
 {
-    private readonly IDiscountService _discountService;
+    private readonly IDiscountManager _discountManager;
     private readonly IApiClientService _apiClient;
 
-    public List<DiscountDto> Discounts { get; private set; } = new();
-    public bool FilterActiveOnly { get; private set; }
+    public DiscountMetricsDto Metrics { get; private set; } = new();
+    public PagedResult<DiscountDto> DiscountsPaged { get; private set; } = new();
 
-    // Create
-    [BindProperty] public string CreateName { get; set; } = string.Empty;
-    [BindProperty] public int CreateDiscountType { get; set; } = 0;
-    [BindProperty] public decimal CreatePercentage { get; set; }
-    [BindProperty] public decimal? CreateFixedAmount { get; set; }
-    [BindProperty] public int CreateMinQuantity { get; set; } = 1;
-    [BindProperty] public string? CreateTargetSegment { get; set; }
-    [BindProperty] public string? CreateCouponCode { get; set; }
-    [BindProperty] public int? CreateMaxUses { get; set; }
-    [BindProperty] public DateTime? CreateValidFrom { get; set; }
-    [BindProperty] public DateTime? CreateValidTo { get; set; }
-    [BindProperty] public bool CreateIsActive { get; set; } = true;
+    [BindProperty(SupportsGet = true)]
+    public string? Search { get; set; }
 
-    // Edit
-    [BindProperty] public int EditDiscountId { get; set; }
-    [BindProperty] public string? EditName { get; set; }
-    [BindProperty] public int? EditDiscountType { get; set; }
-    [BindProperty] public decimal? EditPercentage { get; set; }
-    [BindProperty] public decimal? EditFixedAmount { get; set; }
-    [BindProperty] public int? EditMinQuantity { get; set; }
-    [BindProperty] public string? EditTargetSegment { get; set; }
-    [BindProperty] public string? EditCouponCode { get; set; }
-    [BindProperty] public int? EditMaxUses { get; set; }
-    [BindProperty] public DateTime? EditValidFrom { get; set; }
-    [BindProperty] public DateTime? EditValidTo { get; set; }
-    [BindProperty] public bool? EditIsActive { get; set; }
+    [BindProperty(SupportsGet = true)]
+    public string? TypeFilter { get; set; }
 
-    // Delete
-    [BindProperty] public int DeleteDiscountId { get; set; }
+    [BindProperty(SupportsGet = true)]
+    public string? SegmentFilter { get; set; }
 
-    [TempData] public string? StatusMessage { get; set; }
+    [BindProperty(SupportsGet = true)]
+    public bool? ActiveOnly { get; set; }
 
-    public DiscountsModel(IDiscountService discountService, IApiClientService apiClient)
+    [BindProperty(SupportsGet = true)]
+    public int PageNumber { get; set; } = 1;
+
+    [BindProperty]
+    public CreateDiscountRequest CreateRequest { get; set; } = new();
+
+    [BindProperty]
+    public int EditDiscountId { get; set; }
+
+    [BindProperty]
+    public UpdateDiscountRequest EditRequest { get; set; } = new();
+
+    [BindProperty]
+    public int DeleteDiscountId { get; set; }
+
+    [TempData]
+    public string? StatusMessage { get; set; }
+
+    public IEnumerable<CustomerSegment> Segments { get; } = Enum.GetValues<CustomerSegment>();
+    public IEnumerable<DiscountType> DiscountTypes { get; } = Enum.GetValues<DiscountType>();
+
+    public DiscountsModel(IDiscountManager discountManager, IApiClientService apiClient)
     {
-        _discountService = discountService;
+        _discountManager = discountManager;
         _apiClient = apiClient;
     }
 
-    public async Task<IActionResult> OnGetAsync([FromQuery] bool activeOnly = false)
+    public async Task<IActionResult> OnGetAsync(CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out var token, out _))
+        if (!TryGetSecurityContext(out var token, out var permissions))
             return GoToLogin();
 
+        if (!HasPermission(permissions, PermissionKeys.PricingRead) &&
+            !HasPermission(permissions, PermissionKeys.InventoryRead))
+        {
+            return AccessDenied();
+        }
+
         _apiClient.SetToken(token);
-        FilterActiveOnly = activeOnly;
-        Discounts = await _discountService.GetAllAsync(activeOnly ? true : null);
+
+        Metrics = await _discountManager.GetMetricsAsync(ct);
+
+        var filter = new DiscountFilterRequest
+        {
+            Page = PageNumber < 1 ? 1 : PageNumber,
+            PageSize = 20,
+            SearchTerm = Search,
+            DiscountType = TypeFilter,
+            TargetSegment = SegmentFilter,
+            ActiveOnly = ActiveOnly
+        };
+
+        DiscountsPaged = await _discountManager.GetDiscountsPagedAsync(filter, ct);
         return Page();
     }
 
-    public async Task<IActionResult> OnPostCreateAsync()
+    public async Task<IActionResult> OnGetDetailsJsonAsync(int id, CancellationToken ct = default)
     {
         if (!TryGetSecurityContext(out var token, out _))
-            return GoToLogin();
+            return Unauthorized();
 
         _apiClient.SetToken(token);
 
-        CustomerSegment? segment = null;
-        if (!string.IsNullOrWhiteSpace(CreateTargetSegment) && int.TryParse(CreateTargetSegment, out var si))
-            segment = (CustomerSegment)si;
+        var discount = await _discountManager.GetDiscountByIdAsync(id, ct);
+        if (discount is null) return NotFound();
 
-        var req = new CreateDiscountRequest
-        {
-            Name = CreateName.Trim(),
-            DiscountType = (DiscountType)CreateDiscountType,
-            Percentage = CreatePercentage,
-            FixedAmount = CreateFixedAmount,
-            MinQuantity = CreateMinQuantity,
-            TargetSegment = segment,
-            CouponCode = string.IsNullOrWhiteSpace(CreateCouponCode) ? null : CreateCouponCode.Trim().ToUpperInvariant(),
-            MaxUses = CreateMaxUses,
-            ValidFrom = CreateValidFrom,
-            ValidTo = CreateValidTo,
-            IsActive = CreateIsActive
-        };
-
-        await _discountService.CreateAsync(req, Guid.Empty); // userId resolved server-side by API
-        StatusMessage = $"Discount '{req.Name}' created.";
-        return RedirectToPage();
+        return new JsonResult(discount);
     }
 
-    public async Task<IActionResult> OnPostEditAsync()
+    public async Task<IActionResult> OnGetSearchCatalogAsync(string? q, CancellationToken ct = default)
     {
         if (!TryGetSecurityContext(out var token, out _))
-            return GoToLogin();
+            return Unauthorized();
 
         _apiClient.SetToken(token);
 
-        CustomerSegment? segment = null;
-        if (!string.IsNullOrWhiteSpace(EditTargetSegment) && int.TryParse(EditTargetSegment, out var si))
-            segment = (CustomerSegment)si;
-
-        var req = new UpdateDiscountRequest
+        var items = await _discountManager.SearchCatalogItemsAsync(q, ct);
+        var list = items.Select(i => new
         {
-            Name = EditName?.Trim(),
-            DiscountType = EditDiscountType.HasValue ? (DiscountType?)EditDiscountType.Value : null,
-            Percentage = EditPercentage,
-            FixedAmount = EditFixedAmount,
-            MinQuantity = EditMinQuantity,
-            TargetSegment = segment,
-            CouponCode = EditCouponCode?.Trim().ToUpperInvariant(),
-            MaxUses = EditMaxUses,
-            ValidFrom = EditValidFrom,
-            ValidTo = EditValidTo,
-            IsActive = EditIsActive
-        };
+            id = i.ItemId.ToString(),
+            name = i.Name,
+            barcode = i.Barcode ?? "N/A",
+            category = i.CategoryName ?? "General",
+            unitPrice = i.UnitPrice
+        });
 
-        await _discountService.UpdateAsync(EditDiscountId, req);
-        StatusMessage = $"Discount updated.";
-        return RedirectToPage();
+        return new JsonResult(list);
     }
 
-    public async Task<IActionResult> OnPostDeleteAsync()
+    public async Task<IActionResult> OnGetCategoriesAsync(CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return Unauthorized();
+
+        _apiClient.SetToken(token);
+
+        var categories = await _discountManager.GetCategoriesAsync(ct);
+        var list = categories.Select(c => new
+        {
+            id = c.CategoryId,
+            name = c.Name
+        });
+
+        return new JsonResult(list);
+    }
+
+    public async Task<IActionResult> OnPostSimulateAsync([FromBody] DiscountSimulationRequest request, CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return Unauthorized();
+
+        _apiClient.SetToken(token);
+
+        var result = await _discountManager.SimulateDiscountAsync(request, ct);
+        return new JsonResult(result);
+    }
+
+    public async Task<IActionResult> OnGetExportCsvAsync(CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return Unauthorized();
+
+        _apiClient.SetToken(token);
+
+        var filter = new DiscountFilterRequest
+        {
+            Page = 1,
+            PageSize = 2000,
+            SearchTerm = Search,
+            DiscountType = TypeFilter,
+            TargetSegment = SegmentFilter,
+            ActiveOnly = ActiveOnly
+        };
+
+        var paged = await _discountManager.GetDiscountsPagedAsync(filter, ct);
+        var bytes = _discountManager.ExportCsv(paged.Items);
+        var filename = $"discount_rules_catalog_{DateTime.UtcNow:yyyyMMdd_HHmm}.csv";
+        return File(bytes, "text/csv", filename);
+    }
+
+    public async Task<IActionResult> OnPostCreateAsync(CancellationToken ct = default)
     {
         if (!TryGetSecurityContext(out var token, out _))
             return GoToLogin();
 
         _apiClient.SetToken(token);
-        await _discountService.DeleteAsync(DeleteDiscountId);
-        StatusMessage = "Discount deleted.";
-        return RedirectToPage();
+
+        if (string.IsNullOrWhiteSpace(CreateRequest.Name))
+        {
+            StatusMessage = "Error: Rule name is required.";
+            return RedirectToPage(new { Search, TypeFilter, SegmentFilter, ActiveOnly, PageNumber });
+        }
+
+        try
+        {
+            await _discountManager.CreateDiscountAsync(CreateRequest, Guid.Empty, ct);
+            StatusMessage = $"Discount rule '{CreateRequest.Name}' created successfully.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: Failed to create discount - {ex.Message}";
+        }
+
+        return RedirectToPage(new { Search, TypeFilter, SegmentFilter, ActiveOnly, PageNumber });
+    }
+
+    public async Task<IActionResult> OnPostEditAsync(CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return GoToLogin();
+
+        _apiClient.SetToken(token);
+
+        try
+        {
+            var result = await _discountManager.UpdateDiscountAsync(EditDiscountId, EditRequest, ct);
+            StatusMessage = result != null ? "Discount rule updated successfully." : "Error: Discount not found.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: Failed to update discount - {ex.Message}";
+        }
+
+        return RedirectToPage(new { Search, TypeFilter, SegmentFilter, ActiveOnly, PageNumber });
+    }
+
+    public async Task<IActionResult> OnPostDeleteAsync(CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return GoToLogin();
+
+        _apiClient.SetToken(token);
+
+        try
+        {
+            var ok = await _discountManager.DeleteDiscountAsync(DeleteDiscountId, ct);
+            StatusMessage = ok ? "Discount rule deleted." : "Error: Discount rule not found.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: Failed to delete discount - {ex.Message}";
+        }
+
+        return RedirectToPage(new { Search, TypeFilter, SegmentFilter, ActiveOnly, PageNumber });
     }
 }

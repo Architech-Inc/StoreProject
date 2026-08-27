@@ -60,6 +60,7 @@ builder.Services.AddScoped<ILoyaltyService, ApiLoyaltyService>();
 builder.Services.AddScoped<IFileService, ApiFileService>();
 builder.Services.AddScoped<IApiCommunicationLogService, ApiCommunicationLogService>();
 builder.Services.AddScoped<IAuditLogService, ApiAuditLogService>();
+builder.Services.AddScoped<ICategoryService, ApiCategoryService>();
 builder.Services.AddScoped<IEmployeeManager, EmployeeManager>();
 builder.Services.AddScoped<IInventoryOpsManager, InventoryOpsManager>();
 builder.Services.AddScoped<IBatchManager, BatchManager>();
@@ -67,6 +68,7 @@ builder.Services.AddScoped<IStockTransferManager, StockTransferManager>();
 builder.Services.AddScoped<IWastageManager, WastageManager>();
 builder.Services.AddScoped<IPurchaseOrderManager, PurchaseOrderManager>();
 builder.Services.AddScoped<IAuditLogManager, AuditLogManager>();
+builder.Services.AddScoped<IDiscountManager, DiscountManager>();
 
 var app = builder.Build();
 

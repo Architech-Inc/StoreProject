@@ -1,3 +1,4 @@
+using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Store.API.Contracts;
@@ -18,6 +19,22 @@ public class DiscountsController : ControllerBase
     public DiscountsController(IDiscountService discountService)
         => _discountService = discountService;
 
+    [HttpGet("metrics")]
+    [Authorize(Policy = PermissionKeys.PricingRead)]
+    public async Task<IActionResult> GetMetrics(CancellationToken ct)
+    {
+        var metrics = await _discountService.GetMetricsAsync(ct);
+        return Ok(ApiResponse<DiscountMetricsDto>.Ok(metrics));
+    }
+
+    [HttpGet("paged")]
+    [Authorize(Policy = PermissionKeys.PricingRead)]
+    public async Task<IActionResult> GetPaged([FromQuery] DiscountFilterRequest request, CancellationToken ct)
+    {
+        var result = await _discountService.GetDiscountsPagedAsync(request, ct);
+        return Ok(ApiResponse<PagedResult<DiscountDto>>.Ok(result));
+    }
+
     [HttpGet]
     [Authorize(Policy = PermissionKeys.PricingRead)]
     public async Task<IActionResult> GetAll([FromQuery] bool? activeOnly, [FromQuery] string? couponCode)
@@ -34,6 +51,13 @@ public class DiscountsController : ControllerBase
         if (dto is null)
             return NotFound(ApiErrorResponse.From("not_found", "Discount not found", traceId: HttpContext.TraceIdentifier));
         return Ok(ApiResponse<DiscountDto>.Ok(dto));
+    }
+
+    [HttpPost("simulate")]
+    public async Task<IActionResult> Simulate([FromBody] DiscountSimulationRequest request, CancellationToken ct)
+    {
+        var result = await _discountService.SimulateDiscountAsync(request, ct);
+        return Ok(ApiResponse<DiscountSimulationResult>.Ok(result));
     }
 
     [HttpGet("validate-coupon")]
@@ -87,5 +111,51 @@ public class DiscountsController : ControllerBase
     {
         await _discountService.IncrementUsageAsync(id);
         return NoContent();
+    }
+
+    [HttpGet("export/csv")]
+    [Authorize(Policy = PermissionKeys.PricingRead)]
+    public async Task<IActionResult> ExportCsv([FromQuery] DiscountFilterRequest request, CancellationToken ct)
+    {
+        request.Page = 1;
+        request.PageSize = 2000;
+        var paged = await _discountService.GetDiscountsPagedAsync(request, ct);
+
+        var sb = new StringBuilder();
+        sb.AppendLine("ID,Name,Type,Value,Scope,Target Item/Category,Min Qty,Customer Segment,Coupon Code,Used Count,Max Uses,Valid From,Valid To,Active,Currently Valid");
+
+        foreach (var d in paged.Items)
+        {
+            sb.AppendLine(string.Join(",",
+                d.DiscountId,
+                EscapeCsv(d.Name),
+                EscapeCsv(d.DiscountType),
+                EscapeCsv(d.ValueFormatted),
+                EscapeCsv(d.ScopeType),
+                EscapeCsv(d.ScopeLabel),
+                d.MinQuantity,
+                EscapeCsv(d.TargetSegment ?? "All"),
+                EscapeCsv(d.CouponCode ?? "Auto"),
+                d.UsedCount,
+                d.MaxUses.HasValue ? d.MaxUses.Value.ToString() : "Unlimited",
+                EscapeCsv(d.ValidFrom?.ToString("yyyy-MM-dd HH:mm") ?? "—"),
+                EscapeCsv(d.ValidTo?.ToString("yyyy-MM-dd HH:mm") ?? "—"),
+                d.IsActive,
+                d.IsCurrentlyValid
+            ));
+        }
+
+        var bytes = Encoding.UTF8.GetBytes(sb.ToString());
+        return File(bytes, "text/csv", $"discount_rules_{DateTime.UtcNow:yyyyMMdd_HHmm}.csv");
+    }
+
+    private static string EscapeCsv(string field)
+    {
+        if (string.IsNullOrEmpty(field)) return "\"\"";
+        if (field.Contains(',') || field.Contains('"') || field.Contains('\n') || field.Contains('\r'))
+        {
+            return $"\"{field.Replace("\"", "\"\"")}\"";
+        }
+        return $"\"{field}\"";
     }
 }

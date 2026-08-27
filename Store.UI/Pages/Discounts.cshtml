@@ -1,292 +1,1232 @@
 @page
 @model StoreUI.Pages.DiscountsModel
 @{
-    ViewData["Title"] = "Discount Rules";
+    ViewData["Title"] = "Discount & Promotional Rules";
     ViewData["ActivePage"] = "Discounts";
-    ViewData["PageDescription"] = "Manage item, category, and coupon-based discount rules.";
+    ViewData["PageDescription"] = "Configure automatic volume breaks, percentage markdowns, customer tier discounts, and coupon voucher campaigns.";
+    Layout = "~/Pages/Shared/_AppLayout.cshtml";
 }
 
 @section Styles {
-    <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
+    <style>
+        .discount-hub-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding-bottom: 40px;
+        }
+
+        /* Status Toast Banner */
+        .toast-banner {
+            padding: 12px 18px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: fadeIn 0.3s ease;
+        }
+        .toast-banner.success {
+            background: #ecfdf5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+        .toast-banner.error {
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        /* 4-Card KPI Grid */
+        .discount-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+        }
+        .discount-kpi-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 18px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .discount-kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+        }
+        .kpi-icon-box {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .kpi-icon-box.emerald { background: #ecfdf5; color: #059669; }
+        .kpi-icon-box.amber { background: #fffbeb; color: #d97706; }
+        .kpi-icon-box.purple { background: #f5f3ff; color: #7c3aed; }
+        .kpi-icon-box.teal { background: #f0fdfa; color: #0d9488; }
+
+        .kpi-content {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+        .kpi-label {
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+        .kpi-value {
+            font-size: 1.45rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .kpi-sub {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-top: 2px;
+        }
+
+        /* Filter Dock & Toolbar */
+        .discount-toolbar {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 14px 18px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }
+        .toolbar-left {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            flex: 1;
+        }
+        .search-box-wrap {
+            position: relative;
+            min-width: 260px;
+            max-width: 360px;
+            flex: 1;
+        }
+        .search-box-wrap svg {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            pointer-events: none;
+        }
+        .search-input {
+            width: 100%;
+            height: 38px;
+            padding: 0 12px 0 36px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            color: #1e293b;
+            outline: none;
+            background: #f8fafc;
+            transition: all 0.2s ease;
+        }
+        .search-input:focus {
+            border-color: #019c01;
+            background: #ffffff;
+            box-shadow: 0 0 0 3px rgba(1, 156, 1, 0.12);
+        }
+        .filter-select {
+            height: 38px;
+            padding: 0 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: #334155;
+            background: #ffffff;
+            outline: none;
+        }
+        .filter-select:focus {
+            border-color: #019c01;
+        }
+        .type-filter-pills {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .filter-pill {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
+            color: #475569;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+        .filter-pill:hover {
+            background: #f1f5f9;
+            color: #0f172a;
+            border-color: #cbd5e1;
+        }
+        .filter-pill.active {
+            background: #019c01;
+            color: #ffffff;
+            border-color: #019c01;
+            font-weight: 600;
+            box-shadow: 0 2px 6px rgba(1, 156, 1, 0.25);
+        }
+        .toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Buttons */
+        .btn-brand-primary {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            background: #019c01;
+            color: #ffffff;
+            font-size: 0.88rem;
+            font-weight: 600;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(1, 156, 1, 0.2);
+        }
+        .btn-brand-primary:hover {
+            background: #018001;
+            color: #ffffff;
+        }
+        .btn-brand-secondary {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            background: #ffffff;
+            color: #475569;
+            font-size: 0.88rem;
+            font-weight: 500;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+        .btn-brand-secondary:hover {
+            background: #f8fafc;
+            color: #0f172a;
+            border-color: #94a3b8;
+        }
+
+        /* Table Card */
+        .discount-table-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        }
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+        }
+        .modern-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.88rem;
+        }
+        .modern-table thead th {
+            background: #f8fafc;
+            color: #475569;
+            font-weight: 600;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 12px 16px;
+            border-bottom: 1px solid #e2e8f0;
+            white-space: nowrap;
+        }
+        .modern-table tbody tr {
+            border-bottom: 1px solid #f1f5f9;
+            transition: background 0.15s ease;
+        }
+        .modern-table tbody tr:hover {
+            background: #f8fafc;
+        }
+        .modern-table td {
+            padding: 14px 16px;
+            color: #1e293b;
+            vertical-align: middle;
+        }
+
+        /* Badges & Chips */
+        .code-badge {
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.78rem;
+            padding: 3px 6px;
+            background: #f1f5f9;
+            color: #334155;
+            border-radius: 4px;
+            border: 1px solid #e2e8f0;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .badge-scope {
+            display: inline-block;
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+        .badge-scope.storewide { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+        .badge-scope.category { background: #f0fdfa; color: #0d9488; border: 1px solid #99f6e4; }
+        .badge-scope.item { background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; }
+
+        .badge-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.76rem;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 6px;
+            text-transform: capitalize;
+        }
+        .badge-status.active { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+        .badge-status.inactive { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
+        .badge-status.expired { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+        .badge-status.exhausted { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+
+        .badge-segment {
+            font-size: 0.74rem;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: #f8fafc;
+            color: #475569;
+            border: 1px solid #e2e8f0;
+        }
+
+        /* Action Buttons */
+        .btn-table-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+            color: #475569;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-decoration: none;
+        }
+        .btn-table-action:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+            color: #0f172a;
+        }
+        .btn-table-action.teal {
+            color: #0d9488;
+            border-color: #99f6e4;
+            background: #f0fdfa;
+        }
+        .btn-table-action.teal:hover { background: #ccfbf1; }
+        .btn-table-action.danger {
+            color: #dc2626;
+            border-color: #fecaca;
+            background: #ffffff;
+        }
+        .btn-table-action.danger:hover { background: #fef2f2; }
+
+        /* Modals */
+        .modern-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 9998;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        .modern-modal-overlay.open {
+            display: block;
+            opacity: 1;
+        }
+        .modern-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.95);
+            background: #ffffff;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 740px;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+            z-index: 9999;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+            opacity: 0;
+        }
+        .modern-modal.open {
+            display: flex;
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+        }
+        .modal-header {
+            padding: 18px 24px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #f8fafc;
+        }
+        .modal-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-close-modal {
+            background: transparent;
+            border: none;
+            font-size: 1.25rem;
+            color: #94a3b8;
+            cursor: pointer;
+            padding: 4px;
+            line-height: 1;
+            border-radius: 6px;
+            transition: all 0.15s ease;
+        }
+        .btn-close-modal:hover {
+            color: #0f172a;
+            background: #e2e8f0;
+        }
+        .modal-body {
+            padding: 20px 24px;
+            overflow-y: auto;
+            max-height: calc(85vh - 140px);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .modal-footer {
+            padding: 14px 24px;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+            background: #f8fafc;
+        }
+
+        /* Form Controls */
+        .form-row-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+        .form-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .form-label {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #334155;
+        }
+        .form-input, .form-select {
+            width: 100%;
+            height: 38px;
+            padding: 0 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            color: #1e293b;
+            background: #ffffff;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+        .form-input:focus, .form-select:focus {
+            border-color: #019c01;
+            box-shadow: 0 0 0 3px rgba(1, 156, 1, 0.12);
+        }
+
+        /* Live Simulation Preview Banner */
+        .simulation-preview-banner {
+            background: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            border-radius: 10px;
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .sim-metric {
+            display: flex;
+            flex-direction: column;
+        }
+        .sim-label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #065f46;
+        }
+        .sim-val {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #064e3b;
+        }
+    </style>
 }
 
-<div class="panel">
-
+<div class="discount-hub-container">
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
     {
-        <div class="status @(Model.StatusMessage.StartsWith("Error") ? "error" : "ok")">@Model.StatusMessage</div>
+        <div class="toast-banner @(Model.StatusMessage.StartsWith("Error") ? "error" : "success")">
+            @if (Model.StatusMessage.StartsWith("Error"))
+            {
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            }
+            else
+            {
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+            }
+            <span>@Model.StatusMessage</span>
+        </div>
     }
 
-    <!-- Filter bar -->
-    <form method="get" style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
-        <label style="display:flex;align-items:center;gap:6px;font-size:.85rem;">
-            <input type="checkbox" name="activeOnly" value="true" @(Model.FilterActiveOnly ? "checked" : "") /> Active only
-        </label>
-        <button type="submit" class="button-secondary">Filter</button>
-    </form>
-
-    <section class="card-resource">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-            <h2 style="font-size: var(--fontSize-heading-sm); margin:0;">Discounts <small style="font-weight:400;color:var(--text-secondary);">@Model.Discounts.Count total</small></h2>
-            <button type="button" class="button-primary" onclick="openCreate()">+ New Discount</button>
+    <!-- 4-Card Interactive KPI Banner -->
+    <div class="discount-kpi-grid">
+        <div class="discount-kpi-card">
+            <div class="kpi-icon-box emerald">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+            </div>
+            <div class="kpi-content">
+                <span class="kpi-label">Active Promotional Rules</span>
+                <span class="kpi-value">@Model.Metrics.ActiveRulesCount</span>
+                <span class="kpi-sub">@Model.Metrics.TotalRules total rules defined</span>
+            </div>
         </div>
 
-        @if (!Model.Discounts.Any())
+        <div class="discount-kpi-card">
+            <div class="kpi-icon-box amber">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                </svg>
+            </div>
+            <div class="kpi-content">
+                <span class="kpi-label">Coupon Campaigns</span>
+                <span class="kpi-value">@Model.Metrics.CouponCampaignsCount</span>
+                <span class="kpi-sub">Voucher code promotions</span>
+            </div>
+        </div>
+
+        <div class="discount-kpi-card">
+            <div class="kpi-icon-box purple">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+            </div>
+            <div class="kpi-content">
+                <span class="kpi-label">Customer Tier Rules</span>
+                <span class="kpi-value">@Model.Metrics.SegmentRulesCount</span>
+                <span class="kpi-sub">Wholesale & VIP loyalty rules</span>
+            </div>
+        </div>
+
+        <div class="discount-kpi-card">
+            <div class="kpi-icon-box teal">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div class="kpi-content">
+                <span class="kpi-label">Total Redemptions</span>
+                <span class="kpi-value">@Model.Metrics.TotalRedemptionsCount</span>
+                <span class="kpi-sub">Times applied at POS checkout</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Dock & Search Toolbar -->
+    <div class="discount-toolbar">
+        <div class="toolbar-left">
+            <form method="get" id="discountFilterForm" class="search-box-wrap">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input type="text" name="Search" value="@Model.Search" class="search-input" placeholder="Search discount name, coupon code, item..." onchange="document.getElementById('discountFilterForm').submit();" />
+                @if (!string.IsNullOrWhiteSpace(Model.TypeFilter))
+                {
+                    <input type="hidden" name="TypeFilter" value="@Model.TypeFilter" />
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.SegmentFilter))
+                {
+                    <input type="hidden" name="SegmentFilter" value="@Model.SegmentFilter" />
+                }
+            </form>
+
+            <!-- Segment Selector -->
+            <select class="filter-select" onchange="applySegmentFilter(this.value)">
+                <option value="">All Customer Tiers</option>
+                @foreach (var s in Model.Segments)
+                {
+                    <option value="@s" selected="@(Model.SegmentFilter == s.ToString())">@s Tier</option>
+                }
+            </select>
+
+            <!-- Type Filter Pills -->
+            <div class="type-filter-pills">
+                <a href="?Search=@Model.Search&SegmentFilter=@Model.SegmentFilter" class="filter-pill @(string.IsNullOrWhiteSpace(Model.TypeFilter) ? "active" : "")">All Types</a>
+                <a href="?TypeFilter=Percentage&SegmentFilter=@Model.SegmentFilter&Search=@Model.Search" class="filter-pill @(Model.TypeFilter == "Percentage" ? "active" : "")">Percentage (%)</a>
+                <a href="?TypeFilter=FixedAmount&SegmentFilter=@Model.SegmentFilter&Search=@Model.Search" class="filter-pill @(Model.TypeFilter == "FixedAmount" ? "active" : "")">Fixed (XAF)</a>
+            </div>
+        </div>
+
+        <div class="toolbar-right">
+            <button type="button" class="btn-brand-secondary" onclick="openSimulatorModal()" title="Simulate Discount Calculation">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+                Simulator
+            </button>
+
+            <a asp-page-handler="ExportCsv" asp-route-Search="@Model.Search" asp-route-TypeFilter="@Model.TypeFilter" asp-route-SegmentFilter="@Model.SegmentFilter" class="btn-brand-secondary" title="Export Promotional Rulebook">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                CSV
+            </a>
+
+            <button type="button" class="btn-brand-primary" onclick="openCreateModal()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                New Discount Rule
+            </button>
+        </div>
+    </div>
+
+    <!-- Data Stream Table Card -->
+    <div class="discount-table-card">
+        @if (!Model.DiscountsPaged.Items.Any())
         {
-            <p style="color:var(--text-secondary);padding:12px 0;">No discounts defined yet.</p>
+            <div style="padding: 48px 24px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px;">
+                <div style="width: 64px; height: 64px; border-radius: 50%; background: #f1f5f9; color: #94a3b8; display: flex; align-items: center; justify-content: center;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                    </svg>
+                </div>
+                <h4 style="font-size: 1.05rem; font-weight: 600; color: #0f172a; margin: 0;">No Discount Rules Found</h4>
+                <p style="font-size: 0.85rem; color: #64748b; margin: 0; max-width: 360px;">
+                    No promotional rules match your search or filter criteria. Create a new rule using "+ New Discount Rule".
+                </p>
+            </div>
         }
         else
         {
-            <div style="overflow-x:auto;">
-                <table class="table">
-                    <thead style="background-color: var(--surface);">
+            <div class="table-responsive">
+                <table class="modern-table">
+                    <thead>
                         <tr>
-                            <th style="padding: 0 8px;">Name</th>
-                            <th style="padding: 0 8px;">Type</th>
-                            <th style="padding: 0 8px;">Value</th>
-                            <th style="padding: 0 8px;">Applies To</th>
-                            <th style="padding: 0 8px;">Min Qty</th>
-                            <th style="padding: 0 8px;">Segment</th>
-                            <th style="padding: 0 8px;">Coupon</th>
-                            <th style="padding: 0 8px;">Uses</th>
-                            <th style="padding: 0 8px;">Valid</th>
-                            <th style="padding: 0 8px;">Status</th>
-                            <th style="padding: 0 8px;"></th>
+                            <th>Rule Name & ID</th>
+                            <th>Discount Value</th>
+                            <th>Scope & Target</th>
+                            <th>Trigger Conditions</th>
+                            <th>Coupon Voucher</th>
+                            <th>Redemptions</th>
+                            <th>Validity Window</th>
+                            <th>Status</th>
+                            <th style="text-align: right;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var d in Model.Discounts)
+                        @foreach (var d in Model.DiscountsPaged.Items)
                         {
+                            var scopeClass = d.ScopeType.ToLowerInvariant();
+                            var statusClass = !d.IsActive ? "inactive" : !d.IsCurrentlyValid ? (d.MaxUses.HasValue && d.UsedCount >= d.MaxUses ? "exhausted" : "expired") : "active";
                             <tr>
-                                <td>@d.Name</td>
-                                <td>@d.DiscountType</td>
                                 <td>
-                                    @if (d.DiscountType == "Percentage")
-                                    { <span>@d.Percentage%</span> }
+                                    <div style="display: flex; flex-direction: column; gap: 2px;">
+                                        <span style="font-weight: 700; color: #0f172a;">@d.Name</span>
+                                        <span style="font-size: 0.72rem; color: #94a3b8;">ID: #@d.DiscountId</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span style="font-weight: 700; font-size: 0.92rem; color: #019c01;">@d.ValueFormatted</span>
+                                </td>
+                                <td>
+                                    <div style="display: flex; flex-direction: column; gap: 2px;">
+                                        <span class="badge-scope @scopeClass" style="width: fit-content;">@d.ScopeType</span>
+                                        <span style="font-size: 0.76rem; color: #475569;">@d.ScopeLabel</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div style="display: flex; flex-direction: column; gap: 2px;">
+                                        <span style="font-size: 0.78rem; font-weight: 600; color: #1e293b;">Min Qty: @d.MinQuantity</span>
+                                        <span class="badge-segment" style="width: fit-content;">@(d.TargetSegment != null ? $"{d.TargetSegment} Tier" : "All Customers")</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrWhiteSpace(d.CouponCode))
+                                    {
+                                        <span class="code-badge">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                                            </svg>
+                                            @d.CouponCode
+                                        </span>
+                                    }
                                     else
-                                    { <span>GHS @d.FixedAmount?.ToString("N2")</span> }
+                                    {
+                                        <span style="font-size: 0.76rem; color: #64748b; font-weight: 500;">⚡ Auto-Applied</span>
+                                    }
                                 </td>
                                 <td>
-                                    @if (d.ItemName is not null) { <span>Item: @d.ItemName</span> }
-                                    else if (d.CategoryName is not null) { <span>Cat: @d.CategoryName</span> }
-                                    else { <span style="color:var(--ops-subtle);">All Items</span> }
-                                </td>
-                                <td>@d.MinQuantity</td>
-                                <td>@(d.TargetSegment ?? "All")</td>
-                                <td>
-                                    @if (d.CouponCode is not null)
-                                    { <code style="font-size:.78rem;background:var(--ops-chip-bg);padding:2px 6px;border-radius:4px;">@d.CouponCode</code> }
-                                    else
-                                    { <span style="color:var(--ops-subtle);">Auto</span> }
-                                </td>
-                                <td>@d.UsedCount @(d.MaxUses.HasValue ? $"/ {d.MaxUses}" : "")</td>
-                                <td style="font-size:.8rem;">
-                                    @(d.ValidFrom?.ToString("MMM d") ?? "Any") – @(d.ValidTo?.ToString("MMM d yyyy") ?? "∞")
+                                    <div style="display: flex; flex-direction: column; gap: 2px;">
+                                        <span style="font-size: 0.78rem; font-weight: 600; color: #0f172a;">@d.UsedCount @(d.MaxUses.HasValue ? $"/ {d.MaxUses.Value}" : "")</span>
+                                        @if (d.MaxUses.HasValue && d.MaxUses.Value > 0)
+                                        {
+                                            var pct = Math.Min(100, (int)((double)d.UsedCount / d.MaxUses.Value * 100));
+                                            <div style="width: 70px; height: 4px; background: #e2e8f0; border-radius: 2px; overflow: hidden;">
+                                                <div style="width: @pct%; height: 100%; background: @(pct >= 100 ? "#dc2626" : "#019c01");"></div>
+                                            </div>
+                                        }
+                                    </div>
                                 </td>
                                 <td>
-                                    @if (d.IsCurrentlyValid)
-                                    { <span class="badge-success">Active</span> }
-                                    else if (!d.IsActive)
-                                    { <span class="badge-critical" style="background-color: var(--surface); color: var(--text-secondary);">Inactive</span> }
-                                    else
-                                    { <span class="badge-critical" style="background-color: var(--accent-yellow); color: var(--text-primary);">Expired</span> }
+                                    <div style="display: flex; flex-direction: column; font-size: 0.76rem; color: #64748b;">
+                                        @if (d.ValidFrom.HasValue || d.ValidTo.HasValue)
+                                        {
+                                            <span>@(d.ValidFrom?.ToString("dd MMM yyyy") ?? "Start")</span>
+                                            <span>@(d.ValidTo?.ToString("dd MMM yyyy") ?? "No Expiry")</span>
+                                        }
+                                        else
+                                        {
+                                            <span>Always Active</span>
+                                        }
+                                    </div>
                                 </td>
-                                <td style="white-space:nowrap; display: flex; gap: 4px;">
-                                    <button type="button" class="button-command" title="Edit"
-                                        onclick="openEdit(@d.DiscountId, @System.Text.Json.JsonSerializer.Serialize(d))">✏️ Edit</button>
-                                    <button type="button" class="button-command" style="color: var(--accent-red);" title="Delete"
-                                        onclick="confirmDelete(@d.DiscountId, '@System.Web.HttpUtility.JavaScriptStringEncode(d.Name)')">🗑️</button>
+                                <td>
+                                    <span class="badge-status @statusClass">@statusClass</span>
+                                </td>
+                                <td style="text-align: right;">
+                                    <div style="display: flex; align-items: center; justify-content: flex-end; gap: 4px;">
+                                        <button type="button" class="btn-table-action teal" onclick="openSimulatorForDiscount(@d.DiscountId, '@d.Name', '@d.DiscountType', @d.Percentage, @(d.FixedAmount ?? 0), @d.MinQuantity)" title="Simulate">
+                                            🧮
+                                        </button>
+                                        <button type="button" class="btn-table-action" onclick="openEditModal(@d.DiscountId)" title="Edit">
+                                            ✏️
+                                        </button>
+                                        <form method="post" asp-page-handler="Delete" style="margin:0;">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="DeleteDiscountId" value="@d.DiscountId" />
+                                            <button type="submit" class="btn-table-action danger" onclick="return confirm('Delete discount rule \'@d.Name\'?');" title="Delete">
+                                                🗑️
+                                            </button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                         }
                     </tbody>
                 </table>
             </div>
+
+            @if (Model.DiscountsPaged.TotalPages > 1)
+            {
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-top: 1px solid #e2e8f0;">
+                    <span style="font-size: 0.82rem; color: #64748b;">
+                        Showing page <strong>@Model.DiscountsPaged.Page</strong> of <strong>@Model.DiscountsPaged.TotalPages</strong> (@Model.DiscountsPaged.TotalCount total records)
+                    </span>
+                    <div style="display: flex; gap: 6px;">
+                        @if (Model.DiscountsPaged.HasPreviousPage)
+                        {
+                            <a href="?PageNumber=@(Model.DiscountsPaged.Page - 1)&Search=@Model.Search&TypeFilter=@Model.TypeFilter&SegmentFilter=@Model.SegmentFilter" class="btn-brand-secondary" style="padding: 4px 10px; font-size: 0.8rem;">Previous</a>
+                        }
+                        @if (Model.DiscountsPaged.HasNextPage)
+                        {
+                            <a href="?PageNumber=@(Model.DiscountsPaged.Page + 1)&Search=@Model.Search&TypeFilter=@Model.TypeFilter&SegmentFilter=@Model.SegmentFilter" class="btn-brand-secondary" style="padding: 4px 10px; font-size: 0.8rem;">Next</a>
+                        }
+                    </div>
+                </div>
+            }
         }
-    </section>
-</div>
-
-<!-- Create Modal -->
-<div id="createModal" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="createTitle">
-    <div class="modal">
-        <div class="modal-head">
-            <h3 id="createTitle">New Discount Rule</h3>
-            <button type="button" class="btn-close" onclick="closeModal('createModal')" aria-label="Close">×</button>
-        </div>
-        <form method="post" asp-page-handler="Create">
-            @Html.AntiForgeryToken()
-            <div class="form-grid">
-                <label>Name *
-                    <input name="CreateName" maxlength="200" required placeholder="e.g. Weekend Special" />
-                </label>
-                <label>Type
-                    <select name="CreateDiscountType" onchange="toggleValueField(this, 'create')">
-                        <option value="0">Percentage</option>
-                        <option value="1">Fixed Amount</option>
-                    </select>
-                </label>
-                <label id="createPctLabel">Percentage (%)
-                    <input name="CreatePercentage" type="number" min="0" max="100" step="0.01" value="0" />
-                </label>
-                <label id="createAmtLabel" style="display:none;">Fixed Amount (GHS)
-                    <input name="CreateFixedAmount" type="number" min="0" step="0.01" />
-                </label>
-                <label>Min Quantity
-                    <input name="CreateMinQuantity" type="number" min="1" value="1" />
-                </label>
-                <label>Target Segment
-                    <select name="CreateTargetSegment">
-                        <option value="">All Segments</option>
-                        <option value="0">Standard</option>
-                        <option value="1">Wholesale</option>
-                        <option value="2">Vip</option>
-                    </select>
-                </label>
-                <label>Coupon Code (leave blank for auto-apply)
-                    <input name="CreateCouponCode" maxlength="50" placeholder="e.g. SAVE20" style="text-transform:uppercase;" />
-                </label>
-                <label>Max Uses (blank = unlimited)
-                    <input name="CreateMaxUses" type="number" min="1" placeholder="Unlimited" />
-                </label>
-                <label>Valid From
-                    <input name="CreateValidFrom" type="datetime-local" />
-                </label>
-                <label>Valid To
-                    <input name="CreateValidTo" type="datetime-local" />
-                </label>
-                <label style="grid-column:1/-1;display:flex;align-items:center;gap:8px;">
-                    <input name="CreateIsActive" type="checkbox" checked value="true" /> Active
-                </label>
-            </div>
-            <div style="display:flex;justify-content:flex-end;gap:8px;">
-                <button type="button" class="button-command" onclick="closeModal('createModal')">Cancel</button>
-                <button type="submit" class="button-primary">Create</button>
-            </div>
-        </form>
     </div>
 </div>
 
-<!-- Edit Modal -->
-<div id="editModal" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="editTitle">
-    <div class="modal">
-        <div class="modal-head">
-            <h3 id="editTitle">Edit Discount</h3>
-            <button type="button" class="btn-close" onclick="closeModal('editModal')" aria-label="Close">×</button>
-        </div>
-        <form method="post" asp-page-handler="Edit">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="EditDiscountId" id="editId" />
-            <div class="form-grid">
-                <label>Name
-                    <input id="editName" name="EditName" maxlength="200" />
-                </label>
-                <label>Type
-                    <select id="editType" name="EditDiscountType" onchange="toggleValueField(this, 'edit')">
-                        <option value="0">Percentage</option>
-                        <option value="1">Fixed Amount</option>
-                    </select>
-                </label>
-                <label id="editPctLabel">Percentage (%)
-                    <input id="editPct" name="EditPercentage" type="number" min="0" max="100" step="0.01" />
-                </label>
-                <label id="editAmtLabel" style="display:none;">Fixed Amount (GHS)
-                    <input id="editAmt" name="EditFixedAmount" type="number" min="0" step="0.01" />
-                </label>
-                <label>Min Quantity
-                    <input id="editMinQty" name="EditMinQuantity" type="number" min="1" />
-                </label>
-                <label>Target Segment
-                    <select id="editSegment" name="EditTargetSegment">
-                        <option value="">All Segments</option>
-                        <option value="0">Standard</option>
-                        <option value="1">Wholesale</option>
-                        <option value="2">Vip</option>
-                    </select>
-                </label>
-                <label>Coupon Code
-                    <input id="editCoupon" name="EditCouponCode" maxlength="50" style="text-transform:uppercase;" />
-                </label>
-                <label>Max Uses
-                    <input id="editMaxUses" name="EditMaxUses" type="number" min="1" placeholder="Unlimited" />
-                </label>
-                <label>Valid From
-                    <input id="editValidFrom" name="EditValidFrom" type="datetime-local" />
-                </label>
-                <label>Valid To
-                    <input id="editValidTo" name="EditValidTo" type="datetime-local" />
-                </label>
-                <label style="grid-column:1/-1;display:flex;align-items:center;gap:8px;">
-                    <input type="hidden" name="EditIsActive" value="false" />
-                    <input id="editActive" name="EditIsActive" type="checkbox" value="true" /> Active
-                </label>
-            </div>
-            <div style="display:flex;justify-content:flex-end;gap:8px;">
-                <button type="button" class="button-command" onclick="closeModal('editModal')">Cancel</button>
-                <button type="submit" class="button-primary">Save</button>
-            </div>
-        </form>
+<!-- Create / Edit Discount Modal -->
+<div class="modern-modal-overlay" id="discountModalOverlay" onclick="closeDiscountModal()"></div>
+<div class="modern-modal" id="discountModal" style="max-width: 760px;">
+    <div class="modal-header">
+        <h3 class="modal-title" id="discountModalTitle">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#019c01">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+            </svg>
+            New Discount Rule
+        </h3>
+        <button type="button" class="btn-close-modal" onclick="closeDiscountModal()">&times;</button>
     </div>
+    <form method="post" id="discountForm" asp-page-handler="Create">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="EditDiscountId" id="modalEditDiscountId" />
+        <div class="modal-body">
+            <div class="form-row-group">
+                <div class="form-field">
+                    <label class="form-label">Rule Name <span style="color: #dc2626;">*</span></label>
+                    <input type="text" name="CreateRequest.Name" id="ruleName" class="form-input" required placeholder="e.g. Weekend Flash Sale 15%" maxlength="200" />
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Discount Type <span style="color: #dc2626;">*</span></label>
+                    <select name="CreateRequest.DiscountType" id="ruleType" class="form-select" onchange="toggleDiscountType(this.value)">
+                        <option value="Percentage">Percentage (%)</option>
+                        <option value="FixedAmount">Fixed Amount (XAF)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row-group">
+                <div class="form-field" id="pctField">
+                    <label class="form-label">Percentage Discount (%) <span style="color: #dc2626;">*</span></label>
+                    <input type="number" name="CreateRequest.Percentage" id="rulePct" class="form-input" min="0" max="100" step="0.01" value="10" oninput="updateLiveSim()" />
+                </div>
+                <div class="form-field" id="amtField" style="display:none;">
+                    <label class="form-label">Fixed Amount (XAF) <span style="color: #dc2626;">*</span></label>
+                    <input type="number" name="CreateRequest.FixedAmount" id="ruleAmt" class="form-input" min="0" step="100" placeholder="e.g. 2500" oninput="updateLiveSim()" />
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Target Customer Tier</label>
+                    <select name="CreateRequest.TargetSegment" id="ruleSegment" class="form-select">
+                        <option value="">All Customers</option>
+                        @foreach (var s in Model.Segments)
+                        {
+                            <option value="@s">@s Tier</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <!-- Scope Targeting -->
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px;">
+                <label class="form-label" style="margin: 0;">Scope & Product Targeting</label>
+                <div style="display: flex; gap: 14px;">
+                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; cursor: pointer;">
+                        <input type="radio" name="scopeRadio" value="storewide" checked onchange="toggleScopeSelector('storewide')" /> Store-Wide (All Products)
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; cursor: pointer;">
+                        <input type="radio" name="scopeRadio" value="category" onchange="toggleScopeSelector('category')" /> Specific Category
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; cursor: pointer;">
+                        <input type="radio" name="scopeRadio" value="item" onchange="toggleScopeSelector('item')" /> Specific Product
+                    </label>
+                </div>
+
+                <div class="form-field" id="categoryScopeField" style="display:none;">
+                    <label class="form-label">Target Category</label>
+                    <select name="CreateRequest.CategoryId" id="ruleCategorySelect" class="form-select">
+                        <option value="">-- Select Category --</option>
+                    </select>
+                </div>
+
+                <div class="form-field" id="itemScopeField" style="display:none;">
+                    <label class="form-label">Target Catalog Product</label>
+                    <select name="CreateRequest.ItemId" id="ruleItemSelect" class="form-select">
+                        <option value="">-- Select Product --</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row-group">
+                <div class="form-field">
+                    <label class="form-label">Minimum Basket Quantity</label>
+                    <input type="number" name="CreateRequest.MinQuantity" id="ruleMinQty" class="form-input" min="1" value="1" oninput="updateLiveSim()" />
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Coupon Code (Leave blank for Auto-Apply)</label>
+                    <input type="text" name="CreateRequest.CouponCode" id="ruleCoupon" class="form-input" placeholder="e.g. FLASH20" style="text-transform:uppercase;" />
+                </div>
+            </div>
+
+            <div class="form-row-group">
+                <div class="form-field">
+                    <label class="form-label">Maximum Uses Cap (Blank = Unlimited)</label>
+                    <input type="number" name="CreateRequest.MaxUses" id="ruleMaxUses" class="form-input" min="1" placeholder="Unlimited" />
+                </div>
+                <div class="form-field" style="justify-content: center;">
+                    <label style="display: flex; align-items: center; gap: 8px; font-size: 0.88rem; font-weight: 600; color: #1e293b; cursor: pointer; margin-top: 18px;">
+                        <input type="checkbox" name="CreateRequest.IsActive" id="ruleActive" value="true" checked /> Rule Enabled & Active
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-row-group">
+                <div class="form-field">
+                    <label class="form-label">Valid From</label>
+                    <input type="datetime-local" name="CreateRequest.ValidFrom" id="ruleValidFrom" class="form-input" />
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Valid To</label>
+                    <input type="datetime-local" name="CreateRequest.ValidTo" id="ruleValidTo" class="form-input" />
+                </div>
+            </div>
+
+            <!-- Live Simulation Preview Banner -->
+            <div class="simulation-preview-banner">
+                <div class="sim-metric">
+                    <span class="sim-label">Sample Item Price</span>
+                    <span class="sim-val" id="simSamplePrice">10,000 XAF</span>
+                </div>
+                <div class="sim-metric">
+                    <span class="sim-label">Discount Applied</span>
+                    <span class="sim-val" id="simDiscountAmt">-1,000 XAF</span>
+                </div>
+                <div class="sim-metric" style="text-align: right;">
+                    <span class="sim-label">Net Customer Price</span>
+                    <span class="sim-val" id="simNetPrice">9,000 XAF</span>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-brand-secondary" onclick="closeDiscountModal()">Cancel</button>
+            <button type="submit" class="btn-brand-primary" id="btnSubmitDiscount">Create Rule</button>
+        </div>
+    </form>
 </div>
 
-<!-- Delete Confirm Modal -->
-<div id="deleteModal" class="modal-overlay" hidden role="dialog" aria-modal="true">
-    <div class="modal" style="max-width:420px;">
-        <div class="modal-head">
-            <h3>Delete Discount</h3>
-            <button type="button" class="btn-close" onclick="closeModal('deleteModal')" aria-label="Close">×</button>
+<!-- Standalone Simulator Modal -->
+<div class="modern-modal-overlay" id="simulatorOverlay" onclick="closeSimulatorModal()"></div>
+<div class="modern-modal" id="simulatorModal" style="max-width: 600px;">
+    <div class="modal-header">
+        <h3 class="modal-title">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#019c01">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+            Discount Rule Simulator
+        </h3>
+        <button type="button" class="btn-close-modal" onclick="closeSimulatorModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; font-size: 0.85rem; color: #475569;">
+            Simulate exact pricing deductions and margin savings in Central African CFA Francs (<strong>XAF</strong>).
         </div>
-        <p>Delete <strong id="deleteNameLabel"></strong>? This cannot be undone.</p>
-        <form method="post" asp-page-handler="Delete">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="DeleteDiscountId" id="deleteId" />
-            <div style="display:flex;justify-content:flex-end;gap:8px;">
-                <button type="button" class="button-command" onclick="closeModal('deleteModal')">Cancel</button>
-                <button type="submit" class="button-primary danger">Delete</button>
+
+        <div class="form-row-group">
+            <div class="form-field">
+                <label class="form-label">Item Unit Price (XAF)</label>
+                <input type="number" id="calcPrice" class="form-input" value="15000" min="0" step="500" oninput="runSimulatorCalc()" />
             </div>
-        </form>
+            <div class="form-field">
+                <label class="form-label">Cart Quantity</label>
+                <input type="number" id="calcQty" class="form-input" value="1" min="1" oninput="runSimulatorCalc()" />
+            </div>
+        </div>
+
+        <div class="form-field">
+            <label class="form-label">Select Rule / Coupon</label>
+            <select id="calcDiscountSelect" class="form-select" onchange="runSimulatorCalc()">
+                @foreach (var d in Model.DiscountsPaged.Items)
+                {
+                    <option value="@d.DiscountId" data-type="@d.DiscountType" data-pct="@d.Percentage" data-amt="@(d.FixedAmount ?? 0)" data-min="@d.MinQuantity">
+                        @d.Name (@d.ValueFormatted)
+                    </option>
+                }
+            </select>
+        </div>
+
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.88rem; color: #64748b;">
+                <span>Original Total:</span>
+                <strong id="calcOrigTotal" style="color: #0f172a;">15,000 XAF</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.88rem; color: #059669;">
+                <span>Discount Deduction:</span>
+                <strong id="calcDiscountDeduction">-1,500 XAF (10%)</strong>
+            </div>
+            <div style="border-top: 1px dashed #cbd5e1; padding-top: 10px; display: flex; justify-content: space-between; font-size: 1.1rem; font-weight: 700; color: #019c01;">
+                <span>Final Price (XAF):</span>
+                <span id="calcFinalPrice">13,500 XAF</span>
+            </div>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn-brand-secondary" onclick="closeSimulatorModal()">Close</button>
     </div>
 </div>
 
 @section Scripts {
-<script>
-function openCreate() { document.getElementById('createModal').hidden = false; }
-function closeModal(id) { document.getElementById(id).hidden = true; }
+    <script>
+        let catalogItemsCache = [];
+        let categoriesCache = [];
 
-function toggleValueField(sel, prefix) {
-    const isFixed = sel.value === '1';
-    document.getElementById(prefix + 'PctLabel').style.display = isFixed ? 'none' : '';
-    document.getElementById(prefix + 'AmtLabel').style.display = isFixed ? '' : 'none';
-}
+        async function initCatalogData() {
+            try {
+                const [itmRes, catRes] = await Promise.all([
+                    fetch('?handler=SearchCatalog'),
+                    fetch('?handler=Categories')
+                ]);
 
-function toLocalDatetimeInput(iso) {
-    if (!iso) return '';
-    const d = new Date(iso);
-    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-}
+                if (itmRes.ok) {
+                    catalogItemsCache = await itmRes.json();
+                    const itmSelect = document.getElementById('ruleItemSelect');
+                    itmSelect.innerHTML = '<option value="">-- Select Product --</option>';
+                    catalogItemsCache.forEach(i => {
+                        itmSelect.innerHTML += `<option value="${i.id}">${escapeHtml(i.name)} (${escapeHtml(i.barcode)})</option>`;
+                    });
+                }
 
-function openEdit(id, d) {
-    document.getElementById('editId').value = id;
-    document.getElementById('editName').value = d.name || '';
-    const typeVal = d.discountType === 'FixedAmount' ? '1' : '0';
-    document.getElementById('editType').value = typeVal;
-    toggleValueField(document.getElementById('editType'), 'edit');
-    document.getElementById('editPct').value = d.percentage || 0;
-    document.getElementById('editAmt').value = d.fixedAmount || '';
-    document.getElementById('editMinQty').value = d.minQuantity || 1;
-    const segMap = { Standard: '0', Wholesale: '1', Vip: '2' };
-    document.getElementById('editSegment').value = d.targetSegment ? (segMap[d.targetSegment] ?? '') : '';
-    document.getElementById('editCoupon').value = d.couponCode || '';
-    document.getElementById('editMaxUses').value = d.maxUses || '';
-    document.getElementById('editValidFrom').value = toLocalDatetimeInput(d.validFrom);
-    document.getElementById('editValidTo').value = toLocalDatetimeInput(d.validTo);
-    document.getElementById('editActive').checked = d.isActive;
-    document.getElementById('editModal').style.display = 'flex';
-}
+                if (catRes.ok) {
+                    categoriesCache = await catRes.json();
+                    const catSelect = document.getElementById('ruleCategorySelect');
+                    catSelect.innerHTML = '<option value="">-- Select Category --</option>';
+                    categoriesCache.forEach(c => {
+                        catSelect.innerHTML += `<option value="${c.id}">${escapeHtml(c.name)}</option>`;
+                    });
+                }
+            } catch (e) {
+                console.error("Init discount catalog failed", e);
+            }
+        }
 
-function confirmDelete(id, name) {
-    document.getElementById('deleteId').value = id;
-    document.getElementById('deleteNameLabel').textContent = name;
-    document.getElementById('deleteModal').style.display = 'flex';
-}
-</script>
+        document.addEventListener('DOMContentLoaded', () => {
+            initCatalogData();
+            updateLiveSim();
+            runSimulatorCalc();
+        });
+
+        function applySegmentFilter(seg) {
+            const url = new URL(window.location.href);
+            if (seg) {
+                url.searchParams.set('SegmentFilter', seg);
+            } else {
+                url.searchParams.delete('SegmentFilter');
+            }
+            url.searchParams.set('PageNumber', '1');
+            window.location.href = url.toString();
+        }
+
+        function toggleDiscountType(type) {
+            const isPct = type === 'Percentage';
+            document.getElementById('pctField').style.display = isPct ? '' : 'none';
+            document.getElementById('amtField').style.display = isPct ? 'none' : '';
+            updateLiveSim();
+        }
+
+        function toggleScopeSelector(scope) {
+            document.getElementById('categoryScopeField').style.display = scope === 'category' ? '' : 'none';
+            document.getElementById('itemScopeField').style.display = scope === 'item' ? '' : 'none';
+        }
+
+        function updateLiveSim() {
+            const samplePrice = 10000;
+            const type = document.getElementById('ruleType').value;
+            let discountAmt = 0;
+
+            if (type === 'Percentage') {
+                const pct = parseFloat(document.getElementById('rulePct').value) || 0;
+                discountAmt = (samplePrice * pct) / 100;
+            } else {
+                const fixed = parseFloat(document.getElementById('ruleAmt').value) || 0;
+                discountAmt = Math.min(samplePrice, fixed);
+            }
+
+            const netPrice = Math.max(0, samplePrice - discountAmt);
+            document.getElementById('simSamplePrice').textContent = `${formatNumber(samplePrice)} XAF`;
+            document.getElementById('simDiscountAmt').textContent = `-${formatNumber(discountAmt)} XAF`;
+            document.getElementById('simNetPrice').textContent = `${formatNumber(netPrice)} XAF`;
+        }
+
+        function openCreateModal() {
+            document.getElementById('discountModalTitle').innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#019c01">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+                New Discount Rule
+            `;
+            document.getElementById('discountForm').action = '?handler=Create';
+            document.getElementById('btnSubmitDiscount').textContent = 'Create Rule';
+            document.getElementById('modalEditDiscountId').value = '';
+            document.getElementById('ruleName').value = '';
+            document.getElementById('ruleType').value = 'Percentage';
+            toggleDiscountType('Percentage');
+            document.getElementById('rulePct').value = '10';
+            document.getElementById('ruleAmt').value = '';
+            document.getElementById('ruleMinQty').value = '1';
+            document.getElementById('ruleSegment').value = '';
+            document.getElementById('ruleCoupon').value = '';
+            document.getElementById('ruleMaxUses').value = '';
+            document.getElementById('ruleValidFrom').value = '';
+            document.getElementById('ruleValidTo').value = '';
+            document.getElementById('ruleActive').checked = true;
+            document.querySelector('input[name="scopeRadio"][value="storewide"]').checked = true;
+            toggleScopeSelector('storewide');
+
+            document.getElementById('discountModalOverlay').classList.add('open');
+            document.getElementById('discountModal').classList.add('open');
+            updateLiveSim();
+        }
+
+        async function openEditModal(id) {
+            document.getElementById('discountModalTitle').innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#019c01">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Edit Discount Rule
+            `;
+            document.getElementById('discountForm').action = '?handler=Edit';
+            document.getElementById('btnSubmitDiscount').textContent = 'Save Changes';
+            document.getElementById('modalEditDiscountId').value = id;
+
+            try {
+                const res = await fetch(`?handler=DetailsJson&id=${id}`);
+                if (!res.ok) throw new Error("Failed to load discount details");
+                const d = await res.json();
+
+                document.getElementById('ruleName').value = d.name || '';
+                document.getElementById('ruleType').value = d.discountType || 'Percentage';
+                toggleDiscountType(d.discountType || 'Percentage');
+                document.getElementById('rulePct').value = d.percentage || 0;
+                document.getElementById('ruleAmt').value = d.fixedAmount || '';
+                document.getElementById('ruleMinQty').value = d.minQuantity || 1;
+                document.getElementById('ruleSegment').value = d.targetSegment || '';
+                document.getElementById('ruleCoupon').value = d.couponCode || '';
+                document.getElementById('ruleMaxUses').value = d.maxUses || '';
+                document.getElementById('ruleValidFrom').value = toLocalDatetimeInput(d.validFrom);
+                document.getElementById('ruleValidTo').value = toLocalDatetimeInput(d.validTo);
+                document.getElementById('ruleActive').checked = d.isActive;
+
+                if (d.itemId) {
+                    document.querySelector('input[name="scopeRadio"][value="item"]').checked = true;
+                    toggleScopeSelector('item');
+                    document.getElementById('ruleItemSelect').value = d.itemId;
+                } else if (d.categoryId) {
+                    document.querySelector('input[name="scopeRadio"][value="category"]').checked = true;
+                    toggleScopeSelector('category');
+                    document.getElementById('ruleCategorySelect').value = d.categoryId;
+                } else {
+                    document.querySelector('input[name="scopeRadio"][value="storewide"]').checked = true;
+                    toggleScopeSelector('storewide');
+                }
+
+                document.getElementById('discountModalOverlay').classList.add('open');
+                document.getElementById('discountModal').classList.add('open');
+                updateLiveSim();
+            } catch (e) {
+                alert("Error loading discount: " + e.message);
+            }
+        }
+
+        function closeDiscountModal() {
+            document.getElementById('discountModalOverlay').classList.remove('open');
+            document.getElementById('discountModal').classList.remove('open');
+        }
+
+        function openSimulatorModal() {
+            document.getElementById('simulatorOverlay').classList.add('open');
+            document.getElementById('simulatorModal').classList.add('open');
+            runSimulatorCalc();
+        }
+
+        function closeSimulatorModal() {
+            document.getElementById('simulatorOverlay').classList.remove('open');
+            document.getElementById('simulatorModal').classList.remove('open');
+        }
+
+        function openSimulatorForDiscount(id, name, type, pct, amt, minQty) {
+            document.getElementById('calcDiscountSelect').value = id;
+            openSimulatorModal();
+        }
+
+        function runSimulatorCalc() {
+            const price = parseFloat(document.getElementById('calcPrice').value) || 0;
+            const qty = parseInt(document.getElementById('calcQty').value) || 1;
+            const origTotal = price * qty;
+
+            const select = document.getElementById('calcDiscountSelect');
+            if (!select.options.length) return;
+
+            const opt = select.options[select.selectedIndex];
+            if (!opt) return;
+
+            const type = opt.getAttribute('data-type');
+            const pct = parseFloat(opt.getAttribute('data-pct')) || 0;
+            const amt = parseFloat(opt.getAttribute('data-amt')) || 0;
+            const minQty = parseInt(opt.getAttribute('data-min')) || 1;
+
+            let discountDeduction = 0;
+            let note = '';
+
+            if (qty < minQty) {
+                note = ` (Min ${minQty} required)`;
+            } else if (type === 'Percentage') {
+                discountDeduction = (origTotal * pct) / 100;
+                note = ` (${pct}%)`;
+            } else {
+                discountDeduction = Math.min(origTotal, amt * qty);
+                note = ` (${formatNumber(amt)} XAF/unit)`;
+            }
+
+            const finalPrice = Math.max(0, origTotal - discountDeduction);
+
+            document.getElementById('calcOrigTotal').textContent = `${formatNumber(origTotal)} XAF`;
+            document.getElementById('calcDiscountDeduction').textContent = `-${formatNumber(discountDeduction)} XAF${note}`;
+            document.getElementById('calcFinalPrice').textContent = `${formatNumber(finalPrice)} XAF`;
+        }
+
+        function toLocalDatetimeInput(iso) {
+            if (!iso) return '';
+            const d = new Date(iso);
+            return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+        }
+
+        function formatNumber(num) {
+            return Number(num || 0).toLocaleString('en-US');
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+    </script>
 }
