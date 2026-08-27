@@ -20,10 +20,18 @@ public class InventoryOperationsController : ControllerBase
 
     [HttpGet("movements")]
     [Authorize(Policy = PermissionKeys.InventoryRead)]
-    public async Task<IActionResult> GetMovements([FromQuery] int page = 1, [FromQuery] int pageSize = 50, [FromQuery] StockMovementType? type = null, CancellationToken ct = default)
+    public async Task<IActionResult> GetMovements([FromQuery] StockMovementFilterRequest request, CancellationToken ct = default)
     {
-        var rows = await _ops.GetStockMovementsAsync(page, pageSize, type, ct);
-        return Ok(rows);
+        var result = await _ops.GetStockMovementsPagedAsync(request, ct);
+        return Ok(result);
+    }
+
+    [HttpGet("metrics")]
+    [Authorize(Policy = PermissionKeys.InventoryRead)]
+    public async Task<IActionResult> GetMetrics(CancellationToken ct = default)
+    {
+        var metrics = await _ops.GetInventoryMetricsAsync(ct);
+        return Ok(metrics);
     }
 
     [HttpPost("receive")]

@@ -1,121 +1,988 @@
 @page
 @model StoreUI.Pages.InventoryOpsModel
+@using Store.Models.Enums
 @{
-    ViewData["Title"] = "Inventory Operations";
-    ViewData["PageDescription"] = "Process GRN, returns, adjustments, and reorder monitoring.";
+    ViewData["Title"] = "Inventory Operations & Stock Control";
+    ViewData["ActivePage"] = "InventoryOps";
+    ViewData["PageDescription"] = "Goods receipts (GRN), returns, manual count adjustments, reorder monitoring, and stock audit stream.";
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
+    <style>
+        /* ── Inventory Ops Scoped & Standardized Styles ── */
+        .inv-container {
+            max-width: 1440px;
+            margin: 0 auto;
+            color: var(--text-primary);
+        }
+
+        /* ── 1. KPI Grid ── */
+        .inv-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .inv-kpi-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg, 12px);
+            padding: 18px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.05));
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .inv-kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,0.08));
+            border-color: var(--brand-border, #b7d9b7);
+        }
+
+        .inv-kpi-card.active {
+            border-color: var(--brand);
+            background: var(--brand-soft);
+        }
+
+        .inv-kpi-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .inv-kpi-icon.amber  { background: rgba(245, 158, 11, 0.12); color: #d97706; }
+        .inv-kpi-icon.teal   { background: rgba(20, 184, 166, 0.12); color: #0d9488; }
+        .inv-kpi-icon.green  { background: var(--brand-soft, rgba(1, 156, 1, 0.12)); color: var(--brand, #019c01); }
+        .inv-kpi-icon.purple { background: rgba(139, 92, 246, 0.12); color: #7c3aed; }
+        .inv-kpi-icon.red    { background: rgba(220, 38, 38, 0.12); color: #dc2626; }
+
+        .inv-kpi-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .inv-kpi-val {
+            font-size: 1.45rem;
+            font-weight: 700;
+            line-height: 1.2;
+            color: var(--text-primary);
+        }
+
+        .inv-kpi-lbl {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 700;
+            margin-top: 2px;
+        }
+
+        .inv-kpi-sub {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* ── 2. Toolbar & Filter Dock ── */
+        .inv-toolbar {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg, 12px);
+            padding: 14px 18px;
+            margin-bottom: 24px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.05));
+        }
+
+        .inv-filter-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            flex-grow: 1;
+        }
+
+        .inv-search-box {
+            position: relative;
+            min-width: 240px;
+            flex-grow: 1;
+            max-width: 360px;
+        }
+
+        .inv-search-box input {
+            width: 100%;
+            padding: 9px 12px 9px 38px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--canvas);
+            color: var(--text-primary);
+            font-size: 0.90rem;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .inv-search-box input:focus {
+            background: var(--surface);
+            border-color: var(--brand);
+            box-shadow: 0 0 0 3px var(--brand-glow, rgba(1, 156, 1, 0.2));
+        }
+
+        .inv-search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            pointer-events: none;
+        }
+
+        .inv-pill-btn {
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-secondary);
+            font-size: 0.84rem;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            line-height: 1;
+            white-space: nowrap;
+        }
+
+        .inv-pill-btn:hover {
+            border-color: var(--brand);
+            color: var(--brand);
+        }
+
+        .inv-pill-btn.active {
+            background: var(--brand);
+            color: #ffffff !important;
+            border-color: var(--brand);
+            font-weight: 600;
+        }
+
+        .inv-toolbar-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        /* ── 3. Section Cards & Tables ── */
+        .inv-card-section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg, 12px);
+            padding: 20px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.05));
+        }
+
+        .inv-section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .inv-section-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0;
+        }
+
+        .inv-stock-progress {
+            width: 100%;
+            height: 6px;
+            background: var(--border-subtle, #edf2f7);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 4px;
+        }
+
+        .inv-stock-bar {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .inv-stock-bar.danger  { background: #dc2626; }
+        .inv-stock-bar.warning { background: #d97706; }
+        .inv-stock-bar.ok      { background: #059669; }
+
+        .btn-table-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 0.80rem;
+            font-weight: 600;
+            text-decoration: none;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+
+        .btn-table-action:hover {
+            border-color: var(--brand);
+            color: var(--brand);
+            background: var(--brand-soft);
+        }
+
+        .btn-table-action.primary {
+            background: var(--brand);
+            color: #ffffff;
+            border-color: var(--brand);
+        }
+
+        .btn-table-action.primary:hover {
+            background: #018501;
+        }
+
+        /* ── 4. Standard Layered Modals ── */
+        .inv-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(15, 23, 42, 0.45);
+            backdrop-filter: blur(4px);
+            z-index: 290;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .inv-modal-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .inv-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -46%) scale(0.97);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            width: 90%;
+            max-width: 540px;
+            max-height: 90vh;
+            overflow-y: auto;
+            z-index: 300;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18);
+            opacity: 0;
+            pointer-events: none;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+        }
+
+        .inv-modal.open {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .inv-modal-header {
+            padding: 18px 22px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .inv-modal-body {
+            padding: 22px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .inv-modal-footer {
+            padding: 16px 22px;
+            border-top: 1px solid var(--border);
+            background: var(--surface-alt, #f8fafc);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            border-bottom-left-radius: 14px;
+            border-bottom-right-radius: 14px;
+        }
+
+        .inv-stock-live-banner {
+            background: var(--canvas);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.88rem;
+        }
+
+        .code-badge {
+            font-family: 'Cascadia Code', Consolas, monospace;
+            font-size: 0.78rem;
+            background: var(--canvas);
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+    </style>
 }
 
-<div class="ops-page">
-    
-
-    <nav class="page-jump" aria-label="Inventory sections">
-        <a href="#reorder">Reorder Suggestions</a>
-        <a href="#actions">Stock Actions</a>
-        <a href="#audit">Audit Trail</a>
-    </nav>
+<div class="inv-container">
 
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
     {
-        <div class="status">@Model.StatusMessage</div>
+        <div class="status @(Model.StatusMessage.StartsWith("Error") || Model.StatusMessage.StartsWith("Failed") ? "error" : "ok")" style="margin-bottom: 20px;">
+            @Model.StatusMessage
+        </div>
     }
 
-    <section class="card" id="reorder">
-        <h2>Low Stock Reorder Suggestions</h2>
-        <table>
-            <thead>
-                <tr><th>Item</th><th>Stock</th><th>Reorder</th><th>Suggested</th><th>Est. Cost</th></tr>
-            </thead>
-            <tbody>
-            @foreach (var row in Model.ReorderSuggestions)
+    <!-- ── 1. KPI Metric Banner ──────────────────────────────────── -->
+    <div class="inv-kpi-grid">
+        <a href="#reorderSection" class="inv-kpi-card @(Model.Metrics.LowStockCount > 0 ? "active" : "")">
+            <div class="inv-kpi-icon amber">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+            <div class="inv-kpi-info">
+                <span class="inv-kpi-val">@Model.Metrics.LowStockCount</span>
+                <span class="inv-kpi-lbl">Low Stock SKUs</span>
+                <span class="inv-kpi-sub">@(Model.Metrics.OutOfStockCount > 0 ? $"{Model.Metrics.OutOfStockCount} out of stock" : "At or below reorder limit")</span>
+            </div>
+        </a>
+
+        <a href="?MovementType=" class="inv-kpi-card @(Model.MovementType == null && string.IsNullOrEmpty(Model.Search) ? "active" : "")">
+            <div class="inv-kpi-icon teal">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+            </div>
+            <div class="inv-kpi-info">
+                <span class="inv-kpi-val">@Model.Metrics.MovementsTodayCount</span>
+                <span class="inv-kpi-lbl">Movements (24h)</span>
+                <span class="inv-kpi-sub">@Model.TotalMovements total lifetime logs</span>
+            </div>
+        </a>
+
+        <a href="?MovementType=@((int)StockMovementType.Receive)" class="inv-kpi-card @(Model.MovementType == StockMovementType.Receive ? "active" : "")">
+            <div class="inv-kpi-icon green">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                </svg>
+            </div>
+            <div class="inv-kpi-info">
+                <span class="inv-kpi-val">+@Model.Metrics.TotalUnitsReceivedMtd</span>
+                <span class="inv-kpi-lbl">Goods Inward (MTD)</span>
+                <span class="inv-kpi-sub">Units received via GRN</span>
+            </div>
+        </a>
+
+        <a href="?MovementType=@((int)StockMovementType.Adjustment)" class="inv-kpi-card @(Model.MovementType == StockMovementType.Adjustment ? "active" : "")">
+            <div class="inv-kpi-icon purple">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 18h12l3-18H3zm6 6h6m-3-3v6" />
+                </svg>
+            </div>
+            <div class="inv-kpi-info">
+                <span class="inv-kpi-val">@(Model.Metrics.TotalAdjustmentVarianceMtd >= 0 ? "+" : "")@Model.Metrics.TotalAdjustmentVarianceMtd</span>
+                <span class="inv-kpi-lbl">Net Variance (MTD)</span>
+                <span class="inv-kpi-sub">Adjustments & returns delta</span>
+            </div>
+        </a>
+    </div>
+
+    <!-- ── 2. Toolbar & Filter Dock ──────────────────────────────── -->
+    <div class="inv-toolbar">
+        <form method="get" id="invFilterForm" class="inv-filter-group">
+            <div class="inv-search-box">
+                <svg class="inv-search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input type="search" name="Search" value="@Model.Search" placeholder="Search item, reason, or reference code..." />
+            </div>
+
+            <a href="?Search=@Uri.EscapeDataString(Model.Search ?? "")" class="inv-pill-btn @(Model.MovementType == null ? "active" : "")">All Movements</a>
+            <a href="?MovementType=@((int)StockMovementType.Receive)&Search=@Uri.EscapeDataString(Model.Search ?? "")" class="inv-pill-btn @(Model.MovementType == StockMovementType.Receive ? "active" : "")">GRN / Receipts</a>
+            <a href="?MovementType=@((int)StockMovementType.Adjustment)&Search=@Uri.EscapeDataString(Model.Search ?? "")" class="inv-pill-btn @(Model.MovementType == StockMovementType.Adjustment ? "active" : "")">Adjustments</a>
+            <a href="?MovementType=@((int)StockMovementType.Return)&Search=@Uri.EscapeDataString(Model.Search ?? "")" class="inv-pill-btn @(Model.MovementType == StockMovementType.Return ? "active" : "")">Returns</a>
+            <a href="?MovementType=@((int)StockMovementType.Transfer)&Search=@Uri.EscapeDataString(Model.Search ?? "")" class="inv-pill-btn @(Model.MovementType == StockMovementType.Transfer ? "active" : "")">Transfers</a>
+        </form>
+
+        <div class="inv-toolbar-actions">
+            <a href="?handler=ExportCsv&MovementType=@Model.MovementType&Search=@Uri.EscapeDataString(Model.Search ?? "")" class="button-secondary" style="display: inline-flex; align-items: center; gap: 6px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg> Export CSV
+            </a>
+
+            @if (Model.CanWrite)
             {
-                <tr>
-                    <td>@row.ItemName</td>
-                    <td>@row.CurrentStock</td>
-                    <td>@row.ReorderLevel</td>
-                    <td>@row.SuggestedOrderQuantity</td>
-                    <td>@row.EstimatedCost.ToString("N2")</td>
-                </tr>
+                <button type="button" class="button-secondary" onclick="openReturnModal()" style="display: inline-flex; align-items: center; gap: 6px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                    </svg> Return Stock
+                </button>
+
+                <button type="button" class="button-secondary" onclick="openAdjustModal()" style="display: inline-flex; align-items: center; gap: 6px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg> Quick Adjust
+                </button>
+
+                <button type="button" class="button-primary" onclick="openGrnModal()" style="display: inline-flex; align-items: center; gap: 6px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"/>
+                    </svg> Receive Goods (GRN)
+                </button>
             }
-            </tbody>
-        </table>
+        </div>
+    </div>
+
+    <!-- ── 3. Low Stock Reorder Monitoring ───────────────────────── -->
+    <section class="inv-card-section" id="reorderSection">
+        <div class="inv-section-header">
+            <h3 class="inv-section-title">
+                <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#d97706;"></span>
+                Low Stock & Reorder Alerts
+                <span class="badge badge-warning" style="font-size:0.75rem;">@Model.ReorderSuggestions.Count items</span>
+            </h3>
+            <span style="font-size:0.82rem; color:var(--text-secondary);">Automated replenishment recommendations based on configured minimum thresholds</span>
+        </div>
+
+        @if (!Model.ReorderSuggestions.Any())
+        {
+            <div style="padding: 24px; text-align: center; background: var(--canvas); border-radius: 8px; border: 1px dashed var(--border);">
+                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="margin: 0 auto 8px; color: #059669;">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div style="font-weight: 700; color: var(--text-primary);">All Stock Levels Healthy</div>
+                <div style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 2px;">No products are currently at or below their reorder levels.</div>
+            </div>
+        }
+        else
+        {
+            <div class="table-wrap" style="margin:0; border:none;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Item Details</th>
+                            <th>Stock vs. Threshold</th>
+                            <th>Current Level</th>
+                            <th>Suggested Order</th>
+                            <th>Est. Replenishment Cost</th>
+                            <th style="text-align: right;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in Model.ReorderSuggestions)
+                        {
+                            var ratio = row.ReorderLevel > 0 ? (double)row.CurrentStock / row.ReorderLevel : 0;
+                            var pct = Math.Min(100, Math.Max(0, (int)(ratio * 100)));
+                            var barClass = row.CurrentStock == 0 ? "danger" : row.CurrentStock <= row.ReorderLevel ? "warning" : "ok";
+
+                            <tr>
+                                <td>
+                                    <div>
+                                        <strong style="color:var(--text-primary);">@row.ItemName</strong>
+                                        <div style="display:flex; gap:6px; margin-top:3px; align-items:center;">
+                                            @if (!string.IsNullOrEmpty(row.CategoryName))
+                                            {
+                                                <span class="badge badge-neutral" style="font-size:0.70rem;">@row.CategoryName</span>
+                                            }
+                                            @if (!string.IsNullOrEmpty(row.Barcode))
+                                            {
+                                                <span class="code-badge">@row.Barcode</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </td>
+                                <td style="min-width: 160px;">
+                                    <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-secondary); margin-bottom:2px;">
+                                        <span>@row.CurrentStock in stock</span>
+                                        <span>Min: @row.ReorderLevel</span>
+                                    </div>
+                                    <div class="inv-stock-progress">
+                                        <div class="inv-stock-bar @barClass" style="width: @pct%;"></div>
+                                    </div>
+                                </td>
+                                <td>
+                                    @if (row.CurrentStock <= 0)
+                                    {
+                                        <span class="badge badge-danger">Out of Stock</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-warning">Low: @row.CurrentStock</span>
+                                    }
+                                </td>
+                                <td>
+                                    <strong style="color:var(--brand); font-size:0.95rem;">+@row.SuggestedOrderQuantity units</strong>
+                                </td>
+                                <td>
+                                    <div>
+                                        <strong style="color:var(--text-primary);">@row.EstimatedCost.ToString("N2") XAF</strong>
+                                        <div style="font-size:0.75rem; color:var(--text-muted);">@@ @row.UnitCost.ToString("N2") / unit</div>
+                                    </div>
+                                </td>
+                                <td style="text-align: right;">
+                                    <div style="display:inline-flex; gap:6px;">
+                                        <a href="/PurchaseOrders?createItemId=@row.ItemId&qty=@row.SuggestedOrderQuantity" class="btn-table-action primary" title="Generate Purchase Order Draft">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                            </svg> Quick PO
+                                        </a>
+                                        @if (Model.CanWrite)
+                                        {
+                                            <button type="button" class="btn-table-action" onclick="quickAdjustFor('@row.ItemId', '@row.ItemName.Replace("'", "\\'") ', @row.CurrentStock)" title="Adjust Stock">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                                </svg> Adjust
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
     </section>
 
-    @if (Model.CanWrite)
-    {
-        <section class="grid-3" id="actions">
-            <article class="card">
-                <h2>Goods Receipt</h2>
-                <form method="post" asp-page-handler="Receive">
-                    <label>Select Item *</label>
-                    <div class="smart-lookup-wrap" data-url="?handler=SearchItems" data-placeholder="Search item...">
-                        <input type="hidden" asp-for="ReceiveItemId" required />
-                    </div>
-                    <label>Quantity *</label>
-                    <input asp-for="ReceiveQuantity" type="number" min="1" required />
-                    <label>Unit Cost</label>
-                    <input asp-for="ReceiveUnitCost" type="number" step="0.01" min="0" placeholder="Optional unit cost" />
-                    <label>Reference</label>
-                    <input asp-for="ReceiveReference" placeholder="e.g. GRN-001" />
-                    <button type="submit">Post GRN</button>
-                </form>
-            </article>
+    <!-- ── 4. Stock Movement Audit Stream ────────────────────────── -->
+    <section class="inv-card-section">
+        <div class="inv-section-header">
+            <h3 class="inv-section-title">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color:var(--brand);">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Stock Movement Audit Trail
+                <span class="badge badge-neutral" style="font-size:0.75rem;">@Model.TotalMovements records</span>
+            </h3>
+        </div>
 
-            <article class="card">
-                <h2>Stock Return</h2>
-                <form method="post" asp-page-handler="Return">
-                    <label>Select Item *</label>
-                    <div class="smart-lookup-wrap" data-url="?handler=SearchItems" data-placeholder="Search item...">
-                        <input type="hidden" asp-for="ReturnItemId" required />
-                    </div>
-                    <label>Quantity *</label>
-                    <input asp-for="ReturnQuantity" type="number" min="1" required />
-                    <label>Reason *</label>
-                    <input asp-for="ReturnReason" required placeholder="Reason for return" />
-                    <button type="submit">Apply Return</button>
-                </form>
-            </article>
+        @if (!Model.Movements.Any())
+        {
+            <div class="empty-state" style="padding: 36px 20px; text-align: center;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="42" height="42" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="margin:0 auto 12px; color:var(--text-muted);">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                <h4 style="margin:0 0 6px 0; color:var(--text-primary);">No Stock Movements Found</h4>
+                <p style="color:var(--text-secondary); margin:0;">No transactions match your current search or movement filter.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-wrap" style="margin:0; border:none;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date & Time</th>
+                            <th>Item Name</th>
+                            <th>Movement Type</th>
+                            <th>Delta Qty</th>
+                            <th>Stock Flow</th>
+                            <th>Reference & Reason</th>
+                            <th>Auditor</th>
+                            <th style="text-align: right;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in Model.Movements)
+                        {
+                            var deltaClass = row.QuantityDelta > 0 ? "color:#059669;" : row.QuantityDelta < 0 ? "color:#dc2626;" : "color:var(--text-secondary);";
+                            var deltaPrefix = row.QuantityDelta > 0 ? "+" : "";
 
-            <article class="card">
-                <h2>Stock Adjustment</h2>
-                <form method="post" asp-page-handler="Adjust">
-                    <label>Select Item *</label>
-                    <div class="smart-lookup-wrap" data-url="?handler=SearchItems" data-placeholder="Search item...">
-                        <input type="hidden" asp-for="AdjustItemId" required />
-                    </div>
-                    <label>Delta (+/-) *</label>
-                    <input asp-for="QuantityDelta" type="number" required placeholder="e.g. -5 or 10" />
-                    <label>Reason *</label>
-                    <input asp-for="AdjustmentReason" required placeholder="e.g. Audit variance" />
-                    <button type="submit">Post Adjustment</button>
-                </form>
-            </article>
-        </section>
-    }
+                            <tr>
+                                <td>
+                                    <div style="font-size:0.85rem; font-weight:600; color:var(--text-primary);">@row.DateCreated.ToString("dd MMM yyyy")</div>
+                                    <div style="font-size:0.75rem; color:var(--text-muted);">@row.DateCreated.ToString("HH:mm:ss") UTC</div>
+                                </td>
+                                <td>
+                                    <strong style="color:var(--text-primary);">@row.ItemName</strong>
+                                </td>
+                                <td>
+                                    @if (row.MovementType == StockMovementType.Receive)
+                                    {
+                                        <span class="badge badge-success">Receive (GRN)</span>
+                                    }
+                                    else if (row.MovementType == StockMovementType.Return)
+                                    {
+                                        <span class="badge badge-teal" style="background:rgba(20, 184, 166, 0.12); color:#0d9488;">Return</span>
+                                    }
+                                    else if (row.MovementType == StockMovementType.Adjustment)
+                                    {
+                                        <span class="badge badge-purple" style="background:rgba(139, 92, 246, 0.12); color:#7c3aed;">Adjustment</span>
+                                    }
+                                    else if (row.MovementType == StockMovementType.Transfer)
+                                    {
+                                        <span class="badge badge-neutral">Transfer</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-danger">@row.MovementType</span>
+                                    }
+                                </td>
+                                <td>
+                                    <strong style="font-size:0.95rem; @deltaClass">@deltaPrefix@row.QuantityDelta</strong>
+                                </td>
+                                <td>
+                                    <span class="code-badge">@row.StockBefore ➔ @row.StockAfter</span>
+                                </td>
+                                <td>
+                                    <div>
+                                        @if (!string.IsNullOrEmpty(row.ReferenceCode))
+                                        {
+                                            <span class="code-badge" style="margin-bottom:2px; display:inline-block;">@row.ReferenceCode</span>
+                                        }
+                                        <div style="font-size:0.82rem; color:var(--text-secondary);">@(string.IsNullOrEmpty(row.Reason) ? "—" : row.Reason)</div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div style="display:flex; align-items:center; gap:6px;">
+                                        <div class="avatar" style="width:24px; height:24px; font-size:0.70rem; background:var(--brand-soft); color:var(--brand); display:flex; align-items:center; justify-content:center; border-radius:50%; font-weight:700;">
+                                            @((row.PerformedByUserName ?? "SYS")[..1].ToUpperInvariant())
+                                        </div>
+                                        <span style="font-size:0.84rem; color:var(--text-primary); font-weight:500;">@(row.PerformedByUserName ?? "System")</span>
+                                    </div>
+                                </td>
+                                <td style="text-align: right;">
+                                    @if (Model.CanWrite)
+                                    {
+                                        <button type="button" class="btn-table-action" onclick="quickAdjustFor('@row.ItemId', '@row.ItemName.Replace("'", "\\'") ', @row.StockAfter)" title="Adjust stock for this item">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                            </svg> Adjust
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
 
-    <section class="card" id="audit">
-        <h2>Stock Movement Audit Trail</h2>
-        <table>
-            <thead>
-                <tr><th>Date (UTC)</th><th>Item</th><th>Type</th><th>Delta</th><th>Before</th><th>After</th><th>Reason</th></tr>
-            </thead>
-            <tbody>
-            @foreach (var row in Model.Movements)
+            @if (Model.TotalPages > 1)
             {
-                <tr>
-                    <td>@row.DateCreated.ToString("yyyy-MM-dd HH:mm")</td>
-                    <td>@row.ItemName</td>
-                    <td>@row.MovementType</td>
-                    <td>@row.QuantityDelta</td>
-                    <td>@row.StockBefore</td>
-                    <td>@row.StockAfter</td>
-                    <td>@row.Reason</td>
-                </tr>
+                <div style="padding: 16px 0; display: flex; justify-content: center;">
+                    <nav class="pagination" aria-label="Movement audit pages">
+                        @if (Model.PageNumber > 1)
+                        {
+                            <a href="?page=@(Model.PageNumber - 1)&MovementType=@Model.MovementType&Search=@Uri.EscapeDataString(Model.Search ?? "")">‹ Prev</a>
+                        }
+                        <span class="active">@Model.PageNumber / @Model.TotalPages</span>
+                        @if (Model.PageNumber < Model.TotalPages)
+                        {
+                            <a href="?page=@(Model.PageNumber + 1)&MovementType=@Model.MovementType&Search=@Uri.EscapeDataString(Model.Search ?? "")">Next ›</a>
+                        }
+                    </nav>
+                </div>
             }
-            </tbody>
-        </table>
+        }
     </section>
 </div>
+
+<!-- ═════════════════════════════════════════════════════════════ -->
+<!-- ── MODAL 1: Goods Receipt Note (GRN) ──────────────────────── -->
+<!-- ═════════════════════════════════════════════════════════════ -->
+<div class="inv-modal-overlay" id="grnModalOverlay" onclick="closeGrnModal()"></div>
+<div class="inv-modal" id="grnModal">
+    <div class="inv-modal-header">
+        <h3 style="margin:0; font-size:1.15rem; color:var(--text-primary); display:flex; align-items:center; gap:8px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color:var(--brand);">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+            </svg> Post Goods Receipt Note (GRN)
+        </h3>
+        <button type="button" class="btn-close" onclick="closeGrnModal()" aria-label="Close">×</button>
+    </div>
+    <form method="post" asp-page-handler="Receive" id="grnForm">
+        @Html.AntiForgeryToken()
+        <div class="inv-modal-body">
+            <div>
+                <label for="grnItemSelect" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Select Item to Receive <span style="color:var(--danger);">*</span></label>
+                <select asp-for="ReceiveItemId" id="grnItemSelect" class="form-control" style="width:100%;" required onchange="onGrnItemChange(this)">
+                    <option value="">— Select Catalog Product —</option>
+                    @foreach (var item in Model.QuickItems)
+                    {
+                        <option value="@item.ItemId" data-stock="@item.InStock" data-cost="@(item.CostPrice ?? 0)">@item.Name (@item.InStock in stock)</option>
+                    }
+                </select>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+                <div>
+                    <label for="grnQty" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Quantity Received <span style="color:var(--danger);">*</span></label>
+                    <input asp-for="ReceiveQuantity" id="grnQty" type="number" min="1" class="form-control" style="width:100%;" required value="1" oninput="calculateGrnTotal()" />
+                </div>
+                <div>
+                    <label for="grnCost" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Unit Cost (XAF)</label>
+                    <input asp-for="ReceiveUnitCost" id="grnCost" type="number" step="0.01" min="0" class="form-control" style="width:100%;" placeholder="0.00" oninput="calculateGrnTotal()" />
+                </div>
+            </div>
+
+            <div class="inv-stock-live-banner">
+                <span style="color:var(--text-secondary);">Estimated Line Inward Valuation:</span>
+                <strong id="grnTotalDisplay" style="color:var(--brand); font-size:1.05rem;">0.00 XAF</strong>
+            </div>
+
+            <div>
+                <label for="grnRef" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Supplier Delivery / Invoice Reference</label>
+                <input asp-for="ReceiveReference" id="grnRef" class="form-control" style="width:100%;" placeholder="e.g. GRN-2026-0881 or INV-4491" />
+            </div>
+
+            <div>
+                <label for="grnNotes" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Receiving Notes</label>
+                <input asp-for="ReceiveNotes" id="grnNotes" class="form-control" style="width:100%;" placeholder="Optional notes (condition, carrier, inspection)..." />
+            </div>
+        </div>
+        <div class="inv-modal-footer">
+            <button type="button" class="button-secondary" onclick="closeGrnModal()">Cancel</button>
+            <button type="submit" class="button-primary">Post Inward GRN</button>
+        </div>
+    </form>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════════ -->
+<!-- ── MODAL 2: Quick Stock Adjustment (Benchmark Style) ──────── -->
+<!-- ═════════════════════════════════════════════════════════════ -->
+<div class="inv-modal-overlay" id="adjustModalOverlay" onclick="closeAdjustModal()"></div>
+<div class="inv-modal" id="adjustModal">
+    <div class="inv-modal-header">
+        <h3 style="margin:0; font-size:1.15rem; color:var(--text-primary); display:flex; align-items:center; gap:8px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color:#d97706;">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg> Quick Stock Adjustment
+        </h3>
+        <button type="button" class="btn-close" onclick="closeAdjustModal()" aria-label="Close">×</button>
+    </div>
+    <form method="post" asp-page-handler="Adjust" id="adjustForm">
+        @Html.AntiForgeryToken()
+        <div class="inv-modal-body">
+            <div>
+                <label for="adjustItemSelect" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Item to Adjust <span style="color:var(--danger);">*</span></label>
+                <select asp-for="AdjustItemId" id="adjustItemSelect" class="form-control" style="width:100%;" required onchange="onAdjustItemChange(this)">
+                    <option value="">— Select Catalog Product —</option>
+                    @foreach (var item in Model.QuickItems)
+                    {
+                        <option value="@item.ItemId" data-stock="@item.InStock">@item.Name (@item.InStock in stock)</option>
+                    }
+                </select>
+            </div>
+
+            <!-- Current On-Hand Banner -->
+            <div class="inv-stock-live-banner">
+                <span style="color:var(--text-secondary);">Current On-Hand Stock:</span>
+                <strong id="adjustCurrentStock" style="color:var(--text-primary); font-size:1.05rem;">0 units</strong>
+            </div>
+
+            <div>
+                <label for="adjustDelta" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Adjustment Quantity (+ or -) <span style="color:var(--danger);">*</span></label>
+                <input asp-for="QuantityDelta" id="adjustDelta" type="number" class="form-control" style="width:100%;" required placeholder="e.g. +5 or -2" oninput="calculateAdjustSim()" />
+                <div style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">Enter a positive number to add stock, or negative to deduct.</div>
+            </div>
+
+            <div>
+                <label for="adjustReason" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Reason Code <span style="color:var(--danger);">*</span></label>
+                <select asp-for="AdjustmentReason" id="adjustReason" class="form-control" style="width:100%;" required>
+                    <option value="Physical Count Correction">Physical Count Correction</option>
+                    <option value="Damaged / Broken in Warehouse">Damaged / Broken in Warehouse</option>
+                    <option value="Expired / Spoilage">Expired / Spoilage</option>
+                    <option value="Internal Sampling / Store Use">Internal Sampling / Store Use</option>
+                    <option value="Theft / Unexplained Loss">Theft / Unexplained Loss</option>
+                    <option value="Data Entry Correction">Data Entry Correction</option>
+                </select>
+            </div>
+
+            <!-- Live Simulation Banner -->
+            <div class="inv-stock-live-banner" style="background:var(--brand-soft); border-color:var(--brand-border);">
+                <span style="color:var(--text-primary); font-weight:600;">Simulated New Stock Level:</span>
+                <strong id="adjustSimulatedStock" style="color:var(--brand); font-size:1.10rem;">0 units</strong>
+            </div>
+        </div>
+        <div class="inv-modal-footer">
+            <button type="button" class="button-secondary" onclick="closeAdjustModal()">Cancel</button>
+            <button type="submit" class="button-primary">Save Adjustment</button>
+        </div>
+    </form>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════════ -->
+<!-- ── MODAL 3: Stock Return ─────────────────────────────────── -->
+<!-- ═════════════════════════════════════════════════════════════ -->
+<div class="inv-modal-overlay" id="returnModalOverlay" onclick="closeReturnModal()"></div>
+<div class="inv-modal" id="returnModal">
+    <div class="inv-modal-header">
+        <h3 style="margin:0; font-size:1.15rem; color:var(--text-primary); display:flex; align-items:center; gap:8px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color:#0d9488;">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+            </svg> Process Stock Return
+        </h3>
+        <button type="button" class="btn-close" onclick="closeReturnModal()" aria-label="Close">×</button>
+    </div>
+    <form method="post" asp-page-handler="Return" id="returnForm">
+        @Html.AntiForgeryToken()
+        <div class="inv-modal-body">
+            <div>
+                <label for="returnItemSelect" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Item to Return <span style="color:var(--danger);">*</span></label>
+                <select asp-for="ReturnItemId" id="returnItemSelect" class="form-control" style="width:100%;" required>
+                    <option value="">— Select Catalog Product —</option>
+                    @foreach (var item in Model.QuickItems)
+                    {
+                        <option value="@item.ItemId">@item.Name (@item.InStock in stock)</option>
+                    }
+                </select>
+            </div>
+
+            <div>
+                <label for="returnQty" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Quantity to Return <span style="color:var(--danger);">*</span></label>
+                <input asp-for="ReturnQuantity" id="returnQty" type="number" min="1" class="form-control" style="width:100%;" required value="1" />
+            </div>
+
+            <div>
+                <label for="returnReason" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Return Reason <span style="color:var(--danger);">*</span></label>
+                <select asp-for="ReturnReason" id="returnReason" class="form-control" style="width:100%;" required>
+                    <option value="Customer Return (Good Condition)">Customer Return (Good Condition)</option>
+                    <option value="Customer Return (Exchange)">Customer Return (Exchange)</option>
+                    <option value="Supplier RMA / Credit Return">Supplier RMA / Credit Return</option>
+                    <option value="Defective / Wrong Item Return">Defective / Wrong Item Return</option>
+                </select>
+            </div>
+        </div>
+        <div class="inv-modal-footer">
+            <button type="button" class="button-secondary" onclick="closeReturnModal()">Cancel</button>
+            <button type="submit" class="button-primary">Apply Return & Restore Stock</button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        // ── Modal Interactions ──────────────────────────────────────
+        function openGrnModal() {
+            document.getElementById('grnModalOverlay').classList.add('open');
+            document.getElementById('grnModal').classList.add('open');
+        }
+        function closeGrnModal() {
+            document.getElementById('grnModalOverlay').classList.remove('open');
+            document.getElementById('grnModal').classList.remove('open');
+        }
+
+        function openAdjustModal() {
+            document.getElementById('adjustModalOverlay').classList.add('open');
+            document.getElementById('adjustModal').classList.add('open');
+            calculateAdjustSim();
+        }
+        function closeAdjustModal() {
+            document.getElementById('adjustModalOverlay').classList.remove('open');
+            document.getElementById('adjustModal').classList.remove('open');
+        }
+
+        function openReturnModal() {
+            document.getElementById('returnModalOverlay').classList.add('open');
+            document.getElementById('returnModal').classList.add('open');
+        }
+        function closeReturnModal() {
+            document.getElementById('returnModalOverlay').classList.remove('open');
+            document.getElementById('returnModal').classList.remove('open');
+        }
+
+        // Close modals on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeGrnModal();
+                closeAdjustModal();
+                closeReturnModal();
+            }
+        });
+
+        // ── GRN Dynamic Calculations ────────────────────────────────
+        function onGrnItemChange(select) {
+            const opt = select.options[select.selectedIndex];
+            if (opt) {
+                const cost = opt.getAttribute('data-cost');
+                if (cost) {
+                    document.getElementById('grnCost').value = parseFloat(cost).toFixed(2);
+                }
+            }
+            calculateGrnTotal();
+        }
+
+        function calculateGrnTotal() {
+            const qty = parseFloat(document.getElementById('grnQty').value) || 0;
+            const cost = parseFloat(document.getElementById('grnCost').value) || 0;
+            const total = qty * cost;
+            document.getElementById('grnTotalDisplay').textContent = total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' XAF';
+        }
+
+        // ── Quick Adjustment Dynamic Calculations ───────────────────
+        let currentAdjustBaseStock = 0;
+
+        function onAdjustItemChange(select) {
+            const opt = select.options[select.selectedIndex];
+            if (opt && opt.value) {
+                currentAdjustBaseStock = parseInt(opt.getAttribute('data-stock')) || 0;
+            } else {
+                currentAdjustBaseStock = 0;
+            }
+            document.getElementById('adjustCurrentStock').textContent = currentAdjustBaseStock + ' units';
+            calculateAdjustSim();
+        }
+
+        function calculateAdjustSim() {
+            const delta = parseInt(document.getElementById('adjustDelta').value) || 0;
+            const newStock = currentAdjustBaseStock + delta;
+            const simEl = document.getElementById('adjustSimulatedStock');
+            simEl.textContent = newStock + ' units';
+            if (newStock < 0) {
+                simEl.style.color = '#dc2626';
+            } else {
+                simEl.style.color = 'var(--brand)';
+            }
+        }
+
+        function quickAdjustFor(itemId, itemName, currentStock) {
+            const sel = document.getElementById('adjustItemSelect');
+            sel.value = itemId;
+            currentAdjustBaseStock = currentStock;
+            document.getElementById('adjustCurrentStock').textContent = currentStock + ' units';
+            document.getElementById('adjustDelta').value = '';
+            calculateAdjustSim();
+            openAdjustModal();
+        }
+    </script>
+}

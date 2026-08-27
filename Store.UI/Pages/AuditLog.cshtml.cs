@@ -33,11 +33,11 @@ public class AuditLogModel : SecurePageModel
         CurrentPage = Math.Max(1, page);
         TypeFilter = type;
 
-        var typeParam = type.HasValue ? $"&type={(int)type.Value}" : string.Empty;
+        var typeParam = type.HasValue ? $"&movementType={(int)type.Value}" : string.Empty;
         var url = $"/api/inventory/movements?page={CurrentPage}&pageSize={PageSize}{typeParam}";
 
-        var movements = await _apiClient.GetAsync<List<StockMovementDto>>(url, ct);
-        Movements = (IReadOnlyList<StockMovementDto>?)movements?.AsReadOnly() ?? Array.Empty<StockMovementDto>();
+        var result = await _apiClient.GetAsync<Store.Models.DTOs.Common.PagedResult<StockMovementDto>>(url, ct);
+        Movements = result?.Items?.ToList() ?? new List<StockMovementDto>();
 
         return Page();
     }

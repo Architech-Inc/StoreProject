@@ -6,6 +6,8 @@ namespace Store.Models.Interfaces.Services;
 public interface IStoreOperationsService
 {
     Task<IReadOnlyList<StockMovementDto>> GetStockMovementsAsync(int page, int pageSize, StockMovementType? type = null, CancellationToken ct = default);
+    Task<Store.Models.DTOs.Common.PagedResult<StockMovementDto>> GetStockMovementsPagedAsync(StockMovementFilterRequest request, CancellationToken ct = default);
+    Task<InventoryMetricsDto> GetInventoryMetricsAsync(CancellationToken ct = default);
     Task<InventoryOperationResultDto> ReceiveGoodsAsync(GoodsReceiptRequest request, Guid? actingUserId, CancellationToken ct = default);
     Task<InventoryOperationResultDto> ProcessReturnAsync(StockReturnRequest request, Guid? actingUserId, CancellationToken ct = default);
     Task<InventoryOperationResultDto> AdjustStockAsync(StockAdjustmentAuditRequest request, Guid? actingUserId, CancellationToken ct = default);

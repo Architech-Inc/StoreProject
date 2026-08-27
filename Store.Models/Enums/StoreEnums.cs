@@ -86,7 +86,9 @@ public enum StockMovementType
     Sale,
     Return,
     Adjustment,
-    Void
+    Void,
+    Transfer,
+    Wastage
 }
 
 public enum CustomerSegment

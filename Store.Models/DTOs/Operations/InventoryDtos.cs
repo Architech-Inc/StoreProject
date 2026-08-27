@@ -74,9 +74,29 @@ public class ReorderSuggestionDto
 {
     public Guid ItemId { get; set; }
     public string ItemName { get; set; } = string.Empty;
+    public string? Barcode { get; set; }
+    public string? CategoryName { get; set; }
     public int CurrentStock { get; set; }
     public int ReorderLevel { get; set; }
     public int SuggestedOrderQuantity { get; set; }
     public decimal UnitCost { get; set; }
     public decimal EstimatedCost { get; set; }
+}
+
+public class InventoryMetricsDto
+{
+    public int LowStockCount { get; set; }
+    public int OutOfStockCount { get; set; }
+    public int MovementsTodayCount { get; set; }
+    public int TotalUnitsReceivedMtd { get; set; }
+    public int TotalAdjustmentVarianceMtd { get; set; }
+    public int TotalTrackedSkus { get; set; }
+}
+
+public class StockMovementFilterRequest : Common.PagedRequest
+{
+    public StockMovementType? MovementType { get; set; }
+    public DateTime? FromDate { get; set; }
+    public DateTime? ToDate { get; set; }
+    public Guid? ItemId { get; set; }
 }

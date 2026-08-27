@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Operations;
 using Store.Models.Entities;
 using Store.Models.Enums;
@@ -19,18 +20,49 @@ public class StoreOperationsService : IStoreOperationsService
 
     public async Task<IReadOnlyList<StockMovementDto>> GetStockMovementsAsync(int page, int pageSize, StockMovementType? type = null, CancellationToken ct = default)
     {
-        page = Math.Max(1, page);
-        pageSize = Math.Clamp(pageSize, 1, 500);
+        var result = await GetStockMovementsPagedAsync(new StockMovementFilterRequest
+        {
+            Page = page,
+            PageSize = pageSize,
+            MovementType = type
+        }, ct);
+        return result.Items.ToList();
+    }
+
+    public async Task<PagedResult<StockMovementDto>> GetStockMovementsPagedAsync(StockMovementFilterRequest request, CancellationToken ct = default)
+    {
+        var page = Math.Max(1, request.Page);
+        var pageSize = Math.Clamp(request.PageSize, 1, 500);
 
         var query = _uow.Repository<StockMovement>().Query()
             .Include(x => x.Item)
             .Include(x => x.PerformedByUser)
             .AsNoTracking();
 
-        if (type.HasValue)
-            query = query.Where(x => x.MovementType == type.Value);
+        if (request.MovementType.HasValue)
+            query = query.Where(x => x.MovementType == request.MovementType.Value);
 
-        var rows = await query
+        if (request.ItemId.HasValue)
+            query = query.Where(x => x.ItemId == request.ItemId.Value);
+
+        if (request.FromDate.HasValue)
+            query = query.Where(x => x.DateCreated >= request.FromDate.Value);
+
+        if (request.ToDate.HasValue)
+            query = query.Where(x => x.DateCreated <= request.ToDate.Value);
+
+        if (!string.IsNullOrWhiteSpace(request.SearchTerm))
+        {
+            var term = request.SearchTerm.Trim();
+            query = query.Where(x => x.Item.Name.Contains(term) ||
+                                     (x.Reason != null && x.Reason.Contains(term)) ||
+                                     (x.ReferenceCode != null && x.ReferenceCode.Contains(term)) ||
+                                     (x.PerformedByUser != null && x.PerformedByUser.Username.Contains(term)));
+        }
+
+        var total = await query.CountAsync(ct);
+
+        var items = await query
             .OrderByDescending(x => x.DateCreated)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
@@ -50,7 +82,38 @@ public class StoreOperationsService : IStoreOperationsService
             })
             .ToListAsync(ct);
 
-        return rows;
+        return new PagedResult<StockMovementDto>(items, total, page, pageSize);
+    }
+
+    public async Task<InventoryMetricsDto> GetInventoryMetricsAsync(CancellationToken ct = default)
+    {
+        var itemsQuery = _uow.Repository<Item>().Query().AsNoTracking();
+        var lowStockCount = await itemsQuery.CountAsync(i => i.IsActive && i.InStock > 0 && i.ReorderLevel.HasValue && i.InStock <= i.ReorderLevel.Value, ct);
+        var outOfStockCount = await itemsQuery.CountAsync(i => i.IsActive && i.InStock <= 0, ct);
+        var totalSkus = await itemsQuery.CountAsync(i => i.IsActive, ct);
+
+        var todayUtc = DateTime.UtcNow.Date;
+        var monthStartUtc = new DateTime(todayUtc.Year, todayUtc.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        var movementsQuery = _uow.Repository<StockMovement>().Query().AsNoTracking();
+        var movementsToday = await movementsQuery.CountAsync(m => m.DateCreated >= todayUtc, ct);
+        var unitsReceivedMtd = await movementsQuery
+            .Where(m => m.MovementType == StockMovementType.Receive && m.DateCreated >= monthStartUtc)
+            .SumAsync(m => (int?)m.QuantityDelta, ct) ?? 0;
+
+        var adjustmentVarianceMtd = await movementsQuery
+            .Where(m => (m.MovementType == StockMovementType.Adjustment || m.MovementType == StockMovementType.Return) && m.DateCreated >= monthStartUtc)
+            .SumAsync(m => (int?)m.QuantityDelta, ct) ?? 0;
+
+        return new InventoryMetricsDto
+        {
+            LowStockCount = lowStockCount,
+            OutOfStockCount = outOfStockCount,
+            MovementsTodayCount = movementsToday,
+            TotalUnitsReceivedMtd = unitsReceivedMtd,
+            TotalAdjustmentVarianceMtd = adjustmentVarianceMtd,
+            TotalTrackedSkus = totalSkus
+        };
     }
 
     public async Task<InventoryOperationResultDto> ReceiveGoodsAsync(GoodsReceiptRequest request, Guid? actingUserId, CancellationToken ct = default)
@@ -206,6 +269,7 @@ public class StoreOperationsService : IStoreOperationsService
     public async Task<IReadOnlyList<ReorderSuggestionDto>> GetLowStockReorderSuggestionsAsync(CancellationToken ct = default)
     {
         var items = await _uow.Repository<Item>().Query()
+            .Include(i => i.Category)
             .AsNoTracking()
             .Where(i => i.IsActive && i.ReorderLevel.HasValue && i.InStock <= i.ReorderLevel.Value)
             .OrderBy(i => i.InStock)
@@ -220,6 +284,8 @@ public class StoreOperationsService : IStoreOperationsService
             {
                 ItemId = i.ItemId,
                 ItemName = i.Name,
+                Barcode = i.Barcode,
+                CategoryName = i.Category?.Name,
                 CurrentStock = i.InStock,
                 ReorderLevel = reorderLevel,
                 SuggestedOrderQuantity = suggested,
