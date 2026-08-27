@@ -47,9 +47,6 @@ public class StockTransferService : IStockTransferService
             .Include(t => t.FromBranch)
             .Include(t => t.ToBranch)
             .Include(t => t.RequestedByUser)
-            .Include(t => t.ApprovedByUser)
-            .Include(t => t.DispatchedByUser)
-            .Include(t => t.ReceivedByUser)
             .Include(t => t.Items).ThenInclude(i => i.Item).ThenInclude(it => it.Category)
             .AsQueryable();
 
@@ -118,9 +115,6 @@ public class StockTransferService : IStockTransferService
             .Include(t => t.FromBranch)
             .Include(t => t.ToBranch)
             .Include(t => t.RequestedByUser)
-            .Include(t => t.ApprovedByUser)
-            .Include(t => t.DispatchedByUser)
-            .Include(t => t.ReceivedByUser)
             .Include(t => t.Items).ThenInclude(i => i.Item).ThenInclude(it => it.Category)
             .AsQueryable();
 
@@ -141,9 +135,6 @@ public class StockTransferService : IStockTransferService
             .Include(t => t.FromBranch)
             .Include(t => t.ToBranch)
             .Include(t => t.RequestedByUser)
-            .Include(t => t.ApprovedByUser)
-            .Include(t => t.DispatchedByUser)
-            .Include(t => t.ReceivedByUser)
             .Include(t => t.Items).ThenInclude(i => i.Item).ThenInclude(it => it.Category)
             .FirstOrDefaultAsync(t => t.StockTransferId == id);
 
@@ -254,7 +245,7 @@ public class StockTransferService : IStockTransferService
                         StockBefore = stockBefore,
                         StockAfter = catalogItem.InStock,
                         UnitCost = catalogItem.CostPrice,
-                        UnitPrice = catalogItem.Price,
+                        UnitPrice = catalogItem.UnitPrice,
                         Reason = $"Stock Transfer #{transfer.StockTransferId} Dispatched to Branch #{transfer.ToBranchId}",
                         ReferenceCode = $"TRF-{transfer.StockTransferId}-OUT",
                         PerformedByUserId = dispatchedByUserId != Guid.Empty ? dispatchedByUserId : null
@@ -315,7 +306,7 @@ public class StockTransferService : IStockTransferService
                         StockBefore = stockBefore,
                         StockAfter = catalogItem.InStock,
                         UnitCost = catalogItem.CostPrice,
-                        UnitPrice = catalogItem.Price,
+                        UnitPrice = catalogItem.UnitPrice,
                         Reason = $"Stock Transfer #{transfer.StockTransferId} Received from Branch #{transfer.FromBranchId}",
                         ReferenceCode = $"TRF-{transfer.StockTransferId}-IN",
                         PerformedByUserId = receivedByUserId != Guid.Empty ? receivedByUserId : null
@@ -362,9 +353,6 @@ public class StockTransferService : IStockTransferService
         ToBranchId = t.ToBranchId,
         ToBranchName = t.ToBranch?.Name ?? string.Empty,
         RequestedByUser = t.RequestedByUser?.Username ?? string.Empty,
-        ApprovedByUser = t.ApprovedByUser?.Username,
-        DispatchedByUser = t.DispatchedByUser?.Username,
-        ReceivedByUser = t.ReceivedByUser?.Username,
         Status = t.Status.ToString(),
         Notes = t.Notes,
         RejectionReason = t.RejectionReason,
