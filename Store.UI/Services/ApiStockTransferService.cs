@@ -1,3 +1,4 @@
+using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Transfers;
 using Store.Models.Interfaces.Services;
 
@@ -8,6 +9,30 @@ public class ApiStockTransferService : IStockTransferService
     private readonly IApiClientService _client;
 
     public ApiStockTransferService(IApiClientService client) => _client = client;
+
+    public async Task<TransferMetricsDto> GetTransferMetricsAsync(CancellationToken ct = default)
+    {
+        var result = await _client.GetAsync<TransferMetricsDto>("/api/stocktransfers/metrics", ct);
+        return result ?? new TransferMetricsDto();
+    }
+
+    public async Task<PagedResult<StockTransferDto>> GetTransfersPagedAsync(TransferFilterRequest request, CancellationToken ct = default)
+    {
+        var qs = new List<string>
+        {
+            $"page={request.Page}",
+            $"pageSize={request.PageSize}"
+        };
+        if (request.BranchId.HasValue) qs.Add($"branchId={request.BranchId.Value}");
+        if (!string.IsNullOrWhiteSpace(request.Status)) qs.Add($"status={Uri.EscapeDataString(request.Status)}");
+        if (!string.IsNullOrWhiteSpace(request.SearchTerm)) qs.Add($"searchTerm={Uri.EscapeDataString(request.SearchTerm)}");
+        if (request.FromDate.HasValue) qs.Add($"fromDate={Uri.EscapeDataString(request.FromDate.Value.ToString("O"))}");
+        if (request.ToDate.HasValue) qs.Add($"toDate={Uri.EscapeDataString(request.ToDate.Value.ToString("O"))}");
+
+        var query = "?" + string.Join("&", qs);
+        var result = await _client.GetAsync<PagedResult<StockTransferDto>>($"/api/stocktransfers/paged{query}", ct);
+        return result ?? new PagedResult<StockTransferDto>();
+    }
 
     public async Task<List<StockTransferDto>> GetAllAsync(int? branchId = null, string? status = null)
     {

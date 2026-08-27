@@ -1,9 +1,12 @@
+using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Transfers;
 
 namespace Store.Models.Interfaces.Services;
 
 public interface IStockTransferService
 {
+    Task<TransferMetricsDto> GetTransferMetricsAsync(CancellationToken ct = default);
+    Task<PagedResult<StockTransferDto>> GetTransfersPagedAsync(TransferFilterRequest request, CancellationToken ct = default);
     Task<List<StockTransferDto>> GetAllAsync(int? branchId = null, string? status = null);
     Task<StockTransferDto?> GetByIdAsync(int id);
     Task<StockTransferDto> CreateAsync(CreateTransferRequest request, Guid requestedByUserId);

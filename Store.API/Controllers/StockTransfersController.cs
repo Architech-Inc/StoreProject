@@ -26,6 +26,22 @@ public class StockTransfersController : ControllerBase
         return Ok(ApiResponse<List<StockTransferDto>>.Ok(list));
     }
 
+    [HttpGet("paged")]
+    [Authorize(Policy = PermissionKeys.InventoryRead)]
+    public async Task<IActionResult> GetPaged([FromQuery] TransferFilterRequest request, CancellationToken ct = default)
+    {
+        var result = await _transferService.GetTransfersPagedAsync(request, ct);
+        return Ok(ApiResponse<PagedResult<StockTransferDto>>.Ok(result));
+    }
+
+    [HttpGet("metrics")]
+    [Authorize(Policy = PermissionKeys.InventoryRead)]
+    public async Task<IActionResult> GetMetrics(CancellationToken ct = default)
+    {
+        var metrics = await _transferService.GetTransferMetricsAsync(ct);
+        return Ok(ApiResponse<TransferMetricsDto>.Ok(metrics));
+    }
+
     [HttpGet("{id:int}")]
     [Authorize(Policy = PermissionKeys.InventoryRead)]
     public async Task<IActionResult> GetById(int id)

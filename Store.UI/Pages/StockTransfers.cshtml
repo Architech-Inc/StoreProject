@@ -2,401 +2,1308 @@
 @model StoreUI.Pages.StockTransfersModel
 @{
     ViewData["Title"] = "Stock Transfers";
-    ViewData["PageDescription"] = "Request, approve, dispatch, and receive inter-branch stock transfers.";
     ViewData["ActivePage"] = "StockTransfers";
+    ViewData["PageDescription"] = "Request, approve, dispatch, and receive inter-branch stock consignments.";
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
+    <style>
+        /* ── Stock Transfers Scoped & Standardized Styles ── */
+        .transfer-container {
+            max-width: 1440px;
+            margin: 0 auto;
+            color: var(--text-primary);
+        }
+
+        /* ── 1. KPI Grid ── */
+        .transfer-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .transfer-kpi-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg, 12px);
+            padding: 18px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.05));
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .transfer-kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,0.08));
+            border-color: var(--brand-border, #b7d9b7);
+        }
+
+        .transfer-kpi-card.active {
+            border-color: var(--brand);
+            background: var(--brand-soft);
+        }
+
+        .transfer-kpi-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .transfer-kpi-icon.amber  { background: rgba(245, 158, 11, 0.12); color: #d97706; }
+        .transfer-kpi-icon.purple { background: rgba(147, 51, 234, 0.12); color: #9333ea; }
+        .transfer-kpi-icon.green  { background: var(--brand-soft, rgba(1, 156, 1, 0.12)); color: var(--brand, #019c01); }
+        .transfer-kpi-icon.teal   { background: rgba(20, 184, 166, 0.12); color: #0d9488; }
+
+        .transfer-kpi-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .transfer-kpi-val {
+            font-size: 1.45rem;
+            font-weight: 700;
+            line-height: 1.2;
+            color: var(--text-primary);
+        }
+
+        .transfer-kpi-lbl {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 700;
+            margin-top: 2px;
+        }
+
+        .transfer-kpi-sub {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* ── 2. Toolbar & Filter Dock ── */
+        .transfer-toolbar {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg, 12px);
+            padding: 14px 18px;
+            margin-bottom: 24px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.05));
+        }
+
+        .transfer-filter-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            flex-grow: 1;
+        }
+
+        .transfer-search-box {
+            position: relative;
+            min-width: 220px;
+            flex-grow: 1;
+            max-width: 320px;
+        }
+
+        .transfer-search-box input {
+            width: 100%;
+            padding: 8px 12px 8px 36px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--canvas);
+            color: var(--text-primary);
+            font-size: 0.88rem;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .transfer-search-box input:focus {
+            background: var(--surface);
+            border-color: var(--brand);
+            box-shadow: 0 0 0 3px var(--brand-glow, rgba(1, 156, 1, 0.2));
+        }
+
+        .transfer-search-icon {
+            position: absolute;
+            left: 11px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            pointer-events: none;
+        }
+
+        .transfer-pill-btn {
+            padding: 6px 13px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-secondary);
+            font-size: 0.82rem;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+        }
+
+        .transfer-pill-btn:hover {
+            border-color: var(--brand);
+            color: var(--brand);
+        }
+
+        .transfer-pill-btn.active {
+            background: var(--brand);
+            color: #ffffff !important;
+            border-color: var(--brand);
+            font-weight: 600;
+        }
+
+        .transfer-toolbar-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        /* ── 3. Cards & Tables ── */
+        .transfer-card-section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg, 12px);
+            padding: 20px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.05));
+        }
+
+        .transfer-section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .transfer-section-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0;
+        }
+
+        .route-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .route-arrow {
+            color: var(--brand);
+            font-size: 0.85rem;
+        }
+
+        .btn-table-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 5px 9px;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            text-decoration: none;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+
+        .btn-table-action:hover {
+            border-color: var(--brand);
+            color: var(--brand);
+            background: var(--brand-soft);
+        }
+
+        .btn-table-action.primary {
+            background: var(--brand);
+            color: #ffffff;
+            border-color: var(--brand);
+        }
+
+        .btn-table-action.primary:hover {
+            background: var(--brand-dark, #017a01);
+            color: #ffffff;
+        }
+
+        .btn-table-action.danger:hover {
+            border-color: #dc2626;
+            color: #dc2626;
+            background: rgba(220, 38, 38, 0.08);
+        }
+
+        .btn-table-action.purple {
+            background: rgba(147, 51, 234, 0.10);
+            color: #9333ea;
+            border-color: rgba(147, 51, 234, 0.3);
+        }
+
+        .btn-table-action.purple:hover {
+            background: #9333ea;
+            color: #ffffff;
+        }
+
+        /* ── 4. Standard Layered Modals ── */
+        .transfer-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(15, 23, 42, 0.45);
+            backdrop-filter: blur(4px);
+            z-index: 290;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .transfer-modal-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .transfer-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -46%) scale(0.97);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            width: 90%;
+            max-width: 640px;
+            max-height: 90vh;
+            overflow-y: auto;
+            z-index: 300;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18);
+            opacity: 0;
+            pointer-events: none;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+        }
+
+        .transfer-modal.open {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .transfer-modal-header {
+            padding: 18px 22px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .transfer-modal-body {
+            padding: 22px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .transfer-modal-footer {
+            padding: 16px 22px;
+            border-top: 1px solid var(--border);
+            background: var(--surface-alt, #f8fafc);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            border-bottom-left-radius: 14px;
+            border-bottom-right-radius: 14px;
+        }
+
+        .transfer-live-banner {
+            background: var(--canvas);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.88rem;
+        }
+
+        .code-badge {
+            font-family: 'Cascadia Code', Consolas, monospace;
+            font-size: 0.78rem;
+            background: var(--canvas);
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+
+        /* ── 5. Printable Waybill Sheet ── */
+        .waybill-sheet {
+            background: #ffffff;
+            color: #0f172a;
+            padding: 24px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            font-size: 0.90rem;
+        }
+
+        .waybill-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #019c01;
+            padding-bottom: 14px;
+            margin-bottom: 16px;
+        }
+
+        .waybill-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-bottom: 16px;
+            background: #f8fafc;
+            padding: 12px;
+            border-radius: 6px;
+        }
+
+        .waybill-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .waybill-table th {
+            background: #f1f5f9;
+            padding: 8px;
+            text-align: left;
+            font-size: 0.80rem;
+            border-bottom: 1px solid #cbd5e1;
+        }
+
+        .waybill-table td {
+            padding: 8px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 0.85rem;
+        }
+
+        .waybill-signatures {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-top: 24px;
+            padding-top: 16px;
+            border-top: 1px dashed #cbd5e1;
+        }
+
+        .sig-block {
+            border-top: 1px solid #94a3b8;
+            padding-top: 6px;
+            text-align: center;
+            font-size: 0.78rem;
+            color: #64748b;
+        }
+
+        @@media print {
+            body * { visibility: hidden; }
+            #printableWaybillContent, #printableWaybillContent * { visibility: visible; }
+            #printableWaybillContent { position: absolute; left: 0; top: 0; width: 100%; }
+        }
+    </style>
 }
 
-<div class="panel">
-    
+<div class="transfer-container">
 
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="status @(Model.StatusMessage.StartsWith("Error") || Model.StatusMessage.StartsWith("Failed") ? "error" : "ok")" style="margin-bottom: 20px;">
+            @Model.StatusMessage
+        </div>
+    }
 
+    <!-- ── 1. KPI Metric Banner ──────────────────────────────────── -->
+    <div class="transfer-kpi-grid">
+        <a href="?Status=Requested" class="transfer-kpi-card @(Model.Status == "Requested" ? "active" : "")">
+            <div class="transfer-kpi-icon amber">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div class="transfer-kpi-info">
+                <span class="transfer-kpi-val">@Model.Metrics.TotalRequested</span>
+                <span class="transfer-kpi-lbl">Pending Approval</span>
+                <span class="transfer-kpi-sub">Awaiting branch authorization</span>
+            </div>
+        </a>
 
-    <!-- Filter bar -->
-    <form method="get" style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
-        <select name="status" class="input-text" style="min-width:160px;">
-            <option value="" selected="@(Model.FilterStatus == null)">All Statuses</option>
-            <option value="Requested" selected="@(Model.FilterStatus == "Requested")">Requested</option>
-            <option value="Approved" selected="@(Model.FilterStatus == "Approved")">Approved</option>
-            <option value="Dispatched" selected="@(Model.FilterStatus == "Dispatched")">Dispatched</option>
-            <option value="Received" selected="@(Model.FilterStatus == "Received")">Received</option>
-            <option value="Cancelled" selected="@(Model.FilterStatus == "Cancelled")">Cancelled</option>
-        </select>
-        <button type="submit" class="button-secondary">Filter</button>
-    </form>
+        <a href="?Status=Dispatched" class="transfer-kpi-card @(Model.Status == "Dispatched" ? "active" : "")">
+            <div class="transfer-kpi-icon purple">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
+                </svg>
+            </div>
+            <div class="transfer-kpi-info">
+                <span class="transfer-kpi-val" style="color:#9333ea;">@Model.Metrics.TotalInTransit</span>
+                <span class="transfer-kpi-lbl">In-Transit Consignments</span>
+                <span class="transfer-kpi-sub">Active goods on the road</span>
+            </div>
+        </a>
 
-    <section class="card-resource">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-            <h2 style="font-size: var(--fontSize-heading-sm); margin:0;">Transfers <small style="font-weight:400;color:var(--text-secondary);">@Model.Transfers.Count total</small></h2>
-            <button type="button" class="button-primary" onclick="window.openBlade('createBlade')">+ New Transfer</button>
+        <a href="?Status=Received" class="transfer-kpi-card @(Model.Status == "Received" ? "active" : "")">
+            <div class="transfer-kpi-icon green">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div class="transfer-kpi-info">
+                <span class="transfer-kpi-val">@Model.Metrics.TotalReceived</span>
+                <span class="transfer-kpi-lbl">Completed Transfers</span>
+                <span class="transfer-kpi-sub">@Model.Metrics.TotalTransferredUnits units delivered</span>
+            </div>
+        </a>
+
+        <div class="transfer-kpi-card">
+            <div class="transfer-kpi-icon teal">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div class="transfer-kpi-info">
+                <span class="transfer-kpi-val">@Model.Metrics.TotalInTransitValuationXaf.ToString("N0") <small style="font-size:0.80rem; font-weight:500;">XAF</small></span>
+                <span class="transfer-kpi-lbl">In-Transit Valuation</span>
+                <span class="transfer-kpi-sub">Capital currently in logistics</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── 2. Toolbar & Filter Dock ──────────────────────────────── -->
+    <div class="transfer-toolbar">
+        <form method="get" id="transferFilterForm" class="transfer-filter-group">
+            <div class="transfer-search-box">
+                <svg class="transfer-search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input type="search" name="Search" value="@Model.Search" placeholder="Search transfer #, branch, item, requester..." />
+            </div>
+
+            <select name="BranchId" class="input-text" style="font-size:0.84rem; padding:6px 10px; min-width:140px;" onchange="this.form.submit()">
+                <option value="">All Branches</option>
+                @foreach (var b in Model.QuickBranches)
+                {
+                    <option value="@b.BranchId" selected="@(Model.BranchId == b.BranchId)">@b.Name</option>
+                }
+            </select>
+
+            <a href="?Search=@Uri.EscapeDataString(Model.Search ?? "")&BranchId=@Model.BranchId" class="transfer-pill-btn @(string.IsNullOrEmpty(Model.Status) ? "active" : "")">All</a>
+            <a href="?Status=Requested&Search=@Uri.EscapeDataString(Model.Search ?? "")&BranchId=@Model.BranchId" class="transfer-pill-btn @(Model.Status == "Requested" ? "active" : "")">Requested</a>
+            <a href="?Status=Approved&Search=@Uri.EscapeDataString(Model.Search ?? "")&BranchId=@Model.BranchId" class="transfer-pill-btn @(Model.Status == "Approved" ? "active" : "")">Approved</a>
+            <a href="?Status=Dispatched&Search=@Uri.EscapeDataString(Model.Search ?? "")&BranchId=@Model.BranchId" class="transfer-pill-btn @(Model.Status == "Dispatched" ? "active" : "")">In-Transit</a>
+            <a href="?Status=Received&Search=@Uri.EscapeDataString(Model.Search ?? "")&BranchId=@Model.BranchId" class="transfer-pill-btn @(Model.Status == "Received" ? "active" : "")">Received</a>
+            <a href="?Status=Cancelled&Search=@Uri.EscapeDataString(Model.Search ?? "")&BranchId=@Model.BranchId" class="transfer-pill-btn @(Model.Status == "Cancelled" ? "active" : "")">Cancelled</a>
+        </form>
+
+        <div class="transfer-toolbar-actions">
+            <a href="?handler=ExportCsv&Status=@Model.Status&BranchId=@Model.BranchId&Search=@Uri.EscapeDataString(Model.Search ?? "")" class="button-secondary" style="display: inline-flex; align-items: center; gap: 6px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg> Export CSV
+            </a>
+
+            @if (Model.CanWrite)
+            {
+                <button type="button" class="button-primary" onclick="openCreateTransferModal()" style="display: inline-flex; align-items: center; gap: 6px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"/>
+                    </svg> + New Transfer
+                </button>
+            }
+        </div>
+    </div>
+
+    <!-- ── 3. Transfers Data Table ───────────────────────────────── -->
+    <section class="transfer-card-section">
+        <div class="transfer-section-header">
+            <h3 class="transfer-section-title">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color:var(--brand);">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                </svg>
+                Inter-Branch Stock Movement Stream
+                <span class="badge badge-neutral" style="font-size:0.75rem;">@Model.TotalTransfers consignments</span>
+            </h3>
         </div>
 
         @if (!Model.Transfers.Any())
         {
-            <div class="empty-state">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div class="empty-state" style="padding: 36px 20px; text-align: center;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="42" height="42" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="margin:0 auto 12px; color:var(--text-muted);">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                 </svg>
-                <h4>No Transfers Found</h4>
-                <p>There are no stock transfers matching the current criteria. You can create a new transfer to get started.</p>
+                <h4 style="margin:0 0 6px 0; color:var(--text-primary);">No Transfers Found</h4>
+                <p style="color:var(--text-secondary); margin:0;">No stock transfer records match your current filter parameters.</p>
             </div>
         }
         else
         {
-            <div style="overflow-x:auto;">
-                <table class="table">
-                    <thead style="background-color: var(--surface);">
+            <div class="table-wrap" style="margin:0; border:none;">
+                <table>
+                    <thead>
                         <tr>
-                            <th style="padding: 0 8px;">#</th>
-                            <th style="padding: 0 8px;">From</th>
-                            <th style="padding: 0 8px;">To</th>
-                            <th style="padding: 0 8px;">Items</th>
-                            <th style="padding: 0 8px;">Requested By</th>
-                            <th style="padding: 0 8px;">Date</th>
-                            <th style="padding: 0 8px;">Status</th>
-                            <th style="padding: 0 8px;"></th>
+                            <th>Transfer #</th>
+                            <th>Logistics Route</th>
+                            <th>Consignment Items</th>
+                            <th>Valuation (XAF)</th>
+                            <th>Requested By</th>
+                            <th>Timeline Date</th>
+                            <th>Status</th>
+                            <th style="text-align: right;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var t in Model.Transfers)
                         {
                             <tr>
-                                <td><strong>#@t.StockTransferId</strong></td>
-                                <td>@t.FromBranchName</td>
-                                <td>@t.ToBranchName</td>
-                                <td>@t.Items.Count item(s)</td>
-                                <td>@t.RequestedByUser</td>
-                                <td>@t.DateCreated.ToString("MMM d, yyyy")</td>
                                 <td>
-                                    @{
-                                        var badgeClass = t.Status switch {
-                                            "Requested" => "badge-critical\" style=\"background-color: var(--accent-yellow); color: var(--text-primary);",
-                                            "Approved" => "badge-success\" style=\"background-color: var(--primary);",
-                                            "Dispatched" => "badge-success\" style=\"background-color: var(--primary-light); color: var(--primary-dark);",
-                                            "Received" => "badge-success",
-                                            "Cancelled" => "badge-critical",
-                                            _ => "badge-critical\" style=\"background-color: var(--surface); color: var(--text-secondary);"
-                                        };
-                                    }
-                                    <span class="badge @Html.Raw(badgeClass)">@t.Status</span>
+                                    <span class="code-badge" style="font-weight:700; font-size:0.84rem;">#TRF-@t.StockTransferId</span>
                                 </td>
-                                <td style="white-space:nowrap; display: flex; gap: 4px;">
-                                    @{ var transferJson = System.Text.Json.JsonSerializer.Serialize(t, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }); }
-                                    <button type="button" class="button-command" data-transfer="@transferJson" onclick="viewDetails(this)">View</button>
-                                    @if (t.Status == "Requested")
+                                <td>
+                                    <div class="route-badge">
+                                        <span>@t.FromBranchName</span>
+                                        <span class="route-arrow">➔</span>
+                                        <span>@t.ToBranchName</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <strong style="color:var(--text-primary);">@t.Items.Count line(s)</strong>
+                                        <div style="font-size:0.78rem; color:var(--text-muted);">
+                                            @if (t.Status == "Received")
+                                            {
+                                                <span>@t.TotalReceivedUnits units received</span>
+                                            }
+                                            else if (t.Status == "Dispatched")
+                                            {
+                                                <span>@t.TotalDispatchedUnits units in transit</span>
+                                            }
+                                            else
+                                            {
+                                                <span>@t.TotalRequestedUnits units requested</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <strong style="color:var(--text-primary);">@t.TotalValuation.ToString("N2") XAF</strong>
+                                </td>
+                                <td>
+                                    <div style="font-size:0.85rem; color:var(--text-primary);">@t.RequestedByUser</div>
+                                </td>
+                                <td>
+                                    <div style="font-size:0.85rem; color:var(--text-secondary);">@t.DateCreated.ToString("dd MMM yyyy")</div>
+                                </td>
+                                <td>
+                                    @switch (t.Status)
                                     {
-                                        <button type="button" class="button-primary" onclick="openApprove(@t.StockTransferId)">Approve</button>
-                                        <button type="button" class="button-secondary" style="color: var(--accent-red);" onclick="openReject(@t.StockTransferId)">Reject</button>
+                                        case "Requested":
+                                            <span class="badge badge-warning">Requested</span>
+                                            break;
+                                        case "Approved":
+                                            <span class="badge badge-teal">Approved</span>
+                                            break;
+                                        case "Dispatched":
+                                            <span class="badge badge-purple">In Transit 🚚</span>
+                                            break;
+                                        case "Received":
+                                            <span class="badge badge-success">Received</span>
+                                            break;
+                                        case "Cancelled":
+                                            <span class="badge badge-danger">Cancelled</span>
+                                            break;
+                                        default:
+                                            <span class="badge badge-neutral">@t.Status</span>
+                                            break;
                                     }
-                                    @if (t.Status == "Approved")
-                                    {
-                                        <button type="button" class="button-primary" data-transfer="@transferJson" onclick="openDispatch(this)">Dispatch</button>
-                                    }
-                                    @if (t.Status == "Dispatched")
-                                    {
-                                        <button type="button" class="button-primary" data-transfer="@transferJson" onclick="openReceive(this)">Receive</button>
-                                    }
-                                    @if (t.Status != "Received" && t.Status != "Cancelled")
-                                    {
-                                        <button type="button" class="button-command" style="color: var(--accent-red);" title="Cancel" onclick="openCancel(@t.StockTransferId)">✕</button>
-                                    }
+                                </td>
+                                <td style="text-align: right;">
+                                    <div style="display:inline-flex; gap:5px; flex-wrap:nowrap;">
+                                        @{
+                                            var transferJson = System.Text.Json.JsonSerializer.Serialize(t, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase });
+                                        }
+                                        <button type="button" class="btn-table-action" data-transfer="@transferJson" onclick="openWaybillModal(this)" title="View Waybill & Details">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                            </svg> Waybill
+                                        </button>
+
+                                        @if (Model.CanApprove && t.Status == "Requested")
+                                        {
+                                            <button type="button" class="btn-table-action primary" onclick="openApproveModal(@t.StockTransferId)">
+                                                ✓ Approve
+                                            </button>
+                                            <button type="button" class="btn-table-action danger" onclick="openRejectModal(@t.StockTransferId)">
+                                                ✕ Reject
+                                            </button>
+                                        }
+
+                                        @if (Model.CanWrite && t.Status == "Approved")
+                                        {
+                                            <button type="button" class="btn-table-action purple" data-transfer="@transferJson" onclick="openDispatchModal(this)">
+                                                🚚 Dispatch
+                                            </button>
+                                        }
+
+                                        @if (Model.CanWrite && t.Status == "Dispatched")
+                                        {
+                                            <button type="button" class="btn-table-action primary" data-transfer="@transferJson" onclick="openReceiveModal(this)">
+                                                📥 Receive
+                                            </button>
+                                        }
+
+                                        @if (Model.CanWrite && t.Status != "Received" && t.Status != "Cancelled")
+                                        {
+                                            <button type="button" class="btn-table-action danger" title="Cancel Transfer" onclick="openCancelModal(@t.StockTransferId)">
+                                                ✕
+                                            </button>
+                                        }
+                                    </div>
                                 </td>
                             </tr>
                         }
                     </tbody>
                 </table>
             </div>
+
+            @if (Model.TotalPages > 1)
+            {
+                <div style="padding: 16px 0; display: flex; justify-content: center;">
+                    <nav class="pagination" aria-label="Stock transfers pages">
+                        @if (Model.PageNumber > 1)
+                        {
+                            <a href="?page=@(Model.PageNumber - 1)&Status=@Model.Status&BranchId=@Model.BranchId&Search=@Uri.EscapeDataString(Model.Search ?? "")">‹ Prev</a>
+                        }
+                        <span class="active">@Model.PageNumber / @Model.TotalPages</span>
+                        @if (Model.PageNumber < Model.TotalPages)
+                        {
+                            <a href="?page=@(Model.PageNumber + 1)&Status=@Model.Status&BranchId=@Model.BranchId&Search=@Uri.EscapeDataString(Model.Search ?? "")">Next ›</a>
+                        }
+                    </nav>
+                </div>
+            }
         }
     </section>
 </div>
 
-<!-- Create Transfer Blade -->
-<div id="createBladeOverlay" class="blade-overlay" data-blade-id="createBlade"></div>
-<div id="createBlade" class="blade" data-overlay-id="createBladeOverlay">
-    <div class="blade-header">
-        <h3>New Stock Transfer</h3>
-        <button type="button" class="btn-close" data-close-blade="createBlade" aria-label="Close new transfer">&times;</button>
+<!-- ═════════════════════════════════════════════════════════════ -->
+<!-- ── MODAL 1: Create New Stock Transfer ─────────────────────── -->
+<!-- ═════════════════════════════════════════════════════════════ -->
+<div class="transfer-modal-overlay" id="createTransferOverlay" onclick="closeCreateTransferModal()"></div>
+<div class="transfer-modal" id="createTransferModal" style="max-width:720px;">
+    <div class="transfer-modal-header">
+        <h3 style="margin:0; font-size:1.15rem; color:var(--text-primary); display:flex; align-items:center; gap:8px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color:var(--brand);">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+            </svg> Create Inter-Branch Stock Transfer
+        </h3>
+        <button type="button" class="btn-close" onclick="closeCreateTransferModal()" aria-label="Close">×</button>
     </div>
-    <form method="post" asp-page-handler="Create" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+    <form method="post" asp-page-handler="Create" id="createTransferForm">
         @Html.AntiForgeryToken()
-        <div class="blade-body">
-            <div class="form-grid">
+        <div class="transfer-modal-body">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
                 <div>
-                    <label>From Branch *</label>
-                    <div class="smart-lookup-wrap" data-url="?handler=SearchBranches" data-placeholder="Search origin branch...">
-                        <input type="hidden" name="CreateFromBranchId" required />
-                    </div>
+                    <label for="createFromBranch" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Origin Branch (Source) <span style="color:var(--danger);">*</span></label>
+                    <select asp-for="CreateFromBranchId" id="createFromBranch" class="form-control" style="width:100%;" required>
+                        <option value="">— Select Source Branch —</option>
+                        @foreach (var b in Model.QuickBranches)
+                        {
+                            <option value="@b.BranchId">@b.Name (@b.Code)</option>
+                        }
+                    </select>
                 </div>
                 <div>
-                    <label>To Branch *</label>
-                    <div class="smart-lookup-wrap" data-url="?handler=SearchBranches" data-placeholder="Search destination branch...">
-                        <input type="hidden" name="CreateToBranchId" required />
-                    </div>
+                    <label for="createToBranch" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Destination Branch (Target) <span style="color:var(--danger);">*</span></label>
+                    <select asp-for="CreateToBranchId" id="createToBranch" class="form-control" style="width:100%;" required>
+                        <option value="">— Select Target Branch —</option>
+                        @foreach (var b in Model.QuickBranches)
+                        {
+                            <option value="@b.BranchId">@b.Name (@b.Code)</option>
+                        }
+                    </select>
                 </div>
-                <label style="grid-column:1/-1;">Notes
-                    <textarea name="CreateNotes" rows="2" maxlength="1000" placeholder="Optional transfer notes..."></textarea>
-                </label>
             </div>
-            <h4 style="margin:16px 0 8px;">Items to Transfer</h4>
-            <div id="itemLines">
-                <div class="item-line" style="display:grid;grid-template-columns:1.5fr 100px 1fr auto;gap:8px;margin-bottom:8px;align-items:end;">
-                    <div>
-                        <label style="font-size:.83rem;margin-bottom:3px;display:block;">Select Item *</label>
-                        <div class="smart-lookup-wrap" data-url="?handler=SearchItems" data-placeholder="Type item name or barcode...">
-                            <input type="hidden" name="TransferItems[0].ItemId" required />
+
+            <div>
+                <label for="createNotes" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Logistics & Purpose Notes</label>
+                <textarea asp-for="CreateNotes" id="createNotes" class="form-control" style="width:100%;" rows="2" placeholder="Driver name, vehicle plate, delivery urgency, or replenishment memo..."></textarea>
+            </div>
+
+            <div style="border-top:1px solid var(--border); padding-top:14px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <h4 style="margin:0; font-size:0.95rem; color:var(--text-primary);">Consignment Items</h4>
+                    <button type="button" class="button-secondary btn-sm" onclick="addTransferItemLine()">+ Add Item</button>
+                </div>
+                <div id="transferItemLines" style="display:flex; flex-direction:column; gap:8px;">
+                    <!-- Line 0 -->
+                    <div class="transfer-item-row" style="display:grid; grid-template-columns:2fr 90px 1.5fr auto; gap:8px; align-items:end;">
+                        <div>
+                            <label style="font-size:0.75rem; color:var(--text-secondary); display:block; margin-bottom:2px;">Select Product *</label>
+                            <select name="TransferItems[0].ItemId" class="form-control item-select" required onchange="calculateModalTotal()">
+                                <option value="">— Select Item —</option>
+                                @foreach (var item in Model.QuickItems)
+                                {
+                                    <option value="@item.ItemId" data-cost="@(item.CostPrice ?? 0)" data-stock="@item.InStock">@item.Name (@item.InStock in stock)</option>
+                                }
+                            </select>
                         </div>
+                        <div>
+                            <label style="font-size:0.75rem; color:var(--text-secondary); display:block; margin-bottom:2px;">Quantity *</label>
+                            <input name="TransferItems[0].RequestedQuantity" type="number" min="1" value="1" class="form-control item-qty" required oninput="calculateModalTotal()" />
+                        </div>
+                        <div>
+                            <label style="font-size:0.75rem; color:var(--text-secondary); display:block; margin-bottom:2px;">Notes</label>
+                            <input name="TransferItems[0].Notes" type="text" class="form-control" placeholder="Line notes" />
+                        </div>
+                        <button type="button" class="button-command danger" onclick="removeTransferLine(this)" style="height:38px; padding:0 10px;" title="Remove Line">✕</button>
                     </div>
-                    <div>
-                        <label style="font-size:.83rem;margin-bottom:3px;display:block;">Qty *</label>
-                        <input name="TransferItems[0].RequestedQuantity" type="number" min="1" value="1" required style="width:100%;box-sizing:border-box;" />
-                    </div>
-                    <div>
-                        <label style="font-size:.83rem;margin-bottom:3px;display:block;">Notes</label>
-                        <input name="TransferItems[0].Notes" type="text" maxlength="500" placeholder="Optional line notes" style="width:100%;box-sizing:border-box;" />
-                    </div>
-                    <button type="button" onclick="removeLine(this)" style="padding:7px 10px;height:38px;" class="button-command danger" title="Remove">✕</button>
                 </div>
             </div>
-            <button type="button" onclick="addItemLine()" style="margin-top:6px;" class="button-secondary btn-sm">+ Add Item</button>
+
+            <div class="transfer-live-banner">
+                <div>
+                    <span style="color:var(--text-secondary);">Consignment Summary:</span>
+                    <span id="createSummaryCounts" style="font-weight:600; margin-left:6px;">1 line(s), 1 unit(s)</span>
+                </div>
+                <div>
+                    <span style="color:var(--text-secondary); margin-right:6px;">Total Estimated Valuation:</span>
+                    <strong id="createValuationTotal" style="color:var(--brand); font-size:1.05rem;">0.00 XAF</strong>
+                </div>
+            </div>
         </div>
-        <div class="blade-footer">
-            <button type="button" class="button-command" data-close-blade="createBlade">Cancel</button>
-            <button type="submit" class="button-primary">Submit Transfer</button>
+        <div class="transfer-modal-footer">
+            <button type="button" class="button-secondary" onclick="closeCreateTransferModal()">Cancel</button>
+            <button type="submit" class="button-primary">Submit Stock Transfer</button>
         </div>
     </form>
 </div>
 
-<!-- View Details Modal -->
-<div id="viewModal" class="modal-overlay" hidden role="dialog" aria-modal="true">
-    <div class="modal" style="max-width:600px;">
-        <div class="modal-head">
-            <h3>Transfer Details</h3>
-            <button type="button" class="btn-close" onclick="closeModal('viewModal')" aria-label="Close">×</button>
+<!-- ═════════════════════════════════════════════════════════════ -->
+<!-- ── MODAL 2: Dispatch Goods Modal ──────────────────────────── -->
+<!-- ═════════════════════════════════════════════════════════════ -->
+<div class="transfer-modal-overlay" id="dispatchOverlay" onclick="closeDispatchModal()"></div>
+<div class="transfer-modal" id="dispatchModal" style="max-width:580px;">
+    <div class="transfer-modal-header">
+        <h3 style="margin:0; font-size:1.15rem; color:#9333ea; display:flex; align-items:center; gap:8px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
+            </svg> Dispatch Transfer #<span id="dispatchIdLabel"></span>
+        </h3>
+        <button type="button" class="btn-close" onclick="closeDispatchModal()" aria-label="Close">×</button>
+    </div>
+    <form method="post" asp-page-handler="Dispatch" id="dispatchForm">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="ActionTransferId" id="dispatchTransferId" />
+        <div class="transfer-modal-body">
+            <div class="transfer-live-banner" style="background:rgba(147, 51, 234, 0.08); border-color:rgba(147, 51, 234, 0.2);">
+                <span id="dispatchRouteLabel" style="font-weight:600; color:#9333ea;">Route</span>
+                <span style="font-size:0.80rem; color:var(--text-secondary);">⚠️ Stock will be deducted from origin branch upon dispatch.</span>
+            </div>
+
+            <div style="font-size:0.84rem; font-weight:600; margin-bottom:4px;">Dispatched Items Checklist:</div>
+            <div id="dispatchItemLines" style="display:flex; flex-direction:column; gap:8px;"></div>
+
+            <div>
+                <label for="dispatchNotes" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Dispatch / Waybill Notes</label>
+                <textarea asp-for="DispatchNotes" id="dispatchNotes" class="form-control" style="width:100%;" rows="2" placeholder="Driver name, vehicle plate, waybill number, or departure memo..."></textarea>
+            </div>
         </div>
-        <div id="viewContent"></div>
+        <div class="transfer-modal-footer">
+            <button type="button" class="button-secondary" onclick="closeDispatchModal()">Cancel</button>
+            <button type="submit" class="button-primary" style="background:#9333ea; border-color:#9333ea;">Confirm Dispatch (In Transit)</button>
+        </div>
+    </form>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════════ -->
+<!-- ── MODAL 3: Receive Goods Modal ───────────────────────────── -->
+<!-- ═════════════════════════════════════════════════════════════ -->
+<div class="transfer-modal-overlay" id="receiveOverlay" onclick="closeReceiveModal()"></div>
+<div class="transfer-modal" id="receiveModal" style="max-width:580px;">
+    <div class="transfer-modal-header">
+        <h3 style="margin:0; font-size:1.15rem; color:var(--brand); display:flex; align-items:center; gap:8px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg> Receive & Verify Transfer #<span id="receiveIdLabel"></span>
+        </h3>
+        <button type="button" class="btn-close" onclick="closeReceiveModal()" aria-label="Close">×</button>
+    </div>
+    <form method="post" asp-page-handler="Receive" id="receiveForm">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="ActionTransferId" id="receiveTransferId" />
+        <div class="transfer-modal-body">
+            <div class="transfer-live-banner" style="background:var(--brand-soft); border-color:var(--brand-border);">
+                <span id="receiveRouteLabel" style="font-weight:600; color:var(--brand);">Route</span>
+                <span style="font-size:0.80rem; color:var(--text-secondary);">Stock will be credited to destination branch upon confirmation.</span>
+            </div>
+
+            <div style="font-size:0.84rem; font-weight:600; margin-bottom:4px;">Received Items Quantity Verification:</div>
+            <div id="receiveItemLines" style="display:flex; flex-direction:column; gap:8px;"></div>
+
+            <div>
+                <label for="receiveNotes" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Receiving Inspection Notes</label>
+                <textarea asp-for="ReceiveNotes" id="receiveNotes" class="form-control" style="width:100%;" rows="2" placeholder="Condition of goods, packaging state, receiving bay clerk notes..."></textarea>
+            </div>
+        </div>
+        <div class="transfer-modal-footer">
+            <button type="button" class="button-secondary" onclick="closeReceiveModal()">Cancel</button>
+            <button type="submit" class="button-primary">Confirm Stock Received</button>
+        </div>
+    </form>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════════ -->
+<!-- ── MODAL 4: Printable Waybill & Delivery Manifest ─────────── -->
+<!-- ═════════════════════════════════════════════════════════════ -->
+<div class="transfer-modal-overlay" id="waybillOverlay" onclick="closeWaybillModal()"></div>
+<div class="transfer-modal" id="waybillModal" style="max-width:780px;">
+    <div class="transfer-modal-header">
+        <h3 style="margin:0; font-size:1.15rem; color:var(--text-primary); display:flex; align-items:center; gap:8px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color:var(--brand);">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg> Official Transfer Waybill Manifest
+        </h3>
+        <button type="button" class="btn-close" onclick="closeWaybillModal()" aria-label="Close">×</button>
+    </div>
+    <div class="transfer-modal-body">
+        <div id="printableWaybillContent" class="waybill-sheet">
+            <div class="waybill-header">
+                <div>
+                    <h2 style="margin:0; font-size:1.4rem; color:#019c01; font-weight:800;">CLEXAN FOODS</h2>
+                    <div style="font-size:0.80rem; color:#64748b; margin-top:2px;">Inter-Branch Stock Transfer Manifest & Delivery Note</div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-family:monospace; font-size:1.15rem; font-weight:700; color:#0f172a;" id="wbTransferId">#TRF-000</div>
+                    <div style="font-size:0.80rem; color:#64748b;" id="wbDateCreated">Date</div>
+                    <div style="font-size:0.80rem; font-weight:700; color:#019c01; margin-top:3px;" id="wbStatus">STATUS</div>
+                </div>
+            </div>
+
+            <div class="waybill-grid">
+                <div>
+                    <div style="font-size:0.75rem; text-transform:uppercase; color:#64748b; font-weight:700;">From Origin Facility:</div>
+                    <div style="font-weight:700; font-size:1.0rem; color:#0f172a;" id="wbFromBranch">Origin</div>
+                    <div style="font-size:0.82rem; color:#64748b;" id="wbRequestedBy">Requested by: User</div>
+                </div>
+                <div>
+                    <div style="font-size:0.75rem; text-transform:uppercase; color:#64748b; font-weight:700;">To Destination Facility:</div>
+                    <div style="font-weight:700; font-size:1.0rem; color:#0f172a;" id="wbToBranch">Destination</div>
+                    <div style="font-size:0.82rem; color:#64748b;" id="wbApprovedBy">Approved by: User</div>
+                </div>
+            </div>
+
+            <div id="wbNotesContainer" style="margin-bottom:14px; background:#fffbeb; border:1px solid #fef3c7; padding:8px 12px; border-radius:6px; font-size:0.85rem; color:#92400e;">
+                <strong>Logistics Notes:</strong> <span id="wbNotes">None</span>
+            </div>
+
+            <table class="waybill-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Product Item & Code</th>
+                        <th style="text-align:center;">Requested</th>
+                        <th style="text-align:center;">Dispatched</th>
+                        <th style="text-align:center;">Received</th>
+                        <th style="text-align:right;">Unit Cost</th>
+                        <th style="text-align:right;">Line Total</th>
+                    </tr>
+                </thead>
+                <tbody id="wbItemsTableBody"></tbody>
+                <tfoot>
+                    <tr style="font-weight:700; background:#f8fafc;">
+                        <td colspan="2" style="text-align:right; padding:10px 8px;">Manifest Total:</td>
+                        <td style="text-align:center;" id="wbTotalReq">0</td>
+                        <td style="text-align:center;" id="wbTotalDisp">0</td>
+                        <td style="text-align:center;" id="wbTotalRec">0</td>
+                        <td></td>
+                        <td style="text-align:right; color:#019c01;" id="wbTotalVal">0.00 XAF</td>
+                    </tr>
+                </tfoot>
+            </table>
+
+            <div class="waybill-signatures">
+                <div>
+                    <div style="height:40px;"></div>
+                    <div class="sig-block">Dispatching Officer / Driver Signature & Date</div>
+                </div>
+                <div>
+                    <div style="height:40px;"></div>
+                    <div class="sig-block">Receiving Warehouse Officer Signature & Date</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="transfer-modal-footer">
+        <button type="button" class="button-secondary" onclick="closeWaybillModal()">Close</button>
+        <button type="button" class="button-primary" onclick="window.print()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display:inline; margin-right:4px;">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg> Print Waybill
+        </button>
     </div>
 </div>
 
+<!-- ═════════════════════════════════════════════════════════════ -->
+<!-- ── MODALS 5, 6, 7: Approve, Reject, Cancel Dialogs ────────── -->
+<!-- ═════════════════════════════════════════════════════════════ -->
 <!-- Approve Modal -->
-<div id="approveModal" class="modal-overlay" hidden role="dialog" aria-modal="true">
-    <div class="modal" style="max-width:420px;">
-        <div class="modal-head">
-            <h3>Approve Transfer #<span id="approveIdLabel"></span></h3>
-            <button type="button" class="btn-close" onclick="closeModal('approveModal')" aria-label="Close">×</button>
-        </div>
-        <form method="post" asp-page-handler="Approve">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="ActionTransferId" id="approveTransferId" />
-            <label style="display:flex;flex-direction:column;gap:4px;margin-bottom:12px;">Notes
-                <textarea name="ApproveNotes" rows="2"></textarea>
-            </label>
-            <div style="display:flex;justify-content:flex-end;gap:8px;">
-                <button type="button" class="button-command" onclick="closeModal('approveModal')">Cancel</button>
-                <button type="submit" class="button-primary">Approve</button>
-            </div>
-        </form>
+<div class="transfer-modal-overlay" id="approveOverlay" onclick="closeApproveModal()"></div>
+<div class="transfer-modal" id="approveModal" style="max-width:440px;">
+    <div class="transfer-modal-header">
+        <h3 style="margin:0; font-size:1.15rem; color:var(--brand);">Approve Transfer #<span id="approveIdLabel"></span></h3>
+        <button type="button" class="btn-close" onclick="closeApproveModal()" aria-label="Close">×</button>
     </div>
+    <form method="post" asp-page-handler="Approve">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="ActionTransferId" id="approveTransferId" />
+        <div class="transfer-modal-body">
+            <p style="margin:0; font-size:0.92rem; color:var(--text-primary);">
+                Are you sure you want to approve this stock transfer for logistics dispatch?
+            </p>
+            <div>
+                <label for="approveNotes" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Approval Memo</label>
+                <textarea asp-for="ApproveNotes" id="approveNotes" class="form-control" style="width:100%;" rows="2" placeholder="Optional supervisor authorization remarks..."></textarea>
+            </div>
+        </div>
+        <div class="transfer-modal-footer">
+            <button type="button" class="button-secondary" onclick="closeApproveModal()">Cancel</button>
+            <button type="submit" class="button-primary">Confirm Approval</button>
+        </div>
+    </form>
 </div>
 
 <!-- Reject Modal -->
-<div id="rejectModal" class="modal-overlay" hidden role="dialog" aria-modal="true">
-    <div class="modal" style="max-width:420px;">
-        <div class="modal-head">
-            <h3>Reject Transfer #<span id="rejectIdLabel"></span></h3>
-            <button type="button" class="btn-close" onclick="closeModal('rejectModal')" aria-label="Close">×</button>
-        </div>
-        <form method="post" asp-page-handler="Reject">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="ActionTransferId" id="rejectTransferId" />
-            <label style="display:flex;flex-direction:column;gap:4px;margin-bottom:12px;">Reason *
-                <textarea name="RejectReason" rows="2" required></textarea>
-            </label>
-            <div style="display:flex;justify-content:flex-end;gap:8px;">
-                <button type="button" class="button-command" onclick="closeModal('rejectModal')">Cancel</button>
-                <button type="submit" class="button-primary danger">Reject</button>
+<div class="transfer-modal-overlay" id="rejectOverlay" onclick="closeRejectModal()"></div>
+<div class="transfer-modal" id="rejectModal" style="max-width:440px;">
+    <div class="transfer-modal-header">
+        <h3 style="margin:0; font-size:1.15rem; color:#dc2626;">Reject Transfer #<span id="rejectIdLabel"></span></h3>
+        <button type="button" class="btn-close" onclick="closeRejectModal()" aria-label="Close">×</button>
+    </div>
+    <form method="post" asp-page-handler="Reject">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="ActionTransferId" id="rejectTransferId" />
+        <div class="transfer-modal-body">
+            <div>
+                <label for="rejectReason" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Rejection Reason <span style="color:var(--danger);">*</span></label>
+                <textarea asp-for="RejectReason" id="rejectReason" class="form-control" style="width:100%;" rows="3" required placeholder="State why this transfer cannot be fulfilled (e.g. stock shortfall, delivery route closed)..."></textarea>
             </div>
-        </form>
-    </div>
-</div>
-
-<!-- Dispatch Blade -->
-<div class="blade-overlay" id="dispatchOverlay"></div>
-<div class="blade" id="dispatchBlade" data-overlay-id="dispatchOverlay">
-    <div class="blade-header">
-        <h3>Dispatch Transfer #<span id="dispatchIdLabel"></span></h3>
-        <button type="button" class="btn-close" data-close-blade aria-label="Close">×</button>
-    </div>
-    <div class="blade-body">
-        <form method="post" asp-page-handler="Dispatch" id="dispatchForm">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="ActionTransferId" id="dispatchTransferId" />
-            <div id="dispatchItemLines"></div>
-            <label style="display:flex;flex-direction:column;gap:4px;margin:12px 0;">Notes
-                <textarea name="DispatchNotes" rows="2"></textarea>
-            </label>
-        </form>
-    </div>
-    <div class="blade-footer">
-        <button type="button" class="button-command" data-close-blade>Cancel</button>
-        <button type="button" class="button-primary" onclick="document.getElementById('dispatchForm').submit()">Mark Dispatched</button>
-    </div>
-</div>
-
-<!-- Receive Blade -->
-<div class="blade-overlay" id="receiveOverlay"></div>
-<div class="blade" id="receiveBlade" data-overlay-id="receiveOverlay">
-    <div class="blade-header">
-        <h3>Receive Transfer #<span id="receiveIdLabel"></span></h3>
-        <button type="button" class="btn-close" data-close-blade aria-label="Close">×</button>
-    </div>
-    <div class="blade-body">
-        <form method="post" asp-page-handler="Receive" id="receiveForm">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="ActionTransferId" id="receiveTransferId" />
-            <div id="receiveItemLines"></div>
-            <label style="display:flex;flex-direction:column;gap:4px;margin:12px 0;">Notes
-                <textarea name="ReceiveNotes" rows="2"></textarea>
-            </label>
-        </form>
-    </div>
-    <div class="blade-footer">
-        <button type="button" class="button-command" data-close-blade>Cancel</button>
-        <button type="button" class="button-primary" onclick="document.getElementById('receiveForm').submit()">Confirm Received</button>
-    </div>
+        </div>
+        <div class="transfer-modal-footer">
+            <button type="button" class="button-secondary" onclick="closeRejectModal()">Cancel</button>
+            <button type="submit" class="button-primary" style="background:#dc2626; border-color:#dc2626;">Reject Transfer</button>
+        </div>
+    </form>
 </div>
 
 <!-- Cancel Modal -->
-<div id="cancelModal" class="modal-overlay" hidden role="dialog" aria-modal="true">
-    <div class="modal" style="max-width:420px;">
-        <div class="modal-head">
-            <h3>Cancel Transfer #<span id="cancelIdLabel"></span></h3>
-            <button type="button" class="btn-close" onclick="closeModal('cancelModal')" aria-label="Close">×</button>
-        </div>
-        <form method="post" asp-page-handler="Cancel">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="ActionTransferId" id="cancelTransferId" />
-            <label style="display:flex;flex-direction:column;gap:4px;margin-bottom:12px;">Reason
-                <textarea name="CancelReason" rows="2"></textarea>
-            </label>
-            <div style="display:flex;justify-content:flex-end;gap:8px;">
-                <button type="button" class="button-command" onclick="closeModal('cancelModal')">Close</button>
-                <button type="submit" class="button-primary danger">Cancel Transfer</button>
-            </div>
-        </form>
+<div class="transfer-modal-overlay" id="cancelOverlay" onclick="closeCancelModal()"></div>
+<div class="transfer-modal" id="cancelModal" style="max-width:440px;">
+    <div class="transfer-modal-header">
+        <h3 style="margin:0; font-size:1.15rem; color:#dc2626;">Cancel Transfer #<span id="cancelIdLabel"></span></h3>
+        <button type="button" class="btn-close" onclick="closeCancelModal()" aria-label="Close">×</button>
     </div>
+    <form method="post" asp-page-handler="Cancel">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="ActionTransferId" id="cancelTransferId" />
+        <div class="transfer-modal-body">
+            <div>
+                <label for="cancelReason" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Cancellation Reason</label>
+                <textarea asp-for="CancelReason" id="cancelReason" class="form-control" style="width:100%;" rows="2" placeholder="Optional explanation for audit records..."></textarea>
+            </div>
+        </div>
+        <div class="transfer-modal-footer">
+            <button type="button" class="button-secondary" onclick="closeCancelModal()">Close</button>
+            <button type="submit" class="button-primary" style="background:#dc2626; border-color:#dc2626;">Cancel Consignment</button>
+        </div>
+    </form>
 </div>
 
 @section Scripts {
-<script>
-let itemLineCount = 1;
+    <script>
+        let transferLineCount = 1;
+        const catalogItems = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.QuickItems.Select(i => new { id = i.ItemId, name = i.Name, cost = i.CostPrice ?? 0, stock = i.InStock })));
 
-function closeModal(id) { document.getElementById(id).hidden = true; }
+        // ── Modal Handlers ──────────────────────────────────────────
+        function openCreateTransferModal() {
+            document.getElementById('createTransferOverlay').classList.add('open');
+            document.getElementById('createTransferModal').classList.add('open');
+            calculateModalTotal();
+        }
+        function closeCreateTransferModal() {
+            document.getElementById('createTransferOverlay').classList.remove('open');
+            document.getElementById('createTransferModal').classList.remove('open');
+        }
 
+        function addTransferItemLine() {
+            const container = document.getElementById('transferItemLines');
+            const idx = transferLineCount++;
+            let options = '<option value="">— Select Item —</option>';
+            catalogItems.forEach(i => {
+                options += `<option value="${i.id}" data-cost="${i.cost}" data-stock="${i.stock}">${i.name} (${i.stock} in stock)</option>`;
+            });
 
+            const div = document.createElement('div');
+            div.className = 'transfer-item-row';
+            div.style = 'display:grid; grid-template-columns:2fr 90px 1.5fr auto; gap:8px; align-items:end;';
+            div.innerHTML = `
+                <div>
+                    <label style="font-size:0.75rem; color:var(--text-secondary); display:block; margin-bottom:2px;">Select Product *</label>
+                    <select name="TransferItems[${idx}].ItemId" class="form-control item-select" required onchange="calculateModalTotal()">
+                        ${options}
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size:0.75rem; color:var(--text-secondary); display:block; margin-bottom:2px;">Quantity *</label>
+                    <input name="TransferItems[${idx}].RequestedQuantity" type="number" min="1" value="1" class="form-control item-qty" required oninput="calculateModalTotal()" />
+                </div>
+                <div>
+                    <label style="font-size:0.75rem; color:var(--text-secondary); display:block; margin-bottom:2px;">Notes</label>
+                    <input name="TransferItems[${idx}].Notes" type="text" class="form-control" placeholder="Line notes" />
+                </div>
+                <button type="button" class="button-command danger" onclick="removeTransferLine(this)" style="height:38px; padding:0 10px;" title="Remove Line">✕</button>
+            `;
+            container.appendChild(div);
+            calculateModalTotal();
+        }
 
-function addItemLine() {
-    const container = document.getElementById('itemLines');
-    const div = document.createElement('div');
-    div.className = 'item-line';
-    div.style = 'display:grid;grid-template-columns:1.5fr 100px 1fr auto;gap:8px;margin-bottom:8px;align-items:end;';
-    const idx = itemLineCount++;
-    div.innerHTML = `
-        <div>
-            <label style="font-size:.83rem;margin-bottom:3px;display:block;">Select Item *</label>
-            <div class="smart-lookup-wrap" data-url="?handler=SearchItems" data-placeholder="Type item name or barcode...">
-                <input type="hidden" name="TransferItems[${idx}].ItemId" required />
-            </div>
-        </div>
-        <div>
-            <label style="font-size:.83rem;margin-bottom:3px;display:block;">Qty *</label>
-            <input name="TransferItems[${idx}].RequestedQuantity" type="number" min="1" value="1" required style="width:100%;box-sizing:border-box;" />
-        </div>
-        <div>
-            <label style="font-size:.83rem;margin-bottom:3px;display:block;">Notes</label>
-            <input name="TransferItems[${idx}].Notes" type="text" maxlength="500" placeholder="Optional line notes" style="width:100%;box-sizing:border-box;" />
-        </div>
-        <button type="button" onclick="removeLine(this)" style="padding:7px 10px;height:38px;" class="button-command danger" title="Remove">✕</button>`;
-    container.appendChild(div);
-    const wrap = div.querySelector('.smart-lookup-wrap');
-    if (wrap && window.SmartLookup) {
-        window.SmartLookup.attach(wrap);
-    }
-}
+        function removeTransferLine(btn) {
+            const rows = document.querySelectorAll('.transfer-item-row');
+            if (rows.length > 1) {
+                btn.closest('.transfer-item-row').remove();
+                calculateModalTotal();
+            }
+        }
 
-function removeLine(btn) {
-    const line = btn.closest('.item-line');
-    if (document.querySelectorAll('.item-line').length > 1) line.remove();
-}
+        function calculateModalTotal() {
+            const rows = document.querySelectorAll('.transfer-item-row');
+            let totalLines = rows.length;
+            let totalUnits = 0;
+            let totalVal = 0;
 
-function viewDetails(btn) {
-    const t = JSON.parse(btn.getAttribute('data-transfer'));
-    let html = `<dl style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:.9rem;">
-        <dt>From</dt><dd>${t.fromBranchName}</dd>
-        <dt>To</dt><dd>${t.toBranchName}</dd>
-        <dt>Status</dt><dd>${t.status}</dd>
-        <dt>Requested By</dt><dd>${t.requestedByUser}</dd>
-        <dt>Notes</dt><dd>${t.notes || '—'}</dd>
-        ${t.rejectionReason ? `<dt>Rejection</dt><dd>${t.rejectionReason}</dd>` : ''}
-    </dl>
-    <h4 style="margin:12px 0 6px;">Items</h4>
-    <table style="width:100%;font-size:.85rem;"><thead><tr><th>Item</th><th>Requested</th><th>Dispatched</th><th>Received</th></tr></thead><tbody>`;
-    for (const i of t.items) {
-        html += `<tr><td>${i.itemName}</td><td>${i.requestedQuantity}</td><td>${i.dispatchedQuantity ?? '—'}</td><td>${i.receivedQuantity ?? '—'}</td></tr>`;
-    }
-    html += '</tbody></table>';
-    document.getElementById('viewContent').innerHTML = html;
-    document.getElementById('viewModal').hidden = false;
-}
+            rows.forEach(r => {
+                const sel = r.querySelector('.item-select');
+                const qtyInput = r.querySelector('.item-qty');
+                const qty = parseFloat(qtyInput ? qtyInput.value : 0) || 0;
+                totalUnits += qty;
 
-function openApprove(id) {
-    document.getElementById('approveTransferId').value = id;
-    document.getElementById('approveIdLabel').textContent = id;
-    document.getElementById('approveModal').hidden = false;
-}
+                if (sel && sel.selectedIndex >= 0) {
+                    const opt = sel.options[sel.selectedIndex];
+                    const cost = parseFloat(opt.getAttribute('data-cost')) || 0;
+                    totalVal += (qty * cost);
+                }
+            });
 
-function openReject(id) {
-    document.getElementById('rejectTransferId').value = id;
-    document.getElementById('rejectIdLabel').textContent = id;
-    document.getElementById('rejectModal').hidden = false;
-}
+            document.getElementById('createSummaryCounts').textContent = `${totalLines} line(s), ${totalUnits} unit(s)`;
+            document.getElementById('createValuationTotal').textContent = totalVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' XAF';
+        }
 
-function openDispatch(btn) {
-    const t = JSON.parse(btn.getAttribute('data-transfer'));
-    document.getElementById('dispatchTransferId').value = t.stockTransferId;
-    document.getElementById('dispatchIdLabel').textContent = t.stockTransferId;
-    let html = '';
-    t.items.forEach((item, idx) => {
-        html += `<div style="display:grid;grid-template-columns:1fr 120px;gap:8px;margin-bottom:8px;font-size:.85rem;">
-            <div><input type="hidden" name="DispatchItems[${idx}].StockTransferItemId" value="${item.stockTransferItemId}"/>${item.itemName} (requested: ${item.requestedQuantity})</div>
-            <label>Dispatched Qty<input name="DispatchItems[${idx}].DispatchedQuantity" type="number" min="0" value="${item.requestedQuantity}" /></label>
-        </div>`;
-    });
-    document.getElementById('dispatchItemLines').innerHTML = html;
-    window.openBlade('dispatchBlade');
-}
+        // ── Dispatch Modal ──────────────────────────────────────────
+        function openDispatchModal(btn) {
+            const t = JSON.parse(btn.getAttribute('data-transfer'));
+            document.getElementById('dispatchTransferId').value = t.stockTransferId;
+            document.getElementById('dispatchIdLabel').textContent = t.stockTransferId;
+            document.getElementById('dispatchRouteLabel').textContent = `${t.fromBranchName} ➔ ${t.toBranchName}`;
 
-function openReceive(btn) {
-    const t = JSON.parse(btn.getAttribute('data-transfer'));
-    document.getElementById('receiveTransferId').value = t.stockTransferId;
-    document.getElementById('receiveIdLabel').textContent = t.stockTransferId;
-    let html = '';
-    t.items.forEach((item, idx) => {
-        html += `<div style="display:grid;grid-template-columns:1fr 120px;gap:8px;margin-bottom:8px;font-size:.85rem;">
-            <div><input type="hidden" name="ReceiveItems[${idx}].StockTransferItemId" value="${item.stockTransferItemId}"/>${item.itemName} (dispatched: ${item.dispatchedQuantity ?? '?'})</div>
-            <label>Received Qty<input name="ReceiveItems[${idx}].ReceivedQuantity" type="number" min="0" value="${item.dispatchedQuantity ?? 0}" /></label>
-        </div>`;
-    });
-    document.getElementById('receiveItemLines').innerHTML = html;
-    window.openBlade('receiveBlade');
-}
+            let html = '';
+            t.items.forEach((item, idx) => {
+                html += `
+                    <div style="background:var(--canvas); border:1px solid var(--border); border-radius:6px; padding:8px 12px; display:grid; grid-template-columns:1fr 120px; gap:10px; align-items:center;">
+                        <input type="hidden" name="DispatchItems[${idx}].StockTransferItemId" value="${item.stockTransferItemId}" />
+                        <div>
+                            <strong style="color:var(--text-primary); font-size:0.90rem;">${item.itemName}</strong>
+                            <div style="font-size:0.75rem; color:var(--text-secondary);">Requested: ${item.requestedQuantity} units</div>
+                        </div>
+                        <div>
+                            <label style="font-size:0.75rem; color:var(--text-secondary); display:block; margin-bottom:2px;">Dispatched Qty</label>
+                            <input name="DispatchItems[${idx}].DispatchedQuantity" type="number" min="0" value="${item.requestedQuantity}" class="form-control" style="width:100%;" required />
+                        </div>
+                    </div>
+                `;
+            });
+            document.getElementById('dispatchItemLines').innerHTML = html;
+            document.getElementById('dispatchOverlay').classList.add('open');
+            document.getElementById('dispatchModal').classList.add('open');
+        }
+        function closeDispatchModal() {
+            document.getElementById('dispatchOverlay').classList.remove('open');
+            document.getElementById('dispatchModal').classList.remove('open');
+        }
 
-function openCancel(id) {
-    document.getElementById('cancelTransferId').value = id;
-    document.getElementById('cancelIdLabel').textContent = id;
-    document.getElementById('cancelModal').hidden = false;
-}
-</script>
+        // ── Receive Modal ───────────────────────────────────────────
+        function openReceiveModal(btn) {
+            const t = JSON.parse(btn.getAttribute('data-transfer'));
+            document.getElementById('receiveTransferId').value = t.stockTransferId;
+            document.getElementById('receiveIdLabel').textContent = t.stockTransferId;
+            document.getElementById('receiveRouteLabel').textContent = `${t.fromBranchName} ➔ ${t.toBranchName}`;
+
+            let html = '';
+            t.items.forEach((item, idx) => {
+                const dispQty = item.dispatchedQuantity ?? item.requestedQuantity;
+                html += `
+                    <div style="background:var(--canvas); border:1px solid var(--border); border-radius:6px; padding:8px 12px; display:grid; grid-template-columns:1fr 120px; gap:10px; align-items:center;">
+                        <input type="hidden" name="ReceiveItems[${idx}].StockTransferItemId" value="${item.stockTransferItemId}" />
+                        <div>
+                            <strong style="color:var(--text-primary); font-size:0.90rem;">${item.itemName}</strong>
+                            <div style="font-size:0.75rem; color:var(--text-secondary);">Dispatched from origin: ${dispQty} units</div>
+                        </div>
+                        <div>
+                            <label style="font-size:0.75rem; color:var(--text-secondary); display:block; margin-bottom:2px;">Received Qty</label>
+                            <input name="ReceiveItems[${idx}].ReceivedQuantity" type="number" min="0" value="${dispQty}" class="form-control" style="width:100%;" required />
+                        </div>
+                    </div>
+                `;
+            });
+            document.getElementById('receiveItemLines').innerHTML = html;
+            document.getElementById('receiveOverlay').classList.add('open');
+            document.getElementById('receiveModal').classList.add('open');
+        }
+        function closeReceiveModal() {
+            document.getElementById('receiveOverlay').classList.remove('open');
+            document.getElementById('receiveModal').classList.remove('open');
+        }
+
+        // ── Waybill Modal ───────────────────────────────────────────
+        function openWaybillModal(btn) {
+            const t = JSON.parse(btn.getAttribute('data-transfer'));
+            document.getElementById('wbTransferId').textContent = '#TRF-' + t.stockTransferId;
+            document.getElementById('wbDateCreated').textContent = new Date(t.dateCreated).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+            document.getElementById('wbStatus').textContent = t.status.toUpperCase();
+            document.getElementById('wbFromBranch').textContent = t.fromBranchName;
+            document.getElementById('wbToBranch').textContent = t.toBranchName;
+            document.getElementById('wbRequestedBy').textContent = 'Requested by: ' + t.requestedByUser;
+            document.getElementById('wbApprovedBy').textContent = t.approvedByUser ? 'Approved by: ' + t.approvedByUser : 'Awaiting Approval';
+            document.getElementById('wbNotes').textContent = t.notes || 'No notes specified';
+
+            let bodyHtml = '';
+            let totalReq = 0, totalDisp = 0, totalRec = 0, totalVal = 0;
+
+            t.items.forEach((item, idx) => {
+                const req = item.requestedQuantity || 0;
+                const disp = item.dispatchedQuantity ?? '—';
+                const rec = item.receivedQuantity ?? '—';
+                const cost = item.unitCost || 0;
+                const lineVal = item.lineValuation || (req * cost);
+
+                totalReq += req;
+                if (typeof disp === 'number') totalDisp += disp;
+                if (typeof rec === 'number') totalRec += rec;
+                totalVal += lineVal;
+
+                bodyHtml += `
+                    <tr>
+                        <td>${idx + 1}</td>
+                        <td>
+                            <strong>${item.itemName}</strong>
+                            ${item.itemCode ? `<span style="font-size:0.75rem; color:#64748b; display:block;">Code: ${item.itemCode}</span>` : ''}
+                        </td>
+                        <td style="text-align:center;">${req}</td>
+                        <td style="text-align:center;">${disp}</td>
+                        <td style="text-align:center;">${rec}</td>
+                        <td style="text-align:right;">${cost.toFixed(2)} XAF</td>
+                        <td style="text-align:right; font-weight:600;">${lineVal.toFixed(2)} XAF</td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('wbItemsTableBody').innerHTML = bodyHtml;
+            document.getElementById('wbTotalReq').textContent = totalReq;
+            document.getElementById('wbTotalDisp').textContent = totalDisp;
+            document.getElementById('wbTotalRec').textContent = totalRec;
+            document.getElementById('wbTotalVal').textContent = totalVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' XAF';
+
+            document.getElementById('waybillOverlay').classList.add('open');
+            document.getElementById('waybillModal').classList.add('open');
+        }
+        function closeWaybillModal() {
+            document.getElementById('waybillOverlay').classList.remove('open');
+            document.getElementById('waybillModal').classList.remove('open');
+        }
+
+        // ── Action Dialogs ──────────────────────────────────────────
+        function openApproveModal(id) {
+            document.getElementById('approveTransferId').value = id;
+            document.getElementById('approveIdLabel').textContent = id;
+            document.getElementById('approveOverlay').classList.add('open');
+            document.getElementById('approveModal').classList.add('open');
+        }
+        function closeApproveModal() {
+            document.getElementById('approveOverlay').classList.remove('open');
+            document.getElementById('approveModal').classList.remove('open');
+        }
+
+        function openRejectModal(id) {
+            document.getElementById('rejectTransferId').value = id;
+            document.getElementById('rejectIdLabel').textContent = id;
+            document.getElementById('rejectOverlay').classList.add('open');
+            document.getElementById('rejectModal').classList.add('open');
+        }
+        function closeRejectModal() {
+            document.getElementById('rejectOverlay').classList.remove('open');
+            document.getElementById('rejectModal').classList.remove('open');
+        }
+
+        function openCancelModal(id) {
+            document.getElementById('cancelTransferId').value = id;
+            document.getElementById('cancelIdLabel').textContent = id;
+            document.getElementById('cancelOverlay').classList.add('open');
+            document.getElementById('cancelModal').classList.add('open');
+        }
+        function closeCancelModal() {
+            document.getElementById('cancelOverlay').classList.remove('open');
+            document.getElementById('cancelModal').classList.remove('open');
+        }
+
+        // Close on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeCreateTransferModal();
+                closeDispatchModal();
+                closeReceiveModal();
+                closeWaybillModal();
+                closeApproveModal();
+                closeRejectModal();
+                closeCancelModal();
+            }
+        });
+    </script>
 }

@@ -62,6 +62,7 @@ builder.Services.AddScoped<IApiCommunicationLogService, ApiCommunicationLogServi
 builder.Services.AddScoped<IEmployeeManager, EmployeeManager>();
 builder.Services.AddScoped<IInventoryOpsManager, InventoryOpsManager>();
 builder.Services.AddScoped<IBatchManager, BatchManager>();
+builder.Services.AddScoped<IStockTransferManager, StockTransferManager>();
 
 var app = builder.Build();
 
