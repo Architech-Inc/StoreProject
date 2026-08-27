@@ -1,3 +1,4 @@
+using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Inventory;
 using Store.Models.Interfaces.Services;
 
@@ -19,6 +20,30 @@ public class ApiBatchService : IBatchService
         return result ?? new List<BatchDto>();
     }
 
+    public async Task<PagedResult<BatchDto>> GetBatchesPagedAsync(BatchFilterRequest request, CancellationToken ct = default)
+    {
+        var qs = new List<string>
+        {
+            $"page={request.Page}",
+            $"pageSize={request.PageSize}"
+        };
+        if (request.ItemId.HasValue) qs.Add($"itemId={request.ItemId.Value}");
+        if (!string.IsNullOrWhiteSpace(request.ExpiryStatus)) qs.Add($"expiryStatus={Uri.EscapeDataString(request.ExpiryStatus)}");
+        if (!string.IsNullOrWhiteSpace(request.SearchTerm)) qs.Add($"searchTerm={Uri.EscapeDataString(request.SearchTerm)}");
+        if (request.FromExpiry.HasValue) qs.Add($"fromExpiry={Uri.EscapeDataString(request.FromExpiry.Value.ToString("O"))}");
+        if (request.ToExpiry.HasValue) qs.Add($"toExpiry={Uri.EscapeDataString(request.ToExpiry.Value.ToString("O"))}");
+
+        var query = "?" + string.Join("&", qs);
+        var result = await _client.GetAsync<PagedResult<BatchDto>>($"/api/batches/paged{query}", ct);
+        return result ?? new PagedResult<BatchDto>();
+    }
+
+    public async Task<BatchMetricsDto> GetBatchMetricsAsync(CancellationToken ct = default)
+    {
+        var result = await _client.GetAsync<BatchMetricsDto>("/api/batches/metrics", ct);
+        return result ?? new BatchMetricsDto();
+    }
+
     public async Task<BatchDto?> GetByIdAsync(Guid id)
         => await _client.GetAsync<BatchDto>($"/api/batches/{id}");
 
@@ -33,6 +58,12 @@ public class ApiBatchService : IBatchService
 
     public async Task<bool> DeleteAsync(Guid id)
         => await _client.DeleteAsync($"/api/batches/{id}");
+
+    public async Task<bool> WriteOffBatchAsync(WriteOffBatchRequest request, Guid? actingUserId, CancellationToken ct = default)
+    {
+        var result = await _client.PostAsync<bool>("/api/batches/write-off", request, ct);
+        return result;
+    }
 
     public async Task<List<BatchDto>> GetExpiringAsync(int withinDays = 30)
     {

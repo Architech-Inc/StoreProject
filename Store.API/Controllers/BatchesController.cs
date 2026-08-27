@@ -26,12 +26,42 @@ public class BatchesController : ControllerBase
         return Ok(ApiResponse<List<BatchDto>>.Ok(list));
     }
 
+    [HttpGet("paged")]
+    [Authorize(Policy = PermissionKeys.InventoryRead)]
+    public async Task<IActionResult> GetPaged([FromQuery] BatchFilterRequest request, CancellationToken ct = default)
+    {
+        var result = await _batchService.GetBatchesPagedAsync(request, ct);
+        return Ok(ApiResponse<PagedResult<BatchDto>>.Ok(result));
+    }
+
+    [HttpGet("metrics")]
+    [Authorize(Policy = PermissionKeys.InventoryRead)]
+    public async Task<IActionResult> GetMetrics(CancellationToken ct = default)
+    {
+        var metrics = await _batchService.GetBatchMetricsAsync(ct);
+        return Ok(ApiResponse<BatchMetricsDto>.Ok(metrics));
+    }
+
     [HttpGet("expiring")]
     [Authorize(Policy = PermissionKeys.InventoryRead)]
     public async Task<IActionResult> GetExpiring([FromQuery] int withinDays = 30)
     {
         var list = await _batchService.GetExpiringAsync(withinDays);
         return Ok(ApiResponse<List<BatchDto>>.Ok(list));
+    }
+
+    [HttpPost("write-off")]
+    [Authorize(Policy = PermissionKeys.InventoryWrite)]
+    public async Task<IActionResult> WriteOff([FromBody] WriteOffBatchRequest request, CancellationToken ct = default)
+    {
+        Guid? uid = null;
+        var sub = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (Guid.TryParse(sub, out var g)) uid = g;
+
+        var ok = await _batchService.WriteOffBatchAsync(request, uid, ct);
+        if (!ok)
+            return NotFound(ApiErrorResponse.From("not_found", "Batch not found or cannot be written off", traceId: HttpContext.TraceIdentifier));
+        return Ok(ApiResponse<bool>.Ok(true));
     }
 
     [HttpGet("{id:guid}")]

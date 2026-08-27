@@ -1,252 +1,933 @@
 @page
 @model StoreUI.Pages.BatchTrackingModel
+@using Store.Models.Enums
 @{
     ViewData["Title"] = "Batch & Expiry Tracking";
     ViewData["ActivePage"] = "BatchTracking";
-    ViewData["PageDescription"] = "Monitor stock lot numbers, cost prices, and expiry dates. Receive alerts for expiring items.";
+    ViewData["PageDescription"] = "Monitor lot numbers, shelf-life countdowns, cost valuations, and food safety write-offs.";
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
+    <style>
+        /* ── Batch Tracking Scoped & Standardized Styles ── */
+        .batch-container {
+            max-width: 1440px;
+            margin: 0 auto;
+            color: var(--text-primary);
+        }
+
+        /* ── 1. KPI Grid ── */
+        .batch-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .batch-kpi-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg, 12px);
+            padding: 18px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.05));
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .batch-kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,0.08));
+            border-color: var(--brand-border, #b7d9b7);
+        }
+
+        .batch-kpi-card.active {
+            border-color: var(--brand);
+            background: var(--brand-soft);
+        }
+
+        .batch-kpi-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .batch-kpi-icon.amber  { background: rgba(245, 158, 11, 0.12); color: #d97706; }
+        .batch-kpi-icon.red    { background: rgba(220, 38, 38, 0.12); color: #dc2626; }
+        .batch-kpi-icon.green  { background: var(--brand-soft, rgba(1, 156, 1, 0.12)); color: var(--brand, #019c01); }
+        .batch-kpi-icon.teal   { background: rgba(20, 184, 166, 0.12); color: #0d9488; }
+
+        .batch-kpi-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .batch-kpi-val {
+            font-size: 1.45rem;
+            font-weight: 700;
+            line-height: 1.2;
+            color: var(--text-primary);
+        }
+
+        .batch-kpi-lbl {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 700;
+            margin-top: 2px;
+        }
+
+        .batch-kpi-sub {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* ── 2. Toolbar & Filter Dock ── */
+        .batch-toolbar {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg, 12px);
+            padding: 14px 18px;
+            margin-bottom: 24px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.05));
+        }
+
+        .batch-filter-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            flex-grow: 1;
+        }
+
+        .batch-search-box {
+            position: relative;
+            min-width: 240px;
+            flex-grow: 1;
+            max-width: 360px;
+        }
+
+        .batch-search-box input {
+            width: 100%;
+            padding: 9px 12px 9px 38px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--canvas);
+            color: var(--text-primary);
+            font-size: 0.90rem;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .batch-search-box input:focus {
+            background: var(--surface);
+            border-color: var(--brand);
+            box-shadow: 0 0 0 3px var(--brand-glow, rgba(1, 156, 1, 0.2));
+        }
+
+        .batch-search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            pointer-events: none;
+        }
+
+        .batch-pill-btn {
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-secondary);
+            font-size: 0.84rem;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            line-height: 1;
+            white-space: nowrap;
+        }
+
+        .batch-pill-btn:hover {
+            border-color: var(--brand);
+            color: var(--brand);
+        }
+
+        .batch-pill-btn.active {
+            background: var(--brand);
+            color: #ffffff !important;
+            border-color: var(--brand);
+            font-weight: 600;
+        }
+
+        .batch-toolbar-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        /* ── 3. Section Cards & Tables ── */
+        .batch-card-section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg, 12px);
+            padding: 20px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.05));
+        }
+
+        .batch-section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .batch-section-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0;
+        }
+
+        .btn-table-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 0.80rem;
+            font-weight: 600;
+            text-decoration: none;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+
+        .btn-table-action:hover {
+            border-color: var(--brand);
+            color: var(--brand);
+            background: var(--brand-soft);
+        }
+
+        .btn-table-action.danger:hover {
+            border-color: #dc2626;
+            color: #dc2626;
+            background: rgba(220, 38, 38, 0.08);
+        }
+
+        .btn-table-action.warning:hover {
+            border-color: #d97706;
+            color: #d97706;
+            background: rgba(245, 158, 11, 0.08);
+        }
+
+        /* ── 4. Standard Layered Modals ── */
+        .batch-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(15, 23, 42, 0.45);
+            backdrop-filter: blur(4px);
+            z-index: 290;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .batch-modal-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .batch-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -46%) scale(0.97);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            width: 90%;
+            max-width: 560px;
+            max-height: 90vh;
+            overflow-y: auto;
+            z-index: 300;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18);
+            opacity: 0;
+            pointer-events: none;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+        }
+
+        .batch-modal.open {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .batch-modal-header {
+            padding: 18px 22px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .batch-modal-body {
+            padding: 22px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .batch-modal-footer {
+            padding: 16px 22px;
+            border-top: 1px solid var(--border);
+            background: var(--surface-alt, #f8fafc);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            border-bottom-left-radius: 14px;
+            border-bottom-right-radius: 14px;
+        }
+
+        .batch-live-banner {
+            background: var(--canvas);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.88rem;
+        }
+
+        .code-badge {
+            font-family: 'Cascadia Code', Consolas, monospace;
+            font-size: 0.78rem;
+            background: var(--canvas);
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+
+        .expiry-preset-pills {
+            display: flex;
+            gap: 6px;
+            margin-top: 6px;
+            flex-wrap: wrap;
+        }
+
+        .expiry-preset-btn {
+            font-size: 0.72rem;
+            padding: 3px 8px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background: var(--canvas);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .expiry-preset-btn:hover {
+            border-color: var(--brand);
+            color: var(--brand);
+            background: var(--brand-soft);
+        }
+    </style>
 }
 
-<div class="ops-page">
+<div class="batch-container">
 
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
     {
-        <div class="status @(Model.StatusMessage.StartsWith("Error") ? "error" : "ok")">@Model.StatusMessage</div>
-    }
-
-    <!-- Expiry Alert Banner -->
-    @if (Model.ExpiringBatches.Any())
-    {
-        <div class="status error" style="margin-bottom:16px;">
-            ⚠️ <strong>@Model.ExpiringBatches.Count</strong> batch(es) expiring within the next 30 days.
-            <a href="?expiryStatus=Expiring" style="margin-left:8px;color:inherit;text-decoration:underline;">View</a>
+        <div class="status @(Model.StatusMessage.StartsWith("Error") || Model.StatusMessage.StartsWith("Failed") ? "error" : "ok")" style="margin-bottom: 20px;">
+            @Model.StatusMessage
         </div>
     }
 
-    <!-- Filter bar -->
-    <form method="get" style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
-        <select name="expiryStatus" style="min-width:140px;">
-            <option value="" selected="@(Model.FilterStatus == null)">All Statuses</option>
-            <option value="OK" selected="@(Model.FilterStatus == "OK")">OK</option>
-            <option value="Expiring" selected="@(Model.FilterStatus == "Expiring")">Expiring Soon</option>
-            <option value="Expired" selected="@(Model.FilterStatus == "Expired")">Expired</option>
-        </select>
-        <button type="submit" class="btn-sm">Filter</button>
-    </form>
+    <!-- ── 1. KPI Metric Banner ──────────────────────────────────── -->
+    <div class="batch-kpi-grid">
+        <a href="?ExpiryStatus=Expiring" class="batch-kpi-card @(Model.ExpiryStatus == "Expiring" ? "active" : "")">
+            <div class="batch-kpi-icon amber">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div class="batch-kpi-info">
+                <span class="batch-kpi-val">@Model.Metrics.TotalExpiring30Days</span>
+                <span class="batch-kpi-lbl">Expiring (≤ 30 Days)</span>
+                <span class="batch-kpi-sub">Priority FEFO rotation needed</span>
+            </div>
+        </a>
 
-    <section class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-            <h2 style="margin:0;">Batches <small style="font-weight:400;color:var(--ops-subtle);">@Model.Batches.Count total</small></h2>
-            <button type="button" onclick="openCreate()">+ Record Batch</button>
+        <a href="?ExpiryStatus=Expired" class="batch-kpi-card @(Model.ExpiryStatus == "Expired" ? "active" : "")">
+            <div class="batch-kpi-icon red">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+            <div class="batch-kpi-info">
+                <span class="batch-kpi-val" style="color: #dc2626;">@Model.Metrics.TotalExpired</span>
+                <span class="batch-kpi-lbl">Expired Batches</span>
+                <span class="batch-kpi-sub">@(Model.Metrics.TotalExpired > 0 ? "Quarantine & write-off required" : "Zero expired stock")</span>
+            </div>
+        </a>
+
+        <a href="?ExpiryStatus=OK" class="batch-kpi-card @(Model.ExpiryStatus == "OK" ? "active" : "")">
+            <div class="batch-kpi-icon green">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+            </div>
+            <div class="batch-kpi-info">
+                <span class="batch-kpi-val">@Model.Metrics.TotalBatches</span>
+                <span class="batch-kpi-lbl">Active Lots / Batches</span>
+                <span class="batch-kpi-sub">@Model.Metrics.TotalTrackedUnits units tracked</span>
+            </div>
+        </a>
+
+        <div class="batch-kpi-card">
+            <div class="batch-kpi-icon teal">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div class="batch-kpi-info">
+                <span class="batch-kpi-val">@Model.Metrics.TotalBatchValuationXaf.ToString("N0") <small style="font-size:0.80rem; font-weight:500;">XAF</small></span>
+                <span class="batch-kpi-lbl">Batch Stock Valuation</span>
+                <span class="batch-kpi-sub">Total capital across lots</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── 2. Toolbar & Filter Dock ──────────────────────────────── -->
+    <div class="batch-toolbar">
+        <form method="get" id="batchFilterForm" class="batch-filter-group">
+            <div class="batch-search-box">
+                <svg class="batch-search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input type="search" name="Search" value="@Model.Search" placeholder="Search batch #, product name, barcode..." />
+            </div>
+
+            <a href="?Search=@Uri.EscapeDataString(Model.Search ?? "")" class="batch-pill-btn @(string.IsNullOrEmpty(Model.ExpiryStatus) ? "active" : "")">All Batches</a>
+            <a href="?ExpiryStatus=Expiring&Search=@Uri.EscapeDataString(Model.Search ?? "")" class="batch-pill-btn @(Model.ExpiryStatus == "Expiring" ? "active" : "")">Expiring Soon</a>
+            <a href="?ExpiryStatus=Expired&Search=@Uri.EscapeDataString(Model.Search ?? "")" class="batch-pill-btn @(Model.ExpiryStatus == "Expired" ? "active" : "")">Expired</a>
+            <a href="?ExpiryStatus=OK&Search=@Uri.EscapeDataString(Model.Search ?? "")" class="batch-pill-btn @(Model.ExpiryStatus == "OK" ? "active" : "")">Healthy (OK)</a>
+        </form>
+
+        <div class="batch-toolbar-actions">
+            <a href="?handler=ExportCsv&ExpiryStatus=@Model.ExpiryStatus&Search=@Uri.EscapeDataString(Model.Search ?? "")" class="button-secondary" style="display: inline-flex; align-items: center; gap: 6px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg> Export CSV
+            </a>
+
+            @if (Model.CanWrite)
+            {
+                <button type="button" class="button-primary" onclick="openRecordBatchModal()" style="display: inline-flex; align-items: center; gap: 6px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"/>
+                    </svg> Record Batch
+                </button>
+            }
+        </div>
+    </div>
+
+    <!-- ── 3. Batches Data Table ─────────────────────────────────── -->
+    <section class="batch-card-section">
+        <div class="batch-section-header">
+            <h3 class="batch-section-title">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color:var(--brand);">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                Lot & Batch Inventory Stream
+                <span class="badge badge-neutral" style="font-size:0.75rem;">@Model.TotalBatches records</span>
+            </h3>
         </div>
 
         @if (!Model.Batches.Any())
         {
-            <p style="color:var(--ops-subtle);padding:12px 0;">No batches recorded yet.</p>
+            <div class="empty-state" style="padding: 36px 20px; text-align: center;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="42" height="42" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="margin:0 auto 12px; color:var(--text-muted);">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+                <h4 style="margin:0 0 6px 0; color:var(--text-primary);">No Batch Lots Found</h4>
+                <p style="color:var(--text-secondary); margin:0;">No lot records match your current filter criteria.</p>
+            </div>
         }
         else
         {
-            <div style="overflow-x:auto;">
+            <div class="table-wrap" style="margin:0; border:none;">
                 <table>
                     <thead>
                         <tr>
-                            <th>Batch #</th>
-                            <th>Item</th>
-                            <th>Qty</th>
-                            <th>Cost Price</th>
-                            <th>Received</th>
-                            <th>Expiry</th>
-                            <th>Status</th>
+                            <th>Batch / Lot Code</th>
+                            <th>Product Details</th>
+                            <th>Lot Quantity</th>
+                            <th>Cost & Valuation</th>
+                            <th>Received Date</th>
+                            <th>Expiry & Shelf-Life</th>
                             <th>Notes</th>
-                            <th></th>
+                            <th style="text-align: right;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var b in Model.Batches)
                         {
                             <tr>
-                                <td><code style="font-size:.78rem;">@b.BatchNumber</code></td>
-                                <td>@b.ItemName</td>
-                                <td>@b.Quantity</td>
-                                <td>GHS @b.CostPrice.ToString("N2")</td>
-                                <td>@b.ReceivedDate.ToString("MMM d, yyyy")</td>
-                                <td>@(b.ExpiryDate.HasValue ? b.ExpiryDate.Value.ToString("MMM d, yyyy") : "–")</td>
                                 <td>
-                                    @switch (b.ExpiryStatus)
+                                    <span class="code-badge" style="font-size:0.84rem; font-weight:700;">@b.BatchNumber</span>
+                                </td>
+                                <td>
+                                    <div>
+                                        <strong style="color:var(--text-primary);">@b.ItemName</strong>
+                                        <div style="display:flex; gap:6px; margin-top:3px; align-items:center;">
+                                            @if (!string.IsNullOrEmpty(b.CategoryName))
+                                            {
+                                                <span class="badge badge-neutral" style="font-size:0.70rem;">@b.CategoryName</span>
+                                            }
+                                            @if (!string.IsNullOrEmpty(b.ItemCode))
+                                            {
+                                                <span class="code-badge">@b.ItemCode</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <strong style="font-size:0.95rem; color:var(--text-primary);">@b.Quantity units</strong>
+                                </td>
+                                <td>
+                                    <div>
+                                        <strong style="color:var(--text-primary);">@b.TotalValuation.ToString("N2") XAF</strong>
+                                        <div style="font-size:0.75rem; color:var(--text-muted);">@@ @b.CostPrice.ToString("N2") / unit</div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div style="font-size:0.85rem; color:var(--text-secondary);">@b.ReceivedDate.ToString("dd MMM yyyy")</div>
+                                </td>
+                                <td>
+                                    @if (!b.ExpiryDate.HasValue)
                                     {
-                                        case "Expired":
-                                            <span class="badge badge-danger">Expired</span>
-                                            break;
-                                        case "Expiring":
-                                            <span class="badge badge-warning">Expiring (@b.DaysUntilExpiry d)</span>
-                                            break;
-                                        default:
-                                            <span class="badge badge-success">OK</span>
-                                            break;
+                                        <span class="badge badge-neutral">No Expiry Date</span>
+                                    }
+                                    else
+                                    {
+                                        <div style="font-size:0.85rem; font-weight:600; color:var(--text-primary); margin-bottom:2px;">
+                                            @b.ExpiryDate.Value.ToString("dd MMM yyyy")
+                                        </div>
+                                        @if (b.ExpiryStatus == "Expired")
+                                        {
+                                            <span class="badge badge-danger">Expired (@(Math.Abs(b.DaysUntilExpiry))d ago)</span>
+                                        }
+                                        else if (b.ExpiryStatus == "Expiring")
+                                        {
+                                            <span class="badge badge-warning">Expiring in @b.DaysUntilExpiry d</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge badge-success">OK (@b.DaysUntilExpiry d)</span>
+                                        }
                                     }
                                 </td>
-                                <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="@b.Notes">@b.Notes</td>
-                                <td style="white-space:nowrap;">
-                                    <button type="button" class="btn-icon" title="Edit"
-                                        onclick="openEdit('@b.BatchId', @System.Text.Json.JsonSerializer.Serialize(b))">✏️</button>
-                                    <button type="button" class="btn-icon danger" title="Delete"
-                                        onclick="confirmDelete('@b.BatchId', '@System.Web.HttpUtility.JavaScriptStringEncode(b.BatchNumber)')">🗑️</button>
+                                <td style="max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="@b.Notes">
+                                    <span style="font-size:0.82rem; color:var(--text-secondary);">@(string.IsNullOrWhiteSpace(b.Notes) ? "—" : b.Notes)</span>
+                                </td>
+                                <td style="text-align: right;">
+                                    <div style="display:inline-flex; gap:6px;">
+                                        @if (Model.CanWrite)
+                                        {
+                                            @if (b.ExpiryStatus == "Expired" || b.ExpiryStatus == "Expiring")
+                                            {
+                                                <button type="button" class="btn-table-action warning" title="Write-off to Wastage"
+                                                    onclick="openWriteOffModal('@b.BatchId', '@b.ItemId', '@b.BatchNumber.Replace("'", "\\'") ', '@b.ItemName.Replace("'", "\\'") ', @b.Quantity)">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg> Write-Off
+                                                </button>
+                                            }
+
+                                            <button type="button" class="btn-table-action" title="Edit Batch"
+                                                onclick="openEditBatchModal('@b.BatchId', '@b.BatchNumber.Replace("'", "\\'") ', @b.Quantity, @b.CostPrice, '@(b.ExpiryDate.HasValue ? b.ExpiryDate.Value.ToString("yyyy-MM-dd") : "")', '@(b.Notes?.Replace("'", "\\'") ?? "")')">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                                </svg> Edit
+                                            </button>
+
+                                            <button type="button" class="btn-table-action danger" title="Delete Batch"
+                                                onclick="openDeleteBatchModal('@b.BatchId', '@b.BatchNumber.Replace("'", "\\'") ')">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7" />
+                                                </svg>
+                                            </button>
+                                        }
+                                    </div>
                                 </td>
                             </tr>
                         }
                     </tbody>
                 </table>
             </div>
+
+            @if (Model.TotalPages > 1)
+            {
+                <div style="padding: 16px 0; display: flex; justify-content: center;">
+                    <nav class="pagination" aria-label="Batch tracking pages">
+                        @if (Model.PageNumber > 1)
+                        {
+                            <a href="?page=@(Model.PageNumber - 1)&ExpiryStatus=@Model.ExpiryStatus&Search=@Uri.EscapeDataString(Model.Search ?? "")">‹ Prev</a>
+                        }
+                        <span class="active">@Model.PageNumber / @Model.TotalPages</span>
+                        @if (Model.PageNumber < Model.TotalPages)
+                        {
+                            <a href="?page=@(Model.PageNumber + 1)&ExpiryStatus=@Model.ExpiryStatus&Search=@Uri.EscapeDataString(Model.Search ?? "")">Next ›</a>
+                        }
+                    </nav>
+                </div>
+            }
         }
     </section>
 </div>
 
-<!-- Create Modal -->
-<div id="createModal" class="modal-overlay" hidden role="dialog" aria-modal="true">
-    <div class="modal">
-        <div class="modal-head">
-            <h3>Record Batch</h3>
-            <button type="button" class="btn-close" onclick="closeModal('createModal')" aria-label="Close">×</button>
-        </div>
-        <form method="post" asp-page-handler="Create">
-            @Html.AntiForgeryToken()
-            <div class="form-grid">
-                <div>
-                    <label>Select Item *</label>
-                    <div class="smart-lookup-wrap" id="batchItemLookup" data-url="?handler=SearchItems" data-placeholder="Search item...">
-                        <input type="hidden" name="CreateItemId" id="createBatchItemId" required />
-                    </div>
-                </div>
-                <div>
-                    <label>Batch Number *</label>
-                    <input name="CreateBatchNumber" maxlength="100" required placeholder="e.g. LOT-2025-001" />
-                </div>
-                <div>
-                    <label>Quantity *</label>
-                    <input name="CreateQuantity" type="number" min="1" required value="1" />
-                </div>
-                <div>
-                    <label>Cost Price (GHS)</label>
-                    <input name="CreateCostPrice" id="createBatchCostPrice" type="number" min="0" step="0.01" value="0.00" />
-                </div>
-                <div>
-                    <label>Received Date</label>
-                    <input name="CreateReceivedDate" type="date" value="@DateTime.Today.ToString("yyyy-MM-dd")" />
-                </div>
-                <div>
-                    <label>Expiry Date</label>
-                    <input name="CreateExpiryDate" type="date" />
-                </div>
-                <div style="grid-column:1/-1;">
-                    <label>Notes</label>
-                    <textarea name="CreateNotes" rows="2" maxlength="500" placeholder="Optional batch notes..."></textarea>
-                </div>
-            </div>
-            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
-                <button type="button" class="button-command" onclick="closeModal('createModal')">Cancel</button>
-                <button type="submit" class="button-primary">Save Batch</button>
-            </div>
-        </form>
+<!-- ═════════════════════════════════════════════════════════════ -->
+<!-- ── MODAL 1: Record Batch ──────────────────────────────────── -->
+<!-- ═════════════════════════════════════════════════════════════ -->
+<div class="batch-modal-overlay" id="recordBatchOverlay" onclick="closeRecordBatchModal()"></div>
+<div class="batch-modal" id="recordBatchModal">
+    <div class="batch-modal-header">
+        <h3 style="margin:0; font-size:1.15rem; color:var(--text-primary); display:flex; align-items:center; gap:8px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color:var(--brand);">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg> Record New Product Batch
+        </h3>
+        <button type="button" class="btn-close" onclick="closeRecordBatchModal()" aria-label="Close">×</button>
     </div>
+    <form method="post" asp-page-handler="Create" id="createBatchForm">
+        @Html.AntiForgeryToken()
+        <div class="batch-modal-body">
+            <div>
+                <label for="createItemSelect" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Product Catalog Item <span style="color:var(--danger);">*</span></label>
+                <select asp-for="CreateItemId" id="createItemSelect" class="form-control" style="width:100%;" required onchange="onCreateItemChange(this)">
+                    <option value="">— Select Catalog Product —</option>
+                    @foreach (var item in Model.QuickItems)
+                    {
+                        <option value="@item.ItemId" data-cost="@(item.CostPrice ?? 0)" data-stock="@item.InStock">@item.Name (@item.InStock in stock)</option>
+                    }
+                </select>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+                <div>
+                    <label for="createBatchNum" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Batch / Lot Number <span style="color:var(--danger);">*</span></label>
+                    <input asp-for="CreateBatchNumber" id="createBatchNum" class="form-control" style="width:100%; font-family:monospace;" required placeholder="e.g. LOT-2026-001" />
+                </div>
+                <div>
+                    <label for="createBatchQty" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Lot Quantity <span style="color:var(--danger);">*</span></label>
+                    <input asp-for="CreateQuantity" id="createBatchQty" type="number" min="1" class="form-control" style="width:100%;" required value="1" oninput="calculateCreateValuation()" />
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+                <div>
+                    <label for="createBatchCost" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Unit Cost Price (XAF)</label>
+                    <input asp-for="CreateCostPrice" id="createBatchCost" type="number" step="0.01" min="0" class="form-control" style="width:100%;" placeholder="0.00" oninput="calculateCreateValuation()" />
+                </div>
+                <div>
+                    <label for="createReceivedDate" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Received Date</label>
+                    <input asp-for="CreateReceivedDate" id="createReceivedDate" type="date" class="form-control" style="width:100%;" value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                </div>
+            </div>
+
+            <div class="batch-live-banner">
+                <span style="color:var(--text-secondary);">Total Batch Lot Valuation:</span>
+                <strong id="createValuationDisplay" style="color:var(--brand); font-size:1.05rem;">0.00 XAF</strong>
+            </div>
+
+            <div>
+                <label for="createExpiryDate" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Expiry Date (Shelf-Life)</label>
+                <input asp-for="CreateExpiryDate" id="createExpiryDate" type="date" class="form-control" style="width:100%;" />
+                <div class="expiry-preset-pills">
+                    <span style="font-size:0.75rem; color:var(--text-muted); align-self:center;">Presets:</span>
+                    <button type="button" class="expiry-preset-btn" onclick="setExpiryPreset(30)">+30 Days</button>
+                    <button type="button" class="expiry-preset-btn" onclick="setExpiryPreset(90)">+90 Days</button>
+                    <button type="button" class="expiry-preset-btn" onclick="setExpiryPreset(180)">+180 Days (6m)</button>
+                    <button type="button" class="expiry-preset-btn" onclick="setExpiryPreset(365)">+1 Year</button>
+                </div>
+            </div>
+
+            <div>
+                <label for="createNotes" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Batch Storage Notes</label>
+                <textarea asp-for="CreateNotes" id="createNotes" class="form-control" style="width:100%;" rows="2" placeholder="Optional notes (warehouse location, temperature, supplier lot)..."></textarea>
+            </div>
+        </div>
+        <div class="batch-modal-footer">
+            <button type="button" class="button-secondary" onclick="closeRecordBatchModal()">Cancel</button>
+            <button type="submit" class="button-primary">Save Batch Record</button>
+        </div>
+    </form>
 </div>
 
-<!-- Edit Modal -->
-<div id="editModal" class="modal-overlay" hidden role="dialog" aria-modal="true">
-    <div class="modal">
-        <div class="modal-head">
-            <h3>Edit Batch</h3>
-            <button type="button" class="btn-close" onclick="closeModal('editModal')" aria-label="Close">×</button>
-        </div>
-        <form method="post" asp-page-handler="Edit">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="EditBatchId" id="editBatchId" />
-            <div class="form-grid">
-                <label>Batch Number
-                    <input id="editBatchNumber" name="EditBatchNumber" maxlength="100" />
-                </label>
-                <label>Quantity
-                    <input id="editQty" name="EditQuantity" type="number" min="0" />
-                </label>
-                <label>Cost Price (GHS)
-                    <input id="editCost" name="EditCostPrice" type="number" min="0" step="0.01" />
-                </label>
-                <label>Expiry Date
-                    <input id="editExpiry" name="EditExpiryDate" type="date" />
-                </label>
-                <label style="grid-column:1/-1;">Notes
-                    <textarea id="editNotes" name="EditNotes" rows="2" maxlength="500"></textarea>
-                </label>
-            </div>
-            <div style="display:flex;justify-content:flex-end;gap:8px;">
-                <button type="button" class="button-command" onclick="closeModal('editModal')">Cancel</button>
-                <button type="submit" class="button-primary">Save</button>
-            </div>
-        </form>
+<!-- ═════════════════════════════════════════════════════════════ -->
+<!-- ── MODAL 2: Edit Batch ────────────────────────────────────── -->
+<!-- ═════════════════════════════════════════════════════════════ -->
+<div class="batch-modal-overlay" id="editBatchOverlay" onclick="closeEditBatchModal()"></div>
+<div class="batch-modal" id="editBatchModal">
+    <div class="batch-modal-header">
+        <h3 style="margin:0; font-size:1.15rem; color:var(--text-primary); display:flex; align-items:center; gap:8px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color:var(--brand);">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg> Edit Batch Details
+        </h3>
+        <button type="button" class="btn-close" onclick="closeEditBatchModal()" aria-label="Close">×</button>
     </div>
+    <form method="post" asp-page-handler="Edit" id="editBatchForm">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="EditBatchId" id="editBatchId" />
+        <div class="batch-modal-body">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+                <div>
+                    <label for="editBatchNum" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Batch / Lot Number</label>
+                    <input asp-for="EditBatchNumber" id="editBatchNum" class="form-control" style="width:100%; font-family:monospace;" />
+                </div>
+                <div>
+                    <label for="editBatchQty" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Lot Quantity</label>
+                    <input asp-for="EditQuantity" id="editBatchQty" type="number" min="0" class="form-control" style="width:100%;" />
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+                <div>
+                    <label for="editBatchCost" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Unit Cost Price (XAF)</label>
+                    <input asp-for="EditCostPrice" id="editBatchCost" type="number" step="0.01" min="0" class="form-control" style="width:100%;" />
+                </div>
+                <div>
+                    <label for="editExpiryDate" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Expiry Date</label>
+                    <input asp-for="EditExpiryDate" id="editExpiryDate" type="date" class="form-control" style="width:100%;" />
+                </div>
+            </div>
+
+            <div>
+                <label for="editNotes" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Notes</label>
+                <textarea asp-for="EditNotes" id="editNotes" class="form-control" style="width:100%;" rows="2"></textarea>
+            </div>
+        </div>
+        <div class="batch-modal-footer">
+            <button type="button" class="button-secondary" onclick="closeEditBatchModal()">Cancel</button>
+            <button type="submit" class="button-primary">Save Changes</button>
+        </div>
+    </form>
 </div>
 
-<!-- Delete Confirm Modal -->
-<div id="deleteModal" class="modal-overlay" hidden role="dialog" aria-modal="true">
-    <div class="modal" style="max-width:420px;">
-        <div class="modal-head">
-            <h3>Delete Batch</h3>
-            <button type="button" class="btn-close" onclick="closeModal('deleteModal')" aria-label="Close">×</button>
-        </div>
-        <p>Delete batch <strong id="deleteLabel"></strong>? This cannot be undone.</p>
-        <form method="post" asp-page-handler="Delete">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="DeleteBatchId" id="deleteBatchId" />
-            <div style="display:flex;justify-content:flex-end;gap:8px;">
-                <button type="button" class="button-command" onclick="closeModal('deleteModal')">Cancel</button>
-                <button type="submit" class="button-primary danger">Delete</button>
-            </div>
-        </form>
+<!-- ═════════════════════════════════════════════════════════════ -->
+<!-- ── MODAL 3: Write-Off to Wastage Log ──────────────────────── -->
+<!-- ═════════════════════════════════════════════════════════════ -->
+<div class="batch-modal-overlay" id="writeOffOverlay" onclick="closeWriteOffModal()"></div>
+<div class="batch-modal" id="writeOffModal">
+    <div class="batch-modal-header">
+        <h3 style="margin:0; font-size:1.15rem; color:#dc2626; display:flex; align-items:center; gap:8px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg> Write-Off Batch to Wastage Log
+        </h3>
+        <button type="button" class="btn-close" onclick="closeWriteOffModal()" aria-label="Close">×</button>
     </div>
+    <form method="post" asp-page-handler="WriteOff" id="writeOffForm">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="WriteOffBatchId" id="writeOffBatchId" />
+        <input type="hidden" asp-for="WriteOffItemId" id="writeOffItemId" />
+
+        <div class="batch-modal-body">
+            <div class="batch-live-banner" style="background:rgba(220, 38, 38, 0.08); border-color:rgba(220, 38, 38, 0.2);">
+                <div>
+                    <div style="font-weight: 700; color: #dc2626;" id="writeOffBatchLabel">Batch #</div>
+                    <div style="font-size: 0.82rem; color: var(--text-secondary);" id="writeOffItemLabel">Product Name</div>
+                </div>
+                <strong id="writeOffAvailLabel" style="color:#dc2626;">0 units available</strong>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+                <div>
+                    <label for="writeOffQty" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Write-Off Quantity <span style="color:var(--danger);">*</span></label>
+                    <input asp-for="WriteOffQuantity" id="writeOffQty" type="number" min="1" class="form-control" style="width:100%;" required value="1" />
+                </div>
+                <div>
+                    <label for="writeOffType" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Wastage Reason Category <span style="color:var(--danger);">*</span></label>
+                    <select asp-for="WriteOffType" id="writeOffType" class="form-control" style="width:100%;" required>
+                        <option value="Expiry">Expired Shelf-Life</option>
+                        <option value="Damage">Damaged in Store</option>
+                        <option value="Spoilage">Spoiled Perishable</option>
+                        <option value="Theft">Theft or Shrinkage</option>
+                        <option value="AdminError">Administrative Error</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label for="writeOffReason" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Disposal / Inspection Reason <span style="color:var(--danger);">*</span></label>
+                <input asp-for="WriteOffReason" id="writeOffReason" class="form-control" style="width:100%;" required value="Batch past shelf-life expiry" />
+            </div>
+
+            <div>
+                <label for="writeOffNotes" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Additional Wastage Notes</label>
+                <textarea asp-for="WriteOffNotes" id="writeOffNotes" class="form-control" style="width:100%;" rows="2" placeholder="Optional notes (disposal method, supervisor approval)..."></textarea>
+            </div>
+        </div>
+        <div class="batch-modal-footer">
+            <button type="button" class="button-secondary" onclick="closeWriteOffModal()">Cancel</button>
+            <button type="submit" class="button-primary" style="background:#dc2626; border-color:#dc2626;">Confirm Write-Off</button>
+        </div>
+    </form>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════════ -->
+<!-- ── MODAL 4: Delete Batch ──────────────────────────────────── -->
+<!-- ═════════════════════════════════════════════════════════════ -->
+<div class="batch-modal-overlay" id="deleteBatchOverlay" onclick="closeDeleteBatchModal()"></div>
+<div class="batch-modal" id="deleteBatchModal" style="max-width: 440px;">
+    <div class="batch-modal-header">
+        <h3 style="margin:0; font-size:1.15rem; color:#dc2626;">Delete Batch Record</h3>
+        <button type="button" class="btn-close" onclick="closeDeleteBatchModal()" aria-label="Close">×</button>
+    </div>
+    <form method="post" asp-page-handler="Delete" id="deleteBatchForm">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="DeleteBatchId" id="deleteBatchId" />
+        <div class="batch-modal-body">
+            <p style="margin:0; font-size:0.92rem; color:var(--text-primary);">
+                Are you sure you want to delete batch record <strong id="deleteBatchNumLabel" style="font-family:monospace;"></strong>?
+            </p>
+            <div style="font-size:0.80rem; color:var(--text-secondary); background:var(--canvas); padding:10px 12px; border-radius:6px; border:1px solid var(--border);">
+                ⚠️ This will permanently remove the lot record from tracking. To write off lost stock, use the <strong>Write-Off to Wastage</strong> action instead.
+            </div>
+        </div>
+        <div class="batch-modal-footer">
+            <button type="button" class="button-secondary" onclick="closeDeleteBatchModal()">Cancel</button>
+            <button type="submit" class="button-primary" style="background:#dc2626; border-color:#dc2626;">Delete Record</button>
+        </div>
+    </form>
 </div>
 
 @section Scripts {
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const wrap = document.getElementById('batchItemLookup');
-    if (wrap && window.SmartLookup) {
-        window.SmartLookup.attach(wrap, {
-            onSelect: function(item) {
-                if (item && item.cost !== undefined) {
-                    const costInput = document.getElementById('createBatchCostPrice');
-                    if (costInput) {
-                        costInput.value = item.cost.toFixed(2);
-                    }
-                }
+    <script>
+        // ── Modal Interactions ──────────────────────────────────────
+        function openRecordBatchModal() {
+            document.getElementById('recordBatchOverlay').classList.add('open');
+            document.getElementById('recordBatchModal').classList.add('open');
+        }
+        function closeRecordBatchModal() {
+            document.getElementById('recordBatchOverlay').classList.remove('open');
+            document.getElementById('recordBatchModal').classList.remove('open');
+        }
+
+        function openEditBatchModal(id, batchNum, qty, cost, expiry, notes) {
+            document.getElementById('editBatchId').value = id;
+            document.getElementById('editBatchNum').value = batchNum;
+            document.getElementById('editBatchQty').value = qty;
+            document.getElementById('editBatchCost').value = cost.toFixed(2);
+            document.getElementById('editExpiryDate').value = expiry;
+            document.getElementById('editNotes').value = notes;
+            document.getElementById('editBatchOverlay').classList.add('open');
+            document.getElementById('editBatchModal').classList.add('open');
+        }
+        function closeEditBatchModal() {
+            document.getElementById('editBatchOverlay').classList.remove('open');
+            document.getElementById('editBatchModal').classList.remove('open');
+        }
+
+        function openWriteOffModal(batchId, itemId, batchNum, itemName, availQty) {
+            document.getElementById('writeOffBatchId').value = batchId;
+            document.getElementById('writeOffItemId').value = itemId;
+            document.getElementById('writeOffBatchLabel').textContent = 'Batch: ' + batchNum;
+            document.getElementById('writeOffItemLabel').textContent = itemName;
+            document.getElementById('writeOffAvailLabel').textContent = availQty + ' units in lot';
+            document.getElementById('writeOffQty').value = availQty;
+            document.getElementById('writeOffQty').max = availQty;
+            document.getElementById('writeOffOverlay').classList.add('open');
+            document.getElementById('writeOffModal').classList.add('open');
+        }
+        function closeWriteOffModal() {
+            document.getElementById('writeOffOverlay').classList.remove('open');
+            document.getElementById('writeOffModal').classList.remove('open');
+        }
+
+        function openDeleteBatchModal(batchId, batchNum) {
+            document.getElementById('deleteBatchId').value = batchId;
+            document.getElementById('deleteBatchNumLabel').textContent = batchNum;
+            document.getElementById('deleteBatchOverlay').classList.add('open');
+            document.getElementById('deleteBatchModal').classList.add('open');
+        }
+        function closeDeleteBatchModal() {
+            document.getElementById('deleteBatchOverlay').classList.remove('open');
+            document.getElementById('deleteBatchModal').classList.remove('open');
+        }
+
+        // Close on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeRecordBatchModal();
+                closeEditBatchModal();
+                closeWriteOffModal();
+                closeDeleteBatchModal();
             }
         });
-    }
-});
 
-function openCreate() { document.getElementById('createModal').hidden = false; }
-function closeModal(id) { document.getElementById(id).hidden = true; }
+        // ── Dynamic Calculators & Presets ───────────────────────────
+        function onCreateItemChange(select) {
+            const opt = select.options[select.selectedIndex];
+            if (opt && opt.value) {
+                const cost = opt.getAttribute('data-cost');
+                if (cost) {
+                    document.getElementById('createBatchCost').value = parseFloat(cost).toFixed(2);
+                }
+            }
+            calculateCreateValuation();
+        }
 
-function toDateInput(iso) {
-    if (!iso) return '';
-    return iso.substring(0, 10);
-}
+        function calculateCreateValuation() {
+            const qty = parseFloat(document.getElementById('createBatchQty').value) || 0;
+            const cost = parseFloat(document.getElementById('createBatchCost').value) || 0;
+            const total = qty * cost;
+            document.getElementById('createValuationDisplay').textContent = total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' XAF';
+        }
 
-function openEdit(id, b) {
-    document.getElementById('editBatchId').value = id;
-    document.getElementById('editBatchNumber').value = b.batchNumber || '';
-    document.getElementById('editQty').value = b.quantity || '';
-    document.getElementById('editCost').value = b.costPrice || '';
-    document.getElementById('editExpiry').value = toDateInput(b.expiryDate);
-    document.getElementById('editNotes').value = b.notes || '';
-    document.getElementById('editModal').hidden = false;
-}
-
-function confirmDelete(id, num) {
-    document.getElementById('deleteBatchId').value = id;
-    document.getElementById('deleteLabel').textContent = num;
-    document.getElementById('deleteModal').hidden = false;
-}
-</script>
+        function setExpiryPreset(days) {
+            const date = new Date();
+            date.setDate(date.getDate() + days);
+            const yyyy = date.getFullYear();
+            const mm = String(date.getMonth() + 1).padStart(2, '0');
+            const dd = String(date.getDate()).padStart(2, '0');
+            document.getElementById('createExpiryDate').value = `${yyyy}-${mm}-${dd}`;
+        }
+    </script>
 }

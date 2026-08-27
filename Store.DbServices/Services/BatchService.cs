@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
+using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Inventory;
 using Store.Models.Entities;
+using Store.Models.Enums;
 using Store.Models.Interfaces;
 using Store.Models.Interfaces.Services;
 
@@ -17,18 +19,103 @@ public class BatchService : IBatchService
         var query = _uow.Repository<Batch>().Query()
             .AsNoTracking()
             .Include(b => b.Item)
+                .ThenInclude(i => i.Category)
             .AsQueryable();
 
         if (itemId.HasValue)
             query = query.Where(b => b.ItemId == itemId.Value);
 
-        var batches = await query.OrderByDescending(b => b.ReceivedDate).ToListAsync();
-        var dtos = batches.Select(MapToDto).ToList();
+        var today = DateTime.UtcNow.Date;
+        var cutoff = today.AddDays(30);
 
         if (!string.IsNullOrWhiteSpace(expiryStatus))
-            dtos = dtos.Where(d => d.ExpiryStatus.Equals(expiryStatus, StringComparison.OrdinalIgnoreCase)).ToList();
+        {
+            if (expiryStatus.Equals("Expired", StringComparison.OrdinalIgnoreCase))
+                query = query.Where(b => b.ExpiryDate != null && b.ExpiryDate.Value.Date < today);
+            else if (expiryStatus.Equals("Expiring", StringComparison.OrdinalIgnoreCase))
+                query = query.Where(b => b.ExpiryDate != null && b.ExpiryDate.Value.Date >= today && b.ExpiryDate.Value.Date <= cutoff);
+            else if (expiryStatus.Equals("OK", StringComparison.OrdinalIgnoreCase))
+                query = query.Where(b => b.ExpiryDate == null || b.ExpiryDate.Value.Date > cutoff);
+        }
 
-        return dtos;
+        var batches = await query.OrderByDescending(b => b.ReceivedDate).ToListAsync();
+        return batches.Select(MapToDto).ToList();
+    }
+
+    public async Task<PagedResult<BatchDto>> GetBatchesPagedAsync(BatchFilterRequest request, CancellationToken ct = default)
+    {
+        var page = Math.Max(1, request.Page);
+        var pageSize = Math.Clamp(request.PageSize, 1, 500);
+
+        var query = _uow.Repository<Batch>().Query()
+            .AsNoTracking()
+            .Include(b => b.Item)
+                .ThenInclude(i => i.Category)
+            .AsQueryable();
+
+        if (request.ItemId.HasValue)
+            query = query.Where(b => b.ItemId == request.ItemId.Value);
+
+        if (request.FromExpiry.HasValue)
+            query = query.Where(b => b.ExpiryDate >= request.FromExpiry.Value);
+
+        if (request.ToExpiry.HasValue)
+            query = query.Where(b => b.ExpiryDate <= request.ToExpiry.Value);
+
+        var today = DateTime.UtcNow.Date;
+        var cutoff = today.AddDays(30);
+
+        if (!string.IsNullOrWhiteSpace(request.ExpiryStatus))
+        {
+            if (request.ExpiryStatus.Equals("Expired", StringComparison.OrdinalIgnoreCase))
+                query = query.Where(b => b.ExpiryDate != null && b.ExpiryDate.Value.Date < today);
+            else if (request.ExpiryStatus.Equals("Expiring", StringComparison.OrdinalIgnoreCase))
+                query = query.Where(b => b.ExpiryDate != null && b.ExpiryDate.Value.Date >= today && b.ExpiryDate.Value.Date <= cutoff);
+            else if (request.ExpiryStatus.Equals("OK", StringComparison.OrdinalIgnoreCase))
+                query = query.Where(b => b.ExpiryDate == null || b.ExpiryDate.Value.Date > cutoff);
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.SearchTerm))
+        {
+            var term = request.SearchTerm.Trim();
+            query = query.Where(b => b.BatchNumber.Contains(term) ||
+                                     b.Item.Name.Contains(term) ||
+                                     (b.Item.Barcode != null && b.Item.Barcode.Contains(term)) ||
+                                     (b.Notes != null && b.Notes.Contains(term)));
+        }
+
+        var total = await query.CountAsync(ct);
+
+        var batches = await query
+            .OrderByDescending(b => b.ReceivedDate)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+
+        var dtos = batches.Select(MapToDto).ToList();
+        return new PagedResult<BatchDto>(dtos, total, page, pageSize);
+    }
+
+    public async Task<BatchMetricsDto> GetBatchMetricsAsync(CancellationToken ct = default)
+    {
+        var query = _uow.Repository<Batch>().Query().AsNoTracking();
+        var today = DateTime.UtcNow.Date;
+        var cutoff = today.AddDays(30);
+
+        var totalBatches = await query.CountAsync(ct);
+        var totalUnits = await query.SumAsync(b => (int?)b.Quantity, ct) ?? 0;
+        var totalValuation = await query.SumAsync(b => (decimal?)(b.Quantity * b.CostPrice), ct) ?? 0;
+        var totalExpired = await query.CountAsync(b => b.ExpiryDate != null && b.ExpiryDate.Value.Date < today, ct);
+        var totalExpiring = await query.CountAsync(b => b.ExpiryDate != null && b.ExpiryDate.Value.Date >= today && b.ExpiryDate.Value.Date <= cutoff, ct);
+
+        return new BatchMetricsDto
+        {
+            TotalBatches = totalBatches,
+            TotalExpiring30Days = totalExpiring,
+            TotalExpired = totalExpired,
+            TotalTrackedUnits = totalUnits,
+            TotalBatchValuationXaf = totalValuation
+        };
     }
 
     public async Task<BatchDto?> GetByIdAsync(Guid id)
@@ -36,6 +123,7 @@ public class BatchService : IBatchService
         var batch = await _uow.Repository<Batch>().Query()
             .AsNoTracking()
             .Include(b => b.Item)
+                .ThenInclude(i => i.Category)
             .FirstOrDefaultAsync(b => b.BatchId == id);
 
         return batch is null ? null : MapToDto(batch);
@@ -58,10 +146,11 @@ public class BatchService : IBatchService
         await _uow.Repository<Batch>().AddAsync(batch);
         await _uow.SaveChangesAsync();
 
-        // Reload with Item navigation
+        // Reload with Item & Category navigation
         var loaded = await _uow.Repository<Batch>().Query()
             .AsNoTracking()
             .Include(b => b.Item)
+                .ThenInclude(i => i.Category)
             .FirstAsync(b => b.BatchId == batch.BatchId);
 
         return MapToDto(loaded);
@@ -71,6 +160,7 @@ public class BatchService : IBatchService
     {
         var batch = await _uow.Repository<Batch>().Query()
             .Include(b => b.Item)
+                .ThenInclude(i => i.Category)
             .FirstOrDefaultAsync(b => b.BatchId == id);
 
         if (batch is null) return null;
@@ -98,6 +188,62 @@ public class BatchService : IBatchService
         return true;
     }
 
+    public async Task<bool> WriteOffBatchAsync(WriteOffBatchRequest request, Guid? actingUserId, CancellationToken ct = default)
+    {
+        var batch = await _uow.Repository<Batch>().Query()
+            .FirstOrDefaultAsync(b => b.BatchId == request.BatchId, ct);
+
+        if (batch is null) return false;
+
+        if (request.Quantity <= 0 || request.Quantity > batch.Quantity)
+            throw new InvalidOperationException($"Write-off quantity must be between 1 and available batch quantity ({batch.Quantity}).");
+
+        batch.Quantity -= request.Quantity;
+        _uow.Repository<Batch>().Update(batch);
+
+        var item = await _uow.Repository<Item>().GetByIdAsync(batch.ItemId, ct);
+        if (item != null)
+        {
+            var before = item.InStock;
+            item.InStock = Math.Max(0, item.InStock - request.Quantity);
+            _uow.Repository<Item>().Update(item);
+
+            // Audit Movement
+            var movement = new StockMovement
+            {
+                ItemId = item.ItemId,
+                PerformedByUserId = actingUserId,
+                MovementType = StockMovementType.Wastage,
+                QuantityDelta = -request.Quantity,
+                StockBefore = before,
+                StockAfter = item.InStock,
+                UnitCost = batch.CostPrice,
+                UnitPrice = item.UnitPrice,
+                Reason = $"Batch {batch.BatchNumber} write-off: {request.Reason}",
+                ReferenceCode = $"BATCH-WRITEOFF-{DateTime.UtcNow:yyyyMMddHHmmss}"
+            };
+            await _uow.Repository<StockMovement>().AddAsync(movement, ct);
+
+            // Wastage Entry
+            if (actingUserId.HasValue)
+            {
+                var wastage = new WastageEntry
+                {
+                    ItemId = item.ItemId,
+                    WastageType = request.WastageType,
+                    Quantity = request.Quantity,
+                    Notes = $"Batch #{batch.BatchNumber}: {request.Reason}. {request.Notes}".Trim(),
+                    ReferenceCode = $"BATCH-{batch.BatchNumber}",
+                    RecordedByUserId = actingUserId.Value
+                };
+                await _uow.Repository<WastageEntry>().AddAsync(wastage, ct);
+            }
+        }
+
+        await _uow.SaveChangesAsync(ct);
+        return true;
+    }
+
     public async Task<List<BatchDto>> GetExpiringAsync(int withinDays = 30)
     {
         var now = DateTime.UtcNow;
@@ -106,6 +252,7 @@ public class BatchService : IBatchService
         var batches = await _uow.Repository<Batch>().Query()
             .AsNoTracking()
             .Include(b => b.Item)
+                .ThenInclude(i => i.Category)
             .Where(b => b.ExpiryDate != null && b.ExpiryDate >= now && b.ExpiryDate <= cutoff)
             .OrderBy(b => b.ExpiryDate)
             .ToListAsync();
@@ -133,6 +280,7 @@ public class BatchService : IBatchService
             ItemId = b.ItemId,
             ItemName = b.Item?.Name ?? string.Empty,
             ItemCode = b.Item?.Barcode ?? string.Empty,
+            CategoryName = b.Item?.Category?.Name,
             BatchNumber = b.BatchNumber,
             Quantity = b.Quantity,
             CostPrice = b.CostPrice,
