@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Procurement;
 using Store.Models.Entities;
 using Store.Models.Enums;
@@ -13,15 +14,117 @@ public class PurchaseOrderService : IPurchaseOrderService
 
     public PurchaseOrderService(IUnitOfWork uow) => _uow = uow;
 
+    public async Task<PurchaseOrderMetricsDto> GetPurchaseOrderMetricsAsync(CancellationToken ct = default)
+    {
+        var orders = await _uow.Repository<PurchaseOrder>().Query()
+            .AsNoTracking()
+            .Include(p => p.Items)
+            .ToListAsync(ct);
+
+        var metrics = new PurchaseOrderMetricsDto
+        {
+            TotalOrders = orders.Count,
+            PendingApprovalCount = orders.Count(p => p.Status == PurchaseOrderStatus.Submitted || p.Status == PurchaseOrderStatus.Draft),
+            AwaitingDeliveryCount = orders.Count(p => p.Status == PurchaseOrderStatus.Approved || p.Status == PurchaseOrderStatus.PartiallyReceived),
+            FulfilledCount = orders.Count(p => p.Status == PurchaseOrderStatus.Received),
+            TotalCommittedValuationXaf = orders.Where(p => p.Status == PurchaseOrderStatus.Approved || p.Status == PurchaseOrderStatus.PartiallyReceived || p.Status == PurchaseOrderStatus.Submitted)
+                .SelectMany(p => p.Items)
+                .Sum(i => Math.Max(0, i.OrderedQuantity - i.ReceivedQuantity) * i.UnitCost),
+            TotalReceivedValuationXaf = orders.SelectMany(p => p.Items)
+                .Sum(i => i.ReceivedQuantity * i.UnitCost)
+        };
+
+        return metrics;
+    }
+
+    public async Task<PagedResult<PurchaseOrderDto>> GetPurchaseOrdersPagedAsync(PurchaseOrderFilterRequest request, CancellationToken ct = default)
+    {
+        var query = _uow.Repository<PurchaseOrder>().Query()
+            .AsNoTracking()
+            .Include(p => p.Supplier).ThenInclude(s => s.Emails)
+            .Include(p => p.Supplier).ThenInclude(s => s.Phones)
+            .Include(p => p.Branch)
+            .Include(p => p.RequestedByUser)
+            .Include(p => p.ApprovedByUser)
+            .Include(p => p.Items).ThenInclude(i => i.Item).ThenInclude(it => it.Category)
+            .AsQueryable();
+
+        if (request.SupplierId.HasValue && request.SupplierId.Value != Guid.Empty)
+        {
+            query = query.Where(p => p.SupplierId == request.SupplierId.Value);
+        }
+
+        if (request.BranchId.HasValue && request.BranchId.Value > 0)
+        {
+            query = query.Where(p => p.BranchId == request.BranchId.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Status) &&
+            Enum.TryParse<PurchaseOrderStatus>(request.Status, ignoreCase: true, out var st))
+        {
+            query = query.Where(p => p.Status == st);
+        }
+
+        if (request.FromDate.HasValue)
+        {
+            query = query.Where(p => p.DateCreated >= request.FromDate.Value);
+        }
+
+        if (request.ToDate.HasValue)
+        {
+            query = query.Where(p => p.DateCreated <= request.ToDate.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.SearchTerm))
+        {
+            var term = request.SearchTerm.Trim();
+            if (int.TryParse(term.Replace("#", "").Replace("PO-", ""), out var searchId))
+            {
+                query = query.Where(p => p.PurchaseOrderId == searchId ||
+                                         (p.ReferenceNumber != null && p.ReferenceNumber.Contains(term)) ||
+                                         p.Supplier.Name.Contains(term) ||
+                                         (p.Branch != null && p.Branch.Name.Contains(term)) ||
+                                         p.RequestedByUser.Username.Contains(term) ||
+                                         (p.Notes != null && p.Notes.Contains(term)) ||
+                                         p.Items.Any(i => i.Item.Name.Contains(term) || (i.Item.Barcode != null && i.Item.Barcode.Contains(term))));
+            }
+            else
+            {
+                query = query.Where(p => (p.ReferenceNumber != null && p.ReferenceNumber.Contains(term)) ||
+                                         p.Supplier.Name.Contains(term) ||
+                                         (p.Branch != null && p.Branch.Name.Contains(term)) ||
+                                         p.RequestedByUser.Username.Contains(term) ||
+                                         (p.Notes != null && p.Notes.Contains(term)) ||
+                                         p.Items.Any(i => i.Item.Name.Contains(term) || (i.Item.Barcode != null && i.Item.Barcode.Contains(term))));
+            }
+        }
+
+        var total = await query.CountAsync(ct);
+        var pagedItems = await query
+            .OrderByDescending(p => p.DateCreated)
+            .Skip((request.Page - 1) * request.PageSize)
+            .Take(request.PageSize)
+            .ToListAsync(ct);
+
+        return new PagedResult<PurchaseOrderDto>
+        {
+            Items = pagedItems.Select(MapToDto).ToList(),
+            TotalCount = total,
+            Page = request.Page,
+            PageSize = request.PageSize
+        };
+    }
+
     public async Task<List<PurchaseOrderDto>> GetAllAsync(PurchaseOrderStatus? status = null, Guid? supplierId = null)
     {
         var query = _uow.Repository<PurchaseOrder>().Query()
             .AsNoTracking()
-            .Include(p => p.Supplier)
+            .Include(p => p.Supplier).ThenInclude(s => s.Emails)
+            .Include(p => p.Supplier).ThenInclude(s => s.Phones)
             .Include(p => p.Branch)
             .Include(p => p.RequestedByUser)
             .Include(p => p.ApprovedByUser)
-            .Include(p => p.Items).ThenInclude(i => i.Item)
+            .Include(p => p.Items).ThenInclude(i => i.Item).ThenInclude(it => it.Category)
             .AsQueryable();
 
         if (status.HasValue)
@@ -46,7 +149,9 @@ public class PurchaseOrderService : IPurchaseOrderService
         {
             SupplierId = request.SupplierId,
             BranchId = request.BranchId,
-            ReferenceNumber = request.ReferenceNumber?.Trim().ToUpperInvariant(),
+            ReferenceNumber = string.IsNullOrWhiteSpace(request.ReferenceNumber)
+                ? $"PO-{DateTime.UtcNow:yyyyMM}-{new Random().Next(1000, 9999)}"
+                : request.ReferenceNumber.Trim().ToUpperInvariant(),
             ExpectedDeliveryDate = request.ExpectedDeliveryDate,
             Notes = request.Notes?.Trim(),
             Status = PurchaseOrderStatus.Draft,
@@ -140,11 +245,12 @@ public class PurchaseOrderService : IPurchaseOrderService
                 QuantityDelta = line.ReceivedQuantity,
                 StockBefore = stockBefore,
                 StockAfter = item.InStock,
-                PerformedByUserId = receivedByUserId,
+                PerformedByUserId = receivedByUserId != Guid.Empty ? receivedByUserId : null,
                 UnitCost = poItem.UnitCost,
+                UnitPrice = item.UnitPrice,
                 Reason = $"Goods receipt against PO #{po.PurchaseOrderId}" +
                          (po.ReferenceNumber is not null ? $" ({po.ReferenceNumber})" : ""),
-                ReferenceCode = po.ReferenceNumber
+                ReferenceCode = po.ReferenceNumber ?? $"PO-{po.PurchaseOrderId}"
             };
             await _uow.Repository<StockMovement>().AddAsync(movement);
 
@@ -185,11 +291,12 @@ public class PurchaseOrderService : IPurchaseOrderService
     private async Task<PurchaseOrder?> LoadWithNavsAsync(int id)
         => await _uow.Repository<PurchaseOrder>().Query()
             .AsNoTracking()
-            .Include(p => p.Supplier)
+            .Include(p => p.Supplier).ThenInclude(s => s.Emails)
+            .Include(p => p.Supplier).ThenInclude(s => s.Phones)
             .Include(p => p.Branch)
             .Include(p => p.RequestedByUser)
             .Include(p => p.ApprovedByUser)
-            .Include(p => p.Items).ThenInclude(i => i.Item)
+            .Include(p => p.Items).ThenInclude(i => i.Item).ThenInclude(it => it.Category)
             .FirstOrDefaultAsync(p => p.PurchaseOrderId == id);
 
     private static PurchaseOrderDto MapToDto(PurchaseOrder p) => new()
@@ -198,6 +305,8 @@ public class PurchaseOrderService : IPurchaseOrderService
         ReferenceNumber = p.ReferenceNumber,
         SupplierId = p.SupplierId,
         SupplierName = p.Supplier?.Name ?? string.Empty,
+        SupplierEmail = p.Supplier?.Emails.FirstOrDefault()?.Email?.Address,
+        SupplierPhone = p.Supplier?.Phones.FirstOrDefault()?.Phone?.Number,
         BranchId = p.BranchId,
         BranchName = p.Branch?.Name,
         Status = p.Status.ToString(),
@@ -214,6 +323,7 @@ public class PurchaseOrderService : IPurchaseOrderService
             ItemId = i.ItemId,
             ItemName = i.Item?.Name ?? string.Empty,
             ItemCode = i.Item?.Barcode ?? string.Empty,
+            CategoryName = i.Item?.Category?.Name,
             OrderedQuantity = i.OrderedQuantity,
             UnitCost = i.UnitCost,
             ReceivedQuantity = i.ReceivedQuantity,

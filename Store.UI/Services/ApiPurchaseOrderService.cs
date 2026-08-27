@@ -1,3 +1,4 @@
+using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Procurement;
 using Store.Models.Enums;
 using Store.Models.Interfaces.Services;
@@ -9,6 +10,39 @@ public class ApiPurchaseOrderService : IPurchaseOrderService
     private readonly IApiClientService _client;
 
     public ApiPurchaseOrderService(IApiClientService client) => _client = client;
+
+    public async Task<PurchaseOrderMetricsDto> GetPurchaseOrderMetricsAsync(CancellationToken ct = default)
+        => await _client.GetAsync<PurchaseOrderMetricsDto>("/api/purchase-orders/metrics") ?? new();
+
+    public async Task<PagedResult<PurchaseOrderDto>> GetPurchaseOrdersPagedAsync(PurchaseOrderFilterRequest request, CancellationToken ct = default)
+    {
+        var qs = new List<string>
+        {
+            $"page={request.Page}",
+            $"pageSize={request.PageSize}"
+        };
+
+        if (!string.IsNullOrWhiteSpace(request.Status))
+            qs.Add($"status={Uri.EscapeDataString(request.Status)}");
+
+        if (request.SupplierId.HasValue && request.SupplierId.Value != Guid.Empty)
+            qs.Add($"supplierId={request.SupplierId.Value}");
+
+        if (request.BranchId.HasValue && request.BranchId.Value > 0)
+            qs.Add($"branchId={request.BranchId.Value}");
+
+        if (!string.IsNullOrWhiteSpace(request.SearchTerm))
+            qs.Add($"searchTerm={Uri.EscapeDataString(request.SearchTerm)}");
+
+        if (request.FromDate.HasValue)
+            qs.Add($"fromDate={request.FromDate.Value:yyyy-MM-dd}");
+
+        if (request.ToDate.HasValue)
+            qs.Add($"toDate={request.ToDate.Value:yyyy-MM-dd}");
+
+        var url = $"/api/purchase-orders/paged?{string.Join("&", qs)}";
+        return await _client.GetAsync<PagedResult<PurchaseOrderDto>>(url) ?? new();
+    }
 
     public async Task<List<PurchaseOrderDto>> GetAllAsync(PurchaseOrderStatus? status = null, Guid? supplierId = null)
     {

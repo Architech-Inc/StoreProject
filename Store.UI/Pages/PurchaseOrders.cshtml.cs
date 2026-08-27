@@ -1,254 +1,276 @@
 using Microsoft.AspNetCore.Mvc;
 using Store.Models.DTOs.Common;
-using Store.Models.DTOs.Operations;
 using Store.Models.DTOs.Procurement;
 using Store.Models.Enums;
-using Store.Models.Interfaces.Services;
 using StoreUI.Services;
 
 namespace StoreUI.Pages;
 
 public class PurchaseOrdersModel : SecurePageModel
 {
-    private readonly IPurchaseOrderService _poService;
-    private readonly ISupplierService _supplierService;
-    private readonly IItemService _itemService;
+    private readonly IPurchaseOrderManager _poManager;
     private readonly IApiClientService _apiClient;
 
-    public List<PurchaseOrderDto> PurchaseOrders { get; private set; } = new();
-    public string? FilterStatus { get; private set; }
+    public PurchaseOrderMetricsDto Metrics { get; private set; } = new();
+    public PagedResult<PurchaseOrderDto> OrdersPaged { get; private set; } = new();
 
-    // ---- Create PO ----
-    [BindProperty] public Guid CreateSupplierId { get; set; }
-    [BindProperty] public int? CreateBranchId { get; set; }
-    [BindProperty] public string? CreateReferenceNumber { get; set; }
-    [BindProperty] public DateTime? CreateExpectedDelivery { get; set; }
-    [BindProperty] public string? CreateNotes { get; set; }
+    [BindProperty(SupportsGet = true)]
+    public string? Search { get; set; }
 
-    // Items passed as parallel arrays
-    [BindProperty] public List<Guid> CreateItemIds { get; set; } = new();
-    [BindProperty] public List<int> CreateQuantities { get; set; } = new();
-    [BindProperty] public List<decimal> CreateUnitCosts { get; set; } = new();
+    [BindProperty(SupportsGet = true)]
+    public string? StatusFilter { get; set; }
 
-    // ---- Action targets ----
-    [BindProperty] public int ActionPurchaseOrderId { get; set; }
+    [BindProperty(SupportsGet = true)]
+    public Guid? SupplierFilter { get; set; }
 
-    // ---- Receive ----
-    [BindProperty] public List<int> ReceiveItemLineIds { get; set; } = new();
-    [BindProperty] public List<int> ReceiveQuantities { get; set; } = new();
+    [BindProperty(SupportsGet = true)]
+    public int PageNumber { get; set; } = 1;
 
-    [TempData] public string? StatusMessage { get; set; }
+    [BindProperty]
+    public CreatePurchaseOrderRequest CreateRequest { get; set; } = new();
+
+    [BindProperty]
+    public int ActionPurchaseOrderId { get; set; }
+
+    [BindProperty]
+    public ReceivePurchaseOrderRequest ReceiveRequest { get; set; } = new();
+
+    [TempData]
+    public string? StatusMessage { get; set; }
 
     public IEnumerable<PurchaseOrderStatus> Statuses { get; } = Enum.GetValues<PurchaseOrderStatus>();
 
-    public PurchaseOrdersModel(
-        IPurchaseOrderService poService,
-        ISupplierService supplierService,
-        IItemService itemService,
-        IApiClientService apiClient)
+    public PurchaseOrdersModel(IPurchaseOrderManager poManager, IApiClientService apiClient)
     {
-        _poService = poService;
-        _supplierService = supplierService;
-        _itemService = itemService;
+        _poManager = poManager;
         _apiClient = apiClient;
     }
 
-    public async Task<IActionResult> OnGetSearchSuppliersAsync([FromQuery] string? q, CancellationToken ct = default)
-    {
-        if (!TryGetSecurityContext(out var token, out _))
-            return Unauthorized();
-
-        _apiClient.SetToken(token);
-        var suppliers = await _supplierService.GetAllAsync();
-        var search = q?.Trim() ?? string.Empty;
-        var filtered = suppliers
-            .Where(s => string.IsNullOrEmpty(search) ||
-                        s.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                        (s.RegistrationNumber != null && s.RegistrationNumber.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
-                        s.Emails.Any(e => e.Email.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
-                        s.Phones.Any(p => p.PhoneNumber.Contains(search, StringComparison.OrdinalIgnoreCase)))
-            .Take(15)
-            .Select(s => new
-            {
-                id = s.SupplierId.ToString(),
-                title = s.Name,
-                sub = $"Reg: {s.RegistrationNumber ?? "—"} | Phone: {s.Phones.FirstOrDefault()?.PhoneNumber ?? "—"}",
-                badge = s.Emails.FirstOrDefault()?.Email ?? "Supplier"
-            });
-
-        return new JsonResult(filtered);
-    }
-
-    public async Task<IActionResult> OnGetSearchBranchesAsync([FromQuery] string? q, CancellationToken ct = default)
-    {
-        if (!TryGetSecurityContext(out var token, out _))
-            return Unauthorized();
-
-        _apiClient.SetToken(token);
-        var branches = await _apiClient.GetAsync<List<BranchDto>>("api/admin/branches", ct) ?? new();
-        var search = q?.Trim() ?? string.Empty;
-        var filtered = branches
-            .Where(b => string.IsNullOrEmpty(search) ||
-                        b.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                        b.Code.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                        b.BranchId.ToString() == search)
-            .Take(15)
-            .Select(b => new
-            {
-                id = b.BranchId.ToString(),
-                title = b.Name,
-                sub = $"Code: {b.Code} | #{b.BranchId}",
-                badge = b.IsActive ? "Active" : "Inactive"
-            });
-
-        return new JsonResult(filtered);
-    }
-
-    public async Task<IActionResult> OnGetSearchItemsAsync([FromQuery] string? q, CancellationToken ct = default)
-    {
-        if (!TryGetSecurityContext(out var token, out _))
-            return Unauthorized();
-
-        _apiClient.SetToken(token);
-        var result = await _itemService.GetAllAsync(new PagedRequest { Page = 1, PageSize = 15, SearchTerm = q?.Trim() }, ct);
-        var items = result.Items.Select(i => new
-        {
-            id = i.ItemId.ToString(),
-            title = i.Name,
-            sub = $"Code: {(string.IsNullOrEmpty(i.Barcode) ? "N/A" : i.Barcode)} | Cost: ${i.CostPrice:N2}",
-            badge = i.CategoryName ?? "Item",
-            cost = i.CostPrice
-        });
-
-        return new JsonResult(items);
-    }
-
-    public async Task<IActionResult> OnGetAsync([FromQuery] string? status = null)
+    public async Task<IActionResult> OnGetAsync(CancellationToken ct = default)
     {
         if (!TryGetSecurityContext(out var token, out _))
             return GoToLogin();
 
         _apiClient.SetToken(token);
-        FilterStatus = status;
 
-        PurchaseOrderStatus? parsed = null;
-        if (!string.IsNullOrWhiteSpace(status) &&
-            Enum.TryParse<PurchaseOrderStatus>(status, true, out var s))
-            parsed = s;
+        Metrics = await _poManager.GetMetricsAsync(ct);
 
-        PurchaseOrders = await _poService.GetAllAsync(parsed);
-        ViewData["ActivePage"] = "PurchaseOrders";
+        var filter = new PurchaseOrderFilterRequest
+        {
+            Page = PageNumber < 1 ? 1 : PageNumber,
+            PageSize = 20,
+            Status = string.IsNullOrWhiteSpace(StatusFilter) ? null : StatusFilter,
+            SupplierId = SupplierFilter,
+            SearchTerm = Search
+        };
+
+        OrdersPaged = await _poManager.GetPurchaseOrdersPagedAsync(filter, ct);
         return Page();
     }
 
-    public async Task<IActionResult> OnPostCreateAsync()
+    public async Task<IActionResult> OnGetDetailsJsonAsync(int id, CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return Unauthorized();
+
+        _apiClient.SetToken(token);
+
+        var po = await _poManager.GetPurchaseOrderByIdAsync(id, ct);
+        if (po is null) return NotFound();
+
+        return new JsonResult(po);
+    }
+
+    public async Task<IActionResult> OnGetExportCsvAsync(CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return Unauthorized();
+
+        _apiClient.SetToken(token);
+
+        var filter = new PurchaseOrderFilterRequest
+        {
+            Page = 1,
+            PageSize = 1000,
+            Status = string.IsNullOrWhiteSpace(StatusFilter) ? null : StatusFilter,
+            SupplierId = SupplierFilter,
+            SearchTerm = Search
+        };
+
+        var paged = await _poManager.GetPurchaseOrdersPagedAsync(filter, ct);
+        var bytes = _poManager.ExportCsv(paged.Items);
+        var filename = $"purchase_orders_report_{DateTime.UtcNow:yyyyMMdd_HHmm}.csv";
+        return File(bytes, "text/csv", filename);
+    }
+
+    public async Task<IActionResult> OnGetSearchSuppliersAsync(string? q, CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return Unauthorized();
+
+        _apiClient.SetToken(token);
+
+        var suppliers = await _poManager.SearchSuppliersAsync(q, ct);
+        var list = suppliers.Select(s => new
+        {
+            id = s.SupplierId.ToString(),
+            name = s.Name,
+            contact = s.Emails.FirstOrDefault()?.Email ?? s.Phones.FirstOrDefault()?.PhoneNumber ?? "No contact",
+            reg = s.RegistrationNumber ?? "N/A"
+        });
+
+        return new JsonResult(list);
+    }
+
+    public async Task<IActionResult> OnGetSearchBranchesAsync(string? q, CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return Unauthorized();
+
+        _apiClient.SetToken(token);
+
+        var branches = await _poManager.SearchBranchesAsync(q, ct);
+        var list = branches.Select(b => new
+        {
+            id = b.BranchId,
+            name = b.Name,
+            code = b.Code
+        });
+
+        return new JsonResult(list);
+    }
+
+    public async Task<IActionResult> OnGetSearchCatalogAsync(string? q, CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return Unauthorized();
+
+        _apiClient.SetToken(token);
+
+        var items = await _poManager.SearchCatalogItemsAsync(q, ct);
+        var list = items.Select(i => new
+        {
+            id = i.ItemId.ToString(),
+            name = i.Name,
+            barcode = i.Barcode ?? "N/A",
+            category = i.CategoryName ?? "General",
+            inStock = i.InStock,
+            costPrice = i.CostPrice ?? 0,
+            unitPrice = i.UnitPrice
+        });
+
+        return new JsonResult(list);
+    }
+
+    public async Task<IActionResult> OnPostCreateAsync(CancellationToken ct = default)
     {
         if (!TryGetSecurityContext(out var token, out _))
             return GoToLogin();
 
         _apiClient.SetToken(token);
 
-        var lines = new List<CreatePurchaseOrderItemRequest>();
-        for (int i = 0; i < CreateItemIds.Count; i++)
+        if (CreateRequest.SupplierId == Guid.Empty || CreateRequest.Items == null || !CreateRequest.Items.Any())
         {
-            lines.Add(new CreatePurchaseOrderItemRequest
-            {
-                ItemId = CreateItemIds[i],
-                OrderedQuantity = CreateQuantities.ElementAtOrDefault(i),
-                UnitCost = CreateUnitCosts.ElementAtOrDefault(i)
-            });
+            StatusMessage = "Error: Please select a supplier and add at least one line item.";
+            return RedirectToPage(new { Search, StatusFilter, SupplierFilter, PageNumber });
         }
-
-        var req = new CreatePurchaseOrderRequest
-        {
-            SupplierId = CreateSupplierId,
-            BranchId = CreateBranchId,
-            ReferenceNumber = CreateReferenceNumber,
-            ExpectedDeliveryDate = CreateExpectedDelivery,
-            Notes = CreateNotes,
-            Items = lines
-        };
 
         try
         {
-            await _poService.CreateAsync(req, Guid.Empty); // userId injected by API from JWT
-            StatusMessage = "Purchase order created successfully.";
+            await _poManager.CreatePurchaseOrderAsync(CreateRequest, Guid.Empty, ct);
+            StatusMessage = "Purchase order created successfully in Draft status.";
         }
-        catch
+        catch (Exception ex)
         {
-            StatusMessage = "Error: Failed to create purchase order.";
+            StatusMessage = $"Error: Failed to create purchase order - {ex.Message}";
         }
 
-        return RedirectToPage();
+        return RedirectToPage(new { Search, StatusFilter, SupplierFilter, PageNumber });
     }
 
-    public async Task<IActionResult> OnPostSubmitAsync()
+    public async Task<IActionResult> OnPostSubmitAsync(CancellationToken ct = default)
     {
         if (!TryGetSecurityContext(out var token, out _))
             return GoToLogin();
 
         _apiClient.SetToken(token);
 
-        var result = await _poService.SubmitAsync(ActionPurchaseOrderId, Guid.Empty);
-        StatusMessage = result is not null
-            ? "Purchase order submitted for approval."
-            : "Error: Could not submit — must be in Draft status.";
-
-        return RedirectToPage();
-    }
-
-    public async Task<IActionResult> OnPostApproveAsync()
-    {
-        if (!TryGetSecurityContext(out var token, out _))
-            return GoToLogin();
-
-        _apiClient.SetToken(token);
-
-        var result = await _poService.ApproveAsync(ActionPurchaseOrderId, Guid.Empty);
-        StatusMessage = result is not null
-            ? "Purchase order approved."
-            : "Error: Could not approve — must be in Submitted status.";
-
-        return RedirectToPage();
-    }
-
-    public async Task<IActionResult> OnPostReceiveAsync()
-    {
-        if (!TryGetSecurityContext(out var token, out _))
-            return GoToLogin();
-
-        _apiClient.SetToken(token);
-
-        var lines = new List<ReceiveItemLine>();
-        for (int i = 0; i < ReceiveItemLineIds.Count; i++)
+        try
         {
-            lines.Add(new ReceiveItemLine
-            {
-                PurchaseOrderItemId = ReceiveItemLineIds[i],
-                ReceivedQuantity = ReceiveQuantities.ElementAtOrDefault(i)
-            });
+            var result = await _poManager.SubmitPurchaseOrderAsync(ActionPurchaseOrderId, Guid.Empty, ct);
+            StatusMessage = result is not null ? "Purchase order submitted for manager approval." : "Error: PO must be in Draft status to submit.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: Failed to submit purchase order - {ex.Message}";
         }
 
-        var result = await _poService.ReceiveAsync(ActionPurchaseOrderId, new ReceivePurchaseOrderRequest { Lines = lines }, Guid.Empty);
-        StatusMessage = result is not null
-            ? "Goods received and stock updated."
-            : "Error: Could not receive — PO must be Approved or PartiallyReceived.";
-
-        return RedirectToPage();
+        return RedirectToPage(new { Search, StatusFilter, SupplierFilter, PageNumber });
     }
 
-    public async Task<IActionResult> OnPostCancelAsync()
+    public async Task<IActionResult> OnPostApproveAsync(CancellationToken ct = default)
     {
         if (!TryGetSecurityContext(out var token, out _))
             return GoToLogin();
 
         _apiClient.SetToken(token);
 
-        var result = await _poService.CancelAsync(ActionPurchaseOrderId, Guid.Empty);
-        StatusMessage = result is not null
-            ? "Purchase order cancelled."
-            : "Error: Could not cancel — only Draft or Submitted orders can be cancelled.";
+        try
+        {
+            var result = await _poManager.ApprovePurchaseOrderAsync(ActionPurchaseOrderId, Guid.Empty, ct);
+            StatusMessage = result is not null ? "Purchase order approved successfully." : "Error: PO must be in Submitted status to approve.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: Failed to approve purchase order - {ex.Message}";
+        }
 
-        return RedirectToPage();
+        return RedirectToPage(new { Search, StatusFilter, SupplierFilter, PageNumber });
+    }
+
+    public async Task<IActionResult> OnPostReceiveAsync(CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return GoToLogin();
+
+        _apiClient.SetToken(token);
+
+        if (ReceiveRequest.Lines == null || !ReceiveRequest.Lines.Any(l => l.ReceivedQuantity > 0))
+        {
+            StatusMessage = "Error: Please specify at least one line item quantity to receive.";
+            return RedirectToPage(new { Search, StatusFilter, SupplierFilter, PageNumber });
+        }
+
+        try
+        {
+            var result = await _poManager.ReceivePurchaseOrderAsync(ActionPurchaseOrderId, ReceiveRequest, Guid.Empty, ct);
+            StatusMessage = result is not null ? "Goods received successfully and catalog stock updated." : "Error: PO must be in Approved or PartiallyReceived status.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: Failed to receive purchase order - {ex.Message}";
+        }
+
+        return RedirectToPage(new { Search, StatusFilter, SupplierFilter, PageNumber });
+    }
+
+    public async Task<IActionResult> OnPostCancelAsync(CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return GoToLogin();
+
+        _apiClient.SetToken(token);
+
+        try
+        {
+            var result = await _poManager.CancelPurchaseOrderAsync(ActionPurchaseOrderId, Guid.Empty, ct);
+            StatusMessage = result is not null ? "Purchase order cancelled." : "Error: Only Draft or Submitted orders can be cancelled.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: Failed to cancel purchase order - {ex.Message}";
+        }
+
+        return RedirectToPage(new { Search, StatusFilter, SupplierFilter, PageNumber });
     }
 }

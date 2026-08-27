@@ -2,8 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Store.API.Contracts;
 using Store.Models.DTOs.Common;
-using Store.Models.DTOs.Procurement;
 using Store.Models.DTOs.Operations;
+using Store.Models.DTOs.Procurement;
 using Store.Models.Enums;
 using Store.Models.Interfaces.Services;
 
@@ -18,6 +18,22 @@ public class PurchaseOrdersController : ControllerBase
 
     public PurchaseOrdersController(IPurchaseOrderService poService)
         => _poService = poService;
+
+    [HttpGet("metrics")]
+    [Authorize(Policy = PermissionKeys.InventoryRead)]
+    public async Task<IActionResult> GetMetrics(CancellationToken ct)
+    {
+        var metrics = await _poService.GetPurchaseOrderMetricsAsync(ct);
+        return Ok(ApiResponse<PurchaseOrderMetricsDto>.Ok(metrics));
+    }
+
+    [HttpGet("paged")]
+    [Authorize(Policy = PermissionKeys.InventoryRead)]
+    public async Task<IActionResult> GetPaged([FromQuery] PurchaseOrderFilterRequest request, CancellationToken ct)
+    {
+        var result = await _poService.GetPurchaseOrdersPagedAsync(request, ct);
+        return Ok(ApiResponse<PagedResult<PurchaseOrderDto>>.Ok(result));
+    }
 
     [HttpGet]
     [Authorize(Policy = PermissionKeys.InventoryRead)]

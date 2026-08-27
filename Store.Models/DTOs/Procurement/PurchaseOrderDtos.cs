@@ -9,6 +9,8 @@ public class PurchaseOrderDto
     public string? ReferenceNumber { get; set; }
     public Guid SupplierId { get; set; }
     public string SupplierName { get; set; } = string.Empty;
+    public string? SupplierEmail { get; set; }
+    public string? SupplierPhone { get; set; }
     public int? BranchId { get; set; }
     public string? BranchName { get; set; }
     public string Status { get; set; } = string.Empty;
@@ -20,6 +22,11 @@ public class PurchaseOrderDto
     public DateTime? ReceivedAt { get; set; }
     public DateTime DateCreated { get; set; }
     public List<PurchaseOrderItemDto> Items { get; set; } = new();
+
+    public int LineCount => Items.Count;
+    public int TotalOrderedUnits => Items.Sum(i => i.OrderedQuantity);
+    public int TotalReceivedUnits => Items.Sum(i => i.ReceivedQuantity);
+    public decimal TotalValuation => Items.Sum(i => i.LineValuation);
 }
 
 public class PurchaseOrderItemDto
@@ -28,10 +35,35 @@ public class PurchaseOrderItemDto
     public Guid ItemId { get; set; }
     public string ItemName { get; set; } = string.Empty;
     public string ItemCode { get; set; } = string.Empty;
+    public string? CategoryName { get; set; }
     public int OrderedQuantity { get; set; }
     public decimal UnitCost { get; set; }
     public int ReceivedQuantity { get; set; }
+    public decimal LineValuation => OrderedQuantity * UnitCost;
+    public decimal FulfilledValuation => ReceivedQuantity * UnitCost;
     public string? Notes { get; set; }
+}
+
+public class PurchaseOrderMetricsDto
+{
+    public int TotalOrders { get; set; }
+    public int PendingApprovalCount { get; set; }
+    public int AwaitingDeliveryCount { get; set; }
+    public int FulfilledCount { get; set; }
+    public decimal TotalCommittedValuationXaf { get; set; }
+    public decimal TotalReceivedValuationXaf { get; set; }
+}
+
+public class PurchaseOrderFilterRequest
+{
+    public int Page { get; set; } = 1;
+    public int PageSize { get; set; } = 20;
+    public string? Status { get; set; }
+    public Guid? SupplierId { get; set; }
+    public int? BranchId { get; set; }
+    public string? SearchTerm { get; set; }
+    public DateTime? FromDate { get; set; }
+    public DateTime? ToDate { get; set; }
 }
 
 public class CreatePurchaseOrderRequest
@@ -58,10 +90,10 @@ public class CreatePurchaseOrderItemRequest
     [Required]
     public Guid ItemId { get; set; }
 
-    [Range(1, int.MaxValue)]
+    [Range(1, int.MaxValue, ErrorMessage = "Ordered quantity must be at least 1.")]
     public int OrderedQuantity { get; set; }
 
-    [Range(0, double.MaxValue)]
+    [Range(0, double.MaxValue, ErrorMessage = "Unit cost cannot be negative.")]
     public decimal UnitCost { get; set; }
 
     [StringLength(500)]
