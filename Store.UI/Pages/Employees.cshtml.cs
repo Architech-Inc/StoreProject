@@ -1,3 +1,4 @@
+using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Employees;
@@ -12,14 +13,23 @@ public class EmployeesModel : SecurePageModel
 {
     private readonly IEmployeeService _employeeService;
     private readonly IApiClientService _apiClient;
-    private readonly IFileService _fileService;
+    private readonly IEmployeeManager _employeeManager;
 
     public IReadOnlyList<EmployeeDto> Employees { get; private set; } = Array.Empty<EmployeeDto>();
+    public EmployeeMetricsDto Metrics { get; private set; } = new();
     public IReadOnlyList<Department> Departments { get; private set; } = Array.Empty<Department>();
     public int TotalEmployees { get; private set; }
     public int PageNumber { get; private set; } = 1;
-    public int PageSize { get; private set; } = 25;
+    public int PageSize { get; private set; } = 24;
     public int TotalPages => (int)Math.Ceiling((double)TotalEmployees / PageSize);
+
+    // Query, Filter & View Controls
+    [BindProperty(SupportsGet = true)] public string? SearchQuery { get; set; }
+    [BindProperty(SupportsGet = true)] public int? DepartmentFilter { get; set; }
+    [BindProperty(SupportsGet = true)] public string? StatusFilter { get; set; }
+    [BindProperty(SupportsGet = true)] public string SortBy { get; set; } = "name_asc";
+    [BindProperty(SupportsGet = true)] public string ViewMode { get; set; } = "grid";
+    [BindProperty(SupportsGet = true)] public Guid? Id { get; set; }
 
     // Create / Edit form
     [BindProperty] public Guid? EditEmployeeId { get; set; }
@@ -40,14 +50,12 @@ public class EmployeesModel : SecurePageModel
 
     [TempData] public string? StatusMessage { get; set; }
 
-    public EmployeesModel(IEmployeeService employeeService, IApiClientService apiClient, IFileService fileService)
+    public EmployeesModel(IEmployeeService employeeService, IApiClientService apiClient, IEmployeeManager employeeManager)
     {
         _employeeService = employeeService;
         _apiClient = apiClient;
-        _fileService = fileService;
+        _employeeManager = employeeManager;
     }
-
-    [BindProperty(SupportsGet = true)] public string? SearchQuery { get; set; }
 
     public async Task<IActionResult> OnGetAsync(int page = 1, CancellationToken ct = default)
     {
@@ -55,11 +63,29 @@ public class EmployeesModel : SecurePageModel
         _apiClient.SetToken(token);
 
         PageNumber = Math.Max(1, page);
-        var result = await _employeeService.GetAllAsync(new PagedRequest { Page = PageNumber, PageSize = PageSize, IncludeInactive = true, SearchTerm = SearchQuery }, ct);
+
+        var metricsTask = _employeeService.GetMetricsAsync(ct);
+        var deptsTask = _apiClient.GetAsync<List<Department>>("/api/departments", ct);
+        var employeesTask = _employeeService.GetAllAsync(new EmployeeFilterRequest
+        {
+            Page = PageNumber,
+            PageSize = PageSize,
+            IncludeInactive = true,
+            SearchTerm = SearchQuery,
+            DepartmentId = DepartmentFilter,
+            Status = StatusFilter,
+            SortBy = SortBy
+        }, ct);
+
+        await Task.WhenAll(metricsTask, deptsTask, employeesTask);
+
+        Metrics = await metricsTask ?? new EmployeeMetricsDto();
+        Departments = await deptsTask ?? new List<Department>();
+        var result = await employeesTask ?? new PagedResult<EmployeeDto>();
+
         Employees = result.Items?.ToList() ?? new List<EmployeeDto>();
         TotalEmployees = result.TotalCount;
 
-        Departments = (await _apiClient.GetAsync<List<Department>>("/api/departments", ct)) ?? new();
         return Page();
     }
 
@@ -70,65 +96,27 @@ public class EmployeesModel : SecurePageModel
 
         try
         {
-            Enum.TryParse<Gender>(EmpGender, out var gender);
-
-            string? thumbUrl = null;
-            string? fullUrl = null;
-            if (ImageUpload != null && ImageUpload.Length > 0)
-            {
-                if (EditEmployeeId.HasValue && EditEmployeeId.Value != Guid.Empty)
-                {
-                    var existingEmployee = await _employeeService.GetByIdAsync(EditEmployeeId.Value, ct);
-                    if (existingEmployee != null)
-                    {
-                        if (!string.IsNullOrWhiteSpace(existingEmployee.ThumbnailUrl))
-                            await _fileService.DeleteFileAsync(existingEmployee.ThumbnailUrl, ct);
-                        if (!string.IsNullOrWhiteSpace(existingEmployee.FullImageUrl))
-                            await _fileService.DeleteFileAsync(existingEmployee.FullImageUrl, ct);
-                    }
-                }
-                using var stream = ImageUpload.OpenReadStream();
-                var uploadResult = await _fileService.UploadFileAsync(stream, ImageUpload.FileName, ImageUpload.ContentType, "employees", CropX, CropY, CropW, CropH, ct);
-                thumbUrl = uploadResult.ThumbnailUrl;
-                fullUrl = uploadResult.FullImageUrl;
-            }
-
             if (EditEmployeeId.HasValue && EditEmployeeId.Value != Guid.Empty)
             {
-                Enum.TryParse<EmployeeStatus>(EmpStatus, out var status);
-                var update = new UpdateEmployeeRequest
-                {
-                    FirstName = EmpFirstName,
-                    MiddleName = EmpMiddleName,
-                    LastName = EmpLastName,
-                    Gender = gender,
-                    DateOfBirth = EmpDateOfBirth,
-                    DepartmentId = EmpDepartmentId,
-                    Status = status,
-                    ThumbnailUrl = thumbUrl,
-                    FullImageUrl = fullUrl
-                };
-                var updated = await _employeeService.UpdateAsync(EditEmployeeId.Value, update, ct);
+                var updated = await _employeeManager.UpdateEmployeeAsync(
+                    EditEmployeeId.Value, EmpFirstName, EmpMiddleName, EmpLastName,
+                    EmpGender, EmpDateOfBirth, EmpDepartmentId, EmpStatus,
+                    ImageUpload, CropX, CropY, CropW, CropH, ct);
+                    
                 StatusMessage = updated is not null
-                    ? $"Employee '{updated.FullName}' updated."
+                    ? $"Employee '{updated.FullName}' updated successfully."
                     : "Error: Employee not found.";
             }
             else
             {
-                var create = new CreateEmployeeRequest
-                {
-                    FirstName = EmpFirstName,
-                    MiddleName = EmpMiddleName,
-                    LastName = EmpLastName,
-                    Gender = gender,
-                    DateOfBirth = EmpDateOfBirth,
-                    DateEmployed = EmpDateEmployed,
-                    DepartmentId = EmpDepartmentId,
-                    ThumbnailUrl = thumbUrl,
-                    FullImageUrl = fullUrl
-                };
-                var created = await _employeeService.CreateAsync(create, ct);
-                StatusMessage = $"Employee '{created.FullName}' added.";
+                var created = await _employeeManager.CreateEmployeeAsync(
+                    EmpFirstName, EmpMiddleName, EmpLastName,
+                    EmpGender, EmpDateOfBirth, EmpDateEmployed, EmpDepartmentId,
+                    ImageUpload, CropX, CropY, CropW, CropH, ct);
+                    
+                StatusMessage = created is not null 
+                    ? $"Employee '{created.FullName}' added successfully."
+                    : "Error: Could not create employee.";
             }
         }
         catch (Exception ex)
@@ -148,7 +136,7 @@ public class EmployeesModel : SecurePageModel
 
         try
         {
-            var employee360 = await _apiClient.GetAsync<Employee360Dto>($"/api/employees/{id}/360", ct);
+            var employee360 = await _employeeManager.Get360ByIdAsync(id, ct);
             if (employee360 == null)
                 return new JsonResult(new { success = false, message = "Employee not found." }) { StatusCode = 404 };
 
@@ -167,37 +155,8 @@ public class EmployeesModel : SecurePageModel
 
         try
         {
-            var existing = await _employeeService.GetByIdAsync(employeeId, ct);
-            if (existing == null)
-            {
-                StatusMessage = "Error: Employee not found.";
-                return RedirectToPage();
-            }
-
-            if (existing.Status == EmployeeStatus.Pending)
-            {
-                // Hard delete is safe for Pending (e.g. mistaken entry)
-                var ok = await _employeeService.DeleteAsync(employeeId, ct);
-                StatusMessage = ok ? "Pending employee removed completely." : "Error removing pending employee.";
-            }
-            else
-            {
-                // Soft delete / terminate for active staff
-                var update = new UpdateEmployeeRequest
-                {
-                    FirstName = existing.FirstName,
-                    MiddleName = existing.MiddleName,
-                    LastName = existing.LastName,
-                    Gender = existing.Gender,
-                    DateOfBirth = existing.DateOfBirth,
-                    DepartmentId = existing.DepartmentId,
-                    Status = EmployeeStatus.Fired,
-                    ThumbnailUrl = existing.ThumbnailUrl,
-                    FullImageUrl = existing.FullImageUrl
-                };
-                var updated = await _employeeService.UpdateAsync(employeeId, update, ct);
-                StatusMessage = updated != null ? $"Employee '{existing.FullName}' has been terminated." : "Error terminating employee.";
-            }
+            var success = await _employeeManager.TerminateOrDeleteEmployeeAsync(employeeId, ct);
+            StatusMessage = success ? "Employee record updated successfully." : "Error: Could not terminate/delete employee.";
         }
         catch (Exception ex)
         {
@@ -205,5 +164,57 @@ public class EmployeesModel : SecurePageModel
         }
 
         return RedirectToPage();
+    }
+
+    public async Task<IActionResult> OnPostReinstateAsync(Guid employeeId, CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        _apiClient.SetToken(token);
+
+        try
+        {
+            var success = await _employeeManager.ReinstateEmployeeAsync(employeeId, ct);
+            StatusMessage = success ? "Employee has been reinstated to Active status." : "Error: Could not reinstate employee.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: {ex.Message}";
+        }
+
+        return RedirectToPage();
+    }
+
+    public async Task<IActionResult> OnGetExportCsvAsync(CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        _apiClient.SetToken(token);
+
+        var result = await _employeeService.GetAllAsync(new EmployeeFilterRequest
+        {
+            Page = 1,
+            PageSize = 5000,
+            IncludeInactive = true,
+            SearchTerm = SearchQuery,
+            DepartmentId = DepartmentFilter,
+            Status = StatusFilter,
+            SortBy = SortBy
+        }, ct);
+
+        var sb = new StringBuilder();
+        sb.AppendLine("Employee Code,First Name,Middle Name,Last Name,Full Name,Gender,Department,Status,Date Employed,NID Number,Salary Grade");
+
+        foreach (var emp in result.Items)
+        {
+            sb.AppendLine($"\"{emp.ShortEmployeeCode}\",\"{EscapeCsv(emp.FirstName)}\",\"{EscapeCsv(emp.MiddleName)}\",\"{EscapeCsv(emp.LastName)}\",\"{EscapeCsv(emp.FullName)}\",\"{emp.Gender}\",\"{EscapeCsv(emp.DepartmentName)}\",\"{emp.Status}\",\"{emp.DateEmployed:yyyy-MM-dd}\",\"{EscapeCsv(emp.NidNumber)}\",\"{EscapeCsv(emp.SalaryGrade)}\"");
+        }
+
+        var fileName = $"employees_export_{DateTime.UtcNow:yyyyMMdd_HHmmss}.csv";
+        return File(Encoding.UTF8.GetBytes(sb.ToString()), "text/csv", fileName);
+    }
+
+    private static string EscapeCsv(string? value)
+    {
+        if (string.IsNullOrEmpty(value)) return "";
+        return value.Replace("\"", "\"\"");
     }
 }

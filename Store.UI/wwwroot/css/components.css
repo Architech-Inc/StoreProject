@@ -813,3 +813,8 @@ tbody tr:hover { background: color-mix(in srgb, var(--ops-brand, var(--brand)) 4
 .dialog-btn-confirm:hover { background: var(--ops-brand-2, #006300); }
 .dialog-btn-confirm.danger { background: #dc2626; }
 .dialog-btn-confirm.danger:hover { background: #b91c1c; }
+/* ── Pagination ───────────────────────────── */
+.pagination { display: flex; gap: 6px; align-items: center; margin-top: 12px; }
+.pagination a, .pagination span { padding: 5px 10px; border-radius: var(--radius-sm, 4px); border: 1px solid var(--ops-border, var(--border)); font-size: 0.85rem; text-decoration: none; color: var(--ops-ink, var(--text-primary)); }
+.pagination a:hover { background: color-mix(in srgb, var(--ops-brand, var(--brand)) 10%, transparent); }
+.pagination .active { background: var(--ops-brand, var(--brand)); color: #fff; border-color: transparent; }

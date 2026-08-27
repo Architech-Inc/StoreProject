@@ -2,111 +2,917 @@
 @model StoreUI.Pages.EmployeesModel
 @using Store.Models.Enums
 @{
-    ViewData["Title"] = "Employees";
+    ViewData["Title"] = "Staff & Employee 360 Hub";
     ViewData["ActivePage"] = "Employees";
-    ViewData["PageDescription"] = "Manage staff records, departments, and employment status.";
+    ViewData["PageDescription"] = "Workforce directory, 360 HR profiles, employee identity passes, and department records.";
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
+    <style>
+        /* ── Employee Hub Scoped & Standardized Styles ── */
+        .emp-container {
+            max-width: 1440px;
+            margin: 0 auto;
+            color: var(--text-primary);
+        }
+
+        /* KPI Banner */
+        .emp-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .emp-kpi-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg, 12px);
+            padding: 18px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.05));
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .emp-kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,0.08));
+            border-color: var(--brand-border, #b7d9b7);
+        }
+
+        .emp-kpi-card.active {
+            border-color: var(--brand);
+            background: var(--brand-soft);
+        }
+
+        .emp-kpi-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .emp-kpi-icon.green  { background: var(--brand-soft, rgba(1, 156, 1, 0.12)); color: var(--brand, #019c01); }
+        .emp-kpi-icon.teal   { background: rgba(20, 184, 166, 0.12); color: #0d9488; }
+        .emp-kpi-icon.amber  { background: rgba(245, 158, 11, 0.12); color: #d97706; }
+        .emp-kpi-icon.purple { background: rgba(139, 92, 246, 0.12); color: #7c3aed; }
+        .emp-kpi-icon.red    { background: rgba(220, 38, 38, 0.12); color: #dc2626; }
+
+        .emp-kpi-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .emp-kpi-val {
+            font-size: 1.45rem;
+            font-weight: 700;
+            line-height: 1.2;
+            color: var(--text-primary);
+        }
+
+        .emp-kpi-lbl {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 700;
+            margin-top: 2px;
+        }
+
+        .emp-kpi-sub {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* Toolbar & Controls */
+        .emp-toolbar {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg, 12px);
+            padding: 14px 18px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.05));
+        }
+
+        .emp-filter-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            flex-grow: 1;
+        }
+
+        .emp-search-box {
+            position: relative;
+            min-width: 240px;
+            flex-grow: 1;
+            max-width: 380px;
+        }
+
+        .emp-search-box input {
+            width: 100%;
+            padding: 9px 12px 9px 38px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--canvas);
+            color: var(--text-primary);
+            font-size: 0.90rem;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .emp-search-box input:focus {
+            background: var(--surface);
+            border-color: var(--brand);
+            box-shadow: 0 0 0 3px var(--brand-glow, rgba(1, 156, 1, 0.2));
+        }
+
+        .emp-search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            pointer-events: none;
+        }
+
+        .emp-pill-btn {
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-secondary);
+            font-size: 0.84rem;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            line-height: 1;
+            white-space: nowrap;
+        }
+
+        .emp-pill-btn:hover {
+            border-color: var(--brand);
+            color: var(--brand);
+        }
+
+        .emp-pill-btn.active {
+            background: var(--brand);
+            color: #ffffff !important;
+            border-color: var(--brand);
+            font-weight: 600;
+        }
+
+        .emp-select {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-primary);
+            font-size: 0.88rem;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .emp-select:focus {
+            border-color: var(--brand);
+            box-shadow: 0 0 0 3px var(--brand-glow);
+        }
+
+        .emp-toolbar-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .emp-view-switch {
+            display: inline-flex;
+            align-items: center;
+            background: var(--canvas);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 2px;
+            gap: 2px;
+        }
+
+        .emp-view-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            line-height: 1;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+
+        .emp-view-btn.active {
+            background: var(--surface);
+            color: var(--brand);
+            box-shadow: var(--shadow-xs, 0 1px 2px rgba(0,0,0,0.05));
+        }
+
+        /* ── Grid Cards View ── */
+        .emp-card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .emp-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg, 12px);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.05));
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+            position: relative;
+        }
+
+        .emp-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,0.08));
+            border-color: var(--brand-border, #b7d9b7);
+        }
+
+        .emp-card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .emp-card-code {
+            font-family: 'Cascadia Code', Consolas, monospace;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            background: var(--canvas);
+            padding: 3px 8px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+        }
+
+        .emp-card-profile {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .emp-card-avatar {
+            width: 58px;
+            height: 58px;
+            border-radius: 50%;
+            object-fit: cover;
+            flex-shrink: 0;
+            background: var(--brand-soft);
+            color: var(--brand);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.25rem;
+            border: 2px solid var(--border);
+        }
+
+        .emp-card-avatar img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .emp-card-meta-name {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0 0 4px 0;
+            cursor: pointer;
+            transition: color 0.15s ease;
+        }
+
+        .emp-card-meta-name:hover {
+            color: var(--brand);
+            text-decoration: underline;
+        }
+
+        .emp-card-dept-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            background: var(--surface-alt, #f8fafc);
+            padding: 2px 8px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            font-weight: 500;
+        }
+
+        .emp-card-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            background: var(--canvas);
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-subtle, #edf2f7);
+            font-size: 0.82rem;
+        }
+
+        .emp-card-stat-label {
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .emp-card-stat-val {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-top: 2px;
+        }
+
+        .emp-card-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: auto;
+            border-top: 1px solid var(--border-subtle, #edf2f7);
+            padding-top: 12px;
+        }
+
+        /* ── Table View Overrides ── */
+        .emp-table-row:hover {
+            background-color: var(--surface-hover, #f1f5f9) !important;
+        }
+
+        .btn-table-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 0.80rem;
+            font-weight: 600;
+            text-decoration: none;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .btn-table-action:hover {
+            border-color: var(--brand);
+            color: var(--brand);
+            background: var(--brand-soft);
+        }
+
+        .btn-table-action.danger:hover {
+            border-color: var(--danger);
+            color: var(--danger);
+            background: var(--danger-soft);
+        }
+
+        /* ── 360 Slide-Over Blade & Components ── */
+        .emp-quick-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .emp-quick-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            text-decoration: none;
+            border: 1px solid var(--border);
+            background: var(--canvas);
+            color: var(--text-primary);
+            transition: all 0.15s ease;
+        }
+
+        .emp-quick-btn:hover {
+            background: var(--surface);
+            border-color: var(--brand);
+            color: var(--brand);
+        }
+
+        .emp-quick-btn.whatsapp {
+            background: rgba(37, 211, 102, 0.1);
+            border-color: rgba(37, 211, 102, 0.3);
+            color: #15803d;
+        }
+
+        .emp-quick-btn.whatsapp:hover {
+            background: #25d366;
+            color: #fff;
+        }
+
+        /* Authorized Digital Employee ID Pass */
+        .emp-pass-card {
+            background: linear-gradient(135deg, #0f172a, #1e293b);
+            border-radius: 12px;
+            padding: 20px;
+            color: #ffffff;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .emp-pass-card::before {
+            content: '';
+            position: absolute;
+            top: -40px;
+            right: -40px;
+            width: 130px;
+            height: 130px;
+            background: radial-gradient(circle, rgba(1, 156, 1, 0.25), transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .emp-pass-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .emp-pass-title {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #94a3b8;
+            font-weight: 700;
+        }
+
+        .emp-pass-name {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-top: 4px;
+        }
+
+        .emp-pass-role {
+            font-size: 0.82rem;
+            color: #cbd5e1;
+        }
+
+        .emp-pass-barcode {
+            background: #ffffff;
+            padding: 12px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            color: #0f172a;
+        }
+
+        .emp-pass-barcode-lines {
+            width: 100%;
+            height: 48px;
+        }
+
+        .emp-pass-code {
+            font-family: 'Cascadia Code', Consolas, monospace;
+            font-size: 0.84rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+        }
+
+        .emp-pass-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+
+        .emp-tab-btn {
+            background: transparent;
+            border: none;
+            padding: 10px 14px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.15s ease;
+        }
+
+        .emp-tab-btn:hover {
+            color: var(--brand);
+        }
+
+        .emp-tab-btn.active {
+            color: var(--brand);
+            border-bottom-color: var(--brand);
+        }
+
+        /* ── Form Styled Photo Upload Tile ── */
+        .emp-upload-tile {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: var(--surface-alt, #f8fafc);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .emp-upload-tile:hover {
+            border-color: var(--brand);
+            background: var(--brand-soft);
+        }
+
+        .emp-upload-preview {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--brand);
+            display: none;
+        }
+
+        /* Print Media Styles */
+        @@media print {
+            body * {
+                visibility: hidden !important;
+            }
+            #empPrintArea, #empPrintArea * {
+                visibility: visible !important;
+            }
+            #empPrintArea {
+                position: fixed;
+                left: 0;
+                top: 0;
+                width: 100vw;
+                padding: 40px;
+                background: #fff;
+            }
+        }
+    </style>
 }
 
-<div class="ops-page">
+<div class="emp-container">
 
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
     {
-        <div class="status @(Model.StatusMessage.StartsWith("Error") || Model.StatusMessage.StartsWith("Failed") ? "error" : "ok")">
+        <div class="status @(Model.StatusMessage.StartsWith("Error") || Model.StatusMessage.StartsWith("Failed") ? "error" : "ok")" style="margin-bottom: 20px;">
             @Model.StatusMessage
         </div>
     }
 
-    <div class="filter-bar" style="margin-bottom: 24px; justify-content: space-between;">
-        <form method="get" class="filter-row">
-            <div class="filter-group">
-                <label>Search Employees:</label>
-                <div style="display:flex; gap:8px;">
-                    <input type="search" name="search" value="@Model.SearchQuery" placeholder="Name, Dept, etc..." />
-                    <button type="submit" class="button-secondary">Search</button>
-                </div>
+    <!-- ── KPI Summary Cards ──────────────────────────────────────── -->
+    <div class="emp-kpi-grid">
+        <a href="?StatusFilter=" class="emp-kpi-card @(string.IsNullOrEmpty(Model.StatusFilter) ? "active" : "")">
+            <div class="emp-kpi-icon green">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
             </div>
+            <div class="emp-kpi-info">
+                <span class="emp-kpi-val">@Model.Metrics.TotalEmployees</span>
+                <span class="emp-kpi-lbl">Total Workforce</span>
+                <span class="emp-kpi-sub">Across @Model.Metrics.DepartmentCount departments</span>
+            </div>
+        </a>
+
+        <a href="?StatusFilter=Active" class="emp-kpi-card @(Model.StatusFilter == "Active" ? "active" : "")">
+            <div class="emp-kpi-icon teal">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div class="emp-kpi-info">
+                <span class="emp-kpi-val">@Model.Metrics.ActiveEmployees</span>
+                <span class="emp-kpi-lbl">Active Staff</span>
+                <span class="emp-kpi-sub">Operational & in service</span>
+            </div>
+        </a>
+
+        <a href="?StatusFilter=Pending" class="emp-kpi-card @(Model.StatusFilter == "Pending" ? "active" : "")">
+            <div class="emp-kpi-icon amber">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div class="emp-kpi-info">
+                <span class="emp-kpi-val">@Model.Metrics.PendingEmployees</span>
+                <span class="emp-kpi-lbl">Pending Review</span>
+                <span class="emp-kpi-sub">Awaiting HR approval</span>
+            </div>
+        </a>
+
+        <a href="?StatusFilter=Fired" class="emp-kpi-card @(Model.StatusFilter == "Fired" ? "active" : "")">
+            <div class="emp-kpi-icon purple">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div class="emp-kpi-info">
+                <span class="emp-kpi-val">@Model.Metrics.TerminatedEmployees</span>
+                <span class="emp-kpi-lbl">Terminated / Inactive</span>
+                <span class="emp-kpi-sub">Archived staff profiles</span>
+            </div>
+        </a>
+    </div>
+
+    <!-- ── Filter Dock & Toolbar ──────────────────────────────────── -->
+    <div class="emp-toolbar">
+        <form method="get" id="empFilterForm" class="emp-filter-group">
+            <input type="hidden" name="ViewMode" id="viewModeInput" value="@Model.ViewMode" />
+
+            <div class="emp-search-box">
+                <svg class="emp-search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input type="search" name="SearchQuery" value="@Model.SearchQuery" placeholder="Search staff by name, NID, department..." />
+            </div>
+
+            <select name="DepartmentFilter" class="emp-select" onchange="document.getElementById('empFilterForm').submit()">
+                <option value="">All Departments</option>
+                @foreach (var d in Model.Departments)
+                {
+                    <option value="@d.DepartmentId" selected="@(Model.DepartmentFilter == d.DepartmentId)">@d.Name</option>
+                }
+            </select>
+
+            <a href="?DepartmentFilter=@Model.DepartmentFilter&SortBy=@Model.SortBy&ViewMode=@Model.ViewMode" class="emp-pill-btn @(string.IsNullOrEmpty(Model.StatusFilter) ? "active" : "")">All</a>
+            <a href="?StatusFilter=Active&DepartmentFilter=@Model.DepartmentFilter&SortBy=@Model.SortBy&ViewMode=@Model.ViewMode" class="emp-pill-btn @(Model.StatusFilter == "Active" ? "active" : "")">Active</a>
+            <a href="?StatusFilter=Pending&DepartmentFilter=@Model.DepartmentFilter&SortBy=@Model.SortBy&ViewMode=@Model.ViewMode" class="emp-pill-btn @(Model.StatusFilter == "Pending" ? "active" : "")">Pending</a>
+            <a href="?StatusFilter=Fired&DepartmentFilter=@Model.DepartmentFilter&SortBy=@Model.SortBy&ViewMode=@Model.ViewMode" class="emp-pill-btn @(Model.StatusFilter == "Fired" ? "active" : "")">Terminated</a>
+
+            <select name="SortBy" class="emp-select" onchange="document.getElementById('empFilterForm').submit()">
+                <option value="name_asc" selected="@(Model.SortBy == "name_asc")">Name (A-Z)</option>
+                <option value="name_desc" selected="@(Model.SortBy == "name_desc")">Name (Z-A)</option>
+                <option value="date_desc" selected="@(Model.SortBy == "date_desc")">Newest Employed</option>
+                <option value="date_asc" selected="@(Model.SortBy == "date_asc")">Oldest Employed</option>
+                <option value="dept" selected="@(Model.SortBy == "dept")">By Department</option>
+            </select>
         </form>
-        <div style="display:flex; gap:8px;">
-            <button class="button-primary" type="button" data-open-blade="empBlade" onclick="openCreate()">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="margin-right:4px;">
+
+        <div class="emp-toolbar-actions">
+            <!-- View Switcher (Canonical Order: Grid First, Table Second) -->
+            <div class="emp-view-switch">
+                <button type="button" class="emp-view-btn @(Model.ViewMode != "table" ? "active" : "")" onclick="switchViewMode('grid')" title="Grid Card View">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                    </svg> Grid
+                </button>
+                <button type="button" class="emp-view-btn @(Model.ViewMode == "table" ? "active" : "")" onclick="switchViewMode('table')" title="Dense Table View">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                    </svg> Table
+                </button>
+            </div>
+
+            <a href="?handler=ExportCsv&SearchQuery=@Uri.EscapeDataString(Model.SearchQuery ?? "")&DepartmentFilter=@Model.DepartmentFilter&StatusFilter=@Model.StatusFilter&SortBy=@Model.SortBy" class="button-secondary" style="display: inline-flex; align-items: center; gap: 6px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg> Export CSV
+            </a>
+
+            <button class="button-primary" type="button" data-open-blade="empBlade" onclick="openCreate()" style="display: inline-flex; align-items: center; gap: 6px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                     <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"/>
                 </svg> New Employee
             </button>
         </div>
     </div>
 
-    <section class="card" style="padding:0; overflow:hidden;">
-        <div style="padding:16px; display:flex;justify-content:space-between;align-items:center; border-bottom:1px solid var(--ops-border);">
-            <h2 style="margin:0;">
-                Staff Records
-                <small style="font-weight:400;color:var(--ops-subtle);margin-left:8px;">@Model.TotalEmployees total</small>
-            </h2>
+    @if (!Model.Employees.Any())
+    {
+        <div class="empty-state card" style="padding: 48px 24px; text-align: center;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="margin: 0 auto 16px; color: var(--text-muted);">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            <h3 style="margin: 0 0 8px 0; color: var(--text-primary);">No Employees Found</h3>
+            <p style="color: var(--text-secondary); margin: 0 0 20px 0;">No workforce records match your active search or filter criteria.</p>
+            <button type="button" class="button-primary" onclick="openCreate()">+ Add First Employee</button>
+        </div>
+    }
+    else
+    {
+        <!-- ── 1. Grid / Cards View ───────────────────────────────── -->
+        <div id="empGridView" class="emp-card-grid" style="display: @(Model.ViewMode != "table" ? "grid" : "none");">
+            @foreach (var e in Model.Employees)
+            {
+                var initials = string.Join("", (e.FullName ?? "EM").Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(s => s[0])).ToUpperInvariant();
+                if (initials.Length > 2) initials = initials[..2];
+
+                <div class="emp-card">
+                    <div class="emp-card-top">
+                        <span class="emp-card-code">@e.ShortEmployeeCode</span>
+                        @if (e.Status == EmployeeStatus.Active)
+                        {
+                            <span class="badge badge-success">Active</span>
+                        }
+                        else if (e.Status == EmployeeStatus.Pending)
+                        {
+                            <span class="badge badge-warning">Pending</span>
+                        }
+                        else if (e.Status == EmployeeStatus.Fired || e.Status == EmployeeStatus.Suspended || e.Status == EmployeeStatus.Sanctioned)
+                        {
+                            <span class="badge badge-danger">@e.Status</span>
+                        }
+                        else
+                        {
+                            <span class="badge badge-neutral">@e.Status</span>
+                        }
+                    </div>
+
+                    <div class="emp-card-profile">
+                        <div class="emp-card-avatar" onclick="openDrawer('@e.EmployeeId')" style="cursor: pointer;">
+                            @if (!string.IsNullOrEmpty(e.ThumbnailUrl))
+                            {
+                                <img src="@e.ThumbnailUrl" alt="@e.FullName" loading="lazy" />
+                            }
+                            else
+                            {
+                                <span>@initials</span>
+                            }
+                        </div>
+                        <div>
+                            <h4 class="emp-card-meta-name" onclick="openDrawer('@e.EmployeeId')">@e.FullName</h4>
+                            <span class="emp-card-dept-badge">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                </svg>
+                                @(e.DepartmentName ?? "Unassigned")
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="emp-card-stats">
+                        <div>
+                            <div class="emp-card-stat-label">Employed</div>
+                            <div class="emp-card-stat-val">@e.DateEmployed.ToString("dd MMM yyyy")</div>
+                        </div>
+                        <div>
+                            <div class="emp-card-stat-label">Tenure</div>
+                            <div class="emp-card-stat-val">@e.TenureDisplay</div>
+                        </div>
+                        <div>
+                            <div class="emp-card-stat-label">Gender</div>
+                            <div class="emp-card-stat-val">@e.Gender</div>
+                        </div>
+                        <div>
+                            <div class="emp-card-stat-label">Salary Grade</div>
+                            <div class="emp-card-stat-val">@(e.SalaryGrade ?? "Standard")</div>
+                        </div>
+                    </div>
+
+                    <div class="emp-card-actions">
+                        <button type="button" class="btn-table-action" style="flex: 1; justify-content: center;" onclick="openDrawer('@e.EmployeeId')">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg> 360 Profile
+                        </button>
+                        <button type="button" class="btn-table-action" onclick="openEdit(@System.Text.Json.JsonSerializer.Serialize(new {
+                            employeeId = e.EmployeeId,
+                            firstName = e.FirstName,
+                            middleName = e.MiddleName,
+                            lastName = e.LastName,
+                            gender = e.Gender.ToString(),
+                            dob = e.DateOfBirth?.ToString("yyyy-MM-dd"),
+                            dateEmployed = e.DateEmployed.ToString("yyyy-MM-dd"),
+                            departmentId = e.DepartmentId,
+                            status = e.Status.ToString(),
+                            thumbnailUrl = e.ThumbnailUrl
+                        }))">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg> Edit
+                        </button>
+                    </div>
+                </div>
+            }
         </div>
 
-        @if (!Model.Employees.Any())
-        {
-            <div class="empty-state"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg><h4>No Employees Found</h4><p>There are no records matching your criteria.</p></div>
-        }
-        else
-        {
+        <!-- ── 2. Table View ─────────────────────────────────────── -->
+        <div id="empTableView" class="card" style="padding:0; overflow:hidden; display: @(Model.ViewMode == "table" ? "block" : "none"); margin-bottom: 24px;">
             <div class="table-wrap" style="margin:0; border:none; border-radius:0;">
                 <table>
                     <thead>
                         <tr>
-                            <th>Photo</th>
-                            <th>Full Name</th>
-                            <th>Gender</th>
+                            <th>Code</th>
+                            <th>Staff Member</th>
                             <th>Department</th>
-                            <th>Date Employed</th>
+                            <th>Gender</th>
+                            <th>Employed</th>
+                            <th>Tenure</th>
                             <th>Status</th>
-                            <th></th>
+                            <th style="text-align: right;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var e in Model.Employees)
                         {
-                            <tr>
+                            var initials = string.Join("", (e.FullName ?? "EM").Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(s => s[0])).ToUpperInvariant();
+                            if (initials.Length > 2) initials = initials[..2];
+
+                            <tr class="emp-table-row">
                                 <td>
-                                    @if (!string.IsNullOrEmpty(e.ThumbnailUrl))
-                                    {
-                                        <img src="@e.ThumbnailUrl" alt="Photo" style="width:32px;height:32px;border-radius:50%;object-fit:cover;cursor:pointer;" loading="lazy" width="32" height="32" onclick="viewImage('@(e.FullImageUrl ?? e.ThumbnailUrl)')" />
-                                    }
-                                    else
-                                    {
-                                        <div style="width:32px;height:32px;border-radius:50%;background-color:var(--ops-border);display:inline-block;"></div>
-                                    }
+                                    <span class="emp-card-code">@e.ShortEmployeeCode</span>
                                 </td>
                                 <td>
-                                    <strong style="cursor:pointer; color:var(--accent); text-decoration:underline;" onclick="openDrawer('@e.EmployeeId')">@e.FullName</strong>
+                                    <div style="display:flex; align-items:center; gap:10px;">
+                                        @if (!string.IsNullOrEmpty(e.ThumbnailUrl))
+                                        {
+                                            <img src="@e.ThumbnailUrl" alt="Photo" class="avatar" loading="lazy" width="34" height="34" style="cursor:pointer;" onclick="openDrawer('@e.EmployeeId')" />
+                                        }
+                                        else
+                                        {
+                                            <div class="avatar" style="background:var(--brand-soft); color:var(--brand); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.80rem; cursor:pointer;" onclick="openDrawer('@e.EmployeeId')">@initials</div>
+                                        }
+                                        <div>
+                                            <strong style="cursor:pointer; color:var(--text-primary); transition:color 0.15s ease;" onmouseover="this.style.color='var(--brand)'" onmouseout="this.style.color='var(--text-primary)'" onclick="openDrawer('@e.EmployeeId')">@e.FullName</strong>
+                                            @if (!string.IsNullOrEmpty(e.NidNumber))
+                                            {
+                                                <div style="font-size:0.75rem; color:var(--text-muted);">NID: @e.NidNumber</div>
+                                            }
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="emp-card-dept-badge">@(e.DepartmentName ?? "—")</span>
                                 </td>
                                 <td>@e.Gender</td>
-                                <td>@(e.DepartmentName ?? "—")</td>
-                                <td>@e.DateEmployed.ToString("yyyy-MM-dd")</td>
+                                <td>@e.DateEmployed.ToString("dd MMM yyyy")</td>
+                                <td><span style="font-weight: 600;">@e.TenureDisplay</span></td>
                                 <td>
                                     @if (e.Status == EmployeeStatus.Active)
                                     {
-                                        <span class="badge badge-green">Active</span>
+                                        <span class="badge badge-success">Active</span>
                                     }
                                     else if (e.Status == EmployeeStatus.Pending)
                                     {
-                                        <span class="badge badge-info" style="background:#f59e0b;color:#fff;">Pending</span>
+                                        <span class="badge badge-warning">Pending</span>
                                     }
                                     else if (e.Status == EmployeeStatus.Fired || e.Status == EmployeeStatus.Suspended || e.Status == EmployeeStatus.Sanctioned)
                                     {
-                                        <span class="badge badge-red">@e.Status</span>
+                                        <span class="badge badge-danger">@e.Status</span>
                                     }
                                     else
                                     {
-                                        <span class="badge badge-gray">@e.Status</span>
+                                        <span class="badge badge-neutral">@e.Status</span>
                                     }
                                 </td>
-                                <td>
-                                    <div style="display:flex; gap:4px; flex-wrap:nowrap;">
-                                        <button type="button" class="button-secondary" onclick="openEdit(@System.Text.Json.JsonSerializer.Serialize(new {
+                                <td style="text-align: right;">
+                                    <div style="display:inline-flex; gap:6px; flex-wrap:nowrap;">
+                                        <button type="button" class="btn-table-action" onclick="openDrawer('@e.EmployeeId')" title="360 Profile & ID Card">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                            </svg> 360
+                                        </button>
+                                        <button type="button" class="btn-table-action" onclick="openEdit(@System.Text.Json.JsonSerializer.Serialize(new {
                                             employeeId = e.EmployeeId,
                                             firstName = e.FirstName,
                                             middleName = e.MiddleName,
@@ -115,15 +921,35 @@
                                             dob = e.DateOfBirth?.ToString("yyyy-MM-dd"),
                                             dateEmployed = e.DateEmployed.ToString("yyyy-MM-dd"),
                                             departmentId = e.DepartmentId,
-                                            status = e.Status.ToString()
-                                        }))">Edit</button>
-                                        
+                                            status = e.Status.ToString(),
+                                            thumbnailUrl = e.ThumbnailUrl
+                                        }))">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                            </svg> Edit
+                                        </button>
                                         @if (e.Status != EmployeeStatus.Fired)
                                         {
-                                            <form method="post" asp-page-handler="Terminate" style="margin:0;">
+                                            <form method="post" asp-page-handler="Terminate" style="margin:0; display:inline;">
                                                 @Html.AntiForgeryToken()
                                                 <input type="hidden" name="employeeId" value="@e.EmployeeId" />
-                                                <button type="submit" class="button-command danger" data-confirm="@(e.Status == EmployeeStatus.Pending ? $"Permanently delete {e.FullName}?" : $"Terminate employment for {e.FullName}?")" data-confirm-type="danger">@(e.Status == EmployeeStatus.Pending ? "Delete" : "Terminate")</button>
+                                                <button type="submit" class="btn-table-action danger" data-confirm="@(e.Status == EmployeeStatus.Pending ? $"Permanently remove pending record for {e.FullName}?" : $"Terminate active employment for {e.FullName}?")" data-confirm-type="danger" title="Terminate Employment">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg> @(e.Status == EmployeeStatus.Pending ? "Delete" : "Terminate")
+                                                </button>
+                                            </form>
+                                        }
+                                        else
+                                        {
+                                            <form method="post" asp-page-handler="Reinstate" style="margin:0; display:inline;">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="employeeId" value="@e.EmployeeId" />
+                                                <button type="submit" class="btn-table-action" style="color: var(--brand);" data-confirm="Reinstate @e.FullName to Active status?" data-confirm-type="primary" title="Reinstate Staff">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                    </svg> Reinstate
+                                                </button>
                                             </form>
                                         }
                                     </div>
@@ -133,33 +959,225 @@
                     </tbody>
                 </table>
             </div>
+        </div>
 
-            @if (Model.TotalPages > 1)
-            {
-                <div style="padding:16px;">
-                    <nav class="pagination" aria-label="Employee pages">
-                        @if (Model.PageNumber > 1)
-                        {
-                            <a href="?page=@(Model.PageNumber - 1)&search=@Uri.EscapeDataString(Model.SearchQuery ?? "")">‹ Prev</a>
-                        }
-                        <span class="active">@Model.PageNumber / @Model.TotalPages</span>
-                        @if (Model.PageNumber < Model.TotalPages)
-                        {
-                            <a href="?page=@(Model.PageNumber + 1)&search=@Uri.EscapeDataString(Model.SearchQuery ?? "")">Next ›</a>
-                        }
-                    </nav>
-                </div>
-            }
+        @if (Model.TotalPages > 1)
+        {
+            <div style="padding: 16px 0; display: flex; justify-content: center;">
+                <nav class="pagination" aria-label="Employee pages">
+                    @if (Model.PageNumber > 1)
+                    {
+                        <a href="?page=@(Model.PageNumber - 1)&SearchQuery=@Uri.EscapeDataString(Model.SearchQuery ?? "")&DepartmentFilter=@Model.DepartmentFilter&StatusFilter=@Model.StatusFilter&SortBy=@Model.SortBy&ViewMode=@Model.ViewMode">‹ Prev</a>
+                    }
+                    <span class="active">@Model.PageNumber / @Model.TotalPages</span>
+                    @if (Model.PageNumber < Model.TotalPages)
+                    {
+                        <a href="?page=@(Model.PageNumber + 1)&SearchQuery=@Uri.EscapeDataString(Model.SearchQuery ?? "")&DepartmentFilter=@Model.DepartmentFilter&StatusFilter=@Model.StatusFilter&SortBy=@Model.SortBy&ViewMode=@Model.ViewMode">Next ›</a>
+                    }
+                </nav>
+            </div>
         }
-    </section>
+    }
 </div>
 
-<!-- ── Create/Edit Employee Blade ────────────────────────────────── -->
-<div class="blade-overlay" id="empBladeOverlay"></div>
+<!-- ═════════════════════════════════════════════════════════════ -->
+<!-- ── Employee 360 Slide-Over Blade ─────────────────────────── -->
+<!-- ═════════════════════════════════════════════════════════════ -->
+<div class="blade-overlay" id="emp360Overlay" onclick="closeDrawer()"></div>
+<div class="blade" id="emp360Blade" data-overlay-id="emp360Overlay">
+    
+    <!-- Blade Header -->
+    <div class="blade-header">
+        <div style="display:flex; gap:14px; align-items:center;">
+            <div id="drawerAvatarWrap"></div>
+            <div>
+                <h3 id="drawerEmployeeName" style="margin:0; font-size:1.20rem; color:var(--text-primary);">Loading...</h3>
+                <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
+                    <span id="drawerStatusBadge" class="badge badge-success">Active</span>
+                    <span id="drawerDeptText" style="font-size:0.84rem; color:var(--text-secondary);">Department</span>
+                </div>
+            </div>
+        </div>
+        <button type="button" class="btn-close" onclick="closeDrawer()" aria-label="Close">×</button>
+    </div>
+
+    <!-- Blade Body -->
+    <div class="blade-body">
+
+        <!-- 1. Quick Communication Action Pills -->
+        <div class="emp-quick-actions" id="drawerQuickActions">
+            <!-- Injected via JS -->
+        </div>
+
+        <!-- 2. KPI Summary 3-Strip -->
+        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; background:var(--canvas); padding:12px 14px; border-radius:12px; border:1px solid var(--border);">
+            <div>
+                <div style="font-size:0.72rem; color:var(--text-secondary); text-transform:uppercase; font-weight:700; letter-spacing:0.04em;">Employed</div>
+                <div id="drawerDateEmployed" style="font-size:1.05rem; font-weight:700; color:var(--text-primary); margin-top:2px;">—</div>
+            </div>
+            <div>
+                <div style="font-size:0.72rem; color:var(--text-secondary); text-transform:uppercase; font-weight:700; letter-spacing:0.04em;">Tenure</div>
+                <div id="drawerTenure" style="font-size:1.05rem; font-weight:700; color:var(--brand); margin-top:2px;">—</div>
+            </div>
+            <div>
+                <div style="font-size:0.72rem; color:var(--text-secondary); text-transform:uppercase; font-weight:700; letter-spacing:0.04em;">Salary Grade</div>
+                <div id="drawerSalary" style="font-size:1.05rem; font-weight:700; color:var(--text-primary); margin-top:2px;">—</div>
+            </div>
+        </div>
+
+        <!-- 3. AUTHORIZED DIGITAL EMPLOYEE PASS (Golden Standard) -->
+        <div id="empPrintArea" class="emp-pass-card">
+            <div class="emp-pass-header">
+                <div>
+                    <div class="emp-pass-title">Authorized Digital Employee Pass</div>
+                    <div class="emp-pass-name" id="passEmployeeName">—</div>
+                    <div class="emp-pass-role" id="passEmployeeDept">ClexAn Foods Operations</div>
+                </div>
+                <span id="passStatusBadge" class="badge badge-success" style="background:#059669; color:#fff;">Active Staff</span>
+            </div>
+
+            <div class="emp-pass-barcode">
+                <svg class="emp-pass-barcode-lines" viewBox="0 0 300 50" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="10" y="0" width="3" height="50" fill="#000" />
+                    <rect x="16" y="0" width="2" height="50" fill="#000" />
+                    <rect x="22" y="0" width="5" height="50" fill="#000" />
+                    <rect x="30" y="0" width="2" height="50" fill="#000" />
+                    <rect x="35" y="0" width="4" height="50" fill="#000" />
+                    <rect x="42" y="0" width="2" height="50" fill="#000" />
+                    <rect x="48" y="0" width="6" height="50" fill="#000" />
+                    <rect x="58" y="0" width="2" height="50" fill="#000" />
+                    <rect x="63" y="0" width="3" height="50" fill="#000" />
+                    <rect x="70" y="0" width="5" height="50" fill="#000" />
+                    <rect x="78" y="0" width="2" height="50" fill="#000" />
+                    <rect x="84" y="0" width="4" height="50" fill="#000" />
+                    <rect x="92" y="0" width="3" height="50" fill="#000" />
+                    <rect x="98" y="0" width="6" height="50" fill="#000" />
+                    <rect x="108" y="0" width="2" height="50" fill="#000" />
+                    <rect x="114" y="0" width="4" height="50" fill="#000" />
+                    <rect x="122" y="0" width="3" height="50" fill="#000" />
+                    <rect x="130" y="0" width="5" height="50" fill="#000" />
+                    <rect x="138" y="0" width="2" height="50" fill="#000" />
+                    <rect x="144" y="0" width="6" height="50" fill="#000" />
+                    <rect x="154" y="0" width="3" height="50" fill="#000" />
+                    <rect x="160" y="0" width="2" height="50" fill="#000" />
+                    <rect x="166" y="0" width="5" height="50" fill="#000" />
+                    <rect x="175" y="0" width="2" height="50" fill="#000" />
+                    <rect x="180" y="0" width="4" height="50" fill="#000" />
+                    <rect x="188" y="0" width="2" height="50" fill="#000" />
+                    <rect x="194" y="0" width="5" height="50" fill="#000" />
+                    <rect x="202" y="0" width="3" height="50" fill="#000" />
+                    <rect x="210" y="0" width="6" height="50" fill="#000" />
+                    <rect x="220" y="0" width="2" height="50" fill="#000" />
+                    <rect x="226" y="0" width="4" height="50" fill="#000" />
+                    <rect x="234" y="0" width="3" height="50" fill="#000" />
+                    <rect x="242" y="0" width="5" height="50" fill="#000" />
+                    <rect x="250" y="0" width="2" height="50" fill="#000" />
+                    <rect x="256" y="0" width="6" height="50" fill="#000" />
+                    <rect x="266" y="0" width="3" height="50" fill="#000" />
+                    <rect x="272" y="0" width="2" height="50" fill="#000" />
+                    <rect x="278" y="0" width="4" height="50" fill="#000" />
+                    <rect x="286" y="0" width="5" height="50" fill="#000" />
+                </svg>
+                <div class="emp-pass-code" id="passBarcodeText">EMP-00000000</div>
+            </div>
+
+            <div class="emp-pass-footer">
+                <div>Security Verified • ClexAn Foods</div>
+                <button type="button" class="emp-quick-btn" style="background:#ffffff; color:#0f172a; border:none; padding:4px 10px;" onclick="window.print()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg> Print Badge
+                </button>
+            </div>
+        </div>
+
+        <!-- 4. Tab Navigation -->
+        <div style="border-bottom: 1px solid var(--border); display: flex; gap: 4px; margin-top: 10px;">
+            <button type="button" class="emp-tab-btn active" onclick="switchDrawerTab('tab-emp-profile', this)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg> Profile
+            </button>
+            <button type="button" class="emp-tab-btn" onclick="switchDrawerTab('tab-emp-contacts', this)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                </svg> Contacts <span class="badge" id="contactCountTab" style="margin-left:4px; font-size:0.70rem;">0</span>
+            </button>
+            <button type="button" class="emp-tab-btn" onclick="switchDrawerTab('tab-emp-users', this)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg> System Access <span class="badge" id="userCountTab" style="margin-left:4px; font-size:0.70rem;">0</span>
+            </button>
+        </div>
+
+        <!-- Tab 1: Profile Details -->
+        <div id="tab-emp-profile" class="tab-pane active" style="margin-top:16px;">
+            <div class="card" style="padding:16px; display:flex; flex-direction:column; gap:14px;">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+                    <div>
+                        <div style="font-size:0.72rem; color:var(--text-secondary); text-transform:uppercase; font-weight:700;">Date of Birth</div>
+                        <div id="drawerDob" style="font-weight:600; color:var(--text-primary); margin-top:2px;">Not Specified</div>
+                    </div>
+                    <div>
+                        <div style="font-size:0.72rem; color:var(--text-secondary); text-transform:uppercase; font-weight:700;">NID Number</div>
+                        <div id="drawerNid" style="font-weight:600; color:var(--text-primary); margin-top:2px;">Not Specified</div>
+                    </div>
+                    <div>
+                        <div style="font-size:0.72rem; color:var(--text-secondary); text-transform:uppercase; font-weight:700;">Gender</div>
+                        <div id="drawerGender" style="font-weight:600; color:var(--text-primary); margin-top:2px;">—</div>
+                    </div>
+                    <div>
+                        <div style="font-size:0.72rem; color:var(--text-secondary); text-transform:uppercase; font-weight:700;">Record Created</div>
+                        <div id="drawerDateCreated" style="font-weight:600; color:var(--text-primary); margin-top:2px;">—</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 2: Contacts -->
+        <div id="tab-emp-contacts" class="tab-pane" style="margin-top:16px; display:none;">
+            <div id="drawerContactsList">
+                <p style="color:var(--text-secondary); font-size:0.85rem;">Loading contacts...</p>
+            </div>
+        </div>
+
+        <!-- Tab 3: System Access (Users) -->
+        <div id="tab-emp-users" class="tab-pane" style="margin-top:16px; display:none;">
+            <div id="drawerUsersList">
+                <p style="color:var(--text-secondary); font-size:0.85rem;">Loading linked accounts...</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 5. STICKY BLADE FOOTER (Standard Benchmark) -->
+    <div class="blade-footer" style="padding: 16px 24px; border-top: 1px solid var(--border); background: var(--surface-alt, #f8fafc); display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+        <div id="drawerFooterLeft">
+            <!-- Dynamic Terminate / Delete / Reinstate action form -->
+        </div>
+        <div style="display: flex; gap: 8px;">
+            <button type="button" class="button-secondary" id="drawerEditBtn" onclick="">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg> Edit Profile
+            </button>
+            <button type="button" class="button-primary" onclick="window.print()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg> Print Pass
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════════ -->
+<!-- ── Create / Edit Employee Blade ──────────────────────────── -->
+<!-- ═════════════════════════════════════════════════════════════ -->
+<div class="blade-overlay" id="empBladeOverlay" onclick="closeCreateEditBlade()"></div>
 <div class="blade" id="empBlade" data-overlay-id="empBladeOverlay">
     <div class="blade-header">
-        <h3 id="empBladeTitle">New Employee</h3>
-        <button type="button" class="btn-close" data-close-blade="empBlade" aria-label="Close">×</button>
+        <h3 id="empBladeTitle" style="margin:0; font-size:1.20rem; color:var(--text-primary);">New Employee</h3>
+        <button type="button" class="btn-close" onclick="closeCreateEditBlade()" aria-label="Close">×</button>
     </div>
     <div class="blade-body">
         <form method="post" asp-page-handler="Save" id="empForm" enctype="multipart/form-data">
@@ -170,39 +1188,52 @@
             <input type="hidden" asp-for="CropW" id="cropW" />
             <input type="hidden" asp-for="CropH" id="cropH" />
 
-            <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap: 16px;">
+            <!-- Section 1: Personal Information -->
+            <div style="font-size:0.80rem; font-weight:700; text-transform:uppercase; color:var(--brand); letter-spacing:0.06em; margin-bottom:12px;">
+                1. Personal Information
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px;">
                 <div>
-                    <label for="firstNameF">First Name <span style="color:var(--ops-danger);">*</span></label>
-                    <input asp-for="EmpFirstName" id="firstNameF" required maxlength="100" />
+                    <label for="firstNameF" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">First Name <span style="color:var(--danger);">*</span></label>
+                    <input asp-for="EmpFirstName" id="firstNameF" class="form-control" style="width:100%;" required maxlength="100" placeholder="e.g. Alice" />
                 </div>
                 <div>
-                    <label for="middleNameF">Middle Name</label>
-                    <input asp-for="EmpMiddleName" id="middleNameF" maxlength="100" />
+                    <label for="middleNameF" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Middle Name</label>
+                    <input asp-for="EmpMiddleName" id="middleNameF" class="form-control" style="width:100%;" maxlength="100" placeholder="Optional" />
                 </div>
                 <div style="grid-column: span 2;">
-                    <label for="lastNameF">Last Name <span style="color:var(--ops-danger);">*</span></label>
-                    <input asp-for="EmpLastName" id="lastNameF" required maxlength="100" />
+                    <label for="lastNameF" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Last Name <span style="color:var(--danger);">*</span></label>
+                    <input asp-for="EmpLastName" id="lastNameF" class="form-control" style="width:100%;" required maxlength="100" placeholder="e.g. Smith" />
                 </div>
                 <div>
-                    <label for="genderF">Gender</label>
-                    <select asp-for="EmpGender" id="genderF">
+                    <label for="genderF" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Gender</label>
+                    <select asp-for="EmpGender" id="genderF" class="emp-select" style="width:100%;">
                         <option value="NotSpecified">Not Specified</option>
                         <option value="Male">Male</option>
                         <option value="Female">Female</option>
                     </select>
                 </div>
                 <div>
-                    <label for="dobF">Date of Birth</label>
-                    <input asp-for="EmpDateOfBirth" id="dobF" type="date" />
+                    <label for="dobF" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Date of Birth</label>
+                    <input asp-for="EmpDateOfBirth" id="dobF" type="date" class="form-control" style="width:100%;" />
+                </div>
+            </div>
+
+            <!-- Section 2: Employment Details -->
+            <div style="font-size:0.80rem; font-weight:700; text-transform:uppercase; color:var(--brand); letter-spacing:0.06em; margin-bottom:12px; border-top:1px solid var(--border); padding-top:16px;">
+                2. Employment & Role
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px;">
+                <div>
+                    <label for="dateEmpF" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Date Employed <span style="color:var(--danger);">*</span></label>
+                    <input asp-for="EmpDateEmployed" id="dateEmpF" type="date" class="form-control" style="width:100%;" required />
                 </div>
                 <div>
-                    <label for="dateEmpF">Date Employed <span style="color:var(--ops-danger);">*</span></label>
-                    <input asp-for="EmpDateEmployed" id="dateEmpF" type="date" required />
-                </div>
-                <div>
-                    <label for="deptF">Department</label>
-                    <select asp-for="EmpDepartmentId" id="deptF">
-                        <option value="">— None —</option>
+                    <label for="deptF" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Department</label>
+                    <select asp-for="EmpDepartmentId" id="deptF" class="emp-select" style="width:100%;">
+                        <option value="">— Unassigned —</option>
                         @foreach (var d in Model.Departments)
                         {
                             <option value="@d.DepartmentId">@d.Name</option>
@@ -211,11 +1242,11 @@
                 </div>
             </div>
 
-            <div id="statusRowEmp" style="display:none; margin-top:16px;">
-                <label for="statusEmp">Status</label>
-                <select asp-for="EmpStatus" id="statusEmp">
-                    <option value="Pending">Pending</option>
+            <div id="statusRowEmp" style="display:none; margin-bottom:18px;">
+                <label for="statusEmp" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Status</label>
+                <select asp-for="EmpStatus" id="statusEmp" class="emp-select" style="width:100%;">
                     <option value="Active">Active</option>
+                    <option value="Pending">Pending</option>
                     <option value="Suspended">Suspended</option>
                     <option value="Sanctioned">Sanctioned</option>
                     <option value="Fired">Fired</option>
@@ -223,128 +1254,87 @@
                 </select>
             </div>
             
-            <div style="margin-top:16px;">
-                <label for="empImage">Photo</label>
-                <input type="file" asp-for="ImageUpload" id="empImage" accept="image/*" data-crop="true" />
+            <!-- Section 3: Profile Photo -->
+            <div style="font-size:0.80rem; font-weight:700; text-transform:uppercase; color:var(--brand); letter-spacing:0.06em; margin-bottom:12px; border-top:1px solid var(--border); padding-top:16px;">
+                3. Identity Photo
             </div>
 
-            <div class="form-actions" style="margin-top:24px; display:flex; justify-content:flex-end; gap:8px;">
-                <button type="button" class="button-secondary" data-close-blade="empBlade">Cancel</button>
+            <label class="emp-upload-tile" for="empImage">
+                <img id="empImagePreview" class="emp-upload-preview" src="#" alt="Preview" />
+                <div id="empUploadPrompt">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color:var(--brand); margin-bottom:4px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <div style="font-size:0.86rem; font-weight:600; color:var(--text-primary);">Upload Employee Photo</div>
+                    <div style="font-size:0.75rem; color:var(--text-muted);">PNG, JPG or WebP up to 5MB</div>
+                </div>
+                <input type="file" asp-for="ImageUpload" id="empImage" accept="image/*" data-crop="true" style="display:none;" onchange="previewSelectedPhoto(this)" />
+            </label>
+
+            <div class="form-actions" style="margin-top:24px; display:flex; justify-content:flex-end; gap:10px; border-top:1px solid var(--border); padding-top:16px;">
+                <button type="button" class="button-secondary" onclick="closeCreateEditBlade()">Cancel</button>
                 <button type="submit" class="button-primary" id="empSubmitBtn">Add Employee</button>
             </div>
         </form>
     </div>
 </div>
 
-
-<!-- ═════════════════════════════════════════════════════════ -->
-<!-- ── Employee 360 Slide-Over Drawer ─────────────────────── -->
-<!-- ═════════════════════════════════════════════════════════ -->
-<div class="crm-drawer-backdrop" id="drawerBackdrop" onclick="closeDrawer()"></div>
-<aside class="crm-drawer" id="employeeDrawer" aria-label="Employee 360 Profile">
-    
-    <!-- Drawer Header -->
-    <div class="crm-drawer-header">
-        <div style="display:flex;gap:14px;align-items:center;">
-            <div id="drawerAvatarWrap"></div>
-            <div>
-                <h3 id="drawerEmployeeName" style="margin:0;font-size:1.25rem;">Loading...</h3>
-                <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
-                    <span id="drawerStatusBadge" class="badge">Active</span>
-                    <span id="drawerDeptText" style="font-size:0.85rem;color:var(--text-secondary);">Department</span>
-                </div>
-            </div>
-        </div>
-        <button type="button" class="btn-close" onclick="closeDrawer()" aria-label="Close">×</button>
-    </div>
-
-    <!-- Drawer Body -->
-    <div class="crm-drawer-body">
-
-        <!-- KPI Strip -->
-        <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:10px;background:var(--canvas);padding:14px;border-radius:12px;border:1px solid var(--border);">
-            <div>
-                <div style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;">Employed</div>
-                <div id="drawerDateEmployed" style="font-size:1.15rem;font-weight:700;color:var(--text-primary);margin-top:2px;">-</div>
-            </div>
-            <div>
-                <div style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;">Gender</div>
-                <div id="drawerGender" style="font-size:1.15rem;font-weight:700;color:var(--text-primary);margin-top:2px;">-</div>
-            </div>
-            <div>
-                <div style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;">Salary Grade</div>
-                <div id="drawerSalary" style="font-size:1.15rem;font-weight:700;color:var(--text-primary);margin-top:2px;">-</div>
-            </div>
-        </div>
-
-        <!-- Tab Navigation -->
-        <div class="crm-tabs" style="margin-top:24px;">
-            <button type="button" class="crm-tab-btn active" onclick="switchDrawerTab('tab-emp-profile', this)">Profile</button>
-            <button type="button" class="crm-tab-btn" onclick="switchDrawerTab('tab-emp-contacts', this)">Contacts <span class="badge" id="contactCountTab" style="margin-left:4px;">0</span></button>
-            <button type="button" class="crm-tab-btn" onclick="switchDrawerTab('tab-emp-users', this)">System Access <span class="badge" id="userCountTab" style="margin-left:4px;">0</span></button>
-        </div>
-
-        <!-- Tab 1: Profile Details -->
-        <div id="tab-emp-profile" class="crm-tab-pane active" style="margin-top:16px;">
-            <div style="background:var(--canvas);padding:16px;border-radius:12px;border:1px solid var(--border);">
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-                    <div>
-                        <div style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;margin-bottom:4px;">Date of Birth</div>
-                        <div id="drawerDob" style="font-weight:500;">Not Specified</div>
-                    </div>
-                    <div>
-                        <div style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;margin-bottom:4px;">NID Number</div>
-                        <div id="drawerNid" style="font-weight:500;">Not Specified</div>
-                    </div>
-                    <div>
-                        <div style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;margin-bottom:4px;">Date Created</div>
-                        <div id="drawerDateCreated" style="font-weight:500;">-</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Tab 2: Contacts -->
-        <div id="tab-emp-contacts" class="crm-tab-pane" style="margin-top:16px;">
-            <div id="drawerContactsList">
-                <p style="color:var(--text-secondary);font-size:0.85rem;">Loading contacts...</p>
-            </div>
-        </div>
-
-        <!-- Tab 3: System Access (Users) -->
-        <div id="tab-emp-users" class="crm-tab-pane" style="margin-top:16px;">
-            <div id="drawerUsersList">
-                <p style="color:var(--text-secondary);font-size:0.85rem;">Loading users...</p>
-            </div>
-        </div>
-
-    </div>
-</aside>
-
 @section Scripts {
     <script>
+        // ── View Mode Switcher ──────────────────────────────────────
+        function switchViewMode(mode) {
+            const gridView = document.getElementById('empGridView');
+            const tableView = document.getElementById('empTableView');
+            const viewModeInput = document.getElementById('viewModeInput');
+            const viewBtns = document.querySelectorAll('.emp-view-btn');
+
+            if (mode === 'table') {
+                if (gridView) gridView.style.display = 'none';
+                if (tableView) tableView.style.display = 'block';
+                if (viewModeInput) viewModeInput.value = 'table';
+                if (viewBtns.length >= 2) {
+                    viewBtns[0].classList.remove('active');
+                    viewBtns[1].classList.add('active');
+                }
+            } else {
+                if (gridView) gridView.style.display = 'grid';
+                if (tableView) tableView.style.display = 'none';
+                if (viewModeInput) viewModeInput.value = 'grid';
+                if (viewBtns.length >= 2) {
+                    viewBtns[0].classList.add('active');
+                    viewBtns[1].classList.remove('active');
+                }
+            }
+
+            // Sync with URL without full reload
+            const url = new URL(window.location);
+            url.searchParams.set('ViewMode', mode);
+            window.history.replaceState({}, '', url);
+        }
+
+        // ── 360 Slide-Over Blade Logic ──────────────────────────────
         function switchDrawerTab(tabId, btn) {
-            document.querySelectorAll('.crm-tab-pane').forEach(p => p.classList.remove('active'));
-            document.querySelectorAll('.crm-tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-pane').forEach(p => { p.classList.remove('active'); p.style.display = 'none'; });
+            document.querySelectorAll('.emp-tab-btn').forEach(b => { b.classList.remove('active'); });
             const target = document.getElementById(tabId);
-            if (target) target.classList.add('active');
-            if (btn) btn.classList.add('active');
+            if (target) { target.classList.add('active'); target.style.display = 'block'; }
+            if (btn) { btn.classList.add('active'); }
         }
 
         async function openDrawer(employeeId) {
-            const drawer = document.getElementById('employeeDrawer');
-            const backdrop = document.getElementById('drawerBackdrop');
-            drawer.classList.add('active');
-            backdrop.classList.add('active');
+            const drawer = document.getElementById('emp360Blade');
+            const backdrop = document.getElementById('emp360Overlay');
+            if (drawer) drawer.classList.add('visible', 'open');
+            if (backdrop) backdrop.classList.add('visible', 'open');
 
-            document.getElementById('drawerEmployeeName').textContent = 'Loading...';
+            document.getElementById('drawerEmployeeName').textContent = 'Loading profile...';
             
             try {
                 const res = await fetch(`?handler=EmployeeDrawer&id=${employeeId}`);
                 const data = await res.json();
 
                 if (!data.success || !data.employee360) {
-                    await window.AppDialog.alert({title: 'Error', message: data.message || 'Failed to load.', type: 'danger'});
+                    await window.AppDialog.alert({title: 'Error', message: data.message || 'Failed to load employee record.', type: 'danger'});
                     closeDrawer();
                     return;
                 }
@@ -355,83 +1345,160 @@
                 const users = data.employee360.users || [];
 
                 document.getElementById('drawerEmployeeName').textContent = c.fullName;
-                document.getElementById('drawerDeptText').textContent = c.departmentName || 'No Department';
+                document.getElementById('drawerDeptText').textContent = c.departmentName || 'Unassigned Department';
                 
-                const initials = (c.fullName || 'EM').split(' ').map(s => s[0]).slice(0, 2).join('');
+                const initials = (c.fullName || 'EM').split(' ').map(s => s[0]).slice(0, 2).join('').toUpperCase();
                 const avatarWrap = document.getElementById('drawerAvatarWrap');
                 if (c.thumbnailUrl) {
-                    avatarWrap.innerHTML = `<img src="${c.thumbnailUrl}" alt="${c.fullName}" class="crm-avatar" style="width:56px;height:56px;object-fit:cover;" loading="lazy" width="56" height="56" />`;
+                    avatarWrap.innerHTML = `<img src="${c.thumbnailUrl}" alt="${c.fullName}" class="avatar" style="width:54px; height:54px; border-radius:50%; object-fit:cover; border:2px solid var(--border);" loading="lazy" />`;
                 } else {
-                    avatarWrap.innerHTML = `<div class="crm-avatar" style="width:56px;height:56px;font-size:1.2rem;">${initials}</div>`;
+                    avatarWrap.innerHTML = `<div class="avatar" style="width:54px; height:54px; border-radius:50%; background:var(--brand-soft); color:var(--brand); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:1.20rem; border:2px solid var(--border);">${initials}</div>`;
                 }
 
-                // Badge
+                // Header Badge
                 const statusBadge = document.getElementById('drawerStatusBadge');
                 statusBadge.textContent = c.status;
-                if (c.status === 'Active') statusBadge.className = 'badge badge-green';
-                else if (c.status === 'Pending') statusBadge.className = 'badge badge-info';
-                else if (c.status === 'Fired' || c.status === 'Suspended' || c.status === 'Sanctioned') statusBadge.className = 'badge badge-red';
-                else statusBadge.className = 'badge badge-gray';
+                if (c.status === 'Active') statusBadge.className = 'badge badge-success';
+                else if (c.status === 'Pending') statusBadge.className = 'badge badge-warning';
+                else if (c.status === 'Fired' || c.status === 'Suspended' || c.status === 'Sanctioned') statusBadge.className = 'badge badge-danger';
+                else statusBadge.className = 'badge badge-neutral';
 
-                // KPIs
-                document.getElementById('drawerDateEmployed').textContent = c.dateEmployed ? new Date(c.dateEmployed).toLocaleDateString() : '-';
-                document.getElementById('drawerGender').textContent = c.gender || '-';
-                document.getElementById('drawerSalary').textContent = c.salaryGrade || '-';
+                // Quick Communication Action Pills
+                const quickActions = document.getElementById('drawerQuickActions');
+                let quickHtml = '';
+                if (phones.length > 0) {
+                    const primaryPhone = phones[0];
+                    const cleanPhone = primaryPhone.replace(/\D/g, '');
+                    quickHtml += `<a href="https://wa.me/${cleanPhone}" target="_blank" class="emp-quick-btn whatsapp" title="Chat on WhatsApp">
+                        <svg viewBox="0 0 24 24" style="width:13px; height:13px; fill:currentColor;"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.043.072.043.419-.101.824z"/></svg> WhatsApp
+                    </a>`;
+                    quickHtml += `<a href="tel:${primaryPhone}" class="emp-quick-btn" title="Call">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg> Call
+                    </a>`;
+                }
+                if (emails.length > 0) {
+                    quickHtml += `<a href="mailto:${emails[0]}" class="emp-quick-btn" title="Send Email">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg> Email
+                    </a>`;
+                }
+                quickActions.innerHTML = quickHtml;
 
-                // Profile Tab
-                document.getElementById('drawerDob').textContent = c.dateOfBirth ? new Date(c.dateOfBirth).toLocaleDateString() : 'Not Specified';
+                // KPI 3-strip
+                document.getElementById('drawerDateEmployed').textContent = c.dateEmployed ? new Date(c.dateEmployed).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
+                document.getElementById('drawerTenure').textContent = c.tenureDisplay || '—';
+                document.getElementById('drawerSalary').textContent = c.salaryGrade || 'Standard';
+
+                // Digital ID Pass Card
+                document.getElementById('passEmployeeName').textContent = c.fullName;
+                document.getElementById('passEmployeeDept').textContent = (c.departmentName || 'Workforce') + ' • ClexAn Foods';
+                document.getElementById('passBarcodeText').textContent = c.shortEmployeeCode || ('EMP-' + c.employeeId.substring(0, 8).toUpperCase());
+                
+                const passBadge = document.getElementById('passStatusBadge');
+                passBadge.textContent = c.status === 'Active' ? 'Active Staff' : c.status;
+                passBadge.className = c.status === 'Active' ? 'badge badge-success' : 'badge badge-warning';
+
+                // Profile Tab Details
+                document.getElementById('drawerDob').textContent = c.dateOfBirth ? new Date(c.dateOfBirth).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : 'Not Specified';
                 document.getElementById('drawerNid').textContent = c.nidNumber || 'Not Specified';
-                document.getElementById('drawerDateCreated').textContent = c.dateCreated ? new Date(c.dateCreated).toLocaleDateString() : '-';
+                document.getElementById('drawerGender').textContent = c.gender || 'Not Specified';
+                document.getElementById('drawerDateCreated').textContent = c.dateCreated ? new Date(c.dateCreated).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
 
                 // Contacts Tab
                 document.getElementById('contactCountTab').textContent = (emails.length + phones.length).toString();
                 const contactsList = document.getElementById('drawerContactsList');
                 let contactHtml = '';
                 if (!emails.length && !phones.length) {
-                    contactHtml = '<p style="color:var(--text-secondary);font-size:0.85rem;">No contact details found.</p>';
+                    contactHtml = '<p style="color:var(--text-secondary); font-size:0.85rem; padding:12px 0;">No personal contact details registered.</p>';
                 } else {
                     emails.forEach(e => {
-                        contactHtml += `<div style="padding:10px;background:var(--canvas);border-radius:8px;border:1px solid var(--border);margin-bottom:8px;">
-                            <div style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;">Email</div>
-                            <div style="font-weight:500;">${e}</div>
+                        contactHtml += `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:var(--canvas); border-radius:8px; border:1px solid var(--border); margin-bottom:8px;">
+                            <div>
+                                <div style="font-size:0.70rem; color:var(--text-secondary); text-transform:uppercase; font-weight:700;">Email Address</div>
+                                <div style="font-weight:600; color:var(--text-primary); margin-top:2px;">${e}</div>
+                            </div>
+                            <a href="mailto:${e}" class="emp-quick-btn" style="padding:4px 8px; font-size:0.75rem;">Send</a>
                         </div>`;
                     });
                     phones.forEach(p => {
-                        contactHtml += `<div style="padding:10px;background:var(--canvas);border-radius:8px;border:1px solid var(--border);margin-bottom:8px;">
-                            <div style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;">Phone</div>
-                            <div style="font-weight:500;">${p}</div>
+                        contactHtml += `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:var(--canvas); border-radius:8px; border:1px solid var(--border); margin-bottom:8px;">
+                            <div>
+                                <div style="font-size:0.70rem; color:var(--text-secondary); text-transform:uppercase; font-weight:700;">Phone Number</div>
+                                <div style="font-weight:600; color:var(--text-primary); margin-top:2px;">${p}</div>
+                            </div>
+                            <div style="display:flex; gap:4px;">
+                                <a href="tel:${p}" class="emp-quick-btn" style="padding:4px 8px; font-size:0.75rem;">Call</a>
+                            </div>
                         </div>`;
                     });
                 }
                 contactsList.innerHTML = contactHtml;
 
-                // Users Tab
+                // Linked Users Tab
                 document.getElementById('userCountTab').textContent = users.length.toString();
                 const usersList = document.getElementById('drawerUsersList');
                 if (!users.length) {
-                    usersList.innerHTML = '<p style="color:var(--text-secondary);font-size:0.85rem;">No system access accounts linked.</p>';
+                    usersList.innerHTML = '<p style="color:var(--text-secondary); font-size:0.85rem; padding:12px 0;">No system console login accounts linked to this employee.</p>';
                 } else {
                     usersList.innerHTML = users.map(u => `
-                        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:var(--canvas);border-radius:8px;border:1px solid var(--border);margin-bottom:8px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:var(--canvas); border-radius:8px; border:1px solid var(--border); margin-bottom:8px;">
                             <div>
-                                <div style="font-weight:600;">${u.username}</div>
-                                <div style="color:var(--text-secondary);font-size:0.75rem;">Role: ${u.roleName || 'None'}</div>
+                                <div style="font-weight:700; color:var(--text-primary);">${u.username}</div>
+                                <div style="color:var(--text-secondary); font-size:0.78rem;">Role: ${u.roleName || 'Standard User'}</div>
                             </div>
-                            <span class="badge ${u.status === 'Active' ? 'badge-green' : 'badge-red'}">${u.status}</span>
+                            <span class="badge ${u.status === 'Active' ? 'badge-success' : 'badge-danger'}">${u.status}</span>
                         </div>
                     `).join('');
                 }
+
+                // Sticky Footer Dynamic Actions
+                const footerLeft = document.getElementById('drawerFooterLeft');
+                if (c.status === 'Fired') {
+                    footerLeft.innerHTML = `
+                        <form method="post" asp-page-handler="Reinstate" style="margin:0;">
+                            <input type="hidden" name="__RequestVerificationToken" value="${document.querySelector('input[name="__RequestVerificationToken"]').value}" />
+                            <input type="hidden" name="employeeId" value="${c.employeeId}" />
+                            <button type="submit" class="button-primary" style="background:#059669; border-color:#059669;" data-confirm="Reinstate ${c.fullName} to Active status?">Reinstate Staff</button>
+                        </form>
+                    `;
+                } else {
+                    footerLeft.innerHTML = `
+                        <form method="post" asp-page-handler="Terminate" style="margin:0;">
+                            <input type="hidden" name="__RequestVerificationToken" value="${document.querySelector('input[name="__RequestVerificationToken"]').value}" />
+                            <input type="hidden" name="employeeId" value="${c.employeeId}" />
+                            <button type="submit" class="button-command danger" data-confirm="${c.status === 'Pending' ? `Permanently remove ${c.fullName}?` : `Terminate employment for ${c.fullName}?`}" data-confirm-type="danger">${c.status === 'Pending' ? 'Delete Record' : 'Terminate'}</button>
+                        </form>
+                    `;
+                }
+
+                // Edit Button in Footer
+                const editData = JSON.stringify({
+                    employeeId: c.employeeId,
+                    firstName: c.firstName,
+                    middleName: c.middleName,
+                    lastName: c.lastName,
+                    gender: c.gender,
+                    dob: c.dateOfBirth ? c.dateOfBirth.split('T')[0] : '',
+                    dateEmployed: c.dateEmployed ? c.dateEmployed.split('T')[0] : '',
+                    departmentId: c.departmentId,
+                    status: c.status,
+                    thumbnailUrl: c.thumbnailUrl
+                });
+                document.getElementById('drawerEditBtn').setAttribute('onclick', `closeDrawer(); openEdit(${editData});`);
+
             } catch (err) {
-                await window.AppDialog.alert({title: 'Error', message: 'Error fetching profile: ' + err.message, type: 'danger'});
+                await window.AppDialog.alert({title: 'Error', message: 'Error loading employee profile: ' + err.message, type: 'danger'});
                 closeDrawer();
             }
         }
 
         function closeDrawer() {
-            document.getElementById('employeeDrawer').classList.remove('active');
-            document.getElementById('drawerBackdrop').classList.remove('active');
+            const drawer = document.getElementById('emp360Blade');
+            const backdrop = document.getElementById('emp360Overlay');
+            if (drawer) drawer.classList.remove('visible', 'open');
+            if (backdrop) backdrop.classList.remove('visible', 'open');
         }
 
+        // ── Create & Edit Blade Logic ───────────────────────────────
         function openCreate() {
             document.getElementById('empBladeTitle').textContent = 'New Employee';
             document.getElementById('editEmpId').value = '';
@@ -440,35 +1507,92 @@
             document.getElementById('lastNameF').value = '';
             document.getElementById('genderF').value = 'NotSpecified';
             document.getElementById('dobF').value = '';
-            document.getElementById('dateEmpF').value = '';
+            document.getElementById('dateEmpF').value = new Date().toISOString().split('T')[0];
             document.getElementById('deptF').value = '';
             document.getElementById('statusRowEmp').style.display = 'none';
             document.getElementById('empSubmitBtn').textContent = 'Add Employee';
-            // document.querySelector('[data-open-blade="empBlade"]').click(); // Not needed if trigger is data-open-blade
-        }
-
-        function openEdit(data) {
-            document.getElementById('empBladeTitle').textContent = 'Edit Employee';
-            document.getElementById('editEmpId').value = data.employeeId;
-            document.getElementById('firstNameF').value = data.firstName;
-            document.getElementById('middleNameF').value = data.middleName || '';
-            document.getElementById('lastNameF').value = data.lastName;
-            document.getElementById('genderF').value = data.gender;
-            document.getElementById('dobF').value = data.dob || '';
-            document.getElementById('dateEmpF').value = data.dateEmployed || '';
-            if (data.departmentId) document.getElementById('deptF').value = data.departmentId;
-            document.getElementById('statusEmp').value = data.status;
-            document.getElementById('statusRowEmp').style.display = '';
-            document.getElementById('empSubmitBtn').textContent = 'Save Changes';
             
-            // Trigger blade open
+            // Reset photo preview
+            const preview = document.getElementById('empImagePreview');
+            const prompt = document.getElementById('empUploadPrompt');
+            if (preview) { preview.src = '#'; preview.style.display = 'none'; }
+            if (prompt) { prompt.style.display = 'block'; }
+
             const overlay = document.getElementById('empBladeOverlay');
             const blade = document.getElementById('empBlade');
             if (overlay && blade) {
-                overlay.classList.add('visible');
-                blade.classList.add('visible');
+                overlay.classList.add('visible', 'open');
+                blade.classList.add('visible', 'open');
             }
         }
+
+        function openEdit(data) {
+            document.getElementById('empBladeTitle').textContent = 'Edit Employee Profile';
+            document.getElementById('editEmpId').value = data.employeeId;
+            document.getElementById('firstNameF').value = data.firstName || '';
+            document.getElementById('middleNameF').value = data.middleName || '';
+            document.getElementById('lastNameF').value = data.lastName || '';
+            document.getElementById('genderF').value = data.gender || 'NotSpecified';
+            document.getElementById('dobF').value = data.dob || '';
+            document.getElementById('dateEmpF').value = data.dateEmployed || '';
+            if (data.departmentId) document.getElementById('deptF').value = data.departmentId;
+            document.getElementById('statusEmp').value = data.status || 'Active';
+            document.getElementById('statusRowEmp').style.display = 'block';
+            document.getElementById('empSubmitBtn').textContent = 'Save Changes';
+
+            // Preview photo if exists
+            const preview = document.getElementById('empImagePreview');
+            const prompt = document.getElementById('empUploadPrompt');
+            if (data.thumbnailUrl) {
+                if (preview) { preview.src = data.thumbnailUrl; preview.style.display = 'block'; }
+                if (prompt) { prompt.style.display = 'none'; }
+            } else {
+                if (preview) { preview.src = '#'; preview.style.display = 'none'; }
+                if (prompt) { prompt.style.display = 'block'; }
+            }
+
+            const overlay = document.getElementById('empBladeOverlay');
+            const blade = document.getElementById('empBlade');
+            if (overlay && blade) {
+                overlay.classList.add('visible', 'open');
+                blade.classList.add('visible', 'open');
+            }
+        }
+
+        function closeCreateEditBlade() {
+            const overlay = document.getElementById('empBladeOverlay');
+            const blade = document.getElementById('empBlade');
+            if (overlay && blade) {
+                overlay.classList.remove('visible', 'open');
+                blade.classList.remove('visible', 'open');
+            }
+        }
+
+        function previewSelectedPhoto(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const preview = document.getElementById('empImagePreview');
+                    const prompt = document.getElementById('empUploadPrompt');
+                    if (preview) {
+                        preview.src = e.target.result;
+                        preview.style.display = 'block';
+                    }
+                    if (prompt) {
+                        prompt.style.display = 'none';
+                    }
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        // Auto-open drawer if `?id=...` parameter is passed
+        document.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            const autoId = params.get('id') || params.get('Id');
+            if (autoId) {
+                openDrawer(autoId);
+            }
+        });
     </script>
 }
-

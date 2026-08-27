@@ -65,22 +65,65 @@ public class EmployeeService : IEmployeeService
             .Include(e => e.Salary)
             .AsNoTracking();
 
+        if (request is EmployeeFilterRequest filterReq)
+        {
+            if (filterReq.DepartmentId.HasValue)
+                query = query.Where(e => e.DepartmentId == filterReq.DepartmentId.Value);
+
+            if (!string.IsNullOrWhiteSpace(filterReq.Status) && Enum.TryParse<EmployeeStatus>(filterReq.Status, true, out var statusVal))
+                query = query.Where(e => e.Status == statusVal);
+        }
+
         if (!request.IncludeInactive)
             query = query.Where(e => e.Status != EmployeeStatus.Fired);
 
         if (!string.IsNullOrWhiteSpace(request.SearchTerm))
-            query = query.Where(e => e.FirstName.Contains(request.SearchTerm) ||
-                                     e.LastName.Contains(request.SearchTerm));
+        {
+            var term = request.SearchTerm.Trim();
+            query = query.Where(e => e.FirstName.Contains(term) ||
+                                     e.LastName.Contains(term) ||
+                                     (e.MiddleName != null && e.MiddleName.Contains(term)) ||
+                                     (e.NidNumber != null && e.NidNumber.Contains(term)) ||
+                                     (e.Department != null && e.Department.Name.Contains(term)));
+        }
 
         var total = await query.CountAsync(ct);
+
+        query = request.SortBy?.ToLowerInvariant() switch
+        {
+            "name_desc" => query.OrderByDescending(e => e.LastName).ThenByDescending(e => e.FirstName),
+            "date_desc" or "newest" => query.OrderByDescending(e => e.DateEmployed),
+            "date_asc" or "oldest" => query.OrderBy(e => e.DateEmployed),
+            "dept" => query.OrderBy(e => e.Department != null ? e.Department.Name : "").ThenBy(e => e.LastName),
+            _ => query.OrderBy(e => e.LastName).ThenBy(e => e.FirstName)
+        };
+
         var items = await query
-            .OrderBy(e => e.LastName).ThenBy(e => e.FirstName)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
             .Select(e => MapToDto(e))
             .ToListAsync(ct);
 
         return new PagedResult<EmployeeDto>(items, total, request.Page, request.PageSize);
+    }
+
+    public async Task<EmployeeMetricsDto> GetMetricsAsync(CancellationToken ct = default)
+    {
+        var query = _uow.Repository<Employee>().Query().AsNoTracking();
+        var total = await query.CountAsync(ct);
+        var active = await query.CountAsync(e => e.Status == EmployeeStatus.Active, ct);
+        var pending = await query.CountAsync(e => e.Status == EmployeeStatus.Pending, ct);
+        var terminated = await query.CountAsync(e => e.Status == EmployeeStatus.Fired || e.Status == EmployeeStatus.Suspended || e.Status == EmployeeStatus.Sanctioned, ct);
+        var deptCount = await _uow.Repository<Department>().Query().CountAsync(ct);
+
+        return new EmployeeMetricsDto
+        {
+            TotalEmployees = total,
+            ActiveEmployees = active,
+            PendingEmployees = pending,
+            TerminatedEmployees = terminated,
+            DepartmentCount = deptCount
+        };
     }
 
     public async Task<EmployeeDto> CreateAsync(CreateEmployeeRequest request, CancellationToken ct = default)

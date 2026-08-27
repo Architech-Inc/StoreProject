@@ -59,6 +59,7 @@ builder.Services.AddScoped<ISupplierService, ApiSupplierService>();
 builder.Services.AddScoped<ILoyaltyService, ApiLoyaltyService>();
 builder.Services.AddScoped<IFileService, ApiFileService>();
 builder.Services.AddScoped<IApiCommunicationLogService, ApiCommunicationLogService>();
+builder.Services.AddScoped<IEmployeeManager, EmployeeManager>();
 
 var app = builder.Build();
 

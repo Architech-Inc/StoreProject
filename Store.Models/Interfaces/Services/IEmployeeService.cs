@@ -8,6 +8,7 @@ public interface IEmployeeService
     Task<EmployeeDto?> GetByIdAsync(Guid employeeId, CancellationToken ct = default);
     Task<Employee360Dto?> Get360ByIdAsync(Guid employeeId, CancellationToken ct = default);
     Task<PagedResult<EmployeeDto>> GetAllAsync(PagedRequest request, CancellationToken ct = default);
+    Task<EmployeeMetricsDto> GetMetricsAsync(CancellationToken ct = default);
     Task<EmployeeDto> CreateAsync(CreateEmployeeRequest request, CancellationToken ct = default);
     Task<EmployeeDto?> UpdateAsync(Guid employeeId, UpdateEmployeeRequest request, CancellationToken ct = default);
     Task<bool> DeleteAsync(Guid employeeId, CancellationToken ct = default);

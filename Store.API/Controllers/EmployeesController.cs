@@ -16,10 +16,17 @@ public class EmployeesController : ControllerBase
     public EmployeesController(IEmployeeService employeeService) => _employeeService = employeeService;
 
     [HttpGet]
-    public async Task<IActionResult> GetAll([FromQuery] PagedRequest request, CancellationToken ct)
+    public async Task<IActionResult> GetAll([FromQuery] EmployeeFilterRequest request, CancellationToken ct)
     {
         var result = await _employeeService.GetAllAsync(request, ct);
         return Ok(ApiResponse<PagedResult<EmployeeDto>>.Ok(result));
+    }
+
+    [HttpGet("metrics")]
+    public async Task<IActionResult> GetMetrics(CancellationToken ct)
+    {
+        var metrics = await _employeeService.GetMetricsAsync(ct);
+        return Ok(ApiResponse<EmployeeMetricsDto>.Ok(metrics));
     }
 
     [HttpGet("{id:guid}")]

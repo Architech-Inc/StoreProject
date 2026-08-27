@@ -33,8 +33,29 @@ public class ApiEmployeeService : IEmployeeService
         {
             qs += $"&searchTerm={Uri.EscapeDataString(request.SearchTerm)}";
         }
+        if (!string.IsNullOrWhiteSpace(request.SortBy))
+        {
+            qs += $"&sortBy={Uri.EscapeDataString(request.SortBy)}";
+        }
+        if (request is EmployeeFilterRequest filterReq)
+        {
+            if (filterReq.DepartmentId.HasValue)
+            {
+                qs += $"&departmentId={filterReq.DepartmentId.Value}";
+            }
+            if (!string.IsNullOrWhiteSpace(filterReq.Status))
+            {
+                qs += $"&status={Uri.EscapeDataString(filterReq.Status)}";
+            }
+        }
         var result = await _client.GetAsync<PagedResult<EmployeeDto>>($"/api/employees{qs}", ct);
         return result ?? new PagedResult<EmployeeDto>();
+    }
+
+    public async Task<EmployeeMetricsDto> GetMetricsAsync(CancellationToken ct = default)
+    {
+        var result = await _client.GetAsync<EmployeeMetricsDto>("/api/employees/metrics", ct);
+        return result ?? new EmployeeMetricsDto();
     }
 
     public async Task<EmployeeDto> CreateAsync(CreateEmployeeRequest request, CancellationToken ct = default)
