@@ -63,6 +63,7 @@ builder.Services.AddScoped<IEmployeeManager, EmployeeManager>();
 builder.Services.AddScoped<IInventoryOpsManager, InventoryOpsManager>();
 builder.Services.AddScoped<IBatchManager, BatchManager>();
 builder.Services.AddScoped<IStockTransferManager, StockTransferManager>();
+builder.Services.AddScoped<IWastageManager, WastageManager>();
 
 var app = builder.Build();
 

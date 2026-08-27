@@ -18,6 +18,22 @@ public class WastageController : ControllerBase
     public WastageController(IWastageService wastageService)
         => _wastageService = wastageService;
 
+    [HttpGet("metrics")]
+    [Authorize(Policy = PermissionKeys.InventoryRead)]
+    public async Task<IActionResult> GetMetrics(CancellationToken ct)
+    {
+        var metrics = await _wastageService.GetWastageMetricsAsync(ct);
+        return Ok(ApiResponse<WastageMetricsDto>.Ok(metrics));
+    }
+
+    [HttpGet("paged")]
+    [Authorize(Policy = PermissionKeys.InventoryRead)]
+    public async Task<IActionResult> GetPaged([FromQuery] WastageFilterRequest request, CancellationToken ct)
+    {
+        var result = await _wastageService.GetWastagePagedAsync(request, ct);
+        return Ok(ApiResponse<PagedResult<WastageEntryDto>>.Ok(result));
+    }
+
     [HttpGet]
     [Authorize(Policy = PermissionKeys.InventoryRead)]
     public async Task<IActionResult> GetAll([FromQuery] Guid? itemId, [FromQuery] string? wastageType)

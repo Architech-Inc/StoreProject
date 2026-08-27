@@ -1,104 +1,152 @@
 using Microsoft.AspNetCore.Mvc;
+using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Inventory;
 using Store.Models.Enums;
-using Store.Models.Interfaces.Services;
 using StoreUI.Services;
 
 namespace StoreUI.Pages;
 
 public class WastageModel : SecurePageModel
 {
-    private readonly IWastageService _wastageService;
+    private readonly IWastageManager _wastageManager;
     private readonly IApiClientService _apiClient;
-    private readonly IItemService _itemService;
 
-    public List<WastageEntryDto> Entries { get; private set; } = new();
-    public string? FilterType { get; private set; }
+    public WastageMetricsDto Metrics { get; private set; } = new();
+    public PagedResult<WastageEntryDto> WastagePaged { get; private set; } = new();
 
-    [BindProperty] public Guid RecordItemId { get; set; }
-    [BindProperty] public WastageType RecordWastageType { get; set; }
-    [BindProperty] public int RecordQuantity { get; set; }
-    [BindProperty] public string? RecordNotes { get; set; }
-    [BindProperty] public string? RecordReferenceCode { get; set; }
+    [BindProperty(SupportsGet = true)]
+    public string? Search { get; set; }
 
-    [BindProperty] public int DeleteEntryId { get; set; }
+    [BindProperty(SupportsGet = true)]
+    public string? WastageTypeFilter { get; set; }
 
-    [TempData] public string? StatusMessage { get; set; }
+    [BindProperty(SupportsGet = true)]
+    public int PageNumber { get; set; } = 1;
 
-    public IEnumerable<WastageType> WastageTypes { get; } = Enum.GetValues<WastageType>();
+    [BindProperty]
+    public RecordWastageRequest RecordRequest { get; set; } = new();
 
-    public WastageModel(IWastageService wastageService, IApiClientService apiClient, IItemService itemService)
+    [BindProperty]
+    public int DeleteEntryId { get; set; }
+
+    [TempData]
+    public string? StatusMessage { get; set; }
+
+    public IEnumerable<WastageType> AvailableWastageTypes { get; } = Enum.GetValues<WastageType>();
+
+    public WastageModel(IWastageManager wastageManager, IApiClientService apiClient)
     {
-        _wastageService = wastageService;
+        _wastageManager = wastageManager;
         _apiClient = apiClient;
-        _itemService = itemService;
     }
 
-    public async Task<IActionResult> OnGetAsync([FromQuery] string? wastageType = null)
+    public async Task<IActionResult> OnGetAsync(CancellationToken ct = default)
     {
         if (!TryGetSecurityContext(out var token, out _))
             return GoToLogin();
 
         _apiClient.SetToken(token);
-        FilterType = wastageType;
-        Entries = await _wastageService.GetAllAsync(wastageType: wastageType);
+
+        Metrics = await _wastageManager.GetMetricsAsync(ct);
+
+        var filter = new WastageFilterRequest
+        {
+            Page = PageNumber < 1 ? 1 : PageNumber,
+            PageSize = 20,
+            WastageType = string.IsNullOrWhiteSpace(WastageTypeFilter) ? null : WastageTypeFilter,
+            SearchTerm = Search
+        };
+
+        WastagePaged = await _wastageManager.GetWastagePagedAsync(filter, ct);
         return Page();
     }
 
-    public async Task<IActionResult> OnPostRecordAsync()
-    {
-        if (!TryGetSecurityContext(out var token, out _))
-            return GoToLogin();
-
-        _apiClient.SetToken(token);
-
-        var req = new RecordWastageRequest
-        {
-            ItemId = RecordItemId,
-            WastageType = RecordWastageType,
-            Quantity = RecordQuantity,
-            Notes = RecordNotes,
-            ReferenceCode = RecordReferenceCode
-        };
-
-        await _wastageService.RecordAsync(req, Guid.Empty); // userId resolved by API via JWT
-        StatusMessage = "Wastage entry recorded successfully.";
-        return RedirectToPage();
-    }
-
-    public async Task<IActionResult> OnPostDeleteAsync()
-    {
-        if (!TryGetSecurityContext(out var token, out _))
-            return GoToLogin();
-
-        _apiClient.SetToken(token);
-
-        var ok = await _wastageService.DeleteAsync(DeleteEntryId);
-        StatusMessage = ok ? "Wastage entry deleted." : "Entry not found.";
-        return RedirectToPage();
-    }
-
-    public async Task<IActionResult> OnGetSearchItemsAsync(string? q, CancellationToken ct = default)
+    public async Task<IActionResult> OnGetExportCsvAsync(CancellationToken ct = default)
     {
         if (!TryGetSecurityContext(out var token, out _))
             return Unauthorized();
 
         _apiClient.SetToken(token);
-        
-        var req = new Store.Models.DTOs.Common.PagedRequest 
-        { 
-            SearchTerm = q?.Trim(), 
-            PageSize = 15 
+
+        var filter = new WastageFilterRequest
+        {
+            Page = 1,
+            PageSize = 1000,
+            WastageType = string.IsNullOrWhiteSpace(WastageTypeFilter) ? null : WastageTypeFilter,
+            SearchTerm = Search
         };
-        var result = await _itemService.GetAllAsync(req, ct);
-        
-        var selectList = result.Items.Select(i => new
+
+        var paged = await _wastageManager.GetWastagePagedAsync(filter, ct);
+        var bytes = _wastageManager.ExportCsv(paged.Items);
+        var filename = $"wastage_loss_report_{DateTime.UtcNow:yyyyMMdd_HHmm}.csv";
+        return File(bytes, "text/csv", filename);
+    }
+
+    public async Task<IActionResult> OnPostRecordAsync(CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return GoToLogin();
+
+        _apiClient.SetToken(token);
+
+        if (RecordRequest.ItemId == Guid.Empty || RecordRequest.Quantity <= 0)
+        {
+            StatusMessage = "Error: Please select a valid item and specify a quantity greater than zero.";
+            return RedirectToPage(new { Search, WastageTypeFilter, PageNumber });
+        }
+
+        try
+        {
+            await _wastageManager.RecordWastageAsync(RecordRequest, Guid.Empty, ct);
+            StatusMessage = "Wastage write-off entry recorded successfully.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: Failed to record wastage entry - {ex.Message}";
+        }
+
+        return RedirectToPage(new { Search, WastageTypeFilter, PageNumber });
+    }
+
+    public async Task<IActionResult> OnPostDeleteAsync(CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return GoToLogin();
+
+        _apiClient.SetToken(token);
+
+        try
+        {
+            var ok = await _wastageManager.DeleteWastageAsync(DeleteEntryId, ct);
+            StatusMessage = ok ? "Wastage entry removed successfully." : "Error: Wastage entry not found.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: Failed to delete wastage entry - {ex.Message}";
+        }
+
+        return RedirectToPage(new { Search, WastageTypeFilter, PageNumber });
+    }
+
+    public async Task<IActionResult> OnGetSearchCatalogAsync(string? q, CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return Unauthorized();
+
+        _apiClient.SetToken(token);
+
+        var items = await _wastageManager.SearchCatalogItemsAsync(q, ct);
+        var result = items.Select(i => new
         {
             id = i.ItemId.ToString(),
-            title = i.Name,
-            sub = $"Barcode: {(string.IsNullOrEmpty(i.Barcode) ? "N/A" : i.Barcode)} | Stock: {i.InStock}",
-            badge = i.CategoryName ?? "Item"
+            name = i.Name,
+            barcode = i.Barcode ?? "N/A",
+            category = i.CategoryName ?? "General",
+            inStock = i.InStock,
+            costPrice = i.CostPrice ?? 0,
+            unitPrice = i.UnitPrice
         });
-        return new JsonResult(selectList);
+
+        return new JsonResult(result);
     }
 }
