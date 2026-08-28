@@ -524,7 +524,7 @@
 <!-- ════════════════════════════════════════════════════════════ -->
 <!-- ── QUICK STOCK ADJUSTMENT MODAL ─────────────────────────── -->
 <!-- ════════════════════════════════════════════════════════════ -->
-<div id="stockAdjustModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,23,42,0.5);z-index:1100;align-items:center;justify-content:center;">
+<div id="stockAdjustModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,23,42,0.5);z-index:var(--z-modal, 9992);align-items:center;justify-content:center;">
     <div class="card" style="width:440px;max-width:92vw;padding:24px;position:relative;">
         <h3 style="margin:0 0 6px;">⚡ Quick Stock Adjustment</h3>
         <p style="color:var(--ops-subtle);font-size:0.85rem;margin:0 0 16px;" id="adjustModalItemName">Product Name</p>
@@ -568,7 +568,7 @@
 <!-- ════════════════════════════════════════════════════════════ -->
 <!-- ── BARCODE STUDIO & LABEL PRINT MODAL ───────────────────── -->
 <!-- ════════════════════════════════════════════════════════════ -->
-<div id="barcodePrintModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,23,42,0.5);z-index:1100;align-items:center;justify-content:center;">
+<div id="barcodePrintModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,23,42,0.5);z-index:var(--z-modal, 9992);align-items:center;justify-content:center;">
     <div class="card" style="width:520px;max-width:92vw;padding:24px;position:relative;">
         <h3 style="margin:0 0 6px;">🖨️ Barcode Label Print Studio</h3>
         <p style="color:var(--ops-subtle);font-size:0.85rem;margin:0 0 16px;">Generate and print thermal stickers or shelf price tags.</p>
@@ -603,7 +603,7 @@
 <!-- ════════════════════════════════════════════════════════════ -->
 <!-- ── CREATE / EDIT PRODUCT MODAL ──────────────────────────── -->
 <!-- ════════════════════════════════════════════════════════════ -->
-<div id="itemModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,23,42,0.5);z-index:1100;align-items:center;justify-content:center;">
+<div id="itemModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,23,42,0.5);z-index:var(--z-modal, 9992);align-items:center;justify-content:center;">
     <div class="card" style="width:580px;max-width:92vw;max-height:90vh;overflow-y:auto;padding:24px;position:relative;">
         <h3 id="modalTitle" style="margin:0 0 16px;">New Product</h3>
 
@@ -720,7 +720,7 @@
 </div>
 
 <!-- Image Zoom Lightbox -->
-<div id="imagePreviewModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:1200;align-items:center;justify-content:center;" onclick="closeImagePreview()">
+<div id="imagePreviewModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:var(--z-image-viewer, 10000);align-items:center;justify-content:center;" onclick="closeImagePreview()">
     <img id="fullImagePreview" src="" alt="Preview" style="max-width:90vw;max-height:90vh;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,0.5);" />
 </div>
 

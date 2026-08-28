@@ -1,7 +1,7 @@
 @* Smart Barcode/QR Scanner Sleeper Service & Global Action Hub Partial *@
 <div id="smartScannerContainer" class="smart-scanner-container" aria-live="polite">
     <!-- 1. Global Scan Action Hub Modal -->
-    <div class="modal-overlay" id="globalScanModal" hidden style="z-index: 99999;">
+    <div class="modal-overlay" id="globalScanModal" hidden style="z-index: var(--z-scan-hub, 10001);">
         <div class="modal scan-hub-modal" role="dialog" aria-modal="true" aria-labelledby="scanModalTitle">
             <div class="modal-head scan-hub-head">
                 <div class="scan-hub-title-group">

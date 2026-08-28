@@ -158,7 +158,7 @@ tbody tr:hover { background: color-mix(in srgb, var(--ops-brand, var(--brand)) 4
 
 /* ── Toasts (New) ───────────────────────────── */
 .toast-container {
-    position: fixed; top: 20px; right: 20px; z-index: 9999;
+    position: fixed; top: 20px; right: 20px; z-index: var(--z-toast, 9995);
     display: flex; flex-direction: column; gap: 10px; pointer-events: none;
 }
 .toast {
@@ -221,7 +221,7 @@ tbody tr:hover { background: color-mix(in srgb, var(--ops-brand, var(--brand)) 4
     line-height: 1;
     padding: 4px;
     display: none;
-    z-index: 2;
+    z-index: var(--z-base, 2);
 }
 .smart-lookup-wrap .smart-lookup-clear:hover {
     color: var(--ops-danger, #dc2626);
@@ -235,7 +235,7 @@ tbody tr:hover { background: color-mix(in srgb, var(--ops-brand, var(--brand)) 4
     top: calc(100% + 4px);
     left: 0;
     right: 0;
-    z-index: 99999;
+    z-index: var(--z-dropdown, 100);
     background: var(--ops-paper, var(--surface, #ffffff));
     border: 1px solid var(--ops-border, var(--border, #cbd5e1));
     border-radius: var(--radius-md, 6px);
@@ -605,7 +605,202 @@ tbody tr:hover { background: color-mix(in srgb, var(--ops-brand, var(--brand)) 4
     position: fixed;
     bottom: 22px;
     right: 22px;
-    z-index: 900;
+    z-index: var(--z-fab, 900);
+    font-family: inherit;
+}
+.scanner-fab-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 9999px;
+    background: #0f172a;
+    color: #f8fafc;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.scanner-fab-btn:hover {
+    background: #1e293b;
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+}
+.fab-status-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #10b981;
+    display: inline-block;
+}
+.fab-status-indicator.paused { background: #f59e0b; }
+.fab-status-indicator.disabled { background: #94a3b8; }
+
+.fab-pulse-ring {
+    position: absolute;
+    left: 14px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: rgba(16, 185, 129, 0.4);
+    animation: fabPulse 2s cubic-bezier(0.24, 0, 0.38, 1) infinite;
+    pointer-events: none;
+}
+.fab-status-indicator.paused ~ .fab-pulse-ring { background: rgba(245, 158, 11, 0.4); }
+.fab-status-indicator.disabled ~ .fab-pulse-ring { display: none; }
+
+@keyframes fabPulse {
+    0% { transform: scale(0.9); opacity: 0.8; }
+    70% { transform: scale(2.4); opacity: 0; }
+    100% { transform: scale(2.4); opacity: 0; }
+}
+
+.scanner-fab-popover {
+    position: absolute;
+    bottom: 54px;
+    right: 0;
+    width: 290px;
+    border-radius: 12px;
+    background: #0f172a;
+    color: #f8fafc;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    animation: fabPopoverIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes fabPopoverIn {
+    from { opacity: 0; transform: translateY(10px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.scanner-fab-popover-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 14px;
+    background: rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.fab-head-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.88rem;
+}
+.fab-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #10b981;
+}
+.fab-status-dot.paused { background: #f59e0b; }
+.fab-status-dot.disabled { background: #94a3b8; }
+.fab-mode-tag {
+    font-size: 0.72rem;
+    font-weight: 700;
+.scan-details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+}
+.scan-detail-card {
+    padding: 10px 12px;
+    border-radius: 6px;
+    background: var(--ops-paper, #ffffff);
+    border: 1px solid var(--ops-border, #e2e8f0);
+}
+.scan-detail-key {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ops-subtle, #64748b);
+    margin-bottom: 2px;
+}
+.scan-detail-val {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--ops-ink, #0f172a);
+}
+
+/* Action Buttons Grid */
+.scan-actions-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ops-subtle, #64748b);
+    margin-bottom: 10px;
+}
+.scan-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+}
+.scan-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-align: left;
+    text-decoration: none;
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+.scan-action-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+.scan-action-label-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.scan-shortcut-kbd {
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.18);
+    color: inherit;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.scan-hub-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    background: var(--ops-surface-alt, #f8fafc);
+    border-top: 1px solid var(--ops-border, #e2e8f0);
+}
+.scan-hub-hints {
+    display: flex;
+    gap: 14px;
+    font-size: 0.78rem;
+    color: var(--ops-subtle, #64748b);
+}
+.scan-hub-hints kbd {
+    background: var(--ops-paper, #ffffff);
+    border: 1px solid var(--ops-border, #cbd5e1);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: monospace;
+    font-weight: 600;
+}
+
+/* ── Floating Quick-Access Scanner Widget (FAB) ───────── */
+.scanner-fab-wrapper {
+    position: fixed;
+    bottom: 22px;
+    right: 22px;
+    z-index: var(--z-fab, 900);
     font-family: inherit;
 }
 .scanner-fab-btn {
@@ -776,7 +971,7 @@ tbody tr:hover { background: color-mix(in srgb, var(--ops-brand, var(--brand)) 4
 /* ── AppDialog (Custom Modals) ──────────────── */
 .dialog-overlay {
     position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);
-    display: flex; align-items: center; justify-content: center; z-index: 9999;
+    display: flex; align-items: center; justify-content: center; z-index: var(--z-dialog, 9999);
     opacity: 0; visibility: hidden; transition: opacity 0.2s ease, visibility 0.2s ease;
 }
 .dialog-overlay.show { opacity: 1; visibility: visible; }

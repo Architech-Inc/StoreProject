@@ -239,7 +239,7 @@
                                         <td style="text-align:right;">
                                             <form method="post" asp-page-handler="Revoke" style="display:inline; margin:0;">
                                                 <input type="hidden" name="assignmentId" value="@a.UserBranchRoleId" />
-                                                <button type="submit" class="btn-revoke-action" data-confirm="Remove this assignment?" data-confirm-type="danger">
+                                                <button type="submit" class="btn-revoke-action" data-confirm="Remove this assignment for @a.UserName?" data-confirm-type="danger" data-confirm-title="Revoke Branch Assignment">
                                                     Revoke
                                                 </button>
                                             </form>

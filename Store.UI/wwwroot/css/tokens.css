@@ -69,4 +69,22 @@
     /* Semantic danger (canonical — use instead of raw hex) */
     --danger:       var(--accent-red, #d13438);
     --danger-hover: #a72729;
+
+    /* ── ClexAn Stacking Layer Specification v1.0 ──────────────
+     * Use var(--z-*) for ALL z-index declarations across the app.
+     * Never write a bare z-index number for overlay/modal/drawer elements.
+     * ─────────────────────────────────────────────────────────── */
+    --z-base:           1;      /* Sticky table headers, in-flow positioned elements */
+    --z-sticky:         10;     /* Sticky nav / column freezes */
+    --z-dropdown:       100;    /* Autocomplete dropdowns outside a modal */
+    --z-fab:            900;    /* Floating Action Buttons (Smart Scan FAB) */
+    --z-overlay:        9990;   /* All backdrop/dimmer overlays (drawers & modals) */
+    --z-drawer:         9991;   /* Slide-over drawers and side panels */
+    --z-modal:          9992;   /* Center-screen modals */
+    --z-modal-dropdown: 9993;   /* Dropdowns / autocomplete INSIDE an open modal */
+    --z-toast:          9995;   /* Global toast notification strip */
+    --z-dialog:         9999;   /* AppDialog (confirm/alert/prompt) — always topmost interactive */
+    --z-image-viewer:   10000;  /* Full-screen image lightbox */
+    --z-scan-hub:       10001;  /* Smart Scan Hub — system-critical overlay */
+    --z-loading:        10002;  /* Page loading overlay — absolutely topmost */
 }

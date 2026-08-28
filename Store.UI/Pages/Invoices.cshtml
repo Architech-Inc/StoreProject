@@ -417,7 +417,7 @@
             inset: 0;
             background: rgba(15, 23, 42, 0.6);
             backdrop-filter: blur(4px);
-            z-index: 9998;
+            z-index: var(--z-overlay, 9990);
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.25s ease;
@@ -438,7 +438,7 @@
             background: #ffffff !important;
             border-left: 1px solid #e2e8f0;
             box-shadow: -8px 0 24px rgba(0,0,0,0.18);
-            z-index: 9999;
+            z-index: var(--z-drawer, 9991);
             transform: translateX(100%);
             transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
             display: flex;
@@ -574,7 +574,7 @@
             inset: 0;
             background: rgba(15, 23, 42, 0.6);
             backdrop-filter: blur(4px);
-            z-index: 9998;
+            z-index: var(--z-overlay, 9990);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -599,7 +599,7 @@
             display: flex;
             flex-direction: column;
             box-shadow: 0 20px 25px -5px rgba(0,0,0,0.15);
-            z-index: 9999;
+            z-index: var(--z-modal, 9992);
             transform: translateY(12px);
             transition: transform 0.2s ease;
             overflow: hidden;
@@ -634,34 +634,6 @@
             gap: 10px;
             background: #f8fafc;
         }
-
-        /* Toast notification */
-        .inv-toast {
-            position: fixed;
-            bottom: 24px;
-            right: 24px;
-            background: #1e293b;
-            color: #ffffff;
-            padding: 12px 20px;
-            border-radius: 8px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
-            font-size: 0.9rem;
-            z-index: 2000;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            transform: translateY(100px);
-            opacity: 0;
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .inv-toast.show {
-            transform: translateY(0);
-            opacity: 1;
-        }
-
-        .inv-toast.success { background: #065f46; border-left: 4px solid #10b981; }
-        .inv-toast.error { background: #7f1d1d; border-left: 4px solid #ef4444; }
 
         @@media (max-width: 768px) {
             .inv-search-box { max-width: 100%; }

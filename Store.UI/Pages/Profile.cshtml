@@ -311,10 +311,10 @@
                                         }
                                     </td>
                                     <td style="text-align: right;">
-                                        <form method="post" asp-page-handler="CancelContactChange" style="display:inline-block;" onsubmit="return confirm('Are you sure you want to cancel this request?');">
+                                        <form method="post" asp-page-handler="CancelContactChange" style="display:inline-block; margin:0;">
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="requestId" value="@req.Id" />
-                                            <button type="submit" class="btn-secondary" style="padding: 4px 12px; font-size: 0.85rem; color: #dc2626; border-color: #fca5a5;">Cancel</button>
+                                            <button type="submit" class="btn-secondary" style="padding: 4px 12px; font-size: 0.85rem; color: #dc2626; border-color: #fca5a5;" data-confirm="Cancel this pending contact change request?" data-confirm-type="danger" data-confirm-title="Cancel Request">Cancel</button>
                                         </form>
                                     </td>
                                 </tr>
