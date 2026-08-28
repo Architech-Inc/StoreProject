@@ -733,8 +733,31 @@
     <form method="post" asp-page-handler="Receive" id="grnForm">
         @Html.AntiForgeryToken()
         <div class="inv-modal-body">
+            @* ── Purchase Order Linking (Optional) ── *@
+            <div style="background:var(--canvas); border:1px solid var(--border); border-radius:8px; padding:12px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <label style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:var(--text-secondary); margin:0;">
+                        Link Approved Purchase Order (Optional)
+                    </label>
+                    <button type="button" class="btn-table-action" onclick="loadApprovedPurchaseOrders()" style="font-size:0.72rem; padding:2px 8px; display:inline-flex; align-items:center; gap:4px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg> Load Approved POs
+                    </button>
+                </div>
+                <select id="grnPoSelect" class="form-control" style="width:100%; font-size:0.84rem;" onchange="onPoSelected(this)">
+                    <option value="">— Direct Receipt (No Purchase Order) —</option>
+                </select>
+                <div id="grnPoItemSection" style="display:none; margin-top:8px;">
+                    <label style="font-size:0.75rem; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:2px;">Select PO Line Item to Receive</label>
+                    <select id="grnPoItemSelect" class="form-control" style="width:100%; font-size:0.84rem;" onchange="onPoItemLineSelected(this)">
+                        <option value="">— Select PO Line Item —</option>
+                    </select>
+                </div>
+            </div>
+
             <div>
-                <label for="grnItemSelect" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Select Item to Receive <span style="color:var(--danger);">*</span></label>
+                <label for="grnItemSelect" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Catalog Item to Receive <span style="color:var(--danger);">*</span></label>
                 <select asp-for="ReceiveItemId" id="grnItemSelect" class="form-control" style="width:100%;" required onchange="onGrnItemChange(this)">
                     <option value="">— Select Catalog Product —</option>
                     @foreach (var item in Model.QuickItems)
@@ -930,7 +953,84 @@
             }
         });
 
-        // ── GRN Dynamic Calculations ────────────────────────────────
+        // ── GRN Dynamic Calculations & Purchase Order Linking ──────
+        let loadedApprovedPurchaseOrders = [];
+
+        async function loadApprovedPurchaseOrders() {
+            const selectEl = document.getElementById('grnPoSelect');
+            selectEl.disabled = true;
+            try {
+                const resp = await fetch('?handler=ApprovedPurchaseOrders');
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const data = await resp.json();
+                if (data.success && Array.isArray(data.purchaseOrders)) {
+                    loadedApprovedPurchaseOrders = data.purchaseOrders;
+                    let opts = '<option value="">— Direct Receipt (No Purchase Order) —</option>';
+                    data.purchaseOrders.forEach(po => {
+                        opts += `<option value="${po.purchaseOrderId}">${po.poNumber} — ${po.supplierName} (${po.items.length} lines)</option>`;
+                    });
+                    selectEl.innerHTML = opts;
+                    if (window.showToast) window.showToast(`Loaded ${data.purchaseOrders.length} approved purchase order(s).`, 'info');
+                }
+            } catch (err) {
+                if (window.showToast) window.showToast(`Unable to load purchase orders: ${err.message}`, 'warning');
+            } finally {
+                selectEl.disabled = false;
+            }
+        }
+
+        function onPoSelected(select) {
+            const poId = parseInt(select.value);
+            const itemSection = document.getElementById('grnPoItemSection');
+            const itemSelect = document.getElementById('grnPoItemSelect');
+            const refInput = document.getElementById('grnRef');
+            const notesInput = document.getElementById('grnNotes');
+
+            if (!poId) {
+                itemSection.style.display = 'none';
+                itemSelect.innerHTML = '<option value="">— Select PO Line Item —</option>';
+                return;
+            }
+
+            const po = loadedApprovedPurchaseOrders.find(p => p.purchaseOrderId === poId);
+            if (!po) return;
+
+            itemSection.style.display = 'block';
+            let itemOpts = '<option value="">— Select PO Line Item —</option>';
+            po.items.forEach(item => {
+                itemOpts += `<option value="${item.purchaseOrderItemId}" data-item-id="${item.itemId}" data-qty="${item.pendingQuantity}" data-cost="${item.unitCost}">${item.itemName} (Pending: ${item.pendingQuantity} @@ ${item.unitCost.toFixed(2)} XAF)</option>`;
+            });
+            itemSelect.innerHTML = itemOpts;
+
+            refInput.value = `${po.poNumber} (${po.supplierName})`;
+            notesInput.value = `Received against ${po.poNumber} from ${po.supplierName}`;
+        }
+
+        function onPoItemLineSelected(select) {
+            const poItemId = parseInt(select.value);
+            if (!poItemId) return;
+
+            const opt = select.options[select.selectedIndex];
+            const catalogItemId = opt.getAttribute('data-item-id');
+            const pendingQty = opt.getAttribute('data-qty');
+            const unitCost = opt.getAttribute('data-cost');
+
+            if (catalogItemId) {
+                const catalogSelect = document.getElementById('grnItemSelect');
+                catalogSelect.value = catalogItemId;
+            }
+
+            if (pendingQty && parseInt(pendingQty) > 0) {
+                document.getElementById('grnQty').value = pendingQty;
+            }
+
+            if (unitCost) {
+                document.getElementById('grnCost').value = parseFloat(unitCost).toFixed(2);
+            }
+
+            calculateGrnTotal();
+        }
+
         function onGrnItemChange(select) {
             const opt = select.options[select.selectedIndex];
             if (opt) {

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Items;
 using Store.Models.DTOs.Operations;
+using Store.Models.DTOs.Procurement;
 using Store.Models.Enums;
 using Store.Models.Interfaces.Services;
 using StoreUI.Services;
@@ -213,6 +214,37 @@ public class InventoryOpsModel : SecurePageModel
 
         var fileName = $"inventory_movements_{DateTime.UtcNow:yyyyMMdd_HHmmss}.csv";
         return File(Encoding.UTF8.GetBytes(sb.ToString()), "text/csv", fileName);
+    }
+
+    public async Task<IActionResult> OnGetApprovedPurchaseOrdersAsync(CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return new JsonResult(new { success = false, message = "Authentication required." }) { StatusCode = 401 };
+
+        _apiClient.SetToken(token);
+        var pos = await _apiClient.GetAsync<List<PurchaseOrderDto>>("/api/purchase-orders?status=Approved", ct)
+            ?? new List<PurchaseOrderDto>();
+
+        var result = pos.Select(p => new
+        {
+            purchaseOrderId = p.PurchaseOrderId,
+            poNumber = !string.IsNullOrWhiteSpace(p.ReferenceNumber) ? p.ReferenceNumber : $"PO-{p.PurchaseOrderId:D4}",
+            supplierName = p.SupplierName,
+            dateCreated = p.DateCreated.ToString("yyyy-MM-dd"),
+            totalValuation = p.TotalValuation,
+            items = p.Items.Select(i => new
+            {
+                purchaseOrderItemId = i.PurchaseOrderItemId,
+                itemId = i.ItemId.ToString(),
+                itemName = i.ItemName,
+                orderedQuantity = i.OrderedQuantity,
+                receivedQuantity = i.ReceivedQuantity,
+                pendingQuantity = Math.Max(0, i.OrderedQuantity - i.ReceivedQuantity),
+                unitCost = i.UnitCost
+            }).ToList()
+        }).ToList();
+
+        return new JsonResult(new { success = true, purchaseOrders = result });
     }
 
     private async Task<IActionResult> ExecuteWriteOperationAsync(Func<Task> operation)

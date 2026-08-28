@@ -44,6 +44,16 @@
                 </button>
             }
 
+            @if (s is not null)
+            {
+                <button type="button" class="btn-cr-action btn-cr-secondary" onclick="printXReportSlip()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Print Mid-Shift X-Report
+                </button>
+            }
+
             @if (Model.CanCashWrite)
             {
                 @if (s is null)
@@ -512,6 +522,56 @@
                     <p>*** END OF FISCAL Z-REPORT ***</p>
                 </div>
             </div>
+
+            @* ── Printable Mid-Shift X-Report Slip ── *@
+            @if (s is not null)
+            {
+                var cashSalesCurrent = Math.Max(0, (s.ExpectedClosingAmount ?? s.OpeningFloat) - s.OpeningFloat);
+                <div class="fiscal-slip-card" id="printableXReportSlip" style="display:none; margin-top:20px;">
+                    <div class="slip-header">
+                        <h2>CLEXAN FOODS RETAIL</h2>
+                        <p>Commercial Intelligence &amp; POS Systems</p>
+                        <div class="slip-divider"></div>
+                        <h3 style="color:#d97706;">MID-SHIFT X-REPORT VOUCHER</h3>
+                        <p>Status: <strong style="color:#059669;">ACTIVE REGISTER (NON-RESETTING)</strong></p>
+                        <p>Shift ID: <strong>#@s.CashierShiftId.ToString()[..8]</strong></p>
+                        <p>Opened: @s.OpenedAtUtc.ToLocalTime().ToString("dd MMM yyyy HH:mm")</p>
+                        <p>Snapshot Generated: @DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm") UTC</p>
+                    </div>
+
+                    <div class="slip-section">
+                        <div class="slip-row bold">
+                            <span>OPENING FLOAT IN DRAWER</span>
+                            <span>@s.OpeningFloat.ToString("N0") XAF</span>
+                        </div>
+                        <div class="slip-row bold">
+                            <span>ACCUMULATED CASH SALES</span>
+                            <span>@cashSalesCurrent.ToString("N0") XAF</span>
+                        </div>
+                        <div class="slip-divider-dashed"></div>
+                        <div class="slip-row bold highlight" style="background:#fffbeb; color:#b45309;">
+                            <span>EXPECTED DRAWER CASH (FLOAT + SALES)</span>
+                            <span>@((s.ExpectedClosingAmount ?? s.OpeningFloat)).ToString("N0") XAF</span>
+                        </div>
+                    </div>
+
+                    <div class="slip-signatures" style="margin-top:20px;">
+                        <div class="sig-box">
+                            <span>Cashier Check</span>
+                            <div class="sig-line"></div>
+                        </div>
+                        <div class="sig-box">
+                            <span>Shift Supervisor</span>
+                            <div class="sig-line"></div>
+                        </div>
+                    </div>
+
+                    <div class="slip-footer">
+                        <p>*** NOTICE: THIS IS AN INTERIM X-REPORT READING ***</p>
+                        <p>*** REGISTER REMAINS ACTIVE &amp; OPEN FOR TRADING ***</p>
+                    </div>
+                </div>
+            }
         </div>
     </div>
 </div>
@@ -575,6 +635,56 @@
                 <div>
                     <span style="font-size:0.72rem; color:#64748b; text-transform:uppercase;">Expected Drawer:</span>
                     <div id="closeExpectedFloatVal" style="font-weight:800; color:#019c01;"></div>
+                </div>
+            </div>
+
+            @* ── Denomination Cash Counter ── *@
+            <div class="denom-calc-card">
+                <div class="denom-calc-header" onclick="toggleDenomCalculator()">
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color:#019c01;">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                        <span style="font-weight:700; font-size:0.78rem; text-transform:uppercase; color:#0f172a;">Currency Denomination Float Calculator</span>
+                    </div>
+                    <span id="denomToggleIcon" style="font-size:0.75rem; font-weight:700; color:#64748b;">▼</span>
+                </div>
+                <div id="denomCalcBody" style="display:block; padding-top:8px;">
+                    <div class="denom-grid">
+                        <div class="denom-row">
+                            <span>10,000 XAF</span>
+                            <input type="number" id="denom10k" min="0" placeholder="0" class="denom-input" oninput="calculateDenomTotal()" />
+                        </div>
+                        <div class="denom-row">
+                            <span>5,000 XAF</span>
+                            <input type="number" id="denom5k" min="0" placeholder="0" class="denom-input" oninput="calculateDenomTotal()" />
+                        </div>
+                        <div class="denom-row">
+                            <span>2,000 XAF</span>
+                            <input type="number" id="denom2k" min="0" placeholder="0" class="denom-input" oninput="calculateDenomTotal()" />
+                        </div>
+                        <div class="denom-row">
+                            <span>1,000 XAF</span>
+                            <input type="number" id="denom1k" min="0" placeholder="0" class="denom-input" oninput="calculateDenomTotal()" />
+                        </div>
+                        <div class="denom-row">
+                            <span>500 XAF</span>
+                            <input type="number" id="denom500" min="0" placeholder="0" class="denom-input" oninput="calculateDenomTotal()" />
+                        </div>
+                        <div class="denom-row">
+                            <span>Coins (Sum)</span>
+                            <input type="number" id="denomCoins" min="0" placeholder="0" class="denom-input" oninput="calculateDenomTotal()" />
+                        </div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding-top:6px; border-top:1px dashed #cbd5e1;">
+                        <div>
+                            <span style="font-size:0.72rem; color:#64748b; text-transform:uppercase;">Counted Total:</span>
+                            <strong id="denomCalculatedSum" style="display:block; font-size:0.95rem; color:#019c01;">0 XAF</strong>
+                        </div>
+                        <button type="button" class="btn-cr-action btn-cr-primary" onclick="applyDenomTotalToDeclaration()" style="font-size:0.75rem; padding:4px 10px;">
+                            Apply to Declaration
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -1246,14 +1356,58 @@
         gap: 8px;
     }
 
+    /* ── Denomination Counter Styles ── */
+    .denom-calc-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 10px 12px;
+    }
+    .denom-calc-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+        user-select: none;
+    }
+    .denom-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        margin-top: 6px;
+    }
+    .denom-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 4px;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        padding: 4px 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #334155;
+    }
+    .denom-input {
+        width: 58px;
+        text-align: right;
+        font-weight: 700;
+        padding: 2px 4px;
+        font-size: 0.78rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 4px;
+    }
+
     @@media print {
         body * {
             visibility: hidden;
         }
-        #printableFiscalSlip, #printableFiscalSlip * {
+        #printableFiscalSlip, #printableFiscalSlip *,
+        #printableXReportSlip, #printableXReportSlip * {
             visibility: visible;
         }
-        #printableFiscalSlip {
+        #printableFiscalSlip, #printableXReportSlip {
             position: absolute;
             left: 0;
             top: 0;
@@ -1294,6 +1448,7 @@
         document.getElementById('closeOpeningFloatVal').textContent = openingFloat.toLocaleString() + ' XAF';
         document.getElementById('closeExpectedFloatVal').textContent = expectedTotal.toLocaleString() + ' XAF';
         document.getElementById('inputClosingCount').value = expectedTotal;
+        resetDenomInputs();
         updateCloseVariance();
 
         document.getElementById('closeShiftModalOverlay').style.display = 'block';
@@ -1302,6 +1457,51 @@
     function closeCloseShiftModal() {
         document.getElementById('closeShiftModalOverlay').style.display = 'none';
         document.getElementById('closeShiftModal').style.display = 'none';
+    }
+
+    function toggleDenomCalculator() {
+        const body = document.getElementById('denomCalcBody');
+        const icon = document.getElementById('denomToggleIcon');
+        if (body.style.display === 'none') {
+            body.style.display = 'block';
+            icon.textContent = '▼';
+        } else {
+            body.style.display = 'none';
+            icon.textContent = '▶';
+        }
+    }
+
+    function calculateDenomTotal() {
+        const n10k = (parseInt(document.getElementById('denom10k')?.value) || 0) * 10000;
+        const n5k  = (parseInt(document.getElementById('denom5k')?.value) || 0) * 5000;
+        const n2k  = (parseInt(document.getElementById('denom2k')?.value) || 0) * 2000;
+        const n1k  = (parseInt(document.getElementById('denom1k')?.value) || 0) * 1000;
+        const n500 = (parseInt(document.getElementById('denom500')?.value) || 0) * 500;
+        const coins = parseFloat(document.getElementById('denomCoins')?.value) || 0;
+
+        const sum = n10k + n5k + n2k + n1k + n500 + coins;
+        document.getElementById('denomCalculatedSum').textContent = sum.toLocaleString() + ' XAF';
+        return sum;
+    }
+
+    function applyDenomTotalToDeclaration() {
+        const sum = calculateDenomTotal();
+        const input = document.getElementById('inputClosingCount');
+        if (input) {
+            input.value = sum;
+            updateCloseVariance();
+            if (window.showToast) {
+                window.showToast(`Applied ${sum.toLocaleString()} XAF from denomination count.`, 'info');
+            }
+        }
+    }
+
+    function resetDenomInputs() {
+        ['denom10k', 'denom5k', 'denom2k', 'denom1k', 'denom500', 'denomCoins'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        calculateDenomTotal();
     }
 
     function updateCloseVariance() {
@@ -1327,7 +1527,22 @@
     }
 
     function printFiscalSlip() {
+        const xSlip = document.getElementById('printableXReportSlip');
+        if (xSlip) xSlip.style.display = 'none';
         switchTab('slip');
         setTimeout(() => window.print(), 150);
+    }
+
+    function printXReportSlip() {
+        const xSlip = document.getElementById('printableXReportSlip');
+        if (!xSlip) {
+            alert('No active shift to print X-Report.');
+            return;
+        }
+        xSlip.style.display = 'block';
+        switchTab('slip');
+        setTimeout(() => {
+            window.print();
+        }, 150);
     }
 </script>

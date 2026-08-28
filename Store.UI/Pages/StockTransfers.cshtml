@@ -850,7 +850,7 @@
         </h3>
         <button type="button" class="btn-close" onclick="closeDispatchModal()" aria-label="Close">×</button>
     </div>
-    <form method="post" asp-page-handler="Dispatch" id="dispatchForm">
+    <form method="post" asp-page-handler="Dispatch" id="dispatchForm" onsubmit="finalizeDispatchForm()">
         @Html.AntiForgeryToken()
         <input type="hidden" asp-for="ActionTransferId" id="dispatchTransferId" />
         <div class="transfer-modal-body">
@@ -867,8 +867,19 @@
             <div style="font-size:0.84rem; font-weight:600; margin-bottom:4px;">Dispatched Items Checklist:</div>
             <div id="dispatchItemLines" style="display:flex; flex-direction:column; gap:8px;"></div>
 
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <div>
+                    <label for="dispatchDriverName" style="display:block; font-size:0.80rem; font-weight:600; margin-bottom:4px; color:var(--text-secondary);">Transporter / Driver Name</label>
+                    <input type="text" id="dispatchDriverName" class="form-control" placeholder="e.g. Jean Dupont / Express Transit" oninput="assembleDispatchNotes()" />
+                </div>
+                <div>
+                    <label for="dispatchVehicleReg" style="display:block; font-size:0.80rem; font-weight:600; margin-bottom:4px; color:var(--text-secondary);">Vehicle Registration Plate</label>
+                    <input type="text" id="dispatchVehicleReg" class="form-control" placeholder="e.g. LT-492-AA / Van #03" oninput="assembleDispatchNotes()" />
+                </div>
+            </div>
+
             <div>
-                <label for="dispatchNotes" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Dispatch / Waybill Notes</label>
+                <label for="dispatchNotes" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Dispatch / Waybill Logistics Memo</label>
                 <textarea asp-for="DispatchNotes" id="dispatchNotes" class="form-control" style="width:100%;" rows="2" placeholder="Driver name, vehicle plate, waybill number, or departure memo..."></textarea>
             </div>
         </div>
@@ -953,6 +964,17 @@
                     <div style="font-size:0.75rem; text-transform:uppercase; color:#64748b; font-weight:700;">To Destination Facility:</div>
                     <div style="font-weight:700; font-size:1.0rem; color:#0f172a;" id="wbToBranch">Destination</div>
                     <div style="font-size:0.82rem; color:#64748b;" id="wbApprovedBy">Approved by: User</div>
+                </div>
+            </div>
+
+            <div class="waybill-grid" style="background:#f1f5f9; margin-top:-6px; margin-bottom:14px;">
+                <div>
+                    <div style="font-size:0.75rem; text-transform:uppercase; color:#64748b; font-weight:700;">Carrier / Driver:</div>
+                    <div style="font-weight:700; font-size:0.92rem; color:#0f172a;" id="wbDriver">Company Logistics</div>
+                </div>
+                <div>
+                    <div style="font-size:0.75rem; text-transform:uppercase; color:#64748b; font-weight:700;">Vehicle Registration:</div>
+                    <div style="font-weight:700; font-size:0.92rem; color:#0f172a;" id="wbVehicle">Van #01 / Scheduled Run</div>
                 </div>
             </div>
 
@@ -1161,12 +1183,31 @@
             document.getElementById('createValuationTotal').textContent = totalVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' XAF';
         }
 
+        function finalizeDispatchForm() {
+            const driver = document.getElementById('dispatchDriverName').value.trim();
+            const vehicle = document.getElementById('dispatchVehicleReg').value.trim();
+            const memoEl = document.getElementById('dispatchNotes');
+            let memo = memoEl.value.trim();
+            
+            let parts = [];
+            if (driver) parts.push(`Carrier: ${driver}`);
+            if (vehicle) parts.push(`Vehicle: ${vehicle}`);
+            if (memo && !memo.includes('Carrier:')) parts.push(memo);
+            
+            if (parts.length > 0) {
+                memoEl.value = parts.join('; ');
+            }
+        }
+
         // ── Dispatch Modal ──────────────────────────────────────────
         function openDispatchModal(btn) {
             const t = JSON.parse(btn.getAttribute('data-transfer'));
             document.getElementById('dispatchTransferId').value = t.stockTransferId;
             document.getElementById('dispatchIdLabel').textContent = t.stockTransferId;
             document.getElementById('dispatchRouteLabel').textContent = `${t.fromBranchName} ➔ ${t.toBranchName}`;
+            document.getElementById('dispatchDriverName').value = '';
+            document.getElementById('dispatchVehicleReg').value = '';
+            document.getElementById('dispatchNotes').value = '';
 
             let html = '';
             t.items.forEach((item, idx) => {
@@ -1221,9 +1262,18 @@
             document.getElementById('receiveOverlay').classList.add('open');
             document.getElementById('receiveModal').classList.add('open');
         }
-        function closeReceiveModal() {
-            document.getElementById('receiveOverlay').classList.remove('open');
-            document.getElementById('receiveModal').classList.remove('open');
+        function assembleDispatchNotes() {
+            const driver = document.getElementById('dispatchDriverName').value.trim();
+            const vehicle = document.getElementById('dispatchVehicleReg').value.trim();
+            const memoEl = document.getElementById('dispatchNotes');
+            
+            // If user hasn't typed custom non-carrier text, keep structured header
+            let prefix = '';
+            if (driver) prefix += `Carrier: ${driver}; `;
+            if (vehicle) prefix += `Vehicle: ${vehicle}; `;
+            
+            // store in data attribute
+            memoEl.setAttribute('data-prefix', prefix);
         }
 
         // ── Waybill Modal ───────────────────────────────────────────
@@ -1236,7 +1286,24 @@
             document.getElementById('wbToBranch').textContent = t.toBranchName;
             document.getElementById('wbRequestedBy').textContent = 'Requested by: ' + t.requestedByUser;
             document.getElementById('wbApprovedBy').textContent = t.approvedByUser ? 'Approved by: ' + t.approvedByUser : 'Awaiting Approval';
-            document.getElementById('wbNotes').textContent = t.notes || 'No notes specified';
+            
+            // Parse carrier and vehicle if present in notes
+            let notesText = t.notes || 'No notes specified';
+            let carrier = t.dispatchedByUser ? `Internal Logistics (${t.dispatchedByUser})` : 'Company Dispatch';
+            let vehicle = 'Scheduled Branch Run';
+
+            if (notesText.includes('Carrier:')) {
+                const match = notesText.match(/Carrier:\s*([^;]+)/i);
+                if (match) carrier = match[1].trim();
+            }
+            if (notesText.includes('Vehicle:')) {
+                const match = notesText.match(/Vehicle:\s*([^;]+)/i);
+                if (match) vehicle = match[1].trim();
+            }
+
+            document.getElementById('wbDriver').textContent = carrier;
+            document.getElementById('wbVehicle').textContent = vehicle;
+            document.getElementById('wbNotes').textContent = notesText;
 
             let bodyHtml = '';
             let totalReq = 0, totalDisp = 0, totalRec = 0, totalVal = 0;
