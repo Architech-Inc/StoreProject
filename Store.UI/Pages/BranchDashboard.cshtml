@@ -2,129 +2,549 @@
 @model StoreUI.Pages.BranchDashboardModel
 @{
     ViewData["Title"] = "Branch Performance Dashboard";
-    ViewData["PageDescription"] = "View sales, revenue, and payment breakdown by branch for a date range.";
-}
-
-@section Styles {
-    <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
-}
-
-<div class="ops-page">
-    
-
-@if (Model.ErrorMessage is not null)
-{
-    <div class="status error">@Model.ErrorMessage</div>
-}
-
-<!-- Filter bar -->
-<form method="get" class="filter-bar mb-4">
-    <div class="filter-row">
-        <div class="filter-group">
-            <label>Branch</label>
-            <select name="branchId" class="form-control">
-                <option value="">— Select branch —</option>
-                @foreach (var b in Model.Branches)
-                {
-                    <option value="@b.BranchId" selected="@(b.BranchId == Model.SelectedBranchId)">@b.Name</option>
-                }
-            </select>
-        </div>
-        <div class="filter-group">
-            <label>From</label>
-            <input type="date" name="from" value="@Model.FromDate.ToString("yyyy-MM-dd")" class="form-control" />
-        </div>
-        <div class="filter-group">
-            <label>To</label>
-            <input type="date" name="to" value="@Model.ToDate.ToString("yyyy-MM-dd")" class="form-control" />
-        </div>
-        <div class="filter-group" style="align-self:flex-end">
-        <button type="submit" class="button-primary">Load</button>
-        </div>
-    </div>
-</form>
-
-@if (Model.Performance is not null)
-{
+    ViewData["ActivePage"] = "BranchDashboard";
+    ViewData["PageDescription"] = "Comparative multi-branch sales velocity, receivables tracking, and tender breakdown.";
+    Layout = "~/Pages/Shared/_AppLayout.cshtml";
     var perf = Model.Performance;
-    <h2 class="section-title">@perf.BranchName — @perf.FromDate.ToString("d MMM yyyy") to @perf.ToDate.ToString("d MMM yyyy")</h2>
-
-    <!-- KPI cards -->
-    <div class="kpi-grid mb-4">
-        <div class="kpi-card">
-            <div class="kpi-label">Total Revenue</div>
-            <div class="kpi-value text-success">@perf.TotalRevenue.ToString("N2")</div>
-        </div>
-        <div class="kpi-card">
-            <div class="kpi-label">Avg Order Value</div>
-            <div class="kpi-value">@perf.AverageOrderValue.ToString("N2")</div>
-        </div>
-        <div class="kpi-card">
-            <div class="kpi-label">Total Invoices</div>
-            <div class="kpi-value">@perf.TotalInvoices</div>
-        </div>
-        <div class="kpi-card">
-            <div class="kpi-label">Paid</div>
-            <div class="kpi-value text-success">@perf.PaidInvoices</div>
-        </div>
-        <div class="kpi-card">
-            <div class="kpi-label">Unpaid</div>
-            <div class="kpi-value text-warning">@perf.UnpaidInvoices</div>
-        </div>
-        <div class="kpi-card">
-            <div class="kpi-label">Outstanding Balance</div>
-            <div class="kpi-value text-danger">@perf.OutstandingBalance.ToString("N2")</div>
-        </div>
-    </div>
-
-    <div class="row-2col">
-        <!-- Revenue by payment type -->
-        <div>
-            <h3 class="section-subtitle">Revenue by Payment Type</h3>
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Payment Type</th>
-                        <th>Invoices</th>
-                        <th class="text-right">Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var pt in perf.RevenueByPaymentType)
-                    {
-                        <tr>
-                            <td>@pt.PaymentType</td>
-                            <td>@pt.InvoiceCount</td>
-                            <td class="text-right">@pt.Total.ToString("N2")</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Daily revenue -->
-        <div>
-            <h3 class="section-subtitle">Daily Revenue</h3>
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Invoices</th>
-                        <th class="text-right">Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var day in perf.DailyRevenue)
-                    {
-                        <tr>
-                            <td>@day.Date.ToString("d MMM")</td>
-                            <td>@day.InvoiceCount</td>
-                            <td class="text-right">@day.Total.ToString("N2")</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    </div>
 }
+
+<div class="branch-dash-container">
+    @* ── ACTION TOOLBAR ── *@
+    <div class="branch-action-bar">
+        <div class="branch-status-pill">
+            <span class="status-indicator-dot"></span>
+            <span>Multi-Branch Commercial Intelligence &amp; Performance</span>
+        </div>
+        <div class="branch-header-actions">
+            <a href="/BranchAdmin" class="btn-bd-action btn-bd-secondary">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+                Branch Admin
+            </a>
+            <a href="/Dashboard" class="btn-bd-action btn-bd-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+                Store Dashboard
+            </a>
+        </div>
+    </div>
+
+    @if (Model.ErrorMessage is not null)
+    {
+        <div class="branch-alert error" role="alert">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>@Model.ErrorMessage</span>
+        </div>
+    }
+
+    @* ── FILTER DOCK ── *@
+    <div class="branch-filter-dock">
+        <form method="get" class="branch-filter-form">
+            <div class="filter-field">
+                <label for="branchSelect">Branch Location</label>
+                <select id="branchSelect" name="branchId" class="form-control form-control-sm">
+                    <option value="">— Select branch location —</option>
+                    @foreach (var b in Model.Branches)
+                    {
+                        <option value="@b.BranchId" selected="@(b.BranchId == Model.SelectedBranchId)">@b.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="filter-field">
+                <label for="fromInput">Date From</label>
+                <input type="date" id="fromInput" name="from" value="@Model.FromDate.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
+            </div>
+            <div class="filter-field">
+                <label for="toInput">Date To</label>
+                <input type="date" id="toInput" name="to" value="@Model.ToDate.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
+            </div>
+            <button type="submit" class="btn-filter-apply">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Load Performance
+            </button>
+        </form>
+    </div>
+
+    @if (perf is not null)
+    {
+        @* ── 6-CARD FLUENT 2.0 KPI GRID ── *@
+        <div class="branch-kpi-grid">
+            @* KPI 1: Total Revenue *@
+            <div class="branch-kpi-card">
+                <div class="kpi-icon-wrap kpi-emerald">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div class="kpi-data">
+                    <span class="kpi-label">Gross Revenue</span>
+                    <span class="kpi-value">@perf.TotalRevenue.ToString("N0") <small>XAF</small></span>
+                    <span class="kpi-subtext">@perf.BranchName Sales</span>
+                </div>
+            </div>
+
+            @* KPI 2: AOV *@
+            <div class="branch-kpi-card">
+                <div class="kpi-icon-wrap kpi-teal">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                    </svg>
+                </div>
+                <div class="kpi-data">
+                    <span class="kpi-label">Average Ticket (AOV)</span>
+                    <span class="kpi-value">@perf.AverageOrderValue.ToString("N0") <small>XAF</small></span>
+                    <span class="kpi-subtext">Average spend per invoice</span>
+                </div>
+            </div>
+
+            @* KPI 3: Total Invoices *@
+            <div class="branch-kpi-card">
+                <div class="kpi-icon-wrap kpi-purple">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                </div>
+                <div class="kpi-data">
+                    <span class="kpi-label">Total Invoices</span>
+                    <span class="kpi-value">@perf.TotalInvoices.ToString("N0") <small>Tickets</small></span>
+                    <span class="kpi-subtext">Invoiced transactions</span>
+                </div>
+            </div>
+
+            @* KPI 4: Paid *@
+            <div class="branch-kpi-card">
+                <div class="kpi-icon-wrap kpi-emerald">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div class="kpi-data">
+                    <span class="kpi-label">Fully Settled</span>
+                    <span class="kpi-value text-emerald">@perf.PaidInvoices.ToString("N0") <small>Paid</small></span>
+                    <span class="kpi-subtext">Zero balance remaining</span>
+                </div>
+            </div>
+
+            @* KPI 5: Unpaid *@
+            <div class="branch-kpi-card">
+                <div class="kpi-icon-wrap @(perf.UnpaidInvoices > 0 ? "kpi-amber" : "kpi-emerald")">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div class="kpi-data">
+                    <span class="kpi-label">Pending / Unpaid</span>
+                    <span class="kpi-value" style="color:@(perf.UnpaidInvoices > 0 ? "#d97706" : "#059669");">
+                        @perf.UnpaidInvoices.ToString("N0") <small>Tickets</small>
+                    </span>
+                    <span class="kpi-subtext">Partial customer debt</span>
+                </div>
+            </div>
+
+            @* KPI 6: Outstanding Debt Balance *@
+            <div class="branch-kpi-card">
+                <div class="kpi-icon-wrap @(perf.OutstandingBalance > 0 ? "kpi-rose" : "kpi-emerald")">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                    </svg>
+                </div>
+                <div class="kpi-data">
+                    <span class="kpi-label">Customer Receivables</span>
+                    <span class="kpi-value" style="color:@(perf.OutstandingBalance > 0 ? "#e11d48" : "#059669");">
+                        @perf.OutstandingBalance.ToString("N0") <small>XAF</small>
+                    </span>
+                    <span class="kpi-subtext">Total uncollected credit</span>
+                </div>
+            </div>
+        </div>
+
+        @* ── 2-COLUMN SPLIT ── *@
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.25rem;">
+            @* Left: Revenue by Payment Type *@
+            <div class="branch-panel">
+                <div class="panel-header-dock">
+                    <div class="panel-title-wrap">
+                        <h3>Revenue by Tender Channel</h3>
+                        <p>Settlement distribution across payment methods.</p>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="branch-table">
+                        <thead>
+                            <tr>
+                                <th>Payment Type</th>
+                                <th style="text-align:center;">Invoices</th>
+                                <th style="text-align:right;">Total Volume (XAF)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var pt in perf.RevenueByPaymentType)
+                            {
+                                <tr>
+                                    <td>
+                                        <div style="display:flex; align-items:center; gap:8px;">
+                                            <span class="tender-icon-box">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                                                </svg>
+                                            </span>
+                                            <strong style="color:#0f172a;">@pt.PaymentType</strong>
+                                        </div>
+                                    </td>
+                                    <td style="text-align:center; font-weight:600;">@pt.InvoiceCount</td>
+                                    <td style="text-align:right; font-weight:700; color:#0f172a;">
+                                        @pt.Total.ToString("N0")
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            @* Right: Daily Revenue Velocity *@
+            <div class="branch-panel">
+                <div class="panel-header-dock">
+                    <div class="panel-title-wrap">
+                        <h3>Daily Revenue Velocity</h3>
+                        <p>Timeline of sales revenue collected over selected period.</p>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="branch-table">
+                        <thead>
+                            <tr>
+                                <th>Trading Date</th>
+                                <th style="text-align:center;">Invoices</th>
+                                <th style="text-align:right;">Daily Total (XAF)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var day in perf.DailyRevenue)
+                            {
+                                <tr>
+                                    <td>
+                                        <span style="font-weight:600; color:#0f172a;">@day.Date.ToString("dd MMM yyyy")</span>
+                                    </td>
+                                    <td style="text-align:center; font-weight:600;">@day.InvoiceCount</td>
+                                    <td style="text-align:right; font-weight:700; color:#0f172a;">
+                                        @day.Total.ToString("N0")
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="branch-panel">
+            <div class="branch-empty-state">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+                <h4>Select a Branch Location</h4>
+                <p>Choose a branch from the filter dock above and specify a date range to view comparative performance metrics.</p>
+            </div>
+        </div>
+    }
 </div>
+
+@* ── STYLESHEET ── *@
+<style>
+    .branch-dash-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+        padding-bottom: 3rem;
+    }
+
+    .branch-action-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+        padding-bottom: 0.25rem;
+    }
+
+    .branch-status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        padding: 5px 14px;
+        border-radius: 9999px;
+        background: #ecfdf5;
+        color: #059669;
+        border: 1px solid #a7f3d0;
+    }
+
+    .status-indicator-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #059669;
+    }
+
+    .branch-header-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .btn-bd-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .btn-bd-primary {
+        background: #019c01;
+        color: #ffffff !important;
+        border: 1px solid #019c01;
+    }
+    .btn-bd-primary:hover {
+        background: #017a01;
+        border-color: #017a01;
+        transform: translateY(-1px);
+    }
+    .btn-bd-secondary {
+        background: #ffffff;
+        color: #0f172a !important;
+        border: 1px solid #e2e8f0;
+    }
+    .btn-bd-secondary:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+    }
+
+    .branch-alert {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 16px;
+        border-radius: 8px;
+        font-size: 0.85rem;
+    }
+    .branch-alert.error {
+        background: #fff1f2;
+        color: #e11d48;
+        border: 1px solid #fecdd3;
+    }
+
+    /* ── Filter Dock ── */
+    .branch-filter-dock {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+
+    .branch-filter-form {
+        display: flex;
+        align-items: flex-end;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .filter-field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .filter-field label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #64748b;
+        text-transform: uppercase;
+    }
+    .filter-field select, .filter-field input {
+        border-radius: 6px;
+        padding: 6px 12px;
+        border: 1px solid #cbd5e1;
+        background: #ffffff;
+        color: #0f172a;
+        font-size: 0.82rem;
+        min-width: 180px;
+    }
+
+    .btn-filter-apply {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        padding: 7px 14px;
+        border-radius: 6px;
+        border: 1px solid #019c01;
+        background: #019c01;
+        color: #ffffff;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .btn-filter-apply:hover {
+        background: #017a01;
+    }
+
+    /* ── KPI Grid ── */
+    .branch-kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1rem;
+    }
+
+    .branch-kpi-card {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 1.15rem 1.25rem;
+        border-radius: 12px;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .branch-kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    }
+
+    .kpi-icon-wrap {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .kpi-emerald { background: #ecfdf5; color: #059669; }
+    .kpi-teal    { background: #f0fdfa; color: #0d9488; }
+    .kpi-purple  { background: #f5f3ff; color: #7c3aed; }
+    .kpi-amber   { background: #fffbeb; color: #d97706; }
+    .kpi-rose    { background: #fff1f2; color: #e11d48; }
+
+    .kpi-data {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .kpi-label {
+        font-size: 0.78rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #64748b;
+    }
+
+    .kpi-value {
+        font-size: 1.45rem;
+        font-weight: 800;
+        color: #0f172a;
+        line-height: 1.2;
+        margin: 2px 0;
+    }
+    .kpi-value small {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: #64748b;
+    }
+
+    .kpi-subtext {
+        font-size: 0.75rem;
+        color: #94a3b8;
+    }
+
+    /* ── Panels & Tables ── */
+    .branch-panel {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        overflow: hidden;
+    }
+
+    .panel-header-dock {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.15rem 1.25rem;
+        border-bottom: 1px solid #e2e8f0;
+        background: #ffffff;
+    }
+
+    .panel-title-wrap h3 {
+        font-size: 1.05rem;
+        font-weight: 700;
+        margin: 0;
+        color: #0f172a;
+    }
+    .panel-title-wrap p {
+        font-size: 0.80rem;
+        color: #64748b;
+        margin: 2px 0 0 0;
+    }
+
+    .branch-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.84rem;
+    }
+    .branch-table th {
+        background: #f8fafc;
+        color: #64748b;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        padding: 0.85rem 1rem;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .branch-table td {
+        padding: 0.85rem 1rem;
+        border-bottom: 1px solid #f1f5f9;
+        color: #0f172a;
+    }
+    .branch-table tr:hover td {
+        background: #f8fafc;
+    }
+
+    .tender-icon-box {
+        width: 26px;
+        height: 26px;
+        border-radius: 6px;
+        background: #f1f5f9;
+        color: #475569;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .branch-empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 3.5rem 1.5rem;
+        color: #64748b;
+        gap: 8px;
+    }
+</style>

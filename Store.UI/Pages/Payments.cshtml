@@ -4,173 +4,596 @@
 @using Store.Models.Enums
 @using Store.Models.DTOs.Payments
 @{
-    ViewData["Title"] = "Payments";
-
-    string StatusBadge(string s) => s switch
-    {
-        "Pending"   => "badge-pending",
-        "Completed" => "badge-completed",
-        "Failed"    => "badge-failed",
-        "TimedOut"  => "badge-timedout",
-        _           => ""
-    };
-
-    string StatusLabel(string s) => s switch
-    {
-        "TimedOut" => "Timed Out",
-        _          => s
-    };
+    ViewData["Title"] = "Mobile Money & Digital Settlements";
+    ViewData["ActivePage"] = "Payments";
+    ViewData["PageDescription"] = "Live monitoring of MTN Mobile Money, Orange Money, and electronic payment provider settlements.";
+    Layout = "~/Pages/Shared/_AppLayout.cshtml";
+    var s = Model.Settlement;
 }
 
-@section Styles {
-    <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
-}
-
-<div class="page-container">
-    <h1 class="page-title">Mobile Money Payments</h1>
-
-
-
-    @* ── Settlement Summary ──────────────────────────────── *@
-    <section class="card mb-4">
-        <div class="card-header">
-            <h2 class="card-title">Settlement Summary</h2>
-            <form method="get" class="filter-form">
-                <label>From <input type="date" name="from" value="@Model.FromDate?.ToString("yyyy-MM-dd")" class="form-control form-control-sm" /></label>
-                <label>To <input type="date" name="to" value="@Model.ToDate?.ToString("yyyy-MM-dd")" class="form-control form-control-sm" /></label>
-                <input type="hidden" name="status" value="@((int?)Model.StatusFilter)" />
-                <input type="hidden" name="page" value="1" />
-                <button type="submit" class="button-primary btn-sm">Filter</button>
-            </form>
+<div class="pay-container">
+    @* ── ACTION TOOLBAR ── *@
+    <div class="pay-action-bar">
+        <div class="pay-status-pill">
+            <span class="status-indicator-dot"></span>
+            <span>Electronic Settlement Gateway &amp; Provider Feeds</span>
         </div>
-        @if (Model.Settlement is not null)
-        {
-            <div class="summary-cards">
-                <div class="summary-card">
-                    <span class="summary-label">Total Invoices</span>
-                    <span class="summary-value">@Model.Settlement.TotalInvoices</span>
-                </div>
-                <div class="summary-card">
-                    <span class="summary-label">Total Sales</span>
-                    <span class="summary-value">@Model.Settlement.TotalSales.ToString("N2")</span>
-                </div>
-                <div class="summary-card">
-                    <span class="summary-label">Pending MoMo</span>
-                    <span class="summary-value">@Model.Settlement.PendingMobileMoneyTransactions</span>
-                </div>
-            </div>
-            @if (Model.Settlement.ByChannel.Count > 0)
-            {
-                <table class="data-table mt-3">
-                    <thead>
-                        <tr>
-                            <th>Channel</th>
-                            <th>Invoices</th>
-                            <th>Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var ch in Model.Settlement.ByChannel)
-                        {
-                            <tr>
-                                <td>@ch.Channel</td>
-                                <td>@ch.InvoiceCount</td>
-                                <td>@ch.TotalAmount.ToString("N2")</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            }
-        }
-        else
-        {
-            <p class="text-muted px-3">No settlement data available for the selected period.</p>
-        }
-    </section>
+        <div class="pay-header-actions">
+            <a href="/Invoices" class="btn-pay-action btn-pay-secondary">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Invoices &amp; Billing
+            </a>
+            <a href="/Pos" class="btn-pay-action btn-pay-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                POS Register
+            </a>
+        </div>
+    </div>
 
-    @* ── Transaction List ──────────────────────────────── *@
-    <section class="card">
-        <div class="card-header">
-            <h2 class="card-title">Transactions</h2>
-            <form method="get" class="filter-form">
-                <input type="hidden" name="from" value="@Model.FromDate?.ToString("yyyy-MM-dd")" />
-                <input type="hidden" name="to" value="@Model.ToDate?.ToString("yyyy-MM-dd")" />
-                <input type="hidden" name="page" value="1" />
-                <select name="status" class="form-select form-select-sm">
-                    <option value="">All Statuses</option>
-                    @foreach (MobileMoneyStatus s in Enum.GetValues<MobileMoneyStatus>())
+    @* ── DATE & STATUS FILTER DOCK ── *@
+    <div class="pay-filter-dock">
+        <form method="get" class="pay-filter-form">
+            <input type="hidden" name="page" value="1" />
+            <div class="filter-field">
+                <label for="fromDate">Settlement From</label>
+                <input type="date" id="fromDate" name="from" value="@Model.FromDate?.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
+            </div>
+            <div class="filter-field">
+                <label for="toDate">Settlement To</label>
+                <input type="date" id="toDate" name="to" value="@Model.ToDate?.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
+            </div>
+            <div class="filter-field">
+                <label for="statusSelect">Provider Status</label>
+                <select id="statusSelect" name="status" class="form-control form-control-sm">
+                    <option value="">All Provider Statuses</option>
+                    @foreach (MobileMoneyStatus st in Enum.GetValues<MobileMoneyStatus>())
                     {
-                        <option value="@((int)s)" selected="@(Model.StatusFilter == s)">@StatusLabel(s.ToString())</option>
+                        <option value="@((int)st)" selected="@(Model.StatusFilter == st)">@st</option>
                     }
                 </select>
-                <button type="submit" class="button-primary btn-sm">Filter</button>
-            </form>
+            </div>
+            <button type="submit" class="btn-filter-apply">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+                Apply Settlement Filters
+            </button>
+        </form>
+    </div>
+
+    @* ── 4-CARD FLUENT 2.0 KPI GRID ── *@
+    @if (s is not null)
+    {
+        <div class="pay-kpi-grid">
+            @* KPI 1: Total Sales *@
+            <div class="pay-kpi-card">
+                <div class="kpi-icon-wrap kpi-emerald">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div class="kpi-data">
+                    <span class="kpi-label">Electronic Settlement Total</span>
+                    <span class="kpi-value">@s.TotalSales.ToString("N0") <small>XAF</small></span>
+                    <span class="kpi-subtext">Across @s.TotalInvoices Settled Invoices</span>
+                </div>
+            </div>
+
+            @* KPI 2: Total Invoices *@
+            <div class="pay-kpi-card">
+                <div class="kpi-icon-wrap kpi-teal">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                </div>
+                <div class="kpi-data">
+                    <span class="kpi-label">Settled Invoices</span>
+                    <span class="kpi-value">@s.TotalInvoices.ToString("N0") <small>Tickets</small></span>
+                    <span class="kpi-subtext">Completed digital transactions</span>
+                </div>
+            </div>
+
+            @* KPI 3: Pending Transactions *@
+            <div class="pay-kpi-card">
+                <div class="kpi-icon-wrap @(s.PendingMobileMoneyTransactions > 0 ? "kpi-amber" : "kpi-emerald")">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div class="kpi-data">
+                    <span class="kpi-label">Pending MoMo Authorizations</span>
+                    <span class="kpi-value" style="color:@(s.PendingMobileMoneyTransactions > 0 ? "#d97706" : "#059669");">
+                        @s.PendingMobileMoneyTransactions.ToString("N0") <small>Awaiting PIN</small>
+                    </span>
+                    <span class="kpi-subtext">@(s.PendingMobileMoneyTransactions > 0 ? "USSD prompts in progress" : "All prompts resolved")</span>
+                </div>
+            </div>
+
+            @* KPI 4: Channels Active *@
+            <div class="pay-kpi-card">
+                <div class="kpi-icon-wrap kpi-purple">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                    </svg>
+                </div>
+                <div class="kpi-data">
+                    <span class="kpi-label">Provider Channels</span>
+                    <span class="kpi-value">@s.ByChannel.Count <small>Active</small></span>
+                    <span class="kpi-subtext">MTN, Orange, Card Terminals</span>
+                </div>
+            </div>
+        </div>
+    }
+
+    @* ── 2-PANEL LAYOUT ── *@
+    <div style="display:grid; grid-template-columns: 1fr 2.2fr; gap:1.25rem;">
+        @* Left: Settlement Channels Matrix *@
+        <div class="pay-panel">
+            <div class="panel-header-dock">
+                <div class="panel-title-wrap">
+                    <h3>Settlement Channels</h3>
+                    <p>Volume distribution by provider.</p>
+                </div>
+            </div>
+            @if (s is null || !s.ByChannel.Any())
+            {
+                <div class="pay-empty-state">
+                    <p>No settlement records for period.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="pay-table">
+                        <thead>
+                            <tr>
+                                <th>Channel</th>
+                                <th style="text-align:center;">Invoices</th>
+                                <th style="text-align:right;">Volume (XAF)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var ch in s.ByChannel)
+                            {
+                                <tr>
+                                    <td>
+                                        <div style="display:flex; align-items:center; gap:8px;">
+                                            <span class="channel-pill @(ch.Channel.Contains("MTN", StringComparison.OrdinalIgnoreCase) ? "ch-mtn" : ch.Channel.Contains("Orange", StringComparison.OrdinalIgnoreCase) ? "ch-orange" : "ch-card")">
+                                                @ch.Channel
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td style="text-align:center; font-weight:600;">@ch.InvoiceCount</td>
+                                    <td style="text-align:right; font-weight:700; color:#0f172a;">
+                                        @ch.TotalAmount.ToString("N0")
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
         </div>
 
-        @if (Model.Transactions.Count == 0)
-        {
-            <div class="empty-state"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg><h4>No Transactions Found</h4><p>There are no records matching your criteria.</p></div>
-        }
-        else
-        {
-            <div class="table-responsive">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Invoice</th>
-                            <th>Provider</th>
-                            <th>Phone</th>
-                            <th>Amount</th>
-                            <th>Status</th>
-                            <th>Provider Ref</th>
-                            <th>Completed</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var tx in Model.Transactions)
-                        {
+        @* Right: Transaction Feed Ledger *@
+        <div class="pay-panel">
+            <div class="panel-header-dock">
+                <div class="panel-title-wrap">
+                    <h3>Live Mobile Money &amp; Provider Feed</h3>
+                    <p>Detailed transaction log with provider references and timestamps.</p>
+                </div>
+            </div>
+            @if (!Model.Transactions.Any())
+            {
+                <div class="pay-empty-state">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <h4>No Transactions Found</h4>
+                    <p>There are no payment feed records matching your criteria.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="pay-table">
+                        <thead>
                             <tr>
-                                <td>@tx.DateCreated.ToLocalTime().ToString("dd MMM yyyy HH:mm")</td>
-                                <td><code>@tx.InvoiceId.ToString()[..8]…</code></td>
-                                <td>@tx.Provider</td>
-                                <td>@tx.PhoneNumber</td>
-                                <td>@tx.Amount.ToString("N2")</td>
-                                <td><span class="badge @StatusBadge(tx.Status)">@StatusLabel(tx.Status)</span></td>
-                                <td>@(tx.ProviderTransactionId ?? "—")</td>
-                                <td>@(tx.CompletedAtUtc.HasValue ? tx.CompletedAtUtc.Value.ToLocalTime().ToString("dd MMM HH:mm") : "—")</td>
+                                <th>Timestamp</th>
+                                <th>Invoice</th>
+                                <th>Provider</th>
+                                <th>Customer Phone</th>
+                                <th style="text-align:right;">Amount (XAF)</th>
+                                <th style="text-align:center;">Status</th>
+                                <th>Provider Reference</th>
                             </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+                        </thead>
+                        <tbody>
+                            @foreach (var tx in Model.Transactions)
+                            {
+                                <tr>
+                                    <td style="font-size:0.78rem; color:#64748b; white-space:nowrap;">
+                                        @tx.DateCreated.ToLocalTime().ToString("dd MMM HH:mm")
+                                    </td>
+                                    <td>
+                                        <code style="font-size:0.80rem; font-weight:700; color:#019c01;">#@tx.InvoiceId.ToString()[..8]</code>
+                                    </td>
+                                    <td>
+                                        <span class="provider-badge @(tx.Provider.Contains("MTN", StringComparison.OrdinalIgnoreCase) ? "prov-mtn" : tx.Provider.Contains("Orange", StringComparison.OrdinalIgnoreCase) ? "prov-orange" : "prov-generic")">
+                                            @tx.Provider
+                                        </span>
+                                    </td>
+                                    <td style="font-family:'JetBrains Mono', monospace; font-size:0.80rem; color:#0f172a;">
+                                        @(string.IsNullOrWhiteSpace(tx.PhoneNumber) ? "—" : tx.PhoneNumber)
+                                    </td>
+                                    <td style="text-align:right; font-weight:700; color:#0f172a;">
+                                        @tx.Amount.ToString("N0")
+                                    </td>
+                                    <td style="text-align:center;">
+                                        @{
+                                            var badgeClass = tx.Status switch
+                                            {
+                                                "Completed" => "status-completed",
+                                                "Pending"   => "status-pending",
+                                                "Failed"    => "status-failed",
+                                                "TimedOut"  => "status-timedout",
+                                                _           => "status-generic"
+                                            };
+                                        }
+                                        <span class="pay-status-badge @badgeClass">@tx.Status</span>
+                                    </td>
+                                    <td style="font-family:'JetBrains Mono', monospace; font-size:0.75rem; color:#64748b;">
+                                        @(tx.ProviderTransactionId ?? "—")
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
 
-            <div class="pagination">
-                @if (Model.CurrentPage > 1)
-                {
-                    <a href="?page=@(Model.CurrentPage - 1)&status=@((int?)Model.StatusFilter)&from=@Model.FromDate?.ToString("yyyy-MM-dd")&to=@Model.ToDate?.ToString("yyyy-MM-dd")" class="button-command btn-sm">Previous</a>
-                }
-                <span class="page-info">Page @Model.CurrentPage</span>
-                @if (Model.Transactions.Count == Model.PageSize)
-                {
-                    <a href="?page=@(Model.CurrentPage + 1)&status=@((int?)Model.StatusFilter)&from=@Model.FromDate?.ToString("yyyy-MM-dd")&to=@Model.ToDate?.ToString("yyyy-MM-dd")" class="button-command btn-sm">Next</a>
-                }
-            </div>
-        }
-    </section>
+                <div class="pay-pagination">
+                    @if (Model.CurrentPage > 1)
+                    {
+                        <a href="?page=@(Model.CurrentPage - 1)&status=@((int?)Model.StatusFilter)&from=@Model.FromDate?.ToString("yyyy-MM-dd")&to=@Model.ToDate?.ToString("yyyy-MM-dd")" class="btn-page-ctrl">&larr; Previous</a>
+                    }
+                    <span class="page-current">Page @Model.CurrentPage</span>
+                    @if (Model.Transactions.Count == Model.PageSize)
+                    {
+                        <a href="?page=@(Model.CurrentPage + 1)&status=@((int?)Model.StatusFilter)&from=@Model.FromDate?.ToString("yyyy-MM-dd")&to=@Model.ToDate?.ToString("yyyy-MM-dd")" class="btn-page-ctrl">Next &rarr;</a>
+                    }
+                </div>
+            }
+        </div>
+    </div>
 </div>
 
+@* ── STYLESHEET ── *@
 <style>
-    .badge-pending   { background: #fef3c7; color: #92400e; }
-    .badge-completed { background: #d1fae5; color: #065f46; }
-    .badge-failed    { background: #fee2e2; color: #991b1b; }
-    .badge-timedout  { background: #f3f4f6; color: #374151; }
-    .badge { padding: 2px 8px; border-radius: 9999px; font-size: .75rem; font-weight: 600; }
-    .summary-cards { display: flex; gap: 1rem; padding: 1rem; flex-wrap: wrap; }
-    .summary-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: .5rem; padding: .75rem 1.25rem; min-width: 150px; }
-    .summary-label { display: block; font-size: .75rem; color: #6b7280; }
-    .summary-value { display: block; font-size: 1.25rem; font-weight: 700; color: #111827; }
-    .pagination { display: flex; align-items: center; gap: .5rem; padding: .75rem 1rem; }
-    .page-info { font-size: .875rem; color: #6b7280; }
-</style>
+    .pay-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+        padding-bottom: 3rem;
+    }
 
+    .pay-action-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+        padding-bottom: 0.25rem;
+    }
+
+    .pay-status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        padding: 5px 14px;
+        border-radius: 9999px;
+        background: #ecfdf5;
+        color: #059669;
+        border: 1px solid #a7f3d0;
+    }
+
+    .status-indicator-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #059669;
+    }
+
+    .pay-header-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .btn-pay-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .btn-pay-primary {
+        background: #019c01;
+        color: #ffffff !important;
+        border: 1px solid #019c01;
+    }
+    .btn-pay-primary:hover {
+        background: #017a01;
+        border-color: #017a01;
+        transform: translateY(-1px);
+    }
+    .btn-pay-secondary {
+        background: #ffffff;
+        color: #0f172a !important;
+        border: 1px solid #e2e8f0;
+    }
+    .btn-pay-secondary:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+    }
+
+    /* ── Filter Dock ── */
+    .pay-filter-dock {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+
+    .pay-filter-form {
+        display: flex;
+        align-items: flex-end;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .filter-field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .filter-field label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #64748b;
+        text-transform: uppercase;
+    }
+    .filter-field input, .filter-field select {
+        border-radius: 6px;
+        padding: 6px 12px;
+        border: 1px solid #cbd5e1;
+        background: #ffffff;
+        color: #0f172a;
+        font-size: 0.82rem;
+    }
+
+    .btn-filter-apply {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        padding: 7px 14px;
+        border-radius: 6px;
+        border: 1px solid #019c01;
+        background: #019c01;
+        color: #ffffff;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .btn-filter-apply:hover {
+        background: #017a01;
+    }
+
+    /* ── KPI Grid ── */
+    .pay-kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1rem;
+    }
+
+    .pay-kpi-card {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 1.15rem 1.25rem;
+        border-radius: 12px;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .pay-kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    }
+
+    .kpi-icon-wrap {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .kpi-emerald { background: #ecfdf5; color: #059669; }
+    .kpi-teal    { background: #f0fdfa; color: #0d9488; }
+    .kpi-purple  { background: #f5f3ff; color: #7c3aed; }
+    .kpi-amber   { background: #fffbeb; color: #d97706; }
+
+    .kpi-data {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .kpi-label {
+        font-size: 0.78rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #64748b;
+    }
+
+    .kpi-value {
+        font-size: 1.45rem;
+        font-weight: 800;
+        color: #0f172a;
+        line-height: 1.2;
+        margin: 2px 0;
+    }
+    .kpi-value small {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: #64748b;
+    }
+
+    .kpi-subtext {
+        font-size: 0.75rem;
+        color: #94a3b8;
+    }
+
+    /* ── Panels & Tables ── */
+    .pay-panel {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        overflow: hidden;
+    }
+
+    .panel-header-dock {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.15rem 1.25rem;
+        border-bottom: 1px solid #e2e8f0;
+        background: #ffffff;
+    }
+
+    .panel-title-wrap h3 {
+        font-size: 1.05rem;
+        font-weight: 700;
+        margin: 0;
+        color: #0f172a;
+    }
+    .panel-title-wrap p {
+        font-size: 0.80rem;
+        color: #64748b;
+        margin: 2px 0 0 0;
+    }
+
+    .pay-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.84rem;
+    }
+    .pay-table th {
+        background: #f8fafc;
+        color: #64748b;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        padding: 0.85rem 1rem;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .pay-table td {
+        padding: 0.85rem 1rem;
+        border-bottom: 1px solid #f1f5f9;
+        color: #0f172a;
+    }
+    .pay-table tr:hover td {
+        background: #f8fafc;
+    }
+
+    .channel-pill {
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 3px 8px;
+        border-radius: 6px;
+    }
+    .ch-mtn    { background: #fef08a; color: #854d0e; border: 1px solid #fde047; }
+    .ch-orange { background: #fed7aa; color: #9a3412; border: 1px solid #fdba74; }
+    .ch-card   { background: #e2e8f0; color: #334155; border: 1px solid #cbd5e1; }
+
+    .provider-badge {
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 4px;
+    }
+    .prov-mtn    { background: #fef08a; color: #854d0e; }
+    .prov-orange { background: #fed7aa; color: #9a3412; }
+    .prov-generic{ background: #f1f5f9; color: #475569; }
+
+    .pay-status-badge {
+        display: inline-flex;
+        align-items: center;
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 3px 8px;
+        border-radius: 9999px;
+        text-transform: uppercase;
+    }
+    .status-completed { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+    .status-pending   { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+    .status-failed    { background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; }
+    .status-timedout  { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
+
+    .pay-pagination {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+        padding: 0.85rem 1.25rem;
+        border-top: 1px solid #e2e8f0;
+        background: #f8fafc;
+    }
+
+    .btn-page-ctrl {
+        font-size: 0.80rem;
+        font-weight: 600;
+        color: #0f172a;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        padding: 4px 10px;
+        border-radius: 6px;
+        text-decoration: none;
+    }
+    .btn-page-ctrl:hover {
+        background: #f1f5f9;
+    }
+    .page-current {
+        font-size: 0.80rem;
+        color: #64748b;
+        font-weight: 600;
+    }
+
+    .pay-empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 3rem 1.5rem;
+        color: #64748b;
+        gap: 8px;
+    }
+</style>
