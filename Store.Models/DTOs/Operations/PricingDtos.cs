@@ -152,11 +152,34 @@ public class PromotionEffectivenessDto
 {
     public DateTime FromDate { get; set; }
     public DateTime ToDate { get; set; }
+    public decimal TotalGrossRevenue { get; set; }
     public decimal TotalDiscountGiven { get; set; }
-    public int InvoicesWithDiscount { get; set; }
+    public decimal TotalNetRevenue { get; set; }
+    public int TotalInvoicesCount { get; set; }
+    public int InvoicesWithDiscountCount { get; set; }
+    public decimal DiscountPenetrationRatePercent { get; set; }
+    public decimal EstimatedGrossMarginPercent { get; set; }
+
+    public List<PromoRuleEffectivenessDto> RulesSummary { get; set; } = new();
     public List<ItemDiscountSummaryDto> TopDiscountedItems { get; set; } = new();
     public List<BundleHitSummaryDto> BundleHits { get; set; } = new();
     public List<SegmentEffectivenessSummaryDto> SegmentSummary { get; set; } = new();
+    public DiscountOverrideEffectivenessSummaryDto OverrideSummary { get; set; } = new();
+}
+
+public class PromoRuleEffectivenessDto
+{
+    public int DiscountId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string? CouponCode { get; set; }
+    public string DiscountType { get; set; } = string.Empty;
+    public decimal Value { get; set; }
+    public string ValueFormatted => DiscountType.Equals("Percentage", StringComparison.OrdinalIgnoreCase)
+        ? $"{Value:0.##}% OFF"
+        : $"{Value:N0} XAF OFF";
+    public int RedemptionsCount { get; set; }
+    public decimal TotalRevenue { get; set; }
+    public decimal TotalDiscountGiven { get; set; }
 }
 
 public class ItemDiscountSummaryDto
@@ -164,10 +187,14 @@ public class ItemDiscountSummaryDto
     public Guid ItemId { get; set; }
     public string ItemName { get; set; } = string.Empty;
     public string? CategoryName { get; set; }
+    public decimal UnitCostPrice { get; set; }
+    public decimal UnitSellingPrice { get; set; }
     public decimal DiscountPercent { get; set; }
     public int UnitsSold { get; set; }
     public decimal TotalRevenue { get; set; }
     public decimal TotalDiscountGiven { get; set; }
+    public decimal GrossMarginPercent { get; set; }
+    public bool IsLossLeader => UnitCostPrice > 0 && (UnitSellingPrice * (1 - DiscountPercent / 100m)) < UnitCostPrice;
 }
 
 public class BundleHitSummaryDto
@@ -176,8 +203,11 @@ public class BundleHitSummaryDto
     public string BundleName { get; set; } = string.Empty;
     public string TriggerItemName { get; set; } = string.Empty;
     public string RewardItemName { get; set; } = string.Empty;
+    public int TriggerQuantity { get; set; } = 1;
+    public int RewardQuantity { get; set; } = 1;
     public decimal RewardDiscountPercent { get; set; }
     public int TriggerInvoiceCount { get; set; }
+    public decimal EstimatedSavingsXaf { get; set; }
 }
 
 public class SegmentEffectivenessSummaryDto
@@ -185,8 +215,22 @@ public class SegmentEffectivenessSummaryDto
     public string Segment { get; set; } = string.Empty;
     public string ItemName { get; set; } = string.Empty;
     public string? CategoryName { get; set; }
+    public decimal UnitCostPrice { get; set; }
     public decimal StandardPrice { get; set; }
     public decimal SegmentPrice { get; set; }
+    public decimal UnitSavings => Math.Max(0, StandardPrice - SegmentPrice);
     public int UnitsSold { get; set; }
     public decimal TotalRevenue { get; set; }
+    public decimal TotalSavingsXaf => UnitSavings * UnitsSold;
+    public decimal GrossMarginPercent => SegmentPrice > 0 && UnitCostPrice > 0
+        ? Math.Round(((SegmentPrice - UnitCostPrice) / SegmentPrice) * 100m, 1)
+        : 0;
+}
+
+public class DiscountOverrideEffectivenessSummaryDto
+{
+    public int TotalRequested { get; set; }
+    public int TotalApproved { get; set; }
+    public int TotalRejected { get; set; }
+    public decimal TotalMarkdownImpactXaf { get; set; }
 }

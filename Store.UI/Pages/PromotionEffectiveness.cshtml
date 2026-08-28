@@ -3,202 +3,1261 @@
 @using StoreUI.Pages
 @using Store.Models.DTOs.Operations
 @{
-    ViewData["Title"] = "Promotion Effectiveness";
+    ViewData["Title"] = "Promotion Effectiveness Analytics";
+    ViewData["ActivePage"] = "PromotionEffectiveness";
+    ViewData["PageDescription"] = "Commercial return on investment (ROI), sales lift, margin dilution, and customer adoption metrics across all promotional rules and customer tiers.";
+    Layout = "~/Pages/Shared/_AppLayout.cshtml";
+    var r = Model.Report;
 }
 
-@section Styles {
-    <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
-}
-
-<div class="page-container">
-    <h1 class="page-title">Promotion Effectiveness Dashboard</h1>
-
-    @* ── Date Filter ── *@
-    <section class="card mb-4">
-        <div class="card-header">
-            <h2 class="card-title">Date Range</h2>
+<div class="promo-page-container">
+    @* ── ACTION TOOLBAR ── *@
+    <div class="promo-action-bar">
+        <div class="promo-badge">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            Commercial Intelligence Engine
         </div>
-        <div class="card-body">
-            <form method="get" class="filter-form">
-                <label>From <input type="date" name="from" value="@Model.FromDate.ToString("yyyy-MM-dd")" class="form-control form-control-sm" /></label>
-                <label>To <input type="date" name="to" value="@Model.ToDate.ToString("yyyy-MM-dd")" class="form-control form-control-sm" /></label>
-                <button type="submit" class="button-primary btn-sm">Apply</button>
-            </form>
+        <div class="promo-header-actions">
+            <a asp-page-handler="ExportCsv"
+               asp-route-from="@Model.FromDate.ToString("yyyy-MM-dd")"
+               asp-route-to="@Model.ToDate.ToString("yyyy-MM-dd")"
+               asp-route-section="all"
+               class="btn-promo-action btn-promo-secondary">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Export CSV Report
+            </a>
+            <a asp-page="/PricingOps" class="btn-promo-action btn-promo-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                </svg>
+                Configure Pricing & Rules
+            </a>
         </div>
-    </section>
+    </div>
 
-    @if (Model.Report is null)
+    @* ── DATE FILTER TOOLBAR & PRESETS ── *@
+    <div class="promo-filter-dock">
+        <div class="promo-presets-group">
+            <span class="promo-presets-label">Period Presets:</span>
+            <div class="promo-presets-pills">
+                <a asp-page="/PromotionEffectiveness" asp-route-preset="today" asp-route-tab="@Model.ActiveTab" class="preset-pill @(Model.ActivePreset == "today" ? "active" : "")">Today</a>
+                <a asp-page="/PromotionEffectiveness" asp-route-preset="yesterday" asp-route-tab="@Model.ActiveTab" class="preset-pill @(Model.ActivePreset == "yesterday" ? "active" : "")">Yesterday</a>
+                <a asp-page="/PromotionEffectiveness" asp-route-preset="7d" asp-route-tab="@Model.ActiveTab" class="preset-pill @(Model.ActivePreset == "7d" ? "active" : "")">Last 7 Days</a>
+                <a asp-page="/PromotionEffectiveness" asp-route-preset="30d" asp-route-tab="@Model.ActiveTab" class="preset-pill @(Model.ActivePreset == "30d" ? "active" : "")">Last 30 Days</a>
+                <a asp-page="/PromotionEffectiveness" asp-route-preset="month" asp-route-tab="@Model.ActiveTab" class="preset-pill @(Model.ActivePreset == "month" ? "active" : "")">This Month</a>
+                <a asp-page="/PromotionEffectiveness" asp-route-preset="quarter" asp-route-tab="@Model.ActiveTab" class="preset-pill @(Model.ActivePreset == "quarter" ? "active" : "")">Last 90 Days</a>
+                <a asp-page="/PromotionEffectiveness" asp-route-preset="all" asp-route-tab="@Model.ActiveTab" class="preset-pill @(Model.ActivePreset == "all" ? "active" : "")">All Time</a>
+            </div>
+        </div>
+
+        <form method="get" class="promo-custom-date-form">
+            <input type="hidden" name="tab" value="@Model.ActiveTab" />
+            <div class="date-input-wrap">
+                <label for="dateFrom">From</label>
+                <input type="date" id="dateFrom" name="from" value="@Model.FromDate.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
+            </div>
+            <div class="date-input-wrap">
+                <label for="dateTo">To</label>
+                <input type="date" id="dateTo" name="to" value="@Model.ToDate.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
+            </div>
+            <button type="submit" class="btn-filter-apply">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+                Apply Range
+            </button>
+        </form>
+    </div>
+
+    @if (r is null)
     {
-        <div class="alert alert-warning">Could not load promotion report.</div>
+        <div class="promo-alert-box">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#d97706">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span>Unable to compute promotional intelligence metrics for the selected time window.</span>
+        </div>
     }
     else
     {
-        var r = Model.Report;
+        @* ── 4-CARD RESPONSIVE KPI BANNER ── *@
+        <div class="promo-kpi-grid">
+            @* KPI 1: Gross Sales on Promotions *@
+            <div class="promo-kpi-card kpi-emerald">
+                <div class="kpi-icon-wrap">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div class="kpi-data">
+                    <span class="kpi-label">Gross Promo Revenue</span>
+                    <span class="kpi-value">@r.TotalGrossRevenue.ToString("N0") <small>XAF</small></span>
+                    <span class="kpi-subtext">Net Sales: @r.TotalNetRevenue.ToString("N0") XAF</span>
+                </div>
+            </div>
 
-        @* ── Summary Cards ── *@
-        <div class="summary-cards mb-4">
-            <div class="summary-card">
-                <span class="summary-label">Total Discount Given</span>
-                <span class="summary-value">@r.TotalDiscountGiven.ToString("N2")</span>
+            @* KPI 2: Promotional Markdown Investment *@
+            <div class="promo-kpi-card kpi-amber">
+                <div class="kpi-icon-wrap">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                    </svg>
+                </div>
+                <div class="kpi-data">
+                    <span class="kpi-label">Markdown Investment</span>
+                    <span class="kpi-value">@r.TotalDiscountGiven.ToString("N0") <small>XAF</small></span>
+                    <span class="kpi-subtext">Customer Savings Granted</span>
+                </div>
             </div>
-            <div class="summary-card">
-                <span class="summary-label">Invoices w/ Discount</span>
-                <span class="summary-value">@r.InvoicesWithDiscount</span>
+
+            @* KPI 3: Promotional Penetration Rate *@
+            <div class="promo-kpi-card kpi-purple">
+                <div class="kpi-icon-wrap">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                </div>
+                <div class="kpi-data">
+                    <span class="kpi-label">Discount Penetration</span>
+                    <span class="kpi-value">@r.DiscountPenetrationRatePercent%</span>
+                    <span class="kpi-subtext">@r.InvoicesWithDiscountCount of @r.TotalInvoicesCount Invoices</span>
+                </div>
             </div>
-            <div class="summary-card">
-                <span class="summary-label">Active Bundle Rules</span>
-                <span class="summary-value">@r.BundleHits.Count</span>
-            </div>
-            <div class="summary-card">
-                <span class="summary-label">Segment Price Rules</span>
-                <span class="summary-value">@r.SegmentSummary.Count</span>
+
+            @* KPI 4: Effective Gross Margin *@
+            <div class="promo-kpi-card kpi-teal">
+                <div class="kpi-icon-wrap">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                </div>
+                <div class="kpi-data">
+                    <span class="kpi-label">Net Gross Margin</span>
+                    <span class="kpi-value">@r.EstimatedGrossMarginPercent%</span>
+                    <span class="kpi-subtext">Post-Discount Profitability</span>
+                </div>
             </div>
         </div>
 
-        @* ── Item Discount Table ── *@
-        <section class="card mb-4">
-            <div class="card-header">
-                <h2 class="card-title">Discounted Items</h2>
-            </div>
-            @if (r.TopDiscountedItems.Count == 0)
-            {
-                <p class="text-muted px-3 py-2">No discounted items sold in this period.</p>
-            }
-            else
-            {
-                <div class="table-responsive">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Item</th>
-                                <th>Category</th>
-                                <th>Discount %</th>
-                                <th>Units Sold</th>
-                                <th>Revenue</th>
-                                <th>Discount Given</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var item in r.TopDiscountedItems)
-                            {
-                                <tr>
-                                    <td>@item.ItemName</td>
-                                    <td>@(item.CategoryName ?? "—")</td>
-                                    <td>@item.DiscountPercent.ToString("N1")%</td>
-                                    <td>@item.UnitsSold</td>
-                                    <td>@item.TotalRevenue.ToString("N2")</td>
-                                    <td class="text-danger">@item.TotalDiscountGiven.ToString("N2")</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            }
-        </section>
+        @* ── 5-TAB DOCK SWITCHER ── *@
+        <div class="promo-tabs-dock">
+            <button type="button" class="promo-tab-btn @(Model.ActiveTab == "overview" ? "active" : "")" onclick="switchPromoTab('overview')">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                </svg>
+                Channel Overview
+            </button>
+            <button type="button" class="promo-tab-btn @(Model.ActiveTab == "rules" ? "active" : "")" onclick="switchPromoTab('rules')">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+                Discount Rules (@r.RulesSummary.Count)
+            </button>
+            <button type="button" class="promo-tab-btn @(Model.ActiveTab == "bundles" ? "active" : "")" onclick="switchPromoTab('bundles')">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                </svg>
+                Bundle & BOGO (@r.BundleHits.Count)
+            </button>
+            <button type="button" class="promo-tab-btn @(Model.ActiveTab == "segments" ? "active" : "")" onclick="switchPromoTab('segments')">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                Customer Tier Specials (@r.SegmentSummary.Count)
+            </button>
+            <button type="button" class="promo-tab-btn @(Model.ActiveTab == "items" ? "active" : "")" onclick="switchPromoTab('items')">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+                Discounted Items Ledger (@r.TopDiscountedItems.Count)
+            </button>
+        </div>
 
-        @* ── Bundle Rule Hits ── *@
-        <section class="card mb-4">
-            <div class="card-header">
-                <h2 class="card-title">Bundle Rule Activity</h2>
-            </div>
-            @if (r.BundleHits.Count == 0)
-            {
-                <p class="text-muted px-3 py-2">No bundle rules configured.</p>
-            }
-            else
-            {
-                <div class="table-responsive">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Bundle Name</th>
-                                <th>Trigger Item</th>
-                                <th>Reward Item</th>
-                                <th>Reward Discount %</th>
-                                <th>Qualifying Invoices</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var b in r.BundleHits)
-                            {
-                                <tr>
-                                    <td>@b.BundleName</td>
-                                    <td>@b.TriggerItemName</td>
-                                    <td>@b.RewardItemName</td>
-                                    <td>@b.RewardDiscountPercent.ToString("N1")%</td>
-                                    <td>
-                                        @if (b.TriggerInvoiceCount > 0)
-                                        {
-                                            <span class="badge badge-completed">@b.TriggerInvoiceCount</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="text-muted">0</span>
-                                        }
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
+        @* ═════════════════════════════════════════════════════════════ *@
+        @* ── TAB 1: EXECUTIVE OVERVIEW & PROMOTIONAL CHANNEL MATRIX ── *@
+        @* ═════════════════════════════════════════════════════════════ *@
+        <div id="tab-overview" class="promo-tab-content @(Model.ActiveTab == "overview" ? "active" : "")">
+            <div class="promo-matrix-grid">
+                @* Channel Card 1: Catalog & Coupon Rules *@
+                <div class="channel-card">
+                    <div class="channel-card-header">
+                        <div class="channel-icon-pill" style="background:rgba(5, 150, 105, 0.1); color:#059669;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="channel-title">Catalog & Coupon Rules</h3>
+                            <span class="channel-desc">Automated discounts & promotional voucher codes</span>
+                        </div>
+                    </div>
+                    <div class="channel-metrics">
+                        <div class="c-metric">
+                            <span class="c-label">Active Rules</span>
+                            <span class="c-val">@r.RulesSummary.Count</span>
+                        </div>
+                        <div class="c-metric">
+                            <span class="c-label">Redemptions</span>
+                            <span class="c-val">@r.RulesSummary.Sum(x => x.RedemptionsCount)</span>
+                        </div>
+                        <div class="c-metric">
+                            <span class="c-label">Discount Impact</span>
+                            <span class="c-val text-amber">@r.RulesSummary.Sum(x => x.TotalDiscountGiven).ToString("N0") XAF</span>
+                        </div>
+                    </div>
+                    <div class="channel-card-footer">
+                        <button type="button" class="btn-channel-inspect" onclick="switchPromoTab('rules')">Inspect Rule Ledger →</button>
+                    </div>
                 </div>
-            }
-        </section>
 
-        @* ── Segment Pricing Table ── *@
-        <section class="card mb-4">
-            <div class="card-header">
-                <h2 class="card-title">Segment Pricing Activity</h2>
-            </div>
-            @if (r.SegmentSummary.Count == 0)
-            {
-                <p class="text-muted px-3 py-2">No active segment price rules.</p>
-            }
-            else
-            {
-                <div class="table-responsive">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Segment</th>
-                                <th>Item</th>
-                                <th>Category</th>
-                                <th>Standard Price</th>
-                                <th>Segment Price</th>
-                                <th>Saving</th>
-                                <th>Units Sold</th>
-                                <th>Revenue</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var seg in r.SegmentSummary)
-                            {
-                                var saving = seg.StandardPrice - seg.SegmentPrice;
-                                <tr>
-                                    <td><span class="badge badge-pending">@seg.Segment</span></td>
-                                    <td>@seg.ItemName</td>
-                                    <td>@(seg.CategoryName ?? "—")</td>
-                                    <td>@seg.StandardPrice.ToString("N2")</td>
-                                    <td>@seg.SegmentPrice.ToString("N2")</td>
-                                    <td class="@(saving > 0 ? "text-danger" : "text-muted")">@saving.ToString("N2")</td>
-                                    <td>@seg.UnitsSold</td>
-                                    <td>@seg.TotalRevenue.ToString("N2")</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
+                @* Channel Card 2: Bundle & BOGO Combos *@
+                <div class="channel-card">
+                    <div class="channel-card-header">
+                        <div class="channel-icon-pill" style="background:rgba(147, 51, 234, 0.1); color:#9333ea;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="channel-title">Bundle & BOGO Combos</h3>
+                            <span class="channel-desc">Multi-item triggers & volume threshold rewards</span>
+                        </div>
+                    </div>
+                    <div class="channel-metrics">
+                        <div class="c-metric">
+                            <span class="c-label">Configured Combos</span>
+                            <span class="c-val">@r.BundleHits.Count</span>
+                        </div>
+                        <div class="c-metric">
+                            <span class="c-label">Trigger Invoices</span>
+                            <span class="c-val">@r.BundleHits.Sum(x => x.TriggerInvoiceCount)</span>
+                        </div>
+                        <div class="c-metric">
+                            <span class="c-label">Est. Bundle Savings</span>
+                            <span class="c-val text-purple">@r.BundleHits.Sum(x => x.EstimatedSavingsXaf).ToString("N0") XAF</span>
+                        </div>
+                    </div>
+                    <div class="channel-card-footer">
+                        <button type="button" class="btn-channel-inspect" onclick="switchPromoTab('bundles')">Inspect Bundle Matrix →</button>
+                    </div>
                 </div>
-            }
-        </section>
+
+                @* Channel Card 3: Customer Segment Overrides *@
+                <div class="channel-card">
+                    <div class="channel-card-header">
+                        <div class="channel-icon-pill" style="background:rgba(13, 148, 136, 0.1); color:#0d9488;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="channel-title">Customer Tier Pricing</h3>
+                            <span class="channel-desc">Wholesale & VIP customized contract pricing</span>
+                        </div>
+                    </div>
+                    <div class="channel-metrics">
+                        <div class="c-metric">
+                            <span class="c-label">Tier Overrides</span>
+                            <span class="c-val">@r.SegmentSummary.Count</span>
+                        </div>
+                        <div class="c-metric">
+                            <span class="c-label">Units Sold</span>
+                            <span class="c-val">@r.SegmentSummary.Sum(x => x.UnitsSold)</span>
+                        </div>
+                        <div class="c-metric">
+                            <span class="c-label">Total Tier Savings</span>
+                            <span class="c-val text-teal">@r.SegmentSummary.Sum(x => x.TotalSavingsXaf).ToString("N0") XAF</span>
+                        </div>
+                    </div>
+                    <div class="channel-card-footer">
+                        <button type="button" class="btn-channel-inspect" onclick="switchPromoTab('segments')">Inspect Tier Overrides →</button>
+                    </div>
+                </div>
+
+                @* Channel Card 4: Supervisory Discount Overrides *@
+                <div class="channel-card">
+                    <div class="channel-card-header">
+                        <div class="channel-icon-pill" style="background:rgba(217, 119, 6, 0.1); color:#d97706;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="channel-title">Supervisory POS Overrides</h3>
+                            <span class="channel-desc">Audited manager-approved POS markdown exceptions</span>
+                        </div>
+                    </div>
+                    <div class="channel-metrics">
+                        <div class="c-metric">
+                            <span class="c-label">Requests Audited</span>
+                            <span class="c-val">@r.OverrideSummary.TotalRequested</span>
+                        </div>
+                        <div class="c-metric">
+                            <span class="c-label">Approved Overrides</span>
+                            <span class="c-val text-emerald">@r.OverrideSummary.TotalApproved</span>
+                        </div>
+                        <div class="c-metric">
+                            <span class="c-label">Approved Impact</span>
+                            <span class="c-val text-danger">@r.OverrideSummary.TotalMarkdownImpactXaf.ToString("N0") XAF</span>
+                        </div>
+                    </div>
+                    <div class="channel-card-footer">
+                        <a asp-page="/DiscountOverrides" class="btn-channel-inspect">Go to Overrides Audit Console →</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* ═════════════════════════════════════════════════════════════ *@
+        @* ── TAB 2: CATALOG & COUPON RULES ─────────────────────────── *@
+        @* ═════════════════════════════════════════════════════════════ *@
+        <div id="tab-rules" class="promo-tab-content @(Model.ActiveTab == "rules" ? "active" : "")">
+            <div class="promo-panel">
+                <div class="panel-header-dock">
+                    <div class="panel-title-wrap">
+                        <h3>Catalog & Coupon Rule Performance</h3>
+                        <p>Redemption volume, gross turnover generated, and markdown expense per rule.</p>
+                    </div>
+                    <div class="panel-search-wrap">
+                        <input type="text" id="rulesSearchInput" class="form-control form-control-sm" placeholder="Filter by rule name or coupon..." oninput="filterRulesTable()" />
+                    </div>
+                </div>
+
+                @if (r.RulesSummary.Count == 0)
+                {
+                    <div class="promo-empty-state">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                        </svg>
+                        <p>No promotional discount rules were redeemed in this timeframe.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="promo-table" id="rulesTable">
+                            <thead>
+                                <tr>
+                                    <th>Rule Name</th>
+                                    <th>Coupon Code</th>
+                                    <th>Rule Type & Value</th>
+                                    <th style="text-align:right;">Redemptions</th>
+                                    <th style="text-align:right;">Gross Sales (XAF)</th>
+                                    <th style="text-align:right;">Discount Given (XAF)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var rule in r.RulesSummary)
+                                {
+                                    <tr>
+                                        <td>
+                                            <span style="font-weight:600; color:var(--text-primary);">@rule.Name</span>
+                                        </td>
+                                        <td>
+                                            @if (!string.IsNullOrWhiteSpace(rule.CouponCode))
+                                            {
+                                                <span class="badge-code">@rule.CouponCode</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted" style="font-size:0.80rem;">Auto-Applied</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <span class="badge-rule-type">@rule.ValueFormatted</span>
+                                        </td>
+                                        <td style="text-align:right; font-weight:600;">@rule.RedemptionsCount</td>
+                                        <td style="text-align:right; font-weight:600;">@rule.TotalRevenue.ToString("N0")</td>
+                                        <td style="text-align:right; font-weight:700; color:#dc2626;">@rule.TotalDiscountGiven.ToString("N0")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+
+        @* ═════════════════════════════════════════════════════════════ *@
+        @* ── TAB 3: BUNDLE & BOGO COMBOS ────────────────────────────── *@
+        @* ═════════════════════════════════════════════════════════════ *@
+        <div id="tab-bundles" class="promo-tab-content @(Model.ActiveTab == "bundles" ? "active" : "")">
+            <div class="promo-panel">
+                <div class="panel-header-dock">
+                    <div class="panel-title-wrap">
+                        <h3>Bundle & BOGO Deal Activity</h3>
+                        <p>Track qualifying basket penetration, trigger sales volume, and customer savings.</p>
+                    </div>
+                    <div class="panel-search-wrap">
+                        <input type="text" id="bundlesSearchInput" class="form-control form-control-sm" placeholder="Filter bundles..." oninput="filterBundlesTable()" />
+                    </div>
+                </div>
+
+                @if (r.BundleHits.Count == 0)
+                {
+                    <div class="promo-empty-state">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                        </svg>
+                        <p>No bundle or BOGO combo rules configured in the system.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="promo-table" id="bundlesTable">
+                            <thead>
+                                <tr>
+                                    <th>Combo Rule Name</th>
+                                    <th>Trigger Requirement</th>
+                                    <th>Reward Benefit</th>
+                                    <th style="text-align:right;">Qualifying Invoices</th>
+                                    <th style="text-align:right;">Est. Bundle Savings (XAF)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var b in r.BundleHits)
+                                {
+                                    <tr>
+                                        <td>
+                                            <span style="font-weight:600; color:var(--text-primary);">@b.BundleName</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge-trigger">Buy @b.TriggerQuantity x @b.TriggerItemName</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge-reward">Get @b.RewardQuantity x @b.RewardItemName (@b.RewardDiscountPercent.ToString("0.##")% OFF)</span>
+                                        </td>
+                                        <td style="text-align:right; font-weight:600;">
+                                            @if (b.TriggerInvoiceCount > 0)
+                                            {
+                                                <span class="badge-count-active">@b.TriggerInvoiceCount</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">0</span>
+                                            }
+                                        </td>
+                                        <td style="text-align:right; font-weight:700; color:#9333ea;">@b.EstimatedSavingsXaf.ToString("N0")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+
+        @* ═════════════════════════════════════════════════════════════ *@
+        @* ── TAB 4: CUSTOMER SEGMENT PRICING ────────────────────────── *@
+        @* ═════════════════════════════════════════════════════════════ *@
+        <div id="tab-segments" class="promo-tab-content @(Model.ActiveTab == "segments" ? "active" : "")">
+            <div class="promo-panel">
+                <div class="panel-header-dock">
+                    <div class="panel-title-wrap">
+                        <h3>Customer Segment & Tier Performance</h3>
+                        <p>Wholesale and VIP volume velocity, price variance, and gross margin health.</p>
+                    </div>
+                    <div class="panel-search-wrap">
+                        <input type="text" id="segmentsSearchInput" class="form-control form-control-sm" placeholder="Filter tier or item..." oninput="filterSegmentsTable()" />
+                    </div>
+                </div>
+
+                @if (r.SegmentSummary.Count == 0)
+                {
+                    <div class="promo-empty-state">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        <p>No active customer segment pricing rules found.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="promo-table" id="segmentsTable">
+                            <thead>
+                                <tr>
+                                    <th>Customer Tier</th>
+                                    <th>Item & Category</th>
+                                    <th style="text-align:right;">Standard Retail</th>
+                                    <th style="text-align:right;">Tier Price</th>
+                                    <th style="text-align:right;">Unit Saving</th>
+                                    <th style="text-align:right;">Units Sold</th>
+                                    <th style="text-align:right;">Gross Sales</th>
+                                    <th style="text-align:right;">Total Savings</th>
+                                    <th style="text-align:center;">Gross Margin</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var seg in r.SegmentSummary)
+                                {
+                                    <tr>
+                                        <td>
+                                            <span class="badge-tier @(seg.Segment.ToLowerInvariant() == "wholesale" ? "tier-wholesale" : "tier-vip")">@seg.Segment</span>
+                                        </td>
+                                        <td>
+                                            <div style="font-weight:600; color:var(--text-primary);">@seg.ItemName</div>
+                                            <div style="font-size:0.75rem; color:var(--text-secondary);">@(seg.CategoryName ?? "General")</div>
+                                        </td>
+                                        <td style="text-align:right; color:var(--text-secondary);">@seg.StandardPrice.ToString("N0") <small>XAF</small></td>
+                                        <td style="text-align:right; font-weight:600; color:var(--text-primary);">@seg.SegmentPrice.ToString("N0") <small>XAF</small></td>
+                                        <td style="text-align:right; font-weight:600; color:#0d9488;">@seg.UnitSavings.ToString("N0")</td>
+                                        <td style="text-align:right; font-weight:600;">@seg.UnitsSold</td>
+                                        <td style="text-align:right; font-weight:600;">@seg.TotalRevenue.ToString("N0")</td>
+                                        <td style="text-align:right; font-weight:700; color:#059669;">@seg.TotalSavingsXaf.ToString("N0")</td>
+                                        <td style="text-align:center;">
+                                            <span class="margin-pill @(seg.GrossMarginPercent >= 20 ? "margin-good" : seg.GrossMarginPercent >= 10 ? "margin-warn" : "margin-danger")">
+                                                @seg.GrossMarginPercent%
+                                            </span>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+
+        @* ═════════════════════════════════════════════════════════════ *@
+        @* ── TAB 5: DISCOUNTED ITEMS LEDGER ─────────────────────────── *@
+        @* ═════════════════════════════════════════════════════════════ *@
+        <div id="tab-items" class="promo-tab-content @(Model.ActiveTab == "items" ? "active" : "")">
+            <div class="promo-panel">
+                <div class="panel-header-dock">
+                    <div class="panel-title-wrap">
+                        <h3>Discounted Products Ledger</h3>
+                        <p>Granular sales velocity, discount volume, cost-price margins, and loss-leader detection.</p>
+                    </div>
+                    <div class="panel-search-wrap">
+                        <input type="text" id="itemsSearchInput" class="form-control form-control-sm" placeholder="Filter products..." oninput="filterItemsTable()" />
+                    </div>
+                </div>
+
+                @if (r.TopDiscountedItems.Count == 0)
+                {
+                    <div class="promo-empty-state">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                        </svg>
+                        <p>No discounted items sold within the selected period.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="promo-table" id="itemsTable">
+                            <thead>
+                                <tr>
+                                    <th>Item & Category</th>
+                                    <th style="text-align:right;">Unit Cost</th>
+                                    <th style="text-align:right;">Unit Retail</th>
+                                    <th style="text-align:center;">Discount %</th>
+                                    <th style="text-align:right;">Units Sold</th>
+                                    <th style="text-align:right;">Revenue (XAF)</th>
+                                    <th style="text-align:right;">Discount Given (XAF)</th>
+                                    <th style="text-align:center;">Gross Margin</th>
+                                    <th style="text-align:center;">Safety Flag</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in r.TopDiscountedItems)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div style="font-weight:600; color:var(--text-primary);">@item.ItemName</div>
+                                            <div style="font-size:0.75rem; color:var(--text-secondary);">@(item.CategoryName ?? "General")</div>
+                                        </td>
+                                        <td style="text-align:right; color:var(--text-secondary);">@item.UnitCostPrice.ToString("N0") <small>XAF</small></td>
+                                        <td style="text-align:right; color:var(--text-primary); font-weight:600;">@item.UnitSellingPrice.ToString("N0") <small>XAF</small></td>
+                                        <td style="text-align:center;">
+                                            <span class="badge-discount">@item.DiscountPercent.ToString("0.##")%</span>
+                                        </td>
+                                        <td style="text-align:right; font-weight:600;">@item.UnitsSold</td>
+                                        <td style="text-align:right; font-weight:600;">@item.TotalRevenue.ToString("N0")</td>
+                                        <td style="text-align:right; font-weight:700; color:#dc2626;">@item.TotalDiscountGiven.ToString("N0")</td>
+                                        <td style="text-align:center;">
+                                            <span class="margin-pill @(item.GrossMarginPercent >= 20 ? "margin-good" : item.GrossMarginPercent >= 10 ? "margin-warn" : "margin-danger")">
+                                                @item.GrossMarginPercent%
+                                            </span>
+                                        </td>
+                                        <td style="text-align:center;">
+                                            @if (item.IsLossLeader)
+                                            {
+                                                <span class="badge-safety safety-danger" title="Selling price falls below unit cost!">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                                    </svg>
+                                                    Loss Leader
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge-safety safety-good">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                                    </svg>
+                                                    Profitable
+                                                </span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
     }
 </div>
 
+@* ── STYLESHEET ── *@
 <style>
-    .summary-cards { display: flex; gap: 1rem; flex-wrap: wrap; }
-    .summary-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: .5rem; padding: .75rem 1.25rem; min-width: 160px; }
-    .summary-label { display: block; font-size: .75rem; color: #6b7280; }
-    .summary-value { display: block; font-size: 1.25rem; font-weight: 700; color: #111827; }
-    .badge-completed { background: #d1fae5; color: #065f46; }
-    .badge-pending   { background: #fef3c7; color: #92400e; }
-    .badge { padding: 2px 8px; border-radius: 9999px; font-size: .75rem; font-weight: 600; }
-    .text-danger { color: #dc2626; }
+    .promo-page-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+        padding-bottom: 3rem;
+    }
+
+    .promo-action-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+        padding-bottom: 0.25rem;
+    }
+
+    .promo-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #059669;
+        background: rgba(5, 150, 105, 0.08);
+        border: 1px solid rgba(5, 150, 105, 0.2);
+        padding: 4px 12px;
+        border-radius: 9999px;
+    }
+
+    .promo-header-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .btn-promo-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+    .btn-promo-primary {
+        background: #019c01;
+        color: #ffffff !important;
+        border: 1px solid #019c01;
+    }
+
+    .btn-promo-primary:hover {
+        background: #017a01;
+        border-color: #017a01;
+        transform: translateY(-1px);
+    }
+
+    .btn-promo-secondary {
+        background: var(--bg-surface);
+        color: var(--text-primary) !important;
+        border: 1px solid var(--border-color);
+    }
+
+    .btn-promo-secondary:hover {
+        background: var(--bg-secondary);
+        border-color: var(--text-secondary);
+    }
+
+    /* ── Filter Dock ── */
+    .promo-filter-dock {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+        background: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 0.85rem 1.25rem;
+    }
+
+    .promo-presets-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .promo-presets-label {
+        font-size: 0.80rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .promo-presets-pills {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+
+    .preset-pill {
+        font-size: 0.78rem;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 6px;
+        text-decoration: none;
+        color: var(--text-secondary);
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        transition: all 0.15s ease;
+    }
+
+    .preset-pill:hover {
+        color: var(--text-primary);
+        border-color: var(--text-secondary);
+    }
+
+    .preset-pill.active {
+        color: #ffffff;
+        background: #019c01;
+        border-color: #019c01;
+    }
+
+    .promo-custom-date-form {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .date-input-wrap {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.80rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+    }
+
+    .date-input-wrap input {
+        border-radius: 6px;
+        font-size: 0.82rem;
+        padding: 4px 8px;
+        border: 1px solid var(--border-color);
+        background: var(--bg-surface);
+        color: var(--text-primary);
+    }
+
+    .btn-filter-apply {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.80rem;
+        font-weight: 600;
+        padding: 5px 12px;
+        border-radius: 6px;
+        border: 1px solid var(--border-color);
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .btn-filter-apply:hover {
+        background: var(--border-color);
+    }
+
+    /* ── KPI Banner ── */
+    .promo-kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1rem;
+    }
+
+    .promo-kpi-card {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 1.15rem 1.25rem;
+        border-radius: 12px;
+        background: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .kpi-icon-wrap {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .kpi-emerald .kpi-icon-wrap { background: rgba(5, 150, 105, 0.12); color: #059669; }
+    .kpi-amber .kpi-icon-wrap   { background: rgba(217, 119, 6, 0.12); color: #d97706; }
+    .kpi-purple .kpi-icon-wrap  { background: rgba(147, 51, 234, 0.12); color: #9333ea; }
+    .kpi-teal .kpi-icon-wrap    { background: rgba(13, 148, 136, 0.12); color: #0d9488; }
+
+    .kpi-data {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .kpi-label {
+        font-size: 0.78rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-secondary);
+    }
+
+    .kpi-value {
+        font-size: 1.45rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        line-height: 1.2;
+        margin: 2px 0;
+    }
+
+    .kpi-value small {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+    }
+
+    .kpi-subtext {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+    }
+
+    /* ── Tab Dock ── */
+    .promo-tabs-dock {
+        display: flex;
+        gap: 6px;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 2px;
+        overflow-x: auto;
+    }
+
+    .promo-tab-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0.65rem 1.15rem;
+        font-size: 0.88rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        background: transparent;
+        border: none;
+        border-bottom: 2px solid transparent;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+
+    .promo-tab-btn:hover {
+        color: var(--text-primary);
+    }
+
+    .promo-tab-btn.active {
+        color: #019c01;
+        border-bottom-color: #019c01;
+    }
+
+    .promo-tab-content {
+        display: none;
+    }
+
+    .promo-tab-content.active {
+        display: block;
+        animation: fadeIn 0.2s ease;
+    }
+
+    @@keyframes fadeIn {
+        from { opacity: 0; transform: translateY(4px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Overview Matrix Grid ── */
+    .promo-matrix-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.25rem;
+    }
+
+    @@media (max-width: 900px) {
+        .promo-matrix-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @@media (min-width: 1500px) {
+        .promo-matrix-grid {
+            grid-template-columns: repeat(4, 1fr);
+        }
+    }
+
+    .channel-card {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+
+    .channel-card-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .channel-icon-pill {
+        width: 38px;
+        height: 38px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .channel-title {
+        font-size: 1.02rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0;
+    }
+
+    .channel-desc {
+        font-size: 0.78rem;
+        color: var(--text-secondary);
+    }
+
+    .channel-metrics {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        background: var(--bg-secondary);
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+    }
+
+    .c-metric {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .c-label {
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+    }
+
+    .c-val {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-top: 2px;
+    }
+
+    .channel-card-footer {
+        margin-top: auto;
+    }
+
+    .btn-channel-inspect {
+        background: transparent;
+        border: none;
+        color: #019c01;
+        font-size: 0.82rem;
+        font-weight: 600;
+        cursor: pointer;
+        padding: 0;
+        text-decoration: none;
+    }
+
+    .btn-channel-inspect:hover {
+        text-decoration: underline;
+    }
+
+    /* ── Panels & Tables ── */
+    .promo-panel {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .panel-header-dock {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .panel-title-wrap h3 {
+        font-size: 1.05rem;
+        font-weight: 700;
+        margin: 0;
+        color: var(--text-primary);
+    }
+
+    .panel-title-wrap p {
+        font-size: 0.80rem;
+        color: var(--text-secondary);
+        margin: 2px 0 0 0;
+    }
+
+    .panel-search-wrap input {
+        border-radius: 6px;
+        width: 240px;
+        padding: 5px 10px;
+        border: 1px solid var(--border-color);
+        background: var(--bg-surface);
+        color: var(--text-primary);
+    }
+
+    .promo-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.84rem;
+    }
+
+    .promo-table th {
+        background: var(--bg-secondary);
+        color: var(--text-secondary);
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .promo-table td {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--border-color);
+        color: var(--text-primary);
+    }
+
+    .promo-table tr:hover td {
+        background: rgba(0,0,0,0.015);
+    }
+
+    /* ── Badges ── */
+    .badge-code {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.75rem;
+        font-weight: 700;
+        background: rgba(147, 51, 234, 0.1);
+        color: #9333ea;
+        border: 1px solid rgba(147, 51, 234, 0.25);
+        padding: 2px 8px;
+        border-radius: 4px;
+    }
+
+    .badge-rule-type {
+        font-size: 0.75rem;
+        font-weight: 600;
+        background: rgba(5, 150, 105, 0.08);
+        color: #059669;
+        border: 1px solid rgba(5, 150, 105, 0.2);
+        padding: 2px 8px;
+        border-radius: 9999px;
+    }
+
+    .badge-trigger {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        background: var(--bg-secondary);
+        padding: 2px 8px;
+        border-radius: 4px;
+    }
+
+    .badge-reward {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: #9333ea;
+        background: rgba(147, 51, 234, 0.08);
+        padding: 2px 8px;
+        border-radius: 4px;
+    }
+
+    .badge-count-active {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: #059669;
+        background: rgba(5, 150, 105, 0.1);
+        padding: 2px 8px;
+        border-radius: 9999px;
+    }
+
+    .badge-tier {
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        padding: 2px 8px;
+        border-radius: 9999px;
+    }
+
+    .tier-wholesale { background: rgba(13, 148, 136, 0.1); color: #0d9488; border: 1px solid rgba(13, 148, 136, 0.25); }
+    .tier-vip       { background: rgba(147, 51, 234, 0.1); color: #9333ea; border: 1px solid rgba(147, 51, 234, 0.25); }
+
+    .badge-discount {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #d97706;
+        background: rgba(217, 119, 6, 0.1);
+        padding: 2px 8px;
+        border-radius: 9999px;
+    }
+
+    .margin-pill {
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 6px;
+    }
+
+    .margin-good   { background: rgba(5, 150, 105, 0.1); color: #059669; }
+    .margin-warn   { background: rgba(217, 119, 6, 0.1); color: #d97706; }
+    .margin-danger { background: rgba(220, 38, 38, 0.1); color: #dc2626; }
+
+    .badge-safety {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 9999px;
+    }
+
+    .safety-good   { background: rgba(5, 150, 105, 0.1); color: #059669; }
+    .safety-danger { background: rgba(220, 38, 38, 0.1); color: #dc2626; animation: pulseRed 2s infinite; }
+
+    @@keyframes pulseRed {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.65; }
+    }
+
+    .promo-empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 3rem 1.5rem;
+        color: var(--text-secondary);
+        gap: 8px;
+    }
+
+    .promo-alert-box {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 1rem 1.25rem;
+        border-radius: 10px;
+        background: rgba(217, 119, 6, 0.08);
+        border: 1px solid rgba(217, 119, 6, 0.2);
+        color: var(--text-primary);
+        font-size: 0.88rem;
+    }
+
+    .text-emerald { color: #059669 !important; }
+    .text-amber   { color: #d97706 !important; }
+    .text-purple  { color: #9333ea !important; }
+    .text-teal    { color: #0d9488 !important; }
+    .text-danger  { color: #dc2626 !important; }
 </style>
+
+@* ── JAVASCRIPT INTERACTIONS ── *@
+<script>
+    function switchPromoTab(tabName) {
+        document.querySelectorAll('.promo-tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.promo-tab-content').forEach(c => c.classList.remove('active'));
+
+        const targetBtn = Array.from(document.querySelectorAll('.promo-tab-btn')).find(b => b.getAttribute('onclick')?.includes(tabName));
+        if (targetBtn) targetBtn.classList.add('active');
+
+        const targetContent = document.getElementById('tab-' + tabName);
+        if (targetContent) targetContent.classList.add('active');
+
+        // Update URL query state smoothly
+        const url = new URL(window.location);
+        url.searchParams.set('tab', tabName);
+        window.history.replaceState({}, '', url);
+    }
+
+    function filterRulesTable() {
+        const query = document.getElementById('rulesSearchInput')?.value.toLowerCase() || '';
+        const rows = document.querySelectorAll('#rulesTable tbody tr');
+        rows.forEach(r => {
+            const text = r.textContent?.toLowerCase() || '';
+            r.style.display = text.includes(query) ? '' : 'none';
+        });
+    }
+
+    function filterBundlesTable() {
+        const query = document.getElementById('bundlesSearchInput')?.value.toLowerCase() || '';
+        const rows = document.querySelectorAll('#bundlesTable tbody tr');
+        rows.forEach(r => {
+            const text = r.textContent?.toLowerCase() || '';
+            r.style.display = text.includes(query) ? '' : 'none';
+        });
+    }
+
+    function filterSegmentsTable() {
+        const query = document.getElementById('segmentsSearchInput')?.value.toLowerCase() || '';
+        const rows = document.querySelectorAll('#segmentsTable tbody tr');
+        rows.forEach(r => {
+            const text = r.textContent?.toLowerCase() || '';
+            r.style.display = text.includes(query) ? '' : 'none';
+        });
+    }
+
+    function filterItemsTable() {
+        const query = document.getElementById('itemsSearchInput')?.value.toLowerCase() || '';
+        const rows = document.querySelectorAll('#itemsTable tbody tr');
+        rows.forEach(r => {
+            const text = r.textContent?.toLowerCase() || '';
+            r.style.display = text.includes(query) ? '' : 'none';
+        });
+    }
+</script>

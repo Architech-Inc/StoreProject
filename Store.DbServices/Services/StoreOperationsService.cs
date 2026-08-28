@@ -921,6 +921,14 @@ public class StoreOperationsService : IStoreOperationsService
     {
         var toInclusive = toDateUtc.Date.AddDays(1);
 
+        // All invoices in date range
+        var invoices = await _uow.Repository<Invoice>().Query()
+            .AsNoTracking()
+            .Where(i => i.DateCreated >= fromDateUtc && i.DateCreated < toInclusive)
+            .ToListAsync(ct);
+
+        var totalInvoicesCount = invoices.Count;
+
         // Sales in date range with discount amounts
         var sales = await _uow.Repository<Sale>().Query()
             .Include(s => s.Invoice)
@@ -930,15 +938,53 @@ public class StoreOperationsService : IStoreOperationsService
             .Where(s => s.Invoice.DateCreated >= fromDateUtc && s.Invoice.DateCreated < toInclusive)
             .ToListAsync(ct);
 
-        // Total discount given across all lines
         var totalDiscountGiven = sales.Sum(s => s.DiscountAmount ?? 0m);
-        var invoicesWithDiscount = sales
+        var totalNetRevenue = sales.Sum(s => s.LineTotal);
+        var totalGrossRevenue = totalNetRevenue + totalDiscountGiven;
+
+        var invoicesWithDiscountCount = sales
             .Where(s => s.DiscountAmount.HasValue && s.DiscountAmount.Value > 0)
             .Select(s => s.InvoiceId)
             .Distinct()
             .Count();
 
-        // Items with active discounts — summarise sales
+        var discountPenetrationRate = totalInvoicesCount > 0
+            ? Math.Round((decimal)invoicesWithDiscountCount / totalInvoicesCount * 100m, 1)
+            : 0m;
+
+        var totalCostOfGoods = sales.Sum(s => (s.Item.CostPrice ?? 0m) * s.Quantity);
+        var estimatedGrossMargin = totalNetRevenue > 0
+            ? Math.Round(((totalNetRevenue - totalCostOfGoods) / totalNetRevenue) * 100m, 1)
+            : 0m;
+
+        // 1. Promotional Rules Breakdown
+        var allDiscounts = await _uow.Repository<Discount>().Query()
+            .AsNoTracking()
+            .ToListAsync(ct);
+
+        var rulesSummary = allDiscounts.Select(d =>
+        {
+            var matchingSales = sales.Where(s => (d.ItemId.HasValue && s.ItemId == d.ItemId.Value) || (d.CategoryId.HasValue && s.Item.CategoryId == d.CategoryId.Value)).ToList();
+            var redemptions = matchingSales.Count;
+            var rev = matchingSales.Sum(s => s.LineTotal);
+            var disc = matchingSales.Sum(s => s.DiscountAmount ?? 0m);
+            return new PromoRuleEffectivenessDto
+            {
+                DiscountId = d.DiscountId,
+                Name = d.Name,
+                CouponCode = d.CouponCode,
+                DiscountType = d.DiscountType.ToString(),
+                Value = d.DiscountType == DiscountType.Percentage ? d.Percentage : (d.FixedAmount ?? 0m),
+                RedemptionsCount = redemptions,
+                TotalRevenue = rev,
+                TotalDiscountGiven = disc
+            };
+        })
+        .Where(r => r.RedemptionsCount > 0 || r.TotalRevenue > 0)
+        .OrderByDescending(r => r.TotalDiscountGiven)
+        .ToList();
+
+        // 2. Items with active discounts — summarise sales & margins
         var discountedItemIds = sales
             .Where(s => s.Item.Discount is not null && s.Item.Discount.IsActive)
             .Select(s => s.ItemId)
@@ -948,21 +994,36 @@ public class StoreOperationsService : IStoreOperationsService
         var topDiscountedItems = sales
             .Where(s => discountedItemIds.Contains(s.ItemId))
             .GroupBy(s => new { s.ItemId, s.ItemName, s.Item.Category?.Name })
-            .Select(g => new ItemDiscountSummaryDto
+            .Select(g =>
             {
-                ItemId = g.Key.ItemId,
-                ItemName = g.Key.ItemName,
-                CategoryName = g.Key.Name,
-                DiscountPercent = g.First().Item.Discount?.Percentage ?? 0m,
-                UnitsSold = g.Sum(s => s.Quantity),
-                TotalRevenue = g.Sum(s => s.LineTotal),
-                TotalDiscountGiven = g.Sum(s => s.DiscountAmount ?? 0m)
+                var firstItem = g.First().Item;
+                var unitCost = firstItem.CostPrice ?? 0m;
+                var unitSell = firstItem.UnitPrice;
+                var lineRev = g.Sum(s => s.LineTotal);
+                var lineCost = g.Sum(s => (s.Item.CostPrice ?? 0m) * s.Quantity);
+                var marginPct = lineRev > 0
+                    ? Math.Round(((lineRev - lineCost) / lineRev) * 100m, 1)
+                    : 0m;
+
+                return new ItemDiscountSummaryDto
+                {
+                    ItemId = g.Key.ItemId,
+                    ItemName = g.Key.ItemName,
+                    CategoryName = g.Key.Name,
+                    UnitCostPrice = unitCost,
+                    UnitSellingPrice = unitSell,
+                    DiscountPercent = firstItem.Discount?.Percentage ?? 0m,
+                    UnitsSold = g.Sum(s => s.Quantity),
+                    TotalRevenue = lineRev,
+                    TotalDiscountGiven = g.Sum(s => s.DiscountAmount ?? 0m),
+                    GrossMarginPercent = marginPct
+                };
             })
             .OrderByDescending(x => x.TotalDiscountGiven)
-            .Take(20)
+            .Take(30)
             .ToList();
 
-        // Bundle rule hits — count invoices that included the trigger item
+        // 3. Bundle rule hits & estimated savings
         var bundleRules = await _uow.Repository<BundleRule>().Query()
             .Include(b => b.TriggerItem)
             .Include(b => b.RewardItem)
@@ -973,19 +1034,30 @@ public class StoreOperationsService : IStoreOperationsService
             .GroupBy(s => s.InvoiceId)
             .ToDictionary(g => g.Key, g => g.Select(s => s.ItemId).ToHashSet());
 
-        var bundleHits = bundleRules.Select(b => new BundleHitSummaryDto
+        var bundleHits = bundleRules.Select(b =>
         {
-            BundleRuleId = b.BundleRuleId,
-            BundleName = b.Name,
-            TriggerItemName = b.TriggerItem.Name,
-            RewardItemName = b.RewardItem.Name,
-            RewardDiscountPercent = b.RewardDiscountPercent,
-            TriggerInvoiceCount = invoiceTriggerItems.Values.Count(itemSet => itemSet.Contains(b.TriggerItemId))
+            var triggerInvoices = invoiceTriggerItems.Values.Count(itemSet => itemSet.Contains(b.TriggerItemId));
+            var rewardUnitPrice = b.RewardItem?.UnitPrice ?? 0m;
+            var savingsPerBundle = rewardUnitPrice * (b.RewardDiscountPercent / 100m) * b.RewardQuantity;
+            var estSavings = triggerInvoices * savingsPerBundle;
+
+            return new BundleHitSummaryDto
+            {
+                BundleRuleId = b.BundleRuleId,
+                BundleName = b.Name,
+                TriggerItemName = b.TriggerItem?.Name ?? "Unknown Item",
+                RewardItemName = b.RewardItem?.Name ?? "Unknown Item",
+                TriggerQuantity = b.TriggerQuantity,
+                RewardQuantity = b.RewardQuantity,
+                RewardDiscountPercent = b.RewardDiscountPercent,
+                TriggerInvoiceCount = triggerInvoices,
+                EstimatedSavingsXaf = Math.Round(estSavings, 0)
+            };
         })
         .OrderByDescending(x => x.TriggerInvoiceCount)
         .ToList();
 
-        // Segment pricing effectiveness — sales of segment-priced items
+        // 4. Segment pricing effectiveness
         var segmentPrices = await _uow.Repository<CustomerSegmentPrice>().Query()
             .Include(sp => sp.Item).ThenInclude(i => i.Category)
             .AsNoTracking()
@@ -997,29 +1069,54 @@ public class StoreOperationsService : IStoreOperationsService
         var segmentSummary = segmentPrices.Select(sp =>
         {
             var itemSales = salesByItemId.GetValueOrDefault(sp.ItemId, new List<Sale>());
+            var units = itemSales.Sum(s => s.Quantity);
+            var rev = itemSales.Sum(s => s.LineTotal);
+
             return new SegmentEffectivenessSummaryDto
             {
                 Segment = sp.Segment.ToString(),
-                ItemName = sp.Item.Name,
-                CategoryName = sp.Item.Category?.Name,
-                StandardPrice = sp.Item.UnitPrice,
+                ItemName = sp.Item?.Name ?? "Unknown Item",
+                CategoryName = sp.Item?.Category?.Name,
+                UnitCostPrice = sp.Item?.CostPrice ?? 0m,
+                StandardPrice = sp.Item?.UnitPrice ?? 0m,
                 SegmentPrice = sp.PriceOverride,
-                UnitsSold = itemSales.Sum(s => s.Quantity),
-                TotalRevenue = itemSales.Sum(s => s.LineTotal)
+                UnitsSold = units,
+                TotalRevenue = rev
             };
         })
         .OrderByDescending(x => x.UnitsSold)
         .ToList();
 
+        // 5. Supervisory Discount Overrides summary for the period
+        var overrides = await _uow.Repository<DiscountOverrideRequest>().Query()
+            .AsNoTracking()
+            .Where(o => o.DateCreated >= fromDateUtc && o.DateCreated < toInclusive)
+            .ToListAsync(ct);
+
+        var overrideSummary = new DiscountOverrideEffectivenessSummaryDto
+        {
+            TotalRequested = overrides.Count,
+            TotalApproved = overrides.Count(o => o.Status == DiscountOverrideStatus.Approved),
+            TotalRejected = overrides.Count(o => o.Status == DiscountOverrideStatus.Rejected),
+            TotalMarkdownImpactXaf = overrides.Where(o => o.Status == DiscountOverrideStatus.Approved).Sum(o => o.OverrideType == DiscountType.FixedAmount ? o.OverrideValue : 0m)
+        };
+
         return new PromotionEffectivenessDto
         {
             FromDate = fromDateUtc,
             ToDate = toDateUtc,
-            TotalDiscountGiven = totalDiscountGiven,
-            InvoicesWithDiscount = invoicesWithDiscount,
+            TotalGrossRevenue = Math.Round(totalGrossRevenue, 2),
+            TotalDiscountGiven = Math.Round(totalDiscountGiven, 2),
+            TotalNetRevenue = Math.Round(totalNetRevenue, 2),
+            TotalInvoicesCount = totalInvoicesCount,
+            InvoicesWithDiscountCount = invoicesWithDiscountCount,
+            DiscountPenetrationRatePercent = discountPenetrationRate,
+            EstimatedGrossMarginPercent = estimatedGrossMargin,
+            RulesSummary = rulesSummary,
             TopDiscountedItems = topDiscountedItems,
             BundleHits = bundleHits,
-            SegmentSummary = segmentSummary
+            SegmentSummary = segmentSummary,
+            OverrideSummary = overrideSummary
         };
     }
 
