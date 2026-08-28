@@ -10,7 +10,7 @@ namespace StoreUI.Pages;
 
 public class InvoicesModel : SecurePageModel
 {
-    private readonly IInvoiceService _invoiceService;
+    private readonly IInvoiceManager _invoiceManager;
     private readonly IApiClientService _apiClient;
 
     public IReadOnlyList<InvoiceDto> Invoices { get; private set; } = Array.Empty<InvoiceDto>();
@@ -37,9 +37,9 @@ public class InvoicesModel : SecurePageModel
     public bool CanVoid { get; private set; }
     public bool CanAddTender { get; private set; }
 
-    public InvoicesModel(IInvoiceService invoiceService, IApiClientService apiClient)
+    public InvoicesModel(IInvoiceManager invoiceManager, IApiClientService apiClient)
     {
-        _invoiceService = invoiceService;
+        _invoiceManager = invoiceManager;
         _apiClient = apiClient;
     }
 
@@ -78,8 +78,8 @@ public class InvoicesModel : SecurePageModel
             SortDescending = SortBy?.EndsWith("_desc", StringComparison.OrdinalIgnoreCase) ?? true
         };
 
-        var pagedTask = _invoiceService.GetAllAsync(request, ct);
-        var summaryTask = _invoiceService.GetSummaryMetricsAsync(request, ct);
+        var pagedTask = _invoiceManager.GetInvoicesPagedAsync(request, ct);
+        var summaryTask = _invoiceManager.GetSummaryMetricsAsync(request, ct);
 
         await Task.WhenAll(pagedTask, summaryTask);
 
@@ -137,7 +137,7 @@ public class InvoicesModel : SecurePageModel
         if (!TryGetSecurityContext(out var token, out _)) return Unauthorized();
         _apiClient.SetToken(token);
 
-        var invoice = await _invoiceService.GetByIdAsync(id, ct);
+        var invoice = await _invoiceManager.GetInvoiceByIdAsync(id, ct);
         if (invoice is null) return NotFound(new { message = "Invoice not found." });
 
         return new JsonResult(invoice, new System.Text.Json.JsonSerializerOptions
@@ -153,7 +153,7 @@ public class InvoicesModel : SecurePageModel
 
         try
         {
-            var success = await _invoiceService.VoidInvoiceAsync(invoiceId, null, reason, ct);
+            var success = await _invoiceManager.VoidInvoiceAsync(invoiceId, reason, ct);
             StatusMessage = success ? "Invoice voided successfully." : "Error: Invoice not found or already voided.";
         }
         catch (Exception ex)
@@ -173,8 +173,8 @@ public class InvoicesModel : SecurePageModel
 
         try
         {
-            var tender = await _invoiceService.AddTenderAsync(invoiceId, request, ct);
-            var updated = await _invoiceService.GetByIdAsync(invoiceId, ct);
+            var tender = await _invoiceManager.AddTenderAsync(invoiceId, request, ct);
+            var updated = await _invoiceManager.GetInvoiceByIdAsync(invoiceId, ct);
             return new JsonResult(new { success = true, tender, invoice = updated }, new System.Text.Json.JsonSerializerOptions
             {
                 PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
@@ -199,7 +199,7 @@ public class InvoicesModel : SecurePageModel
 
         try
         {
-            var refundedInvoice = await _invoiceService.RefundInvoiceAsync(invoiceId, request, null, ct);
+            var refundedInvoice = await _invoiceManager.RefundInvoiceAsync(invoiceId, request, ct);
             if (refundedInvoice is null) return NotFound(new { message = "Invoice not found or cannot be refunded." });
 
             return new JsonResult(new { success = true, invoice = refundedInvoice, message = "Refund and return processed successfully." }, new System.Text.Json.JsonSerializerOptions
@@ -239,24 +239,11 @@ public class InvoicesModel : SecurePageModel
             SortDescending = SortBy?.EndsWith("_desc", StringComparison.OrdinalIgnoreCase) ?? true
         };
 
-        var result = await _invoiceService.GetAllAsync(request, ct);
+        var result = await _invoiceManager.GetInvoicesPagedAsync(request, ct);
         var items = result.Items ?? Enumerable.Empty<InvoiceDto>();
 
-        var sb = new StringBuilder();
-        // UTF-8 BOM
-        sb.Append('\uFEFF');
-        sb.AppendLine("Invoice ID,Date,Customer,Phone,Cashier,Branch,Payment Type,Total Amount (XAF),Amount Tendered (XAF),Outstanding (XAF),Status,Refunded,Notes");
-
-        foreach (var i in items)
-        {
-            var statusStr = i.IsPaid ? "Paid" : (i.AmountTendered == 0 ? "Voided" : "Partial Debt");
-            var refStr = i.IsRefunded ? $"Yes ({i.RefundedAmount:N0})" : "No";
-
-            sb.AppendLine($"\"{i.InvoiceId}\",\"{i.DateCreated:yyyy-MM-dd HH:mm}\",\"{EscapeCsv(i.CustomerName ?? "Walk-in")}\",\"{EscapeCsv(i.CustomerPhone ?? "")}\",\"{EscapeCsv(i.ProcessedBy ?? "")}\",\"{EscapeCsv(i.BranchName ?? "")}\",\"{EscapeCsv(i.TenderSummary)}\",{i.TotalAmount},{i.AmountTendered},{i.OutstandingBalance},\"{statusStr}\",\"{refStr}\",\"{EscapeCsv(i.Notes ?? "")}\"");
-        }
-
-        var bytes = Encoding.UTF8.GetBytes(sb.ToString());
-        var fileName = $"Invoices_Export_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+        var bytes = _invoiceManager.GenerateInvoicesCsv(items);
+        var fileName = $"Invoices_Export_{DateTime.UtcNow:yyyyMMdd_HHmmss}.csv";
         return File(bytes, "text/csv; charset=utf-8", fileName);
     }
 
