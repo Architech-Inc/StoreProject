@@ -1,153 +1,658 @@
 @page
 @model StoreUI.Pages.CommunicationLogsModel
 @{
-    ViewData["Title"] = "Communication Logs";
+    ViewData["Title"] = "Communication Dispatch Logs";
+    ViewData["ActivePage"] = "CommunicationLogs";
+    ViewData["PageDescription"] = "Audit trail of transactional emails, SMS notifications, and WhatsApp receipts dispatched to customers and personnel.";
+    Layout = "~/Pages/Shared/_AppLayout.cshtml";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>Communication Logs</h2>
-</div>
+<div class="comm-container">
+    @* ── ACTION TOOLBAR ── *@
+    <div class="comm-action-bar">
+        <div class="comm-status-pill">
+            <span class="status-indicator-dot"></span>
+            <span>Outbound Messaging Dispatch &amp; Notification Telemetry</span>
+        </div>
+        <div class="comm-header-actions">
+            <a href="/AuditLog" class="btn-comm-action btn-comm-secondary">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                </svg>
+                Audit Trail
+            </a>
+            <a href="/Dashboard" class="btn-comm-action btn-comm-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+                Store Dashboard
+            </a>
+        </div>
+    </div>
 
-<div class="card shadow-sm mb-4">
-    <div class="card-body">
-        <form method="get" class="row gx-2 gy-2 align-items-center">
-            <div class="col-auto">
-                <select name="channel" class="form-select" asp-for="Channel">
-                    <option value="">All Channels</option>
-                    <option value="Email">Email</option>
-                    <option value="Sms">SMS</option>
-                    <option value="WhatsApp">WhatsApp</option>
+    @* ── 4-CARD FLUENT 2.0 KPI GRID ── *@
+    <div class="comm-kpi-grid">
+        @* KPI 1: Total Dispatches *@
+        <div class="comm-kpi-card">
+            <div class="kpi-icon-wrap kpi-emerald">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                </svg>
+            </div>
+            <div class="kpi-data">
+                <span class="kpi-label">Total Outbound Alerts</span>
+                <span class="kpi-value">@Model.TotalLogs.ToString("N0") <small>Alerts</small></span>
+                <span class="kpi-subtext">Dispatches recorded in telemetry</span>
+            </div>
+        </div>
+
+        @* KPI 2: Email Dispatches *@
+        <div class="comm-kpi-card">
+            <div class="kpi-icon-wrap kpi-teal">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+            </div>
+            <div class="kpi-data">
+                <span class="kpi-label">Email Invoices &amp; Receipts</span>
+                <span class="kpi-value">@Model.EmailCount.ToString("N0") <small>Emails</small></span>
+                <span class="kpi-subtext">PDF tickets and security codes</span>
+            </div>
+        </div>
+
+        @* KPI 3: SMS & WhatsApp *@
+        <div class="comm-kpi-card">
+            <div class="kpi-icon-wrap kpi-purple">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+            </div>
+            <div class="kpi-data">
+                <span class="kpi-label">Instant Mobile Alerts</span>
+                <span class="kpi-value">@((Model.SmsCount + Model.WhatsAppCount).ToString("N0")) <small>SMS / WA</small></span>
+                <span class="kpi-subtext">Direct cellular notifications</span>
+            </div>
+        </div>
+
+        @* KPI 4: Failures *@
+        <div class="comm-kpi-card">
+            <div class="kpi-icon-wrap @(Model.FailedCount > 0 ? "kpi-rose" : "kpi-emerald")">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+            <div class="kpi-data">
+                <span class="kpi-label">Delivery Exceptions</span>
+                <span class="kpi-value" style="color:@(Model.FailedCount > 0 ? "#e11d48" : "#059669");">
+                    @Model.FailedCount.ToString("N0") <small>Failed</small>
+                </span>
+                <span class="kpi-subtext">@(Model.FailedCount > 0 ? "Alerts requiring retry or fix" : "All dispatches succeeded")</span>
+            </div>
+        </div>
+    </div>
+
+    @* ── FILTER DOCK ── *@
+    <div class="comm-filter-dock">
+        <form method="get" class="comm-filter-form">
+            <div class="filter-field">
+                <label for="channelSelect">Dispatch Channel</label>
+                <select name="channel" id="channelSelect" class="form-control form-control-sm" asp-for="Channel">
+                    <option value="">All Communication Channels</option>
+                    <option value="Email">Email Gateway</option>
+                    <option value="Sms">SMS Cellular</option>
+                    <option value="WhatsApp">WhatsApp Business</option>
                 </select>
             </div>
-            <div class="col-auto">
-                <select name="status" class="form-select" asp-for="Status">
-                    <option value="">All Statuses</option>
-                    <option value="Pending">Pending</option>
-                    <option value="Sent">Sent</option>
-                    <option value="Delivered">Delivered</option>
-                    <option value="Failed">Failed</option>
-                    <option value="Retrying">Retrying</option>
+            <div class="filter-field">
+                <label for="statusSelect">Delivery Status</label>
+                <select name="status" id="statusSelect" class="form-control form-control-sm" asp-for="Status">
+                    <option value="">All Delivery Statuses</option>
+                    <option value="Pending">Pending Dispatch</option>
+                    <option value="Sent">Sent to Gateway</option>
+                    <option value="Delivered">Delivered to Recipient</option>
+                    <option value="Failed">Delivery Failed</option>
+                    <option value="Retrying">Retrying Delivery</option>
                 </select>
             </div>
-            <div class="col-auto">
-            <button type="submit" class="button-primary">Filter</button>
-                <a asp-page="/CommunicationLogs" class="button-command">Clear</a>
-            </div>
+            <button type="submit" class="btn-filter-apply">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+                Filter Logs
+            </button>
+            @if (!string.IsNullOrWhiteSpace(Model.Channel) || !string.IsNullOrWhiteSpace(Model.Status))
+            {
+                <a asp-page="/CommunicationLogs" class="btn-filter-clear">Clear Filters</a>
+            }
         </form>
     </div>
-</div>
 
-<div class="card shadow-sm">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>Date Sent</th>
-                    <th>Channel</th>
-                    <th>Recipient</th>
-                    <th>Status</th>
-                    <th>Retry Count</th>
-                    <th>Payload Preview</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @if (!Model.Logs.Any())
-                {
-                    <tr>
-                        <td colspan="7" class="text-center py-4 text-muted">No communication logs found.</td>
-                    </tr>
-                }
-                else
-                {
-                    foreach (var log in Model.Logs)
-                    {
-                        <tr>
-                            <td>@log.DateCreated.ToString("g")</td>
-                            <td>
-                                @if (log.Channel == Store.Models.Enums.CommunicationChannel.Email) { <span class="badge bg-primary">Email</span> }
-                                else if (log.Channel == Store.Models.Enums.CommunicationChannel.Sms) { <span class="badge bg-info text-dark">SMS</span> }
-                                else { <span class="badge bg-success">WhatsApp</span> }
-                            </td>
-                            <td>@log.Recipient</td>
-                            <td>
-                                @if (log.Status == Store.Models.Enums.CommunicationStatus.Sent || log.Status == Store.Models.Enums.CommunicationStatus.Delivered)
-                                {
-                                    <span class="text-success"><i class="bi bi-check-circle-fill me-1"></i> @log.Status</span>
-                                }
-                                else if (log.Status == Store.Models.Enums.CommunicationStatus.Failed)
-                                {
-                                    <span class="text-danger" title="@log.ErrorMessage"><i class="bi bi-x-circle-fill me-1"></i> @log.Status</span>
-                                }
-                                else
-                                {
-                                    <span class="text-warning"><i class="bi bi-hourglass-split me-1"></i> @log.Status</span>
-                                }
-                            </td>
-                            <td>@log.RetryCount</td>
-                            <td class="text-truncate" style="max-width: 200px;" title="@log.Payload">
-                                @log.Payload
-                            </td>
-                            <td>
-                                <button type="button" class="button-command btn-sm" data-bs-toggle="modal" data-bs-target="#logModal-@log.Id">
-                                    Details
-                                </button>
-
-                                <!-- Details Modal -->
-                                <div class="modal fade" id="logModal-@log.Id" tabindex="-1">
-                                    <div class="modal-dialog">
-                                        <div class="modal-content">
-                                            <div class="modal-header">
-                                                <h5 class="modal-title">Log Details</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                            </div>
-                                            <div class="modal-body">
-                                                <p><strong>ID:</strong> @log.Id</p>
-                                                <p><strong>Channel:</strong> @log.Channel</p>
-                                                <p><strong>Recipient:</strong> @log.Recipient</p>
-                                                <p><strong>Date:</strong> @log.DateCreated.ToString("O")</p>
-                                                <p><strong>Status:</strong> @log.Status</p>
-                                                @if (!string.IsNullOrEmpty(log.ErrorMessage))
-                                                {
-                                                    <div class="alert alert-danger">
-                                                        <strong>Error:</strong> @log.ErrorMessage
-                                                    </div>
-                                                }
-                                                <div class="bg-light p-3 rounded">
-                                                    <strong>Payload:</strong><br/>
-                                                    <pre class="mb-0 mt-2" style="white-space: pre-wrap;">@log.Payload</pre>
-                                                </div>
-                                            </div>
-                                            <div class="modal-footer">
-                                                <button type="button" class="button-secondary" data-bs-dismiss="modal">Close</button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </td>
-                        </tr>
-                    }
-                }
-            </tbody>
-        </table>
-    </div>
-    
-    @if (Model.TotalPages > 1)
-    {
-        <div class="card-footer bg-white border-top-0 pt-3">
-            <nav>
-                <ul class="pagination mb-0 justify-content-end">
-                    <li class="page-item @(Model.PageNumber == 1 ? "disabled" : "")">
-                        <a class="page-link" asp-page="./CommunicationLogs" asp-route-page="@(Model.PageNumber - 1)" asp-route-channel="@Model.Channel" asp-route-status="@Model.Status">Previous</a>
-                    </li>
-                    <li class="page-item disabled">
-                        <span class="page-link">Page @Model.PageNumber of @Model.TotalPages</span>
-                    </li>
-                    <li class="page-item @(Model.PageNumber == Model.TotalPages ? "disabled" : "")">
-                        <a class="page-link" asp-page="./CommunicationLogs" asp-route-page="@(Model.PageNumber + 1)" asp-route-channel="@Model.Channel" asp-route-status="@Model.Status">Next</a>
-                    </li>
-                </ul>
-            </nav>
+    @* ── LOGS TABLE PANEL ── *@
+    <div class="comm-panel">
+        <div class="panel-header-dock">
+            <div class="panel-title-wrap">
+                <h3>Outbound Dispatch Ledger</h3>
+                <p>Detailed event log of customer notifications and system dispatches.</p>
+            </div>
         </div>
-    }
+
+        @if (!Model.Logs.Any())
+        {
+            <div class="comm-empty-state">
+                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                </svg>
+                <h4>No Communication Logs Found</h4>
+                <p>There are no outbound message logs matching your current filter criteria.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="comm-table">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Channel</th>
+                            <th>Recipient Target</th>
+                            <th style="text-align:center;">Delivery Status</th>
+                            <th style="text-align:center;">Retries</th>
+                            <th>Payload Message Preview</th>
+                            <th style="text-align:right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var log in Model.Logs)
+                        {
+                            <tr>
+                                <td style="font-size:0.80rem; color:#64748b; white-space:nowrap;">
+                                    @log.DateCreated.ToString("dd MMM yyyy HH:mm")
+                                </td>
+                                <td>
+                                    @if (log.Channel == Store.Models.Enums.CommunicationChannel.Email)
+                                    {
+                                        <span class="channel-pill ch-email">Email</span>
+                                    }
+                                    else if (log.Channel == Store.Models.Enums.CommunicationChannel.Sms)
+                                    {
+                                        <span class="channel-pill ch-sms">SMS</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="channel-pill ch-wa">WhatsApp</span>
+                                    }
+                                </td>
+                                <td>
+                                    <strong style="color:#0f172a; font-size:0.84rem;">@log.Recipient</strong>
+                                </td>
+                                <td style="text-align:center;">
+                                    @if (log.Status == Store.Models.Enums.CommunicationStatus.Sent || log.Status == Store.Models.Enums.CommunicationStatus.Delivered)
+                                    {
+                                        <span class="status-badge status-reviewed">@log.Status</span>
+                                    }
+                                    else if (log.Status == Store.Models.Enums.CommunicationStatus.Failed)
+                                    {
+                                        <span class="status-badge status-danger" title="@log.ErrorMessage">Failed</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="status-badge status-pending">@log.Status</span>
+                                    }
+                                </td>
+                                <td style="text-align:center; font-family:'JetBrains Mono', monospace; font-size:0.80rem; color:#64748b;">
+                                    @log.RetryCount
+                                </td>
+                                <td>
+                                    <span class="payload-preview" title="@log.Payload">
+                                        @log.Payload
+                                    </span>
+                                </td>
+                                <td style="text-align:right;">
+                                    <button type="button" class="btn-ctrl-action"
+                                            onclick="openLogDrawer(@log.Id, '@log.Channel', '@Html.Raw(Html.Encode(log.Recipient))', '@log.DateCreated.ToString("O")', '@log.Status', '@Html.Raw(Html.Encode(log.ErrorMessage ?? ""))', '@Html.Raw(Html.Encode(log.Payload ?? ""))')">
+                                        Inspect
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (Model.TotalPages > 1)
+            {
+                <div class="comm-pagination">
+                    @if (Model.PageNumber > 1)
+                    {
+                        <a asp-page="./CommunicationLogs" asp-route-page="@(Model.PageNumber - 1)" asp-route-channel="@Model.Channel" asp-route-status="@Model.Status" class="btn-page-ctrl">&larr; Previous</a>
+                    }
+                    <span class="page-current">Page @Model.PageNumber of @Model.TotalPages</span>
+                    @if (Model.PageNumber < Model.TotalPages)
+                    {
+                        <a asp-page="./CommunicationLogs" asp-route-page="@(Model.PageNumber + 1)" asp-route-channel="@Model.Channel" asp-route-status="@Model.Status" class="btn-page-ctrl">Next &rarr;</a>
+                    }
+                </div>
+            }
+        }
+    </div>
 </div>
+
+@* ── PAYLOAD INSPECTOR DRAWER ── *@
+<div class="drawer-overlay" id="logDrawerOverlay" onclick="closeLogDrawer()"></div>
+<div class="drawer" id="logDrawer">
+    <div class="drawer-header">
+        <div class="drawer-title-wrap">
+            <h3 id="drawerLogTitle">Dispatch Telemetry</h3>
+            <p>Full notification payload, transport headers, and gateway diagnostics.</p>
+        </div>
+        <button type="button" class="btn-close-drawer" onclick="closeLogDrawer()">&times;</button>
+    </div>
+    <div class="drawer-body" id="drawerLogContent">
+        <!-- Injected via JavaScript -->
+    </div>
+</div>
+
+@* ── STYLESHEET ── *@
+<style>
+    .comm-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+        padding-bottom: 3rem;
+    }
+
+    .comm-action-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+        padding-bottom: 0.25rem;
+    }
+
+    .comm-status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        padding: 5px 14px;
+        border-radius: 9999px;
+        background: #ecfdf5;
+        color: #059669;
+        border: 1px solid #a7f3d0;
+    }
+
+    .status-indicator-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #059669;
+    }
+
+    .comm-header-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .btn-comm-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .btn-comm-primary {
+        background: #019c01;
+        color: #ffffff !important;
+        border: 1px solid #019c01;
+    }
+    .btn-comm-primary:hover {
+        background: #017a01;
+        border-color: #017a01;
+        transform: translateY(-1px);
+    }
+    .btn-comm-secondary {
+        background: #ffffff;
+        color: #0f172a !important;
+        border: 1px solid #e2e8f0;
+    }
+    .btn-comm-secondary:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+    }
+
+    /* ── KPI Grid ── */
+    .comm-kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1rem;
+    }
+
+    .comm-kpi-card {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 1.15rem 1.25rem;
+        border-radius: 12px;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .comm-kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    }
+
+    .kpi-icon-wrap {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .kpi-emerald { background: #ecfdf5; color: #059669; }
+    .kpi-teal    { background: #f0fdfa; color: #0d9488; }
+    .kpi-purple  { background: #f5f3ff; color: #7c3aed; }
+    .kpi-rose    { background: #fff1f2; color: #e11d48; }
+
+    .kpi-data { display: flex; flex-direction: column; }
+    .kpi-label { font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: #64748b; }
+    .kpi-value { font-size: 1.45rem; font-weight: 800; color: #0f172a; line-height: 1.2; margin: 2px 0; }
+    .kpi-value small { font-size: 0.78rem; font-weight: 600; color: #64748b; }
+    .kpi-subtext { font-size: 0.75rem; color: #94a3b8; }
+
+    /* ── Filter Dock ── */
+    .comm-filter-dock {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+
+    .comm-filter-form {
+        display: flex;
+        align-items: flex-end;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .filter-field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 200px;
+    }
+    .filter-field label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #64748b;
+        text-transform: uppercase;
+    }
+    .filter-field select {
+        border-radius: 6px;
+        padding: 6px 12px;
+        border: 1px solid #cbd5e1;
+        background: #ffffff;
+        color: #0f172a;
+        font-size: 0.82rem;
+    }
+
+    .btn-filter-apply {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        padding: 7px 14px;
+        border-radius: 6px;
+        border: 1px solid #019c01;
+        background: #019c01;
+        color: #ffffff;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .btn-filter-apply:hover { background: #017a01; }
+
+    .btn-filter-clear {
+        font-size: 0.82rem;
+        font-weight: 600;
+        padding: 7px 12px;
+        border-radius: 6px;
+        border: 1px solid #cbd5e1;
+        background: #ffffff;
+        color: #475569;
+        text-decoration: none;
+    }
+    .btn-filter-clear:hover { background: #f8fafc; }
+
+    /* ── Panels & Tables ── */
+    .comm-panel {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        overflow: hidden;
+    }
+
+    .panel-header-dock {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.15rem 1.25rem;
+        border-bottom: 1px solid #e2e8f0;
+        background: #ffffff;
+    }
+
+    .panel-title-wrap h3 { font-size: 1.05rem; font-weight: 700; margin: 0; color: #0f172a; }
+    .panel-title-wrap p { font-size: 0.80rem; color: #64748b; margin: 2px 0 0 0; }
+
+    .comm-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.84rem;
+    }
+    .comm-table th {
+        background: #f8fafc;
+        color: #64748b;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        padding: 0.85rem 1rem;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .comm-table td {
+        padding: 0.85rem 1rem;
+        border-bottom: 1px solid #f1f5f9;
+        color: #0f172a;
+    }
+    .comm-table tr:hover td { background: #f8fafc; }
+
+    .channel-pill {
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 4px;
+    }
+    .ch-email { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+    .ch-sms   { background: #f0fdfa; color: #0d9488; border: 1px solid #ccfbf1; }
+    .ch-wa    { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 3px 8px;
+        border-radius: 9999px;
+        text-transform: uppercase;
+    }
+    .status-reviewed { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+    .status-pending  { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+    .status-danger   { background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; }
+
+    .payload-preview {
+        display: block;
+        max-width: 280px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-size: 0.80rem;
+        color: #475569;
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    .btn-ctrl-action {
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 6px;
+        border: 1px solid #cbd5e1;
+        background: #ffffff;
+        color: #0f172a;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+    .btn-ctrl-action:hover { background: #f1f5f9; border-color: #94a3b8; }
+
+    .comm-pagination {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+        padding: 0.85rem 1.25rem;
+        border-top: 1px solid #e2e8f0;
+        background: #f8fafc;
+    }
+    .btn-page-ctrl {
+        font-size: 0.80rem;
+        font-weight: 600;
+        color: #0f172a;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        padding: 4px 10px;
+        border-radius: 6px;
+        text-decoration: none;
+    }
+    .btn-page-ctrl:hover { background: #f1f5f9; }
+    .page-current { font-size: 0.80rem; color: #64748b; font-weight: 600; }
+
+    .comm-empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 3.5rem 1.5rem;
+        color: #64748b;
+        gap: 8px;
+    }
+
+    /* ── Slide-Over Drawer ── */
+    .drawer-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(4px);
+        z-index: 9998;
+    }
+    .drawer {
+        display: none;
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 90%;
+        max-width: 500px;
+        background: #ffffff !important;
+        border-left: 1px solid #e2e8f0;
+        box-shadow: -8px 0 24px rgba(0, 0, 0, 0.15);
+        z-index: 9999;
+        flex-direction: column;
+    }
+    .drawer-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.25rem;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .drawer-title-wrap h3 { font-size: 1.15rem; font-weight: 700; margin: 0; color: #0f172a; }
+    .drawer-title-wrap p { font-size: 0.80rem; color: #64748b; margin: 2px 0 0 0; }
+    .btn-close-drawer { background: none; border: none; font-size: 1.4rem; color: #64748b; cursor: pointer; }
+    .drawer-body { padding: 1.25rem; overflow-y: auto; flex: 1; }
+</style>
+
+@* ── JAVASCRIPT INTERACTIONS ── *@
+@section Scripts {
+    <script>
+        function openLogDrawer(id, channel, recipient, date, status, error, payload) {
+            const overlay = document.getElementById('logDrawerOverlay');
+            const drawer = document.getElementById('logDrawer');
+            const content = document.getElementById('drawerLogContent');
+
+            overlay.style.display = 'block';
+            drawer.style.display = 'flex';
+
+            let statusBadge = `<span class="status-badge status-reviewed">${status}</span>`;
+            if (status === 'Failed') statusBadge = `<span class="status-badge status-danger">Failed</span>`;
+            else if (status === 'Pending' || status === 'Retrying') statusBadge = `<span class="status-badge status-pending">${status}</span>`;
+
+            content.innerHTML = `
+                <div style="display:flex; flex-direction:column; gap:16px;">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; padding-bottom:16px; border-bottom:1px solid #e2e8f0;">
+                        <div>
+                            <span style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase;">Dispatch ID</span>
+                            <p style="margin:2px 0 0 0; font-family:'JetBrains Mono', monospace; font-size:0.85rem; font-weight:700; color:#0f172a;">#${id}</p>
+                        </div>
+                        <div>
+                            <span style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase;">Channel</span>
+                            <p style="margin:2px 0 0 0; font-weight:700; color:#0f172a;">${channel}</p>
+                        </div>
+                        <div style="grid-column:span 2;">
+                            <span style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase;">Recipient</span>
+                            <p style="margin:2px 0 0 0; font-size:0.90rem; font-weight:600; color:#0f172a;">${recipient}</p>
+                        </div>
+                        <div>
+                            <span style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase;">Timestamp</span>
+                            <p style="margin:2px 0 0 0; font-size:0.82rem; color:#0f172a;">${new Date(date).toLocaleString()}</p>
+                        </div>
+                        <div>
+                            <span style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase;">Status</span>
+                            <p style="margin:2px 0 0 0;">${statusBadge}</p>
+                        </div>
+                    </div>
+
+                    ${error ? `
+                        <div style="background:#fff1f2; border:1px solid #fecdd3; border-radius:8px; padding:12px 14px;">
+                            <strong style="font-size:0.82rem; color:#e11d48; display:block;">Gateway Diagnostic Error:</strong>
+                            <p style="font-size:0.80rem; color:#be123c; margin:4px 0 0 0; font-family:'JetBrains Mono', monospace;">${error}</p>
+                        </div>
+                    ` : ''}
+
+                    <div>
+                        <span style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase;">Outbound Payload:</span>
+                        <pre style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-top:6px; font-family:'JetBrains Mono', monospace; font-size:0.82rem; color:#0f172a; white-space:pre-wrap; word-break:break-word; max-height:280px; overflow-y:auto;">${payload}</pre>
+                    </div>
+                </div>
+            `;
+        }
+
+        function closeLogDrawer() {
+            document.getElementById('logDrawerOverlay').style.display = 'none';
+            document.getElementById('logDrawer').style.display = 'none';
+        }
+    </script>
+}

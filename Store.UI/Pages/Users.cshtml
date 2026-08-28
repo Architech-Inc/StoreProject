@@ -1,127 +1,237 @@
 @page
 @model StoreUI.Pages.UsersModel
 @{
-    ViewData["Title"] = "User Accounts";
+    ViewData["Title"] = "User Accounts & Security";
     ViewData["ActivePage"] = "Users";
-    ViewData["PageDescription"] = "Manage system user accounts, roles, and account status.";
+    ViewData["PageDescription"] = "Manage system user credentials, security roles, session tokens, and identity lifecycle.";
+    Layout = "~/Pages/Shared/_AppLayout.cshtml";
 }
 
-@section Styles {
-    <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
-}
-
-<div class="ops-page">
-
-    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
-    {
-        <div class="status @(Model.StatusMessage.StartsWith("Error") ? "error" : "ok")">@Model.StatusMessage</div>
-    }
-
-    <div class="filter-bar" style="margin-bottom: 24px; justify-content: space-between;">
-        <form method="get" class="filter-row">
-            <div class="filter-group">
-                <label>Search Users:</label>
-                <div style="display:flex; gap:8px;">
-                    <input type="search" name="search" value="@Model.SearchQuery" placeholder="Username or email..." />
-                    <button type="submit" class="button-secondary">Search</button>
-                </div>
-            </div>
-        </form>
-        <div style="display:flex; gap:8px;">
-            <a href="/ContactRequests" class="button-secondary" style="text-decoration: none;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;">
-                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line>
-                </svg> Contact Requests
+<div class="users-container">
+    @* ── ACTION TOOLBAR ── *@
+    <div class="users-action-bar">
+        <div class="users-status-pill">
+            <span class="status-indicator-dot"></span>
+            <span>Security Identity &amp; Operator Access Governance</span>
+        </div>
+        <div class="users-header-actions">
+            <a href="/ContactRequests" class="btn-users-action btn-users-secondary">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+                Contact Requests
                 @if (Model.PendingContactChangesCount > 0)
                 {
-                    <span class="badge badge-info" style="margin-left: 6px; background:#d97706; color:white;">@Model.PendingContactChangesCount</span>
+                    <span class="badge-pill-alert">@Model.PendingContactChangesCount</span>
                 }
             </a>
-            <button class="button-secondary" type="button" data-open-blade="settingsBlade" onclick="loadSettings()">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="margin-right:4px;">
-                    <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
-                    <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115l.094-.319z"/>
-            </button>
-            <button class="button-primary" type="button" data-open-blade="userBlade">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="margin-right:4px;">
-                    <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"/>
-                </svg> New User
+            <a href="/RoleMatrix" class="btn-users-action btn-users-secondary">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                Role Matrix
+            </a>
+            <button type="button" class="btn-users-action btn-users-primary" onclick="openCreateUserModal()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                </svg>
+                Create User
             </button>
         </div>
     </div>
 
-    <section class="card" style="padding:0; overflow:hidden;">
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="users-alert @(Model.StatusMessage.StartsWith("Error") ? "error" : "ok")">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>@Model.StatusMessage</span>
+        </div>
+    }
+
+    @* ── 4-CARD FLUENT 2.0 KPI GRID ── *@
+    <div class="users-kpi-grid">
+        @* KPI 1: Total Users *@
+        <div class="users-kpi-card">
+            <div class="kpi-icon-wrap kpi-emerald">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+            </div>
+            <div class="kpi-data">
+                <span class="kpi-label">Registered Accounts</span>
+                <span class="kpi-value">@Model.TotalUsers.ToString("N0") <small>Users</small></span>
+                <span class="kpi-subtext">System personnel accounts</span>
+            </div>
+        </div>
+
+        @* KPI 2: Active Operators *@
+        <div class="users-kpi-card">
+            <div class="kpi-icon-wrap kpi-teal">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+            </div>
+            <div class="kpi-data">
+                <span class="kpi-label">Active Credentials</span>
+                <span class="kpi-value text-emerald">@Model.ActiveUsersCount.ToString("N0") <small>Active</small></span>
+                <span class="kpi-subtext">Operational login access</span>
+            </div>
+        </div>
+
+        @* KPI 3: Suspended Accounts *@
+        <div class="users-kpi-card">
+            <div class="kpi-icon-wrap @(Model.SuspendedUsersCount > 0 ? "kpi-rose" : "kpi-emerald")">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                </svg>
+            </div>
+            <div class="kpi-data">
+                <span class="kpi-label">Suspended Accounts</span>
+                <span class="kpi-value" style="color:@(Model.SuspendedUsersCount > 0 ? "#e11d48" : "#059669");">
+                    @Model.SuspendedUsersCount.ToString("N0") <small>Locked</small>
+                </span>
+                <span class="kpi-subtext">@(Model.SuspendedUsersCount > 0 ? "Access restricted by admin" : "No locked accounts")</span>
+            </div>
+        </div>
+
+        @* KPI 4: Pending Contact Requests *@
+        <div class="users-kpi-card">
+            <div class="kpi-icon-wrap @(Model.PendingContactChangesCount > 0 ? "kpi-amber" : "kpi-purple")">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+            <div class="kpi-data">
+                <span class="kpi-label">Contact Verification</span>
+                <span class="kpi-value" style="color:@(Model.PendingContactChangesCount > 0 ? "#d97706" : "#7c3aed");">
+                    @Model.PendingContactChangesCount.ToString("N0") <small>Pending</small>
+                </span>
+                <span class="kpi-subtext">@(Model.PendingContactChangesCount > 0 ? "Requests awaiting review" : "All requests approved")</span>
+            </div>
+        </div>
+    </div>
+
+    @* ── SEARCH & FILTER DOCK ── *@
+    <div class="users-filter-dock">
+        <form method="get" class="users-filter-form">
+            <div class="filter-field">
+                <label for="searchInput">Search User Accounts</label>
+                <div style="display:flex; gap:8px;">
+                    <input type="search" id="searchInput" name="search" value="@Model.SearchQuery" placeholder="Search by username, email..." class="form-control form-control-sm" />
+                    <button type="submit" class="btn-filter-apply">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        Search
+                    </button>
+                    @if (!string.IsNullOrWhiteSpace(Model.SearchQuery))
+                    {
+                        <a href="/Users" class="btn-filter-clear">Clear</a>
+                    }
+                </div>
+            </div>
+        </form>
+    </div>
+
+    @* ── USERS TABLE PANEL ── *@
+    <div class="users-panel">
+        <div class="panel-header-dock">
+            <div class="panel-title-wrap">
+                <h3>User Accounts Directory</h3>
+                <p>System operators, cashier terminals, and supervisory credentials.</p>
+            </div>
+        </div>
+
         @if (!Model.Users.Any())
         {
-            <div class="empty-state">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div class="users-empty-state">
+                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
                 <h4>No Users Found</h4>
-                <p>There are no records matching your criteria.</p>
+                <p>There are no operator records matching your search query.</p>
             </div>
         }
         else
         {
-            <div class="table-wrap" style="margin:0; border:none; border-radius:0;">
-                <table>
+            <div class="table-responsive">
+                <table class="users-table">
                     <thead>
                         <tr>
-                            <th>Avatar</th>
-                            <th>Username</th>
-                            <th>Role</th>
-                            <th>Status</th>
-                            <th>Created</th>
-                            <th></th>
+                            <th style="width:50px; text-align:center;">Avatar</th>
+                            <th>Username &amp; Identity</th>
+                            <th>Assigned Role</th>
+                            <th style="text-align:center;">Account Status</th>
+                            <th>Created Date</th>
+                            <th style="text-align:right;">Security Controls</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var u in Model.Users)
                         {
                             <tr>
-                                <td>
+                                <td style="text-align:center;">
                                     @if (!string.IsNullOrEmpty(u.ThumbnailUrl))
                                     {
-                                        <img src="@u.ThumbnailUrl" alt="Avatar" style="width:32px;height:32px;border-radius:50%;object-fit:cover;cursor:pointer;" loading="lazy" width="32" height="32" onclick="viewImage('@(u.FullImageUrl ?? u.ThumbnailUrl)')" />
+                                        <img src="@u.ThumbnailUrl" alt="@u.Username" class="user-avatar-img" onclick="openUserDrawer('@u.UserId')" />
                                     }
                                     else
                                     {
-                                        <div style="width:32px;height:32px;border-radius:50%;background-color:var(--ops-border);display:inline-block;"></div>
+                                        <div class="user-avatar-placeholder" onclick="openUserDrawer('@u.UserId')">
+                                            @(u.Username.Length > 0 ? u.Username[0].ToString().ToUpper() : "U")
+                                        </div>
                                     }
-                                <td>
-                                    <strong style="cursor:pointer;color:var(--brand, #019c01);" onclick="openUserDrawer('@u.UserId')">@u.Username</strong>
                                 </td>
                                 <td>
+                                    <strong class="user-name-link" onclick="openUserDrawer('@u.UserId')">@u.Username</strong>
+                                    <span style="font-size:0.75rem; color:#64748b; display:block;">@(u.PrimaryEmail ?? "No email associated")</span>
+                                </td>
+                                <td>
+                                    <span class="role-pill">
+                                        @(u.RoleName ?? (u.RoleId == 1 ? "Admin" : u.RoleId == 2 ? "Manager" : "Cashier / Staff"))
+                                    </span>
+                                </td>
+                                <td style="text-align:center;">
                                     @if (u.Status == Store.Models.Enums.UserStatus.Active)
                                     {
-                                        <span class="badge badge-green">Active</span>
+                                        <span class="status-badge status-reviewed">Active</span>
                                     }
                                     else if (u.Status == Store.Models.Enums.UserStatus.Suspended)
                                     {
-                                        <span class="badge badge-red">Suspended</span>
+                                        <span class="status-badge status-danger">Suspended</span>
                                     }
                                     else
                                     {
-                                        <span class="badge badge-gray">@u.Status</span>
+                                        <span class="status-badge status-pending">@u.Status</span>
                                     }
                                 </td>
-                                <td>@u.DateCreated.ToString("yyyy-MM-dd")</td>
-                                <td>
-                                    <div style="display:flex; gap:4px; flex-wrap:nowrap;">
-                                        <button type="button" class="button-secondary" onclick="openEdit(@System.Text.Json.JsonSerializer.Serialize(new { userId = u.UserId, username = u.Username, roleId = u.RoleId, status = u.Status.ToString() }))">Edit</button>
+                                <td style="font-size:0.80rem; color:#64748b;">
+                                    @u.DateCreated.ToString("dd MMM yyyy")
+                                </td>
+                                <td style="text-align:right;">
+                                    <div style="display:inline-flex; gap:6px; align-items:center;">
+                                        <button type="button" class="btn-ctrl-action" onclick="openEditUserModal('@u.UserId', '@Html.Raw(Html.Encode(u.Username))', '@Html.Raw(Html.Encode(u.PrimaryEmail ?? ""))', @u.RoleId, '@u.Status')">
+                                            Edit
+                                        </button>
                                         
-                                        <form method="post" asp-page-handler="IssuePassword" style="margin:0;">
+                                        <form method="post" asp-page-handler="IssuePassword" style="margin:0; display:inline;">
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="userId" value="@u.UserId" />
-                                            <button type="submit" class="button-secondary" data-confirm="Issue a temporary password for @u.Username?" data-confirm-type="warning">Issue Pwd</button>
+                                            <button type="submit" class="btn-ctrl-action" data-confirm="Generate a temporary password for @u.Username?" data-confirm-type="warning">
+                                                Reset Pwd
+                                            </button>
                                         </form>
 
                                         @if (u.Status == Store.Models.Enums.UserStatus.Active)
                                         {
-                                            <form method="post" asp-page-handler="Suspend" style="margin:0;">
+                                            <form method="post" asp-page-handler="Suspend" style="margin:0; display:inline;">
                                                 @Html.AntiForgeryToken()
                                                 <input type="hidden" name="userId" value="@u.UserId" />
-                                                <button type="submit" class="button-command danger" data-confirm="Suspend account @u.Username?" data-confirm-type="warning">Suspend</button>
+                                                <button type="submit" class="btn-ctrl-danger" data-confirm="Suspend user account @u.Username?" data-confirm-type="danger">
+                                                    Suspend
+                                                </button>
                                             </form>
                                         }
                                     </div>
@@ -134,425 +244,712 @@
 
             @if (Model.TotalPages > 1)
             {
-                <div style="padding:16px;">
-                    <nav class="pagination" aria-label="User pages">
-                        @if (Model.PageNumber > 1)
-                        {
-                            <a href="?page=@(Model.PageNumber - 1)&search=@Uri.EscapeDataString(Model.SearchQuery ?? "")">‹ Prev</a>
-                        }
-                        <span class="active">@Model.PageNumber / @Model.TotalPages</span>
-                        @if (Model.PageNumber < Model.TotalPages)
-                        {
-                            <a href="?page=@(Model.PageNumber + 1)&search=@Uri.EscapeDataString(Model.SearchQuery ?? "")">Next ›</a>
-                        }
-                    </nav>
+                <div class="users-pagination">
+                    @if (Model.PageNumber > 1)
+                    {
+                        <a href="?page=@(Model.PageNumber - 1)&search=@Uri.EscapeDataString(Model.SearchQuery ?? "")" class="btn-page-ctrl">&larr; Previous</a>
+                    }
+                    <span class="page-current">Page @Model.PageNumber of @Model.TotalPages</span>
+                    @if (Model.PageNumber < Model.TotalPages)
+                    {
+                        <a href="?page=@(Model.PageNumber + 1)&search=@Uri.EscapeDataString(Model.SearchQuery ?? "")" class="btn-page-ctrl">Next &rarr;</a>
+                    }
                 </div>
             }
         }
-    </section>
-</div>
-
-<!-- ── Create/Edit User Blade ────────────────────────────────── -->
-<div class="blade-overlay" id="userBladeOverlay"></div>
-<div class="blade" id="userBlade" data-overlay-id="userBladeOverlay">
-    <div class="blade-header">
-        <h3 id="userBladeTitle">New User</h3>
-        <button type="button" class="btn-close" data-close-blade="userBlade" aria-label="Close">×</button>
-    </div>
-    <div class="blade-body">
-        <form method="post" asp-page-handler="Create" id="userForm" enctype="multipart/form-data">
-            @Html.AntiForgeryToken()
-            <input type="hidden" asp-for="EditUserId" id="editUserId" />
-
-            <div class="form-grid" style="grid-template-columns: 1fr;">
-                <div>
-                    <label for="usernameField">Username <span style="color:var(--ops-danger);">*</span></label>
-                    <input asp-for="NewUsername" id="usernameField" required minlength="3" maxlength="100" autocomplete="off" />
-                </div>
-
-                <div id="createFields" class="form-grid" style="grid-template-columns: 1fr; gap: inherit;">
-                    <div>
-                        <label for="emailField">Email <span style="color:var(--ops-danger);">*</span></label>
-                        <input asp-for="NewEmail" id="emailField" type="email" />
-                    </div>
-                    <div>
-                        <label for="passwordField">Password <span style="color:var(--ops-danger);">*</span></label>
-                        <input asp-for="NewPassword" id="passwordField" type="password" minlength="8" maxlength="128" />
-                    </div>
-                </div>
-
-                <div>
-                    <label for="roleField">Role <span style="color:var(--ops-danger);">*</span></label>
-                    <select asp-for="NewRoleId" id="roleField">
-                        <option value="1">Admin</option>
-                        <option value="2">Manager</option>
-                        <option value="3">Cashier</option>
-                    </select>
-                </div>
-
-                <div id="statusRow" style="display:none;">
-                    <label for="statusField">Status</label>
-                    <select asp-for="NewStatus" id="statusField">
-                        <option value="Active">Active</option>
-                        <option value="Suspended">Suspended</option>
-                    </select>
-                </div>
-                
-                <div style="margin-top:16px;">
-                    <label for="imageUpload">Avatar</label>
-                    <input type="file" asp-for="ImageUpload" id="imageUpload" accept="image/*" data-crop="true" />
-                </div>
-            </div>        </form>
-    </div>
-    <div class="blade-footer">
-        <button type="button" class="button-secondary" data-close-blade="userBlade">Cancel</button>
-        <button type="submit" form="userForm" class="button-primary" id="submitBtn">Create User</button>
     </div>
 </div>
 
-<!-- ── Security Settings Blade ────────────────────────────────── -->
-<div class="blade-overlay" id="settingsBladeOverlay"></div>
-<div class="blade" id="settingsBlade" data-overlay-id="settingsBladeOverlay">
-    <div class="blade-header">
-        <h3>Security Settings</h3>
-        <button type="button" class="btn-close" data-close-blade="settingsBlade" aria-label="Close">×</button>
+@* ── CREATE / EDIT USER MODAL ── *@
+<div class="custom-modal-overlay" id="userModalOverlay" onclick="closeUserModal()"></div>
+<div class="custom-modal" id="userModal">
+    <div class="custom-modal-header">
+        <h3 id="userModalTitle">Create User Account</h3>
+        <button type="button" class="btn-close-modal" onclick="closeUserModal()">&times;</button>
     </div>
-    <div class="blade-body">
-        <form id="settingsForm" onsubmit="saveSettings(event)">
-            <div class="form-grid" style="grid-template-columns: 1fr;">
-                <div>
-                    <label for="recoveryMethodField">Password Recovery Method</label>
-                    <p style="font-size: 12px; color: var(--ops-gray); margin: 0 0 8px 0;">Controls which methods users can use to recover passwords.</p>
-                    <select id="recoveryMethodField" required>
-                        <option value="Both">Both (OTP & Temp Password)</option>
-                        <option value="OTP">OTP Only</option>
-                        <option value="TempPassword">Temp Password Only</option>
-                    </select>
-                </div>
+    <form method="post" asp-page-handler="Create" enctype="multipart/form-data" id="userForm">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="EditUserId" id="modalEditUserId" />
+        <input type="hidden" asp-for="CropX" id="modalCropX" />
+        <input type="hidden" asp-for="CropY" id="modalCropY" />
+        <input type="hidden" asp-for="CropW" id="modalCropW" />
+        <input type="hidden" asp-for="CropH" id="modalCropH" />
+
+        <div class="custom-modal-body">
+            <div class="form-group">
+                <label asp-for="NewUsername" class="form-label">Username <span class="text-danger">*</span></label>
+                <input asp-for="NewUsername" id="modalUsername" class="form-control" placeholder="e.g. jdoe" required maxlength="100" />
             </div>
-            <div id="settingsAlert" class="status" style="display:none; margin-top:16px;"></div>
-        </form>
+
+            <div class="form-group" id="emailGroup">
+                <label asp-for="NewEmail" class="form-label">Email Address <span class="text-danger">*</span></label>
+                <input asp-for="NewEmail" id="modalEmail" type="email" class="form-control" placeholder="e.g. jdoe@clexanfoods.cm" maxlength="200" />
+            </div>
+
+            <div class="form-group" id="passwordGroup">
+                <label asp-for="NewPassword" class="form-label">Initial Password <span class="text-danger">*</span></label>
+                <input asp-for="NewPassword" id="modalPassword" type="password" class="form-control" placeholder="Minimum 8 characters" />
+            </div>
+
+            <div class="form-group">
+                <label asp-for="NewRoleId" class="form-label">System Role <span class="text-danger">*</span></label>
+                <select asp-for="NewRoleId" id="modalRoleId" class="form-control" required>
+                    <option value="1">Admin</option>
+                    <option value="2">Manager</option>
+                    <option value="3" selected>Cashier / Staff</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="statusGroup" style="display:none;">
+                <label asp-for="NewStatus" class="form-label">Account Status</label>
+                <select asp-for="NewStatus" id="modalStatus" class="form-control">
+                    <option value="Active">Active</option>
+                    <option value="Suspended">Suspended</option>
+                    <option value="Inactive">Inactive</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Profile Avatar Image</label>
+                <input type="file" asp-for="ImageUpload" id="modalImageUpload" class="form-control" accept="image/*" />
+            </div>
+        </div>
+        <div class="custom-modal-footer">
+            <button type="button" class="btn-users-action btn-users-secondary" onclick="closeUserModal()">Cancel</button>
+            <button type="submit" class="btn-users-action btn-users-primary" id="btnSubmitUser">Save User</button>
+        </div>
+    </form>
+</div>
+
+@* ── USER 360 INSPECTOR DRAWER ── *@
+<div class="drawer-overlay" id="userDrawerOverlay" onclick="closeUserDrawer()"></div>
+<div class="drawer" id="userDrawer">
+    <div class="drawer-header">
+        <div class="drawer-title-wrap">
+            <h3 id="drawerUsername">User Profile</h3>
+            <p>Identity details, security tokens, and activity profile.</p>
+        </div>
+        <button type="button" class="btn-close-drawer" onclick="closeUserDrawer()">&times;</button>
     </div>
-    <div class="blade-footer">
-        <button type="button" class="button-secondary" data-close-blade="settingsBlade">Cancel</button>
-        <button type="submit" form="settingsForm" class="button-primary" id="saveSettingsBtn">Save Settings</button>
+    <div class="drawer-body" id="drawerContent">
+        <div class="drawer-loading">
+            <svg class="spin-icon" xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <circle cx="12" cy="12" r="10" stroke-width="3" stroke-dasharray="32" stroke-linecap="round"></circle>
+            </svg>
+            <p>Loading operator profile…</p>
+        </div>
     </div>
 </div>
 
-<!-- ── User 360 Slide-Over Drawer ───────────────────────────── -->
-<div class="crm-drawer-backdrop" id="userDrawerBackdrop" onclick="closeUserDrawer()"></div>
-<aside class="crm-drawer" id="userDrawer" aria-label="User 360 Profile">
-    <div class="crm-drawer-header">
-        <div style="display:flex;gap:14px;align-items:center;">
-            <div class="drawer-avatar" id="drawerUserInitials" style="width:48px;height:48px;border-radius:50%;background:#e5e7eb;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:1.2rem;">--</div>
-            <div>
-                <h3 id="drawerUsername" style="margin:0 0 4px 0;font-size:1.25rem;">Username</h3>
-                <span id="drawerRoleBadge" class="badge badge-blue">Role</span>
-                <span id="drawerStatusBadge" class="badge badge-green">Active</span>
-            </div>
-        </div>
-        <button type="button" class="drawer-close-btn" onclick="closeUserDrawer()" title="Close Drawer">&times;</button>
-    </div>
+@* ── STYLESHEET ── *@
+<style>
+    .users-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+        padding-bottom: 3rem;
+    }
 
-    <!-- Quick Actions -->
-    <div style="padding:16px; display:flex; gap:8px; border-bottom:1px solid var(--border);">
-        <button type="button" class="button-primary" style="flex:1;" onclick="alert('Manage settings not implemented')">Manage Settings</button>
-        <form method="post" asp-page-handler="RevokeSessions" style="flex:1; margin:0; display:flex;">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="userId" id="revokeSessionsUserId" />
-            <button type="submit" class="button-secondary" style="flex:1; width:100%;" id="drawerRevokeSessionsBtn" data-confirm="Revoke all active sessions for this user?" data-confirm-type="warning">Revoke Sessions</button>
-        </form>
-    </div>
+    .users-action-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+        padding-bottom: 0.25rem;
+    }
 
-    <div class="drawer-nav-tabs">
-        <button type="button" class="drawer-tab-btn active" onclick="switchUserTab(event, 'tabUserOverview')">Overview</button>
-        <button type="button" class="drawer-tab-btn" onclick="switchUserTab(event, 'tabUserActivity')">Activity Log</button>
-        <button type="button" class="drawer-tab-btn" onclick="switchUserTab(event, 'tabUserChanges')">Contact Changes</button>
-        <button type="button" class="drawer-tab-btn" onclick="switchUserTab(event, 'tabUserSessions')">Active Sessions</button>
-    </div>
+    .users-status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        padding: 5px 14px;
+        border-radius: 9999px;
+        background: #ecfdf5;
+        color: #059669;
+        border: 1px solid #a7f3d0;
+    }
 
-    <div class="crm-drawer-body">
-        <!-- Tab 1: Overview -->
-        <div id="tabUserOverview" class="drawer-tab-content active" style="display:block;">
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
-                <div style="background:var(--canvas); padding:16px; border-radius:8px; border:1px solid var(--border);">
-                    <div style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:4px;">Date Created</div>
-                    <div id="drawerDateCreated" style="font-weight:600;">--</div>
-                </div>
-                <div style="background:var(--canvas); padding:16px; border-radius:8px; border:1px solid var(--border);">
-                    <div style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:4px;">2FA Status</div>
-                    <div id="drawer2FAStatus" style="font-weight:600;">--</div>
-                </div>
-            </div>
+    .status-indicator-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #059669;
+    }
 
-            <h4>Contact Details</h4>
-            <div style="background:var(--canvas); padding:16px; border-radius:8px; border:1px solid var(--border); margin-bottom:16px;">
-                <div style="margin-bottom:8px;"><strong>Email:</strong> <span id="drawerEmail">--</span></div>
-                <div><strong>Phone:</strong> <span id="drawerPhone">--</span></div>
-            </div>
+    .users-header-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
 
-            <h4>Linked Employee</h4>
-            <div id="drawerLinkedEmployee" style="background:var(--canvas); padding:16px; border-radius:8px; border:1px solid var(--border);">
-                <span style="color:var(--text-secondary);">No linked employee.</span>
-            </div>
-        </div>
+    .btn-users-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .btn-users-primary {
+        background: #019c01;
+        color: #ffffff !important;
+        border: 1px solid #019c01;
+    }
+    .btn-users-primary:hover {
+        background: #017a01;
+        border-color: #017a01;
+        transform: translateY(-1px);
+    }
+    .btn-users-secondary {
+        background: #ffffff;
+        color: #0f172a !important;
+        border: 1px solid #e2e8f0;
+    }
+    .btn-users-secondary:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+    }
 
-        <!-- Tab 2: Activity Log -->
-        <div id="tabUserActivity" class="drawer-tab-content" style="display:none;">
-            <div id="drawerActivityList" style="display:flex; flex-direction:column; gap:8px;">
-                <div style="text-align:center; color:var(--text-secondary); padding:20px;">No recent activity.</div>
-            </div>
-        </div>
+    .badge-pill-alert {
+        font-size: 0.72rem;
+        font-weight: 700;
+        background: #d97706;
+        color: #ffffff;
+        padding: 1px 6px;
+        border-radius: 9999px;
+        margin-left: 4px;
+    }
 
-        <!-- Tab 3: Contact Changes -->
-        <div id="tabUserChanges" class="drawer-tab-content" style="display:none;">
-            <div id="drawerChangesList" style="display:flex; flex-direction:column; gap:8px;">
-                <div style="text-align:center; color:var(--text-secondary); padding:20px;">No pending contact changes.</div>
-            </div>
-        </div>
+    .users-alert {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 16px;
+        border-radius: 8px;
+        font-size: 0.85rem;
+    }
+    .users-alert.ok {
+        background: #ecfdf5;
+        color: #059669;
+        border: 1px solid #a7f3d0;
+    }
+    .users-alert.error {
+        background: #fff1f2;
+        color: #e11d48;
+        border: 1px solid #fecdd3;
+    }
 
-        <!-- Tab 4: Active Sessions -->
-        <div id="tabUserSessions" class="drawer-tab-content" style="display:none;">
-            <div id="drawerSessionsList" style="display:flex; flex-direction:column; gap:8px;">
-                <div style="text-align:center; color:var(--text-secondary); padding:20px;">No active sessions.</div>
-            </div>
-        </div>
-    </div>
-</aside>
+    /* ── KPI Grid ── */
+    .users-kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1rem;
+    }
 
+    .users-kpi-card {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 1.15rem 1.25rem;
+        border-radius: 12px;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .users-kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    }
+
+    .kpi-icon-wrap {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .kpi-emerald { background: #ecfdf5; color: #059669; }
+    .kpi-teal    { background: #f0fdfa; color: #0d9488; }
+    .kpi-purple  { background: #f5f3ff; color: #7c3aed; }
+    .kpi-amber   { background: #fffbeb; color: #d97706; }
+    .kpi-rose    { background: #fff1f2; color: #e11d48; }
+
+    .kpi-data {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .kpi-label {
+        font-size: 0.78rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #64748b;
+    }
+
+    .kpi-value {
+        font-size: 1.45rem;
+        font-weight: 800;
+        color: #0f172a;
+        line-height: 1.2;
+        margin: 2px 0;
+    }
+    .kpi-value small {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: #64748b;
+    }
+
+    .kpi-subtext {
+        font-size: 0.75rem;
+        color: #94a3b8;
+    }
+
+    /* ── Filter Dock ── */
+    .users-filter-dock {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+
+    .users-filter-form {
+        display: flex;
+        align-items: flex-end;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .filter-field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        width: 100%;
+        max-width: 450px;
+    }
+    .filter-field label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #64748b;
+        text-transform: uppercase;
+    }
+
+    .btn-filter-apply {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        padding: 7px 14px;
+        border-radius: 6px;
+        border: 1px solid #019c01;
+        background: #019c01;
+        color: #ffffff;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .btn-filter-apply:hover { background: #017a01; }
+
+    .btn-filter-clear {
+        font-size: 0.82rem;
+        font-weight: 600;
+        padding: 7px 12px;
+        border-radius: 6px;
+        border: 1px solid #cbd5e1;
+        background: #ffffff;
+        color: #475569;
+        text-decoration: none;
+    }
+    .btn-filter-clear:hover { background: #f8fafc; }
+
+    /* ── Panels & Tables ── */
+    .users-panel {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        overflow: hidden;
+    }
+
+    .panel-header-dock {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.15rem 1.25rem;
+        border-bottom: 1px solid #e2e8f0;
+        background: #ffffff;
+    }
+
+    .panel-title-wrap h3 {
+        font-size: 1.05rem;
+        font-weight: 700;
+        margin: 0;
+        color: #0f172a;
+    }
+    .panel-title-wrap p {
+        font-size: 0.80rem;
+        color: #64748b;
+        margin: 2px 0 0 0;
+    }
+
+    .users-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.84rem;
+    }
+    .users-table th {
+        background: #f8fafc;
+        color: #64748b;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        padding: 0.85rem 1rem;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .users-table td {
+        padding: 0.85rem 1rem;
+        border-bottom: 1px solid #f1f5f9;
+        color: #0f172a;
+    }
+    .users-table tr:hover td {
+        background: #f8fafc;
+    }
+
+    .user-avatar-img {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        object-fit: cover;
+        cursor: pointer;
+        border: 2px solid #e2e8f0;
+        transition: transform 0.15s ease;
+    }
+    .user-avatar-img:hover {
+        transform: scale(1.1);
+        border-color: #019c01;
+    }
+
+    .user-avatar-placeholder {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: #e2e8f0;
+        color: #334155;
+        font-weight: 700;
+        font-size: 0.85rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+    }
+
+    .user-name-link {
+        font-size: 0.88rem;
+        color: #019c01;
+        cursor: pointer;
+    }
+    .user-name-link:hover {
+        text-decoration: underline;
+    }
+
+    .role-pill {
+        font-size: 0.75rem;
+        font-weight: 700;
+        background: #f1f5f9;
+        color: #334155;
+        border: 1px solid #cbd5e1;
+        padding: 2px 8px;
+        border-radius: 4px;
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 3px 8px;
+        border-radius: 9999px;
+        text-transform: uppercase;
+    }
+    .status-reviewed { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+    .status-pending  { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+    .status-danger   { background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; }
+
+    .btn-ctrl-action {
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 6px;
+        border: 1px solid #cbd5e1;
+        background: #ffffff;
+        color: #0f172a;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+    .btn-ctrl-action:hover {
+        background: #f1f5f9;
+        border-color: #94a3b8;
+    }
+
+    .btn-ctrl-danger {
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 6px;
+        border: 1px solid #fecdd3;
+        background: #fff1f2;
+        color: #e11d48;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+    .btn-ctrl-danger:hover {
+        background: #e11d48;
+        color: #ffffff;
+    }
+
+    .users-pagination {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+        padding: 0.85rem 1.25rem;
+        border-top: 1px solid #e2e8f0;
+        background: #f8fafc;
+    }
+    .btn-page-ctrl {
+        font-size: 0.80rem;
+        font-weight: 600;
+        color: #0f172a;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        padding: 4px 10px;
+        border-radius: 6px;
+        text-decoration: none;
+    }
+    .btn-page-ctrl:hover { background: #f1f5f9; }
+    .page-current { font-size: 0.80rem; color: #64748b; font-weight: 600; }
+
+    .users-empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 3.5rem 1.5rem;
+        color: #64748b;
+        gap: 8px;
+    }
+
+    /* ── Modals & Drawers ── */
+    .custom-modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(4px);
+        z-index: 9998;
+    }
+    .custom-modal {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 90%;
+        max-width: 520px;
+        background: #ffffff !important;
+        border-radius: 12px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+        z-index: 9999;
+        overflow: hidden;
+    }
+    .custom-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.15rem 1.25rem;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .custom-modal-header h3 { font-size: 1.1rem; font-weight: 700; margin: 0; color: #0f172a; }
+    .btn-close-modal { background: none; border: none; font-size: 1.4rem; color: #64748b; cursor: pointer; }
+    .custom-modal-body { padding: 1.25rem; display: flex; flex-direction: column; gap: 12px; max-height: 70vh; overflow-y: auto; }
+    .custom-modal-footer { padding: 1rem 1.25rem; border-top: 1px solid #e2e8f0; background: #f8fafc; display: flex; justify-content: flex-end; gap: 8px; }
+
+    .drawer-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(4px);
+        z-index: 9998;
+    }
+    .drawer {
+        display: none;
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 90%;
+        max-width: 480px;
+        background: #ffffff !important;
+        border-left: 1px solid #e2e8f0;
+        box-shadow: -8px 0 24px rgba(0, 0, 0, 0.15);
+        z-index: 9999;
+        flex-direction: column;
+    }
+    .drawer-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.25rem;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .drawer-title-wrap h3 { font-size: 1.15rem; font-weight: 700; margin: 0; color: #0f172a; }
+    .drawer-title-wrap p { font-size: 0.80rem; color: #64748b; margin: 2px 0 0 0; }
+    .btn-close-drawer { background: none; border: none; font-size: 1.4rem; color: #64748b; cursor: pointer; }
+    .drawer-body { padding: 1.25rem; overflow-y: auto; flex: 1; }
+
+    .drawer-loading {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 3rem 1rem;
+        color: #64748b;
+        gap: 12px;
+    }
+    .spin-icon { animation: spin 1s linear infinite; }
+    @@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+</style>
+
+@* ── JAVASCRIPT INTERACTIONS ── *@
 @section Scripts {
-        document.addEventListener('DOMContentLoaded', () => {
-            const openNewBtn = document.querySelector('[data-open-blade="userBlade"]');
-            const blade = document.getElementById('userBlade');
-            const overlay = document.getElementById('userBladeOverlay');
-            
-            const emailField = document.getElementById('emailField');
-            const passwordField = document.getElementById('passwordField');
+    <script>
+        function openCreateUserModal() {
+            document.getElementById('userModalTitle').textContent = 'Create User Account';
+            document.getElementById('modalEditUserId').value = '';
+            document.getElementById('modalUsername').value = '';
+            document.getElementById('modalEmail').value = '';
+            document.getElementById('modalPassword').value = '';
+            document.getElementById('modalRoleId').value = '3';
+            document.getElementById('emailGroup').style.display = 'block';
+            document.getElementById('passwordGroup').style.display = 'block';
+            document.getElementById('statusGroup').style.display = 'none';
+            document.getElementById('btnSubmitUser').textContent = 'Create Account';
 
-            function openCreate() {
-                document.getElementById('userBladeTitle').textContent = 'New User';
-                document.getElementById('editUserId').value = '';
-                document.getElementById('usernameField').value = '';
-                emailField.value = '';
-                passwordField.value = '';
-                document.getElementById('roleField').value = '3';
-                
-                // Show create fields and require them
-                document.getElementById('createFields').style.display = '';
-                emailField.required = true;
-                passwordField.required = true;
-                
-                document.getElementById('statusRow').style.display = 'none';
-                document.getElementById('submitBtn').textContent = 'Create User';
-                
-                blade.classList.add('open');
-                overlay.classList.add('open');
-            }
+            document.getElementById('userModalOverlay').style.display = 'block';
+            document.getElementById('userModal').style.display = 'block';
+        }
 
-            if (openNewBtn && blade && overlay) {
-                openNewBtn.addEventListener('click', openCreate);
-            }
+        function openEditUserModal(userId, username, email, roleId, status) {
+            document.getElementById('userModalTitle').textContent = 'Edit User: ' + username;
+            document.getElementById('modalEditUserId').value = userId;
+            document.getElementById('modalUsername').value = username;
+            document.getElementById('modalEmail').value = email;
+            document.getElementById('modalRoleId').value = roleId;
+            document.getElementById('modalStatus').value = status;
+            document.getElementById('emailGroup').style.display = 'none';
+            document.getElementById('passwordGroup').style.display = 'none';
+            document.getElementById('statusGroup').style.display = 'block';
+            document.getElementById('btnSubmitUser').textContent = 'Save Changes';
 
-            // Expose openEdit to window so onclick can call it
-            window.openEdit = function(data) {
-                document.getElementById('userBladeTitle').textContent = 'Edit User';
-                document.getElementById('editUserId').value = data.userId;
-                document.getElementById('usernameField').value = data.username;
-                document.getElementById('roleField').value = data.roleId;
-                document.getElementById('statusField').value = data.status;
-                
-                // Hide create fields and remove required
-                document.getElementById('createFields').style.display = 'none';
-                emailField.required = false;
-                passwordField.required = false;
-                
-                document.getElementById('statusRow').style.display = '';
-                document.getElementById('submitBtn').textContent = 'Save Changes';
-                
-                blade.classList.add('open');
-                overlay.classList.add('open');
-            };
+            document.getElementById('userModalOverlay').style.display = 'block';
+            document.getElementById('userModal').style.display = 'block';
+        }
 
-            // Security Settings Logic
-            const settingsBlade = document.getElementById('settingsBlade');
-            const settingsOverlay = document.getElementById('settingsBladeOverlay');
-            
-            window.loadSettings = async function() {
-                try {
-                    const response = await fetch('/api/settings/Auth:PasswordRecoveryMethod');
-                    if (response.ok) {
-                        const result = await response.json();
-                        document.getElementById('recoveryMethodField').value = result.data || 'Both';
-                    }
-                    settingsBlade.classList.add('open');
-                    settingsOverlay.classList.add('open');
-                } catch (e) {
-                    console.error('Failed to load settings', e);
-                }
-            };
+        function closeUserModal() {
+            document.getElementById('userModalOverlay').style.display = 'none';
+            document.getElementById('userModal').style.display = 'none';
+        }
 
-            window.saveSettings = async function(e) {
-                e.preventDefault();
-                const btn = document.getElementById('saveSettingsBtn');
-                const alertBox = document.getElementById('settingsAlert');
-                btn.disabled = true;
-                btn.textContent = 'Saving...';
-                
-                try {
-                    const method = document.getElementById('recoveryMethodField').value;
-                    const response = await fetch('/api/settings/Auth:PasswordRecoveryMethod', {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ value: method })
-                    });
-                    
-                    const result = await response.json();
-                    if (response.ok) {
-                        alertBox.className = 'status ok';
-                        alertBox.textContent = result.message || 'Settings saved successfully.';
-                        alertBox.style.display = 'block';
-                        setTimeout(() => {
-                            settingsBlade.classList.remove('open');
-                            settingsOverlay.classList.remove('open');
-                            alertBox.style.display = 'none';
-                        }, 1500);
-                    } else {
-                        throw new Error(result.error?.message || 'Failed to save');
-                    }
-                } catch (err) {
-                    alertBox.className = 'status error';
-                    alertBox.textContent = err.message;
-                    alertBox.style.display = 'block';
-                } finally {
-                    btn.disabled = false;
-                    btn.textContent = 'Save Settings';
-                }
-            };
-        });
-        // User 360 Drawer Logic
         async function openUserDrawer(userId) {
-            const backdrop = document.getElementById('userDrawerBackdrop');
+            const overlay = document.getElementById('userDrawerOverlay');
             const drawer = document.getElementById('userDrawer');
-            
-            // Show loading state (optional: reset fields)
-            document.getElementById('drawerUsername').textContent = 'Loading...';
-            document.getElementById('drawerUserInitials').textContent = '--';
-            document.getElementById('drawerRoleBadge').textContent = '...';
-            document.getElementById('drawerStatusBadge').textContent = '...';
-            
-            backdrop.classList.add('active');
-            drawer.classList.add('active');
-            
+            const content = document.getElementById('drawerContent');
+            const title = document.getElementById('drawerUsername');
+
+            overlay.style.display = 'block';
+            drawer.style.display = 'flex';
+            content.innerHTML = `
+                <div class="drawer-loading">
+                    <svg class="spin-icon" xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <circle cx="12" cy="12" r="10" stroke-width="3" stroke-dasharray="32" stroke-linecap="round"></circle>
+                    </svg>
+                    <p>Loading operator profile…</p>
+                </div>
+            `;
+
             try {
-                const response = await fetch(`?handler=UserDrawer&id=${userId}`);
-                if (response.ok) {
-                    const data = await response.json();
-                    const profile = data.profile;
-                    
-                    // Header
-                    document.getElementById('revokeSessionsUserId').value = userId;
-                    document.getElementById('drawerUsername').textContent = profile.username;
-                    document.getElementById('drawerUserInitials').textContent = profile.username.substring(0, 2).toUpperCase();
-                    
-                    const roleBadge = document.getElementById('drawerRoleBadge');
-                    roleBadge.textContent = profile.roleName || 'Unknown';
-                    
-                    const statusBadge = document.getElementById('drawerStatusBadge');
-                    statusBadge.textContent = profile.status === 1 ? 'Active' : (profile.status === 2 ? 'Suspended' : 'Deleted');
-                    statusBadge.className = 'badge ' + (profile.status === 1 ? 'badge-green' : 'badge-red');
-                    
-                    // Overview Tab
-                    document.getElementById('drawerDateCreated').textContent = new Date(profile.dateCreated).toLocaleDateString();
-                    document.getElementById('drawer2FAStatus').textContent = profile.twoFactorEnabled ? 'Enabled' : 'Disabled';
-                    document.getElementById('drawerEmail').textContent = profile.primaryEmail || 'None';
-                    document.getElementById('drawerPhone').textContent = profile.primaryPhone || 'None';
-                    
-                    // Linked Employee
-                    const linkedEmpDiv = document.getElementById('drawerLinkedEmployee');
-                    if (data.linkedEmployee) {
-                        linkedEmpDiv.innerHTML = `
-                            <div style="margin-bottom:4px;"><strong>${data.linkedEmployee.firstName} ${data.linkedEmployee.lastName}</strong></div>
-                            <div style="font-size:0.85rem; color:var(--text-secondary);">Date Employed: ${new Date(data.linkedEmployee.dateEmployed).toLocaleDateString()}</div>
-                        `;
-                    } else {
-                        linkedEmpDiv.innerHTML = '<span style="color:var(--text-secondary);">No linked employee.</span>';
-                    }
-                    
-                    // Activity Log
-                    const activityList = document.getElementById('drawerActivityList');
-                    if (data.recentActivity && data.recentActivity.length > 0) {
-                        activityList.innerHTML = data.recentActivity.map(a => `
-                            <div style="background:var(--canvas); padding:12px; border-radius:6px; border:1px solid var(--border);">
-                                <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-                                    <strong>${a.action}</strong>
-                                    <span style="font-size:0.75rem; color:var(--text-secondary);">${new Date(a.dateCreated).toLocaleString()}</span>
-                                </div>
-                                <div style="font-size:0.85rem;">${a.details || ''}</div>
-                                <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:4px;">IP: ${a.ipAddress || 'Unknown'}</div>
+                const res = await fetch(`/Users?handler=UserDrawer&id=${userId}`);
+                if (!res.ok) throw new Error('Could not load user profile.');
+                const u = await res.json();
+
+                title.textContent = u.username;
+                content.innerHTML = `
+                    <div style="display:flex; flex-direction:column; gap:16px;">
+                        <div style="display:flex; align-items:center; gap:16px; padding-bottom:16px; border-bottom:1px solid #e2e8f0;">
+                            ${u.thumbnailUrl ? `<img src="${u.thumbnailUrl}" style="width:64px;height:64px;border-radius:50%;object-fit:cover;" />` : `<div class="user-avatar-placeholder" style="width:64px;height:64px;font-size:1.5rem;">${u.username[0].toUpperCase()}</div>`}
+                            <div>
+                                <h4 style="margin:0; font-size:1.15rem; color:#0f172a;">${u.username}</h4>
+                                <span class="role-pill" style="margin-top:4px; display:inline-block;">${u.roleName ?? 'Standard User'}</span>
                             </div>
-                        `).join('');
-                    } else {
-                        activityList.innerHTML = '<div style="text-align:center; color:var(--text-secondary); padding:20px;">No recent activity.</div>';
-                    }
-                    
-                    // Contact Changes
-                    const changesList = document.getElementById('drawerChangesList');
-                    if (data.pendingContactChanges && data.pendingContactChanges.length > 0) {
-                        changesList.innerHTML = data.pendingContactChanges.map(c => `
-                            <div style="background:var(--canvas); padding:12px; border-radius:6px; border:1px solid var(--border);">
-                                <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-                                    <strong>Status: ${c.status}</strong>
-                                    <span style="font-size:0.75rem; color:var(--text-secondary);">${new Date(c.dateCreated).toLocaleDateString()}</span>
-                                </div>
-                                <div style="font-size:0.85rem;">
-                                    ${c.newEmail ? `New Email: ${c.newEmail}<br/>` : ''}
-                                    ${c.newPhone ? `New Phone: ${c.newPhone}` : ''}
-                                </div>
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                            <div>
+                                <span style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase;">User ID</span>
+                                <p style="margin:2px 0 0 0; font-family:'JetBrains Mono', monospace; font-size:0.80rem; color:#0f172a;">${u.userId.substring(0,8)}…</p>
                             </div>
-                        `).join('');
-                    } else {
-                        changesList.innerHTML = '<div style="text-align:center; color:var(--text-secondary); padding:20px;">No pending contact changes.</div>';
-                    }
-                    
-                    // Active Sessions
-                    const sessionsList = document.getElementById('drawerSessionsList');
-                    if (data.activeSessions && data.activeSessions.length > 0) {
-                        sessionsList.innerHTML = data.activeSessions.map(s => `
-                            <div style="background:var(--canvas); padding:12px; border-radius:6px; border:1px solid var(--border);">
-                                <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-                                    <strong>${s.deviceName || 'Unknown Device'}</strong>
-                                    <span style="font-size:0.75rem; color:var(--text-secondary);">${new Date(s.lastActive).toLocaleString()}</span>
-                                </div>
-                                <div style="font-size:0.85rem;">
-                                    IP: ${s.ipAddress || 'Unknown'}<br/>
-                                    <span style="color:var(--text-secondary); font-size:0.8rem; word-break:break-all;">${s.userAgent || 'Unknown Browser'}</span>
-                                </div>
+                            <div>
+                                <span style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase;">Account Status</span>
+                                <p style="margin:2px 0 0 0;"><span class="status-badge ${u.status === 0 || u.status === 'Active' ? 'status-reviewed' : 'status-danger'}">${u.status}</span></p>
                             </div>
-                        `).join('');
-                    } else {
-                        sessionsList.innerHTML = '<div style="text-align:center; color:var(--text-secondary); padding:20px;">No active sessions.</div>';
-                    }
-                    
-                } else {
-                    console.error("Failed to load User 360 Data");
-                    document.getElementById('drawerUsername').textContent = "Error loading user";
-                }
+                            <div style="grid-column: span 2;">
+                                <span style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase;">Email</span>
+                                <p style="margin:2px 0 0 0; font-size:0.85rem; color:#0f172a;">${u.email ?? '—'}</p>
+                            </div>
+                            <div style="grid-column: span 2;">
+                                <span style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase;">Phone</span>
+                                <p style="margin:2px 0 0 0; font-size:0.85rem; color:#0f172a;">${u.phoneNumber ?? '—'}</p>
+                            </div>
+                            <div>
+                                <span style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase;">Created Date</span>
+                                <p style="margin:2px 0 0 0; font-size:0.85rem; color:#0f172a;">${new Date(u.dateCreated).toLocaleDateString()}</p>
+                            </div>
+                            <div>
+                                <span style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase;">Two-Factor Auth</span>
+                                <p style="margin:2px 0 0 0; font-size:0.85rem; color:#0f172a;">${u.isTwoFactorEnabled ? 'Enabled' : 'Disabled'}</p>
+                            </div>
+                        </div>
+                        <div style="margin-top:16px; padding-top:16px; border-top:1px solid #e2e8f0; display:flex; flex-direction:column; gap:8px;">
+                            <form method="post" asp-page-handler="RevokeSessions" style="margin:0;">
+                                <input type="hidden" name="userId" value="${u.userId}" />
+                                <button type="submit" class="btn-ctrl-danger" style="width:100%; text-align:center; padding:8px;" data-confirm="Revoke all active sessions for ${u.username}?" data-confirm-type="danger">
+                                    Revoke All Active Sessions
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                `;
             } catch (err) {
-                console.error("Error fetching user drawer:", err);
+                content.innerHTML = `<div class="users-alert error" style="margin-top:20px;"><span>Failed to load profile.</span></div>`;
             }
         }
 
         function closeUserDrawer() {
-            document.getElementById('userDrawerBackdrop').classList.remove('active');
-            document.getElementById('userDrawer').classList.remove('active');
-        }
-
-        function switchUserTab(event, tabId) {
-            document.querySelectorAll('#userDrawer .drawer-tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('#userDrawer .drawer-tab-content').forEach(c => c.style.display = 'none');
-            
-            event.currentTarget.classList.add('active');
-            document.getElementById(tabId).style.display = 'block';
+            document.getElementById('userDrawerOverlay').style.display = 'none';
+            document.getElementById('userDrawer').style.display = 'none';
         }
     </script>
 }

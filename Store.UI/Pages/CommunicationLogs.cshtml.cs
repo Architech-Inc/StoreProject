@@ -1,17 +1,23 @@
 using Microsoft.AspNetCore.Mvc;
 using Store.Models.Entities;
+using Store.Models.Enums;
 using StoreUI.Services;
 
 namespace StoreUI.Pages;
 
 public class CommunicationLogsModel : SecurePageModel
 {
-    private readonly IApiCommunicationLogService _logService;
+    private readonly ICommunicationManager _commManager;
     private readonly IApiClientService _apiClient;
 
     public List<CommunicationLog> Logs { get; private set; } = new();
     
     public int TotalLogs { get; private set; }
+    public int EmailCount { get; private set; }
+    public int SmsCount { get; private set; }
+    public int WhatsAppCount { get; private set; }
+    public int FailedCount { get; private set; }
+
     public int PageNumber { get; private set; } = 1;
     public int PageSize { get; private set; } = 50;
     public int TotalPages => (int)Math.Ceiling((double)TotalLogs / PageSize);
@@ -22,9 +28,9 @@ public class CommunicationLogsModel : SecurePageModel
     [BindProperty(SupportsGet = true)]
     public string? Status { get; set; }
 
-    public CommunicationLogsModel(IApiCommunicationLogService logService, IApiClientService apiClient)
+    public CommunicationLogsModel(ICommunicationManager commManager, IApiClientService apiClient)
     {
-        _logService = logService;
+        _commManager = commManager;
         _apiClient = apiClient;
     }
 
@@ -37,10 +43,15 @@ public class CommunicationLogsModel : SecurePageModel
         Channel = channel;
         Status = status;
 
-        var result = await _logService.GetLogsAsync(PageNumber, PageSize, Channel, Status, ct);
+        var result = await _commManager.GetLogsPagedAsync(PageNumber, PageSize, Channel, Status, ct);
         
         Logs = result.Logs;
         TotalLogs = (int)result.TotalCount;
+
+        EmailCount = Logs.Count(l => l.Channel == CommunicationChannel.Email);
+        SmsCount = Logs.Count(l => l.Channel == CommunicationChannel.Sms);
+        WhatsAppCount = Logs.Count(l => l.Channel == CommunicationChannel.WhatsApp);
+        FailedCount = Logs.Count(l => l.Status == CommunicationStatus.Failed);
 
         return Page();
     }

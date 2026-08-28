@@ -1,20 +1,21 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Users;
 using Store.Models.Enums;
-using Store.Models.Interfaces.Services;
 using StoreUI.Services;
 
 namespace StoreUI.Pages;
 
 public class UsersModel : SecurePageModel
 {
-    private readonly IUserService _userService;
+    private readonly IUserManager _userManager;
     private readonly IApiClientService _apiClient;
-    private readonly IFileService _fileService;
 
     public IReadOnlyList<UserDto> Users { get; private set; } = Array.Empty<UserDto>();
     public int TotalUsers { get; private set; }
+    public int ActiveUsersCount { get; private set; }
+    public int SuspendedUsersCount { get; private set; }
     public string? SearchQuery { get; private set; }
     
     public int PendingContactChangesCount { get; private set; }
@@ -38,11 +39,10 @@ public class UsersModel : SecurePageModel
 
     [TempData] public string? StatusMessage { get; set; }
 
-    public UsersModel(IUserService userService, IApiClientService apiClient, IFileService fileService)
+    public UsersModel(IUserManager userManager, IApiClientService apiClient)
     {
-        _userService = userService;
+        _userManager = userManager;
         _apiClient = apiClient;
-        _fileService = fileService;
     }
 
     public async Task<IActionResult> OnGetAsync(string? search = null, int page = 1, CancellationToken ct = default)
@@ -59,12 +59,13 @@ public class UsersModel : SecurePageModel
             PageSize = PageSize,
             SearchTerm = search
         };
-        var result = await _userService.GetAllAsync(request, ct);
+        var result = await _userManager.GetUsersPagedAsync(request, ct);
         Users = result.Items?.ToList() ?? new List<UserDto>();
         TotalUsers = result.TotalCount;
+        ActiveUsersCount = Users.Count(u => u.Status == UserStatus.Active);
+        SuspendedUsersCount = Users.Count(u => u.Status == UserStatus.Suspended);
         
-        var pendingChanges = await _userService.GetPendingContactChangesAsync(ct);
-        PendingContactChangesCount = pendingChanges.Count(p => p.Status == ContactChangeStatus.PendingApproval);
+        PendingContactChangesCount = await _userManager.GetPendingContactChangesCountAsync(ct);
 
         return Page();
     }
@@ -76,56 +77,29 @@ public class UsersModel : SecurePageModel
 
         try
         {
-            string? thumbUrl = null;
-            string? fullUrl = null;
-            if (ImageUpload != null && ImageUpload.Length > 0)
-            {
-                if (EditUserId.HasValue && EditUserId.Value != Guid.Empty)
-                {
-                    var existingUser = await _userService.GetByIdAsync(EditUserId.Value, ct);
-                    if (existingUser != null)
-                    {
-                        if (!string.IsNullOrWhiteSpace(existingUser.ThumbnailUrl))
-                            await _fileService.DeleteFileAsync(existingUser.ThumbnailUrl, ct);
-                        if (!string.IsNullOrWhiteSpace(existingUser.FullImageUrl))
-                            await _fileService.DeleteFileAsync(existingUser.FullImageUrl, ct);
-                    }
-                }
-                using var stream = ImageUpload.OpenReadStream();
-                var uploadResult = await _fileService.UploadFileAsync(stream, ImageUpload.FileName, ImageUpload.ContentType, "users", CropX, CropY, CropW, CropH, ct);
-                thumbUrl = uploadResult.ThumbnailUrl;
-                fullUrl = uploadResult.FullImageUrl;
-            }
-
             if (EditUserId.HasValue && EditUserId.Value != Guid.Empty)
             {
-                // Edit existing user
                 Enum.TryParse<UserStatus>(NewStatus, out var status);
                 var update = new UpdateUserRequest
                 {
                     Username = NewUsername,
                     RoleId = NewRoleId,
-                    Status = status,
-                    ThumbnailUrl = thumbUrl,
-                    FullImageUrl = fullUrl
+                    Status = status
                 };
-                var updated = await _userService.UpdateAsync(EditUserId.Value, update, ct);
-                StatusMessage = updated is not null ? $"User '{updated.Username}' updated." : "Error: User not found.";
+                var updated = await _userManager.UpdateUserAsync(EditUserId.Value, update, ImageUpload, CropX, CropY, CropW, CropH, ct);
+                StatusMessage = updated is not null ? $"User '{updated.Username}' updated successfully." : "Error: User not found.";
             }
             else
             {
-                // Create new user
                 var create = new CreateUserRequest
                 {
                     Username = NewUsername,
                     Email = NewEmail,
                     Password = NewPassword,
-                    RoleId = NewRoleId,
-                    ThumbnailUrl = thumbUrl,
-                    FullImageUrl = fullUrl
+                    RoleId = NewRoleId
                 };
-                var created = await _userService.CreateAsync(create, ct);
-                StatusMessage = $"User '{created.Username}' created.";
+                var created = await _userManager.CreateUserAsync(create, ImageUpload, CropX, CropY, CropW, CropH, ct);
+                StatusMessage = $"User '{created.Username}' created successfully.";
             }
         }
         catch (Exception ex)
@@ -143,8 +117,7 @@ public class UsersModel : SecurePageModel
 
         try
         {
-            var update = new UpdateUserRequest { Status = UserStatus.Suspended };
-            var updated = await _userService.UpdateAsync(userId, update, ct);
+            var updated = await _userManager.SuspendUserAsync(userId, ct);
             StatusMessage = updated is not null ? $"User '{updated.Username}' suspended." : "Error: User not found.";
         }
         catch (Exception ex)
@@ -162,15 +135,10 @@ public class UsersModel : SecurePageModel
 
         try
         {
-            var tempPwd = await _userService.IssueTempPasswordAsync(userId, ct);
-            if (!string.IsNullOrEmpty(tempPwd))
-            {
-                StatusMessage = $"Temporary password issued: {tempPwd}";
-            }
-            else
-            {
-                StatusMessage = "Error: Failed to issue temporary password.";
-            }
+            var tempPwd = await _userManager.IssueTempPasswordAsync(userId, ct);
+            StatusMessage = !string.IsNullOrEmpty(tempPwd)
+                ? $"Temporary password issued: {tempPwd}"
+                : "Error: Failed to issue temporary password.";
         }
         catch (Exception ex)
         {
@@ -187,7 +155,7 @@ public class UsersModel : SecurePageModel
 
         try
         {
-            await _userService.RevokeAllSessionsAsync(userId, ct);
+            await _userManager.RevokeAllSessionsAsync(userId, ct);
             StatusMessage = "All active sessions revoked successfully.";
         }
         catch (Exception ex)
@@ -205,7 +173,7 @@ public class UsersModel : SecurePageModel
 
         try
         {
-            var user360 = await _userService.Get360ByIdAsync(id, ct);
+            var user360 = await _userManager.Get360ByIdAsync(id, ct);
             if (user360 == null) return NotFound();
 
             return new JsonResult(user360);

@@ -1,284 +1,886 @@
 @page
 @model StoreUI.Pages.LookupModel
 @{
-    ViewData["Title"] = "Lookup Management";
+    ViewData["Title"] = "Master Data & System Lookups";
     ViewData["ActivePage"] = "Lookup";
-    ViewData["PageDescription"] = "Manage categories, measurement units, and departments used across the system.";
-    var activeTab = ViewData["ActiveTab"] as string ?? "categories";
+    ViewData["PageDescription"] = "Configure merchandise categories, measurement units, and store departments across the enterprise.";
+    Layout = "~/Pages/Shared/_AppLayout.cshtml";
 }
 
-@section Styles {
-    <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
-}
-
-<div class="ops-page">
+<div class="lookup-container">
+    @* ── ACTION TOOLBAR ── *@
+    <div class="lookup-action-bar">
+        <div class="lookup-status-pill">
+            <span class="status-indicator-dot"></span>
+            <span>Master Data Taxonomy &amp; Catalog Dictionaries</span>
+        </div>
+        <div class="lookup-header-actions">
+            <a href="/Catalog" class="btn-lookup-action btn-lookup-secondary">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+                Product Catalog
+            </a>
+            <a href="/Dashboard" class="btn-lookup-action btn-lookup-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+                Store Dashboard
+            </a>
+        </div>
+    </div>
 
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
     {
-        <div class="status @(Model.StatusMessage.StartsWith("Error") || Model.StatusMessage.StartsWith("Failed") ? "error" : "ok")">
-            @Model.StatusMessage
+        <div class="lookup-alert @(Model.StatusMessage.StartsWith("Error") ? "error" : "ok")">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>@Model.StatusMessage</span>
         </div>
     }
 
-    <!-- Tab nav -->
-    <nav class="pagination" style="margin-bottom:0;" aria-label="Lookup tabs">
-        <a href="?tab=categories" class="@(Model.ActiveTab == "categories" ? "active" : "")">Categories</a>
-        <a href="?tab=units"      class="@(Model.ActiveTab == "units"      ? "active" : "")">Units</a>
-        <a href="?tab=departments" class="@(Model.ActiveTab == "departments" ? "active" : "")">Departments</a>
-    </nav>
+    @* ── 3-CARD FLUENT 2.0 KPI GRID ── *@
+    <div class="lookup-kpi-grid">
+        @* KPI 1: Categories *@
+        <div class="lookup-kpi-card" onclick="switchLookupTab('categories')">
+            <div class="kpi-icon-wrap kpi-emerald">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+            </div>
+            <div class="kpi-data">
+                <span class="kpi-label">Merchandise Categories</span>
+                <span class="kpi-value">@Model.TotalCategories <small>Categories</small></span>
+                <span class="kpi-subtext">Product classification groups</span>
+            </div>
+        </div>
 
-    <!-- ── CATEGORIES ─────────────────────────────────────────── -->
-    @if (Model.ActiveTab == "categories")
-    {
-        <section class="card">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                <h2 style="margin:0;">Categories</h2>
-                <button type="button" onclick="openCreate('cat')">+ New Category</button>
+        @* KPI 2: Measurement Units *@
+        <div class="lookup-kpi-card" onclick="switchLookupTab('units')">
+            <div class="kpi-icon-wrap kpi-teal">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+                </svg>
+            </div>
+            <div class="kpi-data">
+                <span class="kpi-label">Measurement Units</span>
+                <span class="kpi-value">@Model.TotalUnits <small>Units</small></span>
+                <span class="kpi-subtext">Weight, volume, and packaging</span>
+            </div>
+        </div>
+
+        @* KPI 3: Departments *@
+        <div class="lookup-kpi-card" onclick="switchLookupTab('departments')">
+            <div class="kpi-icon-wrap kpi-purple">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+            </div>
+            <div class="kpi-data">
+                <span class="kpi-label">Store Departments</span>
+                <span class="kpi-value">@Model.TotalDepartments <small>Departments</small></span>
+                <span class="kpi-subtext">Commercial sections &amp; aisles</span>
+            </div>
+        </div>
+    </div>
+
+    @* ── 3-TAB DOCK SWITCHER ── *@
+    <div class="lookup-tabs-dock">
+        <button type="button" class="lookup-tab-btn @(Model.ActiveTab == "categories" ? "active" : "")" onclick="switchLookupTab('categories')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+            </svg>
+            Product Categories (@Model.TotalCategories)
+        </button>
+        <button type="button" class="lookup-tab-btn @(Model.ActiveTab == "units" ? "active" : "")" onclick="switchLookupTab('units')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+            </svg>
+            Measurement Units (@Model.TotalUnits)
+        </button>
+        <button type="button" class="lookup-tab-btn @(Model.ActiveTab == "departments" ? "active" : "")" onclick="switchLookupTab('departments')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+            Store Departments (@Model.TotalDepartments)
+        </button>
+    </div>
+
+    @* ═════════════════════════════════════════════════════════════ *@
+    @* ── TAB 1: CATEGORIES ──────────────────────────────────────── *@
+    @* ═════════════════════════════════════════════════════════════ *@
+    <div id="tab-categories" class="lookup-tab-content @(Model.ActiveTab == "categories" ? "active" : "")">
+        <div class="lookup-panel">
+            <div class="panel-header-dock">
+                <div class="panel-title-wrap">
+                    <h3>Product Categories</h3>
+                    <p>Hierarchical grouping for catalog merchandising and sales analytics.</p>
+                </div>
+                <button type="button" class="btn-lookup-action btn-lookup-primary" onclick="openCreateCategoryModal()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    New Category
+                </button>
             </div>
 
             @if (!Model.Categories.Any())
             {
-                <p style="color:var(--ops-subtle);padding:12px 0;">No categories yet.</p>
+                <div class="lookup-empty-state">
+                    <p>No product categories registered yet.</p>
+                </div>
             }
             else
             {
-                <table>
-                    <thead>
-                        <tr><th>Photo</th><th>ID</th><th>Name</th><th>Description</th><th></th></tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var c in Model.Categories)
-                        {
+                <div class="table-responsive">
+                    <table class="lookup-table">
+                        <thead>
                             <tr>
-                                <td>
-                                    @if (!string.IsNullOrEmpty(c.ThumbnailUrl))
-                                    {
-                                        <img src="@c.ThumbnailUrl" alt="Photo" style="width:32px;height:32px;border-radius:4px;object-fit:cover;cursor:pointer;" onclick="viewImage('@(c.FullImageUrl ?? c.ThumbnailUrl)')" />
-                                    }
-                                    else
-                                    {
-                                        <div style="width:32px;height:32px;border-radius:4px;background-color:var(--ops-border);display:inline-block;"></div>
-                                    }
-                                </td>
-                                <td>@c.CategoryId</td>
-                                <td><strong>@c.Name</strong></td>
-                                <td>@(c.Description ?? "—")</td>
-                                <td style="display:flex;gap:4px;">
-                                    <button type="button" onclick="openEdit('cat', @c.CategoryId, '@Html.Raw(c.Name.Replace("'", "\\'"))', '@Html.Raw((c.Description ?? "").Replace("'", "\\'"))')">Edit</button>
-                                    <form method="post" asp-page-handler="DeleteCategory" style="margin:0;">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="id" value="@c.CategoryId" />
-                                        <button type="submit" class="danger" data-confirm="Delete category @c.Name?" data-confirm-type="danger">Delete</button>
-                                    </form>
-                                </td>
+                                <th style="width:60px; text-align:center;">Photo</th>
+                                <th style="width:80px;">ID</th>
+                                <th>Category Name</th>
+                                <th>Description</th>
+                                <th style="text-align:right;">Actions</th>
                             </tr>
-                        }
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @foreach (var c in Model.Categories)
+                            {
+                                <tr>
+                                    <td style="text-align:center;">
+                                        @if (!string.IsNullOrEmpty(c.ThumbnailUrl))
+                                        {
+                                            <img src="@c.ThumbnailUrl" alt="@c.Name" class="thumb-preview-img" />
+                                        }
+                                        else
+                                        {
+                                            <div class="thumb-placeholder-box">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                </svg>
+                                            </div>
+                                        }
+                                    </td>
+                                    <td>
+                                        <code style="font-size:0.80rem; font-weight:700; color:#64748b;">#@c.CategoryId</code>
+                                    </td>
+                                    <td>
+                                        <strong style="color:#0f172a; font-size:0.88rem;">@c.Name</strong>
+                                    </td>
+                                    <td style="color:#64748b; font-size:0.82rem;">
+                                        @(c.Description ?? "—")
+                                    </td>
+                                    <td style="text-align:right;">
+                                        <div style="display:inline-flex; gap:6px; align-items:center;">
+                                            <button type="button" class="btn-ctrl-action"
+                                                    onclick="openEditCategoryModal(@c.CategoryId, '@Html.Raw(Html.Encode(c.Name))', '@Html.Raw(Html.Encode(c.Description ?? ""))')">
+                                                Edit
+                                            </button>
+                                            <form method="post" asp-page-handler="DeleteCategory" style="margin:0; display:inline;">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@c.CategoryId" />
+                                                <button type="submit" class="btn-ctrl-danger" data-confirm="Delete category @c.Name?" data-confirm-type="danger">
+                                                    Delete
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
             }
-        </section>
-    }
+        </div>
+    </div>
 
-    <!-- ── UNITS ──────────────────────────────────────────────── -->
-    @if (Model.ActiveTab == "units")
-    {
-        <section class="card">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                <h2 style="margin:0;">Measurement Units</h2>
-                <button type="button" onclick="openCreate('unit')">+ New Unit</button>
+    @* ═════════════════════════════════════════════════════════════ *@
+    @* ── TAB 2: MEASUREMENT UNITS ───────────────────────────────── *@
+    @* ═════════════════════════════════════════════════════════════ *@
+    <div id="tab-units" class="lookup-tab-content @(Model.ActiveTab == "units" ? "active" : "")">
+        <div class="lookup-panel">
+            <div class="panel-header-dock">
+                <div class="panel-title-wrap">
+                    <h3>Measurement Units</h3>
+                    <p>Standard units for inventory stock keeping and pricing.</p>
+                </div>
+                <button type="button" class="btn-lookup-action btn-lookup-primary" onclick="openCreateUnitModal()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    New Unit
+                </button>
             </div>
 
             @if (!Model.Units.Any())
             {
-                <p style="color:var(--ops-subtle);padding:12px 0;">No units yet.</p>
+                <div class="lookup-empty-state">
+                    <p>No measurement units registered yet.</p>
+                </div>
             }
             else
             {
-                <table>
-                    <thead>
-                        <tr><th>ID</th><th>Name</th><th>Abbr.</th><th>Description</th><th></th></tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var u in Model.Units)
-                        {
+                <div class="table-responsive">
+                    <table class="lookup-table">
+                        <thead>
                             <tr>
-                                <td>@u.UnitId</td>
-                                <td><strong>@u.Name</strong></td>
-                                <td><code>@u.Abbreviation</code></td>
-                                <td>@(u.Description ?? "—")</td>
-                                <td style="display:flex;gap:4px;">
-                                    <button type="button" onclick="openEditUnit(@u.UnitId, '@Html.Raw(u.Name.Replace("'", "\\'"))', '@Html.Raw(u.Abbreviation.Replace("'", "\\'"))', '@Html.Raw((u.Description ?? "").Replace("'", "\\'"))')">Edit</button>
-                                    <form method="post" asp-page-handler="DeleteUnit" style="margin:0;">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="id" value="@u.UnitId" />
-                                        <button type="submit" class="danger" data-confirm="Delete unit @u.Name?" data-confirm-type="danger">Delete</button>
-                                    </form>
-                                </td>
+                                <th style="width:80px;">ID</th>
+                                <th>Unit Name</th>
+                                <th>Abbreviation</th>
+                                <th>Description</th>
+                                <th style="text-align:right;">Actions</th>
                             </tr>
-                        }
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @foreach (var u in Model.Units)
+                            {
+                                <tr>
+                                    <td>
+                                        <code style="font-size:0.80rem; font-weight:700; color:#64748b;">#@u.UnitId</code>
+                                    </td>
+                                    <td>
+                                        <strong style="color:#0f172a; font-size:0.88rem;">@u.Name</strong>
+                                    </td>
+                                    <td>
+                                        <span class="abbr-pill">@u.Abbreviation</span>
+                                    </td>
+                                    <td style="color:#64748b; font-size:0.82rem;">
+                                        @(u.Description ?? "—")
+                                    </td>
+                                    <td style="text-align:right;">
+                                        <div style="display:inline-flex; gap:6px; align-items:center;">
+                                            <button type="button" class="btn-ctrl-action"
+                                                    onclick="openEditUnitModal(@u.UnitId, '@Html.Raw(Html.Encode(u.Name))', '@Html.Raw(Html.Encode(u.Abbreviation))', '@Html.Raw(Html.Encode(u.Description ?? ""))')">
+                                                Edit
+                                            </button>
+                                            <form method="post" asp-page-handler="DeleteUnit" style="margin:0; display:inline;">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@u.UnitId" />
+                                                <button type="submit" class="btn-ctrl-danger" data-confirm="Delete measurement unit @u.Name?" data-confirm-type="danger">
+                                                    Delete
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
             }
-        </section>
-    }
+        </div>
+    </div>
 
-    <!-- ── DEPARTMENTS ────────────────────────────────────────── -->
-    @if (Model.ActiveTab == "departments")
-    {
-        <section class="card">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                <h2 style="margin:0;">Departments</h2>
-                <button type="button" onclick="openCreate('dept')">+ New Department</button>
+    @* ═════════════════════════════════════════════════════════════ *@
+    @* ── TAB 3: DEPARTMENTS ─────────────────────────────────────── *@
+    @* ═════════════════════════════════════════════════════════════ *@
+    <div id="tab-departments" class="lookup-tab-content @(Model.ActiveTab == "departments" ? "active" : "")">
+        <div class="lookup-panel">
+            <div class="panel-header-dock">
+                <div class="panel-title-wrap">
+                    <h3>Store Departments</h3>
+                    <p>Physical sections and merchandise departments across store locations.</p>
+                </div>
+                <button type="button" class="btn-lookup-action btn-lookup-primary" onclick="openCreateDeptModal()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    New Department
+                </button>
             </div>
 
             @if (!Model.Departments.Any())
             {
-                <p style="color:var(--ops-subtle);padding:12px 0;">No departments yet.</p>
+                <div class="lookup-empty-state">
+                    <p>No store departments registered yet.</p>
+                </div>
             }
             else
             {
-                <table>
-                    <thead>
-                        <tr><th>ID</th><th>Name</th><th>Description</th><th></th></tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var d in Model.Departments)
-                        {
+                <div class="table-responsive">
+                    <table class="lookup-table">
+                        <thead>
                             <tr>
-                                <td>@d.DepartmentId</td>
-                                <td><strong>@d.Name</strong></td>
-                                <td>@(d.Description ?? "—")</td>
-                                <td style="display:flex;gap:4px;">
-                                    <button type="button" onclick="openEdit('dept', @d.DepartmentId, '@Html.Raw(d.Name.Replace("'", "\\'"))', '@Html.Raw((d.Description ?? "").Replace("'", "\\'"))')">Edit</button>
-                                    <form method="post" asp-page-handler="DeleteDepartment" style="margin:0;">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="id" value="@d.DepartmentId" />
-                                        <button type="submit" class="danger" data-confirm="Delete department @d.Name?" data-confirm-type="danger">Delete</button>
-                                    </form>
-                                </td>
+                                <th style="width:80px;">ID</th>
+                                <th>Department Name</th>
+                                <th>Description</th>
+                                <th style="text-align:right;">Actions</th>
                             </tr>
-                        }
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @foreach (var d in Model.Departments)
+                            {
+                                <tr>
+                                    <td>
+                                        <code style="font-size:0.80rem; font-weight:700; color:#64748b;">#@d.DepartmentId</code>
+                                    </td>
+                                    <td>
+                                        <strong style="color:#0f172a; font-size:0.88rem;">@d.Name</strong>
+                                    </td>
+                                    <td style="color:#64748b; font-size:0.82rem;">
+                                        @(d.Description ?? "—")
+                                    </td>
+                                    <td style="text-align:right;">
+                                        <div style="display:inline-flex; gap:6px; align-items:center;">
+                                            <button type="button" class="btn-ctrl-action"
+                                                    onclick="openEditDeptModal(@d.DepartmentId, '@Html.Raw(Html.Encode(d.Name))', '@Html.Raw(Html.Encode(d.Description ?? ""))')">
+                                                Edit
+                                            </button>
+                                            <form method="post" asp-page-handler="DeleteDepartment" style="margin:0; display:inline;">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@d.DepartmentId" />
+                                                <button type="submit" class="btn-ctrl-danger" data-confirm="Delete department @d.Name?" data-confirm-type="danger">
+                                                    Delete
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
             }
-        </section>
+        </div>
+    </div>
+</div>
+
+@* ── CATEGORY MODAL ── *@
+<div class="custom-modal-overlay" id="catModalOverlay" onclick="closeCatModal()"></div>
+<div class="custom-modal" id="catModal">
+    <div class="custom-modal-header">
+        <h3 id="catModalTitle">Add Product Category</h3>
+        <button type="button" class="btn-close-modal" onclick="closeCatModal()">&times;</button>
+    </div>
+    <form method="post" asp-page-handler="SaveCategory" enctype="multipart/form-data">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" id="catId" value="0" />
+        <div class="custom-modal-body">
+            <div class="form-group">
+                <label class="form-label">Category Name <span class="text-danger">*</span></label>
+                <input type="text" name="name" id="catName" class="form-control" placeholder="e.g. Beverages & Soft Drinks" required maxlength="100" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea name="description" id="catDesc" class="form-control" placeholder="Optional category details..." rows="3" maxlength="300"></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Category Photo / Icon</label>
+                <input type="file" asp-for="CategoryImageUpload" class="form-control" accept="image/*" />
+            </div>
+        </div>
+        <div class="custom-modal-footer">
+            <button type="button" class="btn-lookup-action btn-lookup-secondary" onclick="closeCatModal()">Cancel</button>
+            <button type="submit" class="btn-lookup-action btn-lookup-primary">Save Category</button>
+        </div>
+    </form>
+</div>
+
+@* ── UNIT MODAL ── *@
+<div class="custom-modal-overlay" id="unitModalOverlay" onclick="closeUnitModal()"></div>
+<div class="custom-modal" id="unitModal">
+    <div class="custom-modal-header">
+        <h3 id="unitModalTitle">Add Measurement Unit</h3>
+        <button type="button" class="btn-close-modal" onclick="closeUnitModal()">&times;</button>
+    </div>
+    <form method="post" asp-page-handler="SaveUnit">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" id="unitId" value="0" />
+        <div class="custom-modal-body">
+            <div class="form-group">
+                <label class="form-label">Unit Name <span class="text-danger">*</span></label>
+                <input type="text" name="name" id="unitName" class="form-control" placeholder="e.g. Kilogram" required maxlength="100" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Abbreviation / Symbol <span class="text-danger">*</span></label>
+                <input type="text" name="abbreviation" id="unitAbbr" class="form-control" placeholder="e.g. kg" required maxlength="20" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea name="description" id="unitDesc" class="form-control" placeholder="Optional unit details..." rows="3" maxlength="300"></textarea>
+            </div>
+        </div>
+        <div class="custom-modal-footer">
+            <button type="button" class="btn-lookup-action btn-lookup-secondary" onclick="closeUnitModal()">Cancel</button>
+            <button type="submit" class="btn-lookup-action btn-lookup-primary">Save Unit</button>
+        </div>
+    </form>
+</div>
+
+@* ── DEPARTMENT MODAL ── *@
+<div class="custom-modal-overlay" id="deptModalOverlay" onclick="closeDeptModal()"></div>
+<div class="custom-modal" id="deptModal">
+    <div class="custom-modal-header">
+        <h3 id="deptModalTitle">Add Store Department</h3>
+        <button type="button" class="btn-close-modal" onclick="closeDeptModal()">&times;</button>
+    </div>
+    <form method="post" asp-page-handler="SaveDepartment">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" id="deptId" value="0" />
+        <div class="custom-modal-body">
+            <div class="form-group">
+                <label class="form-label">Department Name <span class="text-danger">*</span></label>
+                <input type="text" name="name" id="deptName" class="form-control" placeholder="e.g. Fresh Produce & Dairy" required maxlength="100" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea name="description" id="deptDesc" class="form-control" placeholder="Optional department details..." rows="3" maxlength="300"></textarea>
+            </div>
+        </div>
+        <div class="custom-modal-footer">
+            <button type="button" class="btn-lookup-action btn-lookup-secondary" onclick="closeDeptModal()">Cancel</button>
+            <button type="submit" class="btn-lookup-action btn-lookup-primary">Save Department</button>
+        </div>
+    </form>
+</div>
+
+@* ── STYLESHEET ── *@
+<style>
+    .lookup-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+        padding-bottom: 3rem;
     }
-</div>
 
-<!-- ── Create/Edit Modal (Category / Department) ─────────── -->
-<div class="modal-overlay" id="lookupModal" hidden>
-    <div class="modal" role="dialog" aria-labelledby="lookupModalTitle" aria-modal="true">
-        <div class="modal-head">
-            <h3 id="lookupModalTitle">New Item</h3>
-            <button type="button" class="btn-close" onclick="closeModal()" aria-label="Close">×</button>
-        </div>
-        <form method="post" id="lookupForm" enctype="multipart/form-data">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="Id" id="lookupId" value="" />
+    .lookup-action-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+        padding-bottom: 0.25rem;
+    }
 
-            <label for="lookupName">Name *</label>
-            <input type="text" id="lookupName" name="Name" required maxlength="100" />
+    .lookup-status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        padding: 5px 14px;
+        border-radius: 9999px;
+        background: #ecfdf5;
+        color: #059669;
+        border: 1px solid #a7f3d0;
+    }
 
-            <label for="lookupDesc">Description</label>
-            <input type="text" id="lookupDesc" name="Description" maxlength="300" />
+    .status-indicator-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #059669;
+    }
 
-            <div id="categoryImageGroup" style="display:none;margin-top:8px;">
-                <label for="categoryImageUpload">Category Image</label>
-                <input type="file" id="categoryImageUpload" asp-for="CategoryImageUpload" accept="image/*" data-crop="true" />
-            </div>
+    .lookup-header-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
 
-            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
-                <button type="button" class="button-command" onclick="closeModal()">Cancel</button>
-                <button type="submit" class="button-primary">Save</button>
-            </div>
-        </form>
-    </div>
-</div>
+    .btn-lookup-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .btn-lookup-primary {
+        background: #019c01;
+        color: #ffffff !important;
+        border: 1px solid #019c01;
+    }
+    .btn-lookup-primary:hover {
+        background: #017a01;
+        border-color: #017a01;
+        transform: translateY(-1px);
+    }
+    .btn-lookup-secondary {
+        background: #ffffff;
+        color: #0f172a !important;
+        border: 1px solid #e2e8f0;
+    }
+    .btn-lookup-secondary:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+    }
 
-<!-- ── Create/Edit Modal (Unit) ──────────────────────────── -->
-<div class="modal-overlay" id="unitModal" hidden>
-    <div class="modal" role="dialog" aria-labelledby="unitModalTitle" aria-modal="true">
-        <div class="modal-head">
-            <h3 id="unitModalTitle">New Unit</h3>
-            <button type="button" class="btn-close" onclick="closeUnitModal()" aria-label="Close">×</button>
-        </div>
-        <form method="post" id="unitForm">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="Id" id="unitId" value="" />
+    .lookup-alert {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 16px;
+        border-radius: 8px;
+        font-size: 0.85rem;
+    }
+    .lookup-alert.ok {
+        background: #ecfdf5;
+        color: #059669;
+        border: 1px solid #a7f3d0;
+    }
+    .lookup-alert.error {
+        background: #fff1f2;
+        color: #e11d48;
+        border: 1px solid #fecdd3;
+    }
 
-            <label for="unitName">Name *</label>
-            <input type="text" id="unitName" name="Name" required maxlength="100" />
+    /* ── KPI Grid ── */
+    .lookup-kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1rem;
+    }
 
-            <label for="unitAbbr">Abbreviation *</label>
-            <input type="text" id="unitAbbr" name="Abbreviation" required maxlength="20" placeholder="e.g. kg, pcs, L" />
+    .lookup-kpi-card {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 1.15rem 1.25rem;
+        border-radius: 12px;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .lookup-kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    }
 
-            <label for="unitDesc">Description</label>
-            <input type="text" id="unitDesc" name="Description" maxlength="300" />
+    .kpi-icon-wrap {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .kpi-emerald { background: #ecfdf5; color: #059669; }
+    .kpi-teal    { background: #f0fdfa; color: #0d9488; }
+    .kpi-purple  { background: #f5f3ff; color: #7c3aed; }
 
-            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
-                <button type="button" class="button-command" onclick="closeUnitModal()">Cancel</button>
-                <button type="submit" class="button-primary">Save</button>
-            </div>
-        </form>
-    </div>
-</div>
+    .kpi-data {
+        display: flex;
+        flex-direction: column;
+    }
 
+    .kpi-label {
+        font-size: 0.78rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #64748b;
+    }
+
+    .kpi-value {
+        font-size: 1.45rem;
+        font-weight: 800;
+        color: #0f172a;
+        line-height: 1.2;
+        margin: 2px 0;
+    }
+    .kpi-value small {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: #64748b;
+    }
+
+    .kpi-subtext {
+        font-size: 0.75rem;
+        color: #94a3b8;
+    }
+
+    /* ── Tab Dock ── */
+    .lookup-tabs-dock {
+        display: flex;
+        gap: 6px;
+        border-bottom: 1px solid #e2e8f0;
+        padding-bottom: 2px;
+        overflow-x: auto;
+    }
+
+    .lookup-tab-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0.65rem 1.15rem;
+        font-size: 0.88rem;
+        font-weight: 600;
+        color: #64748b;
+        background: transparent;
+        border: none;
+        border-bottom: 2px solid transparent;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+    .lookup-tab-btn:hover { color: #0f172a; }
+    .lookup-tab-btn.active {
+        color: #019c01;
+        border-bottom-color: #019c01;
+    }
+
+    .lookup-tab-content {
+        display: none;
+    }
+    .lookup-tab-content.active {
+        display: block;
+        animation: fadeIn 0.2s ease;
+    }
+
+    @@keyframes fadeIn {
+        from { opacity: 0; transform: translateY(4px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Panels & Tables ── */
+    .lookup-panel {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        overflow: hidden;
+    }
+
+    .panel-header-dock {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.15rem 1.25rem;
+        border-bottom: 1px solid #e2e8f0;
+        background: #ffffff;
+    }
+
+    .panel-title-wrap h3 {
+        font-size: 1.05rem;
+        font-weight: 700;
+        margin: 0;
+        color: #0f172a;
+    }
+    .panel-title-wrap p {
+        font-size: 0.80rem;
+        color: #64748b;
+        margin: 2px 0 0 0;
+    }
+
+    .lookup-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.84rem;
+    }
+    .lookup-table th {
+        background: #f8fafc;
+        color: #64748b;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        padding: 0.85rem 1rem;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .lookup-table td {
+        padding: 0.85rem 1rem;
+        border-bottom: 1px solid #f1f5f9;
+        color: #0f172a;
+    }
+    .lookup-table tr:hover td {
+        background: #f8fafc;
+    }
+
+    .thumb-preview-img {
+        width: 36px;
+        height: 36px;
+        border-radius: 6px;
+        object-fit: cover;
+        border: 1px solid #e2e8f0;
+    }
+
+    .thumb-placeholder-box {
+        width: 36px;
+        height: 36px;
+        border-radius: 6px;
+        background: #f1f5f9;
+        color: #94a3b8;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .abbr-pill {
+        font-size: 0.75rem;
+        font-weight: 700;
+        font-family: 'JetBrains Mono', monospace;
+        background: #f1f5f9;
+        color: #334155;
+        border: 1px solid #cbd5e1;
+        padding: 2px 8px;
+        border-radius: 4px;
+    }
+
+    .btn-ctrl-action {
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 6px;
+        border: 1px solid #cbd5e1;
+        background: #ffffff;
+        color: #0f172a;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+    .btn-ctrl-action:hover { background: #f1f5f9; border-color: #94a3b8; }
+
+    .btn-ctrl-danger {
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 6px;
+        border: 1px solid #fecdd3;
+        background: #fff1f2;
+        color: #e11d48;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+    .btn-ctrl-danger:hover { background: #e11d48; color: #ffffff; }
+
+    .lookup-empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 3.5rem 1.5rem;
+        color: #64748b;
+    }
+
+    /* ── Modals ── */
+    .custom-modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(4px);
+        z-index: 9998;
+    }
+    .custom-modal {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 90%;
+        max-width: 480px;
+        background: #ffffff !important;
+        border-radius: 12px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+        z-index: 9999;
+        overflow: hidden;
+    }
+    .custom-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.15rem 1.25rem;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .custom-modal-header h3 { font-size: 1.1rem; font-weight: 700; margin: 0; color: #0f172a; }
+    .btn-close-modal { background: none; border: none; font-size: 1.4rem; color: #64748b; cursor: pointer; }
+    .custom-modal-body { padding: 1.25rem; display: flex; flex-direction: column; gap: 12px; max-height: 70vh; overflow-y: auto; }
+    .custom-modal-footer { padding: 1rem 1.25rem; border-top: 1px solid #e2e8f0; background: #f8fafc; display: flex; justify-content: flex-end; gap: 8px; }
+
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    .form-label { font-size: 0.80rem; font-weight: 600; color: #0f172a; }
+    .form-control { border-radius: 6px; padding: 7px 12px; border: 1px solid #cbd5e1; background: #ffffff; color: #0f172a; font-size: 0.84rem; }
+</style>
+
+@* ── JAVASCRIPT INTERACTIONS ── *@
 @section Scripts {
     <script>
-        function openEdit(type, id, name, desc) {
-            const form = document.getElementById('lookupForm');
-            document.getElementById('lookupModalTitle').textContent = type === 'cat' ? 'Edit Category' : 'Edit Department';
-            form.action = type === 'cat' ? '?handler=SaveCategory' : '?handler=SaveDepartment';
-            document.getElementById('lookupId').value = id;
-            document.getElementById('lookupName').value = name;
-            document.getElementById('lookupDesc').value = desc;
-            document.getElementById('categoryImageGroup').style.display = type === 'cat' ? 'block' : 'none';
-            document.getElementById('lookupModal').hidden = false;
+        function switchLookupTab(tabId) {
+            document.querySelectorAll('.lookup-tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.lookup-tab-content').forEach(c => c.classList.remove('active'));
+
+            const targetBtn = Array.from(document.querySelectorAll('.lookup-tab-btn')).find(b => b.getAttribute('onclick')?.includes(tabId));
+            if (targetBtn) targetBtn.classList.add('active');
+
+            const content = document.getElementById(`tab-${tabId}`);
+            if (content) content.classList.add('active');
         }
 
-        function closeModal() { document.getElementById('lookupModal').hidden = true; }
-
-        document.getElementById('lookupModal').addEventListener('click', function(e) {
-            if (e.target === this) closeModal();
-        });
-
-        // Unit modal
-        function openCreate(type) {
-            if (type === 'unit') { openUnitCreate(); return; }
-            const form = document.getElementById('lookupForm');
-            document.getElementById('lookupModalTitle').textContent = type === 'cat' ? 'New Category' : 'New Department';
-            form.action = type === 'cat' ? '?handler=SaveCategory' : '?handler=SaveDepartment';
-            document.getElementById('lookupId').value = '';
-            document.getElementById('lookupName').value = '';
-            document.getElementById('lookupDesc').value = '';
-            document.getElementById('categoryImageGroup').style.display = type === 'cat' ? 'block' : 'none';
-            document.getElementById('lookupModal').hidden = false;
+        // Category Modal
+        function openCreateCategoryModal() {
+            document.getElementById('catModalTitle').textContent = 'Add Product Category';
+            document.getElementById('catId').value = '0';
+            document.getElementById('catName').value = '';
+            document.getElementById('catDesc').value = '';
+            document.getElementById('catModalOverlay').style.display = 'block';
+            document.getElementById('catModal').style.display = 'block';
+        }
+        function openEditCategoryModal(id, name, desc) {
+            document.getElementById('catModalTitle').textContent = 'Edit Category: ' + name;
+            document.getElementById('catId').value = id;
+            document.getElementById('catName').value = name;
+            document.getElementById('catDesc').value = desc;
+            document.getElementById('catModalOverlay').style.display = 'block';
+            document.getElementById('catModal').style.display = 'block';
+        }
+        function closeCatModal() {
+            document.getElementById('catModalOverlay').style.display = 'none';
+            document.getElementById('catModal').style.display = 'none';
         }
 
-        function openUnitCreate() {
-            document.getElementById('unitModalTitle').textContent = 'New Unit';
-            document.getElementById('unitForm').action = '?handler=SaveUnit';
-            document.getElementById('unitId').value = '';
+        // Unit Modal
+        function openCreateUnitModal() {
+            document.getElementById('unitModalTitle').textContent = 'Add Measurement Unit';
+            document.getElementById('unitId').value = '0';
             document.getElementById('unitName').value = '';
             document.getElementById('unitAbbr').value = '';
             document.getElementById('unitDesc').value = '';
-            document.getElementById('unitModal').hidden = false;
+            document.getElementById('unitModalOverlay').style.display = 'block';
+            document.getElementById('unitModal').style.display = 'block';
         }
-
-        function openEditUnit(id, name, abbr, desc) {
-            document.getElementById('unitModalTitle').textContent = 'Edit Unit';
-            document.getElementById('unitForm').action = '?handler=SaveUnit';
+        function openEditUnitModal(id, name, abbr, desc) {
+            document.getElementById('unitModalTitle').textContent = 'Edit Unit: ' + name;
             document.getElementById('unitId').value = id;
             document.getElementById('unitName').value = name;
             document.getElementById('unitAbbr').value = abbr;
             document.getElementById('unitDesc').value = desc;
-            document.getElementById('unitModal').hidden = false;
+            document.getElementById('unitModalOverlay').style.display = 'block';
+            document.getElementById('unitModal').style.display = 'block';
+        }
+        function closeUnitModal() {
+            document.getElementById('unitModalOverlay').style.display = 'none';
+            document.getElementById('unitModal').style.display = 'none';
         }
 
-        function closeUnitModal() { document.getElementById('unitModal').hidden = true; }
-
-        document.getElementById('unitModal').addEventListener('click', function(e) {
-            if (e.target === this) closeUnitModal();
-        });
+        // Department Modal
+        function openCreateDeptModal() {
+            document.getElementById('deptModalTitle').textContent = 'Add Store Department';
+            document.getElementById('deptId').value = '0';
+            document.getElementById('deptName').value = '';
+            document.getElementById('deptDesc').value = '';
+            document.getElementById('deptModalOverlay').style.display = 'block';
+            document.getElementById('deptModal').style.display = 'block';
+        }
+        function openEditDeptModal(id, name, desc) {
+            document.getElementById('deptModalTitle').textContent = 'Edit Department: ' + name;
+            document.getElementById('deptId').value = id;
+            document.getElementById('deptName').value = name;
+            document.getElementById('deptDesc').value = desc;
+            document.getElementById('deptModalOverlay').style.display = 'block';
+            document.getElementById('deptModal').style.display = 'block';
+        }
+        function closeDeptModal() {
+            document.getElementById('deptModalOverlay').style.display = 'none';
+            document.getElementById('deptModal').style.display = 'none';
+        }
     </script>
 }

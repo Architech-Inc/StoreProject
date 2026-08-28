@@ -1,14 +1,14 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Store.Models.Entities;
-using Store.Models.Interfaces.Services;
 using StoreUI.Services;
 
 namespace StoreUI.Pages;
 
 public class LookupModel : SecurePageModel
 {
+    private readonly ILookupManager _lookupManager;
     private readonly IApiClientService _apiClient;
-    private readonly IFileService _fileService;
 
     public string ActiveTab { get; private set; } = "categories";
 
@@ -16,19 +16,22 @@ public class LookupModel : SecurePageModel
     public IReadOnlyList<Unit> Units { get; private set; } = Array.Empty<Unit>();
     public IReadOnlyList<Department> Departments { get; private set; } = Array.Empty<Department>();
 
+    public int TotalCategories => Categories.Count;
+    public int TotalUnits => Units.Count;
+    public int TotalDepartments => Departments.Count;
+
     [TempData] public string? StatusMessage { get; set; }
 
     [BindProperty] public IFormFile? CategoryImageUpload { get; set; }
-
     [BindProperty] public int? CropX { get; set; }
     [BindProperty] public int? CropY { get; set; }
     [BindProperty] public int? CropW { get; set; }
     [BindProperty] public int? CropH { get; set; }
 
-    public LookupModel(IApiClientService apiClient, IFileService fileService)
+    public LookupModel(ILookupManager lookupManager, IApiClientService apiClient)
     {
+        _lookupManager = lookupManager;
         _apiClient = apiClient;
-        _fileService = fileService;
     }
 
     public async Task<IActionResult> OnGetAsync(string tab = "categories", CancellationToken ct = default)
@@ -38,18 +41,15 @@ public class LookupModel : SecurePageModel
 
         ActiveTab = tab is "categories" or "units" or "departments" ? tab : "categories";
 
-        switch (ActiveTab)
-        {
-            case "categories":
-                Categories = (await _apiClient.GetAsync<List<Category>>("/api/categories", ct)) ?? new();
-                break;
-            case "units":
-                Units = (await _apiClient.GetAsync<List<Unit>>("/api/units", ct)) ?? new();
-                break;
-            case "departments":
-                Departments = (await _apiClient.GetAsync<List<Department>>("/api/departments", ct)) ?? new();
-                break;
-        }
+        var catTask = _lookupManager.GetCategoriesAsync(ct);
+        var unitTask = _lookupManager.GetUnitsAsync(ct);
+        var deptTask = _lookupManager.GetDepartmentsAsync(ct);
+
+        await Task.WhenAll(catTask, unitTask, deptTask);
+
+        Categories = await catTask;
+        Units = await unitTask;
+        Departments = await deptTask;
 
         return Page();
     }
@@ -59,37 +59,16 @@ public class LookupModel : SecurePageModel
     {
         if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
         _apiClient.SetToken(token);
+
         try
         {
-            string? thumbUrl = null;
-            string? fullUrl = null;
-            if (CategoryImageUpload != null && CategoryImageUpload.Length > 0)
-            {
-                if (id != 0)
-                {
-                    var existingCategory = await _apiClient.GetAsync<Category>($"/api/categories/{id}", ct);
-                    if (existingCategory != null)
-                    {
-                        if (!string.IsNullOrWhiteSpace(existingCategory.ThumbnailUrl))
-                            await _fileService.DeleteFileAsync(existingCategory.ThumbnailUrl, ct);
-                        if (!string.IsNullOrWhiteSpace(existingCategory.FullImageUrl))
-                            await _fileService.DeleteFileAsync(existingCategory.FullImageUrl, ct);
-                    }
-                }
-                using var stream = CategoryImageUpload.OpenReadStream();
-                var uploadResult = await _fileService.UploadFileAsync(stream, CategoryImageUpload.FileName, CategoryImageUpload.ContentType, "categories", CropX, CropY, CropW, CropH, ct);
-                thumbUrl = uploadResult.ThumbnailUrl;
-                fullUrl = uploadResult.FullImageUrl;
-            }
-
-            if (id == 0)
-                await _apiClient.PostAsync<Category>("/api/categories", new { name, description, thumbnailUrl = thumbUrl, fullImageUrl = fullUrl }, ct);
-            else
-                await _apiClient.PutAsync<Category>($"/api/categories/{id}", new { name, description, thumbnailUrl = thumbUrl, fullImageUrl = fullUrl }, ct);
-
-            StatusMessage = id == 0 ? $"Category '{name}' created." : $"Category '{name}' updated.";
+            await _lookupManager.SaveCategoryAsync(id, name, description, CategoryImageUpload, CropX, CropY, CropW, CropH, ct);
+            StatusMessage = id == 0 ? $"Category '{name}' created successfully." : $"Category '{name}' updated successfully.";
         }
-        catch (Exception ex) { StatusMessage = $"Error: {ex.Message}"; }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: {ex.Message}";
+        }
 
         return RedirectToPage("/Lookup", new { tab = "categories" });
     }
@@ -98,12 +77,17 @@ public class LookupModel : SecurePageModel
     {
         if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
         _apiClient.SetToken(token);
+
         try
         {
-            var ok = await _apiClient.DeleteAsync($"/api/categories/{id}", ct);
-            StatusMessage = ok ? "Category deleted." : "Error: Could not delete category.";
+            var ok = await _lookupManager.DeleteCategoryAsync(id, ct);
+            StatusMessage = ok ? "Category deleted successfully." : "Error: Could not delete category.";
         }
-        catch (Exception ex) { StatusMessage = $"Error: {ex.Message}"; }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: {ex.Message}";
+        }
+
         return RedirectToPage("/Lookup", new { tab = "categories" });
     }
 
@@ -112,16 +96,17 @@ public class LookupModel : SecurePageModel
     {
         if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
         _apiClient.SetToken(token);
+
         try
         {
-            if (id == 0)
-                await _apiClient.PostAsync<Unit>("/api/units", new { name, abbreviation, description }, ct);
-            else
-                await _apiClient.PutAsync<Unit>($"/api/units/{id}", new { name, abbreviation, description }, ct);
-
-            StatusMessage = id == 0 ? $"Unit '{name}' created." : $"Unit '{name}' updated.";
+            await _lookupManager.SaveUnitAsync(id, name, abbreviation, description, ct);
+            StatusMessage = id == 0 ? $"Unit '{name}' created successfully." : $"Unit '{name}' updated successfully.";
         }
-        catch (Exception ex) { StatusMessage = $"Error: {ex.Message}"; }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: {ex.Message}";
+        }
+
         return RedirectToPage("/Lookup", new { tab = "units" });
     }
 
@@ -129,12 +114,17 @@ public class LookupModel : SecurePageModel
     {
         if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
         _apiClient.SetToken(token);
+
         try
         {
-            var ok = await _apiClient.DeleteAsync($"/api/units/{id}", ct);
-            StatusMessage = ok ? "Unit deleted." : "Error: Could not delete unit.";
+            var ok = await _lookupManager.DeleteUnitAsync(id, ct);
+            StatusMessage = ok ? "Unit deleted successfully." : "Error: Could not delete unit.";
         }
-        catch (Exception ex) { StatusMessage = $"Error: {ex.Message}"; }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: {ex.Message}";
+        }
+
         return RedirectToPage("/Lookup", new { tab = "units" });
     }
 
@@ -143,16 +133,17 @@ public class LookupModel : SecurePageModel
     {
         if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
         _apiClient.SetToken(token);
+
         try
         {
-            if (id == 0)
-                await _apiClient.PostAsync<Department>("/api/departments", new { name, description }, ct);
-            else
-                await _apiClient.PutAsync<Department>($"/api/departments/{id}", new { name, description }, ct);
-
-            StatusMessage = id == 0 ? $"Department '{name}' created." : $"Department '{name}' updated.";
+            await _lookupManager.SaveDepartmentAsync(id, name, description, ct);
+            StatusMessage = id == 0 ? $"Department '{name}' created successfully." : $"Department '{name}' updated successfully.";
         }
-        catch (Exception ex) { StatusMessage = $"Error: {ex.Message}"; }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: {ex.Message}";
+        }
+
         return RedirectToPage("/Lookup", new { tab = "departments" });
     }
 
@@ -160,12 +151,17 @@ public class LookupModel : SecurePageModel
     {
         if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
         _apiClient.SetToken(token);
+
         try
         {
-            var ok = await _apiClient.DeleteAsync($"/api/departments/{id}", ct);
-            StatusMessage = ok ? "Department deleted." : "Error: Could not delete department.";
+            var ok = await _lookupManager.DeleteDepartmentAsync(id, ct);
+            StatusMessage = ok ? "Department deleted successfully." : "Error: Could not delete department.";
         }
-        catch (Exception ex) { StatusMessage = $"Error: {ex.Message}"; }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: {ex.Message}";
+        }
+
         return RedirectToPage("/Lookup", new { tab = "departments" });
     }
 }

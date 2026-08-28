@@ -76,6 +76,9 @@ builder.Services.AddScoped<ICashVarianceManager, CashVarianceManager>();
 builder.Services.AddScoped<ICashReportsManager, CashReportsManager>();
 builder.Services.AddScoped<IReconciliationManager, ReconciliationManager>();
 builder.Services.AddScoped<IInvoiceManager, InvoiceManager>();
+builder.Services.AddScoped<IUserManager, UserManager>();
+builder.Services.AddScoped<ILookupManager, LookupManager>();
+builder.Services.AddScoped<ICommunicationManager, CommunicationManager>();
 
 var app = builder.Build();
 
