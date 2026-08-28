@@ -1378,8 +1378,10 @@
             const confirmBtn = document.getElementById('appDialogConfirm');
 
             overlay.classList.remove('show');
+            overlay.setAttribute('aria-hidden', 'true');
             setTimeout(() => {
-                overlay.setAttribute('aria-hidden', 'true');
+                overlay.hidden = true;
+                overlay.style.display = 'none';
                 if (cancelBtn) cancelBtn.onclick = null;
                 if (confirmBtn) {
                     confirmBtn.onclick = null;
@@ -1448,11 +1450,14 @@
                 };
 
                 // Show
-                overlay.setAttribute('aria-hidden', 'false');
-                overlay.classList.add('show');
-                
-                if (isPrompt) input.focus();
-                else confirmBtn.focus();
+                overlay.hidden = false;
+                overlay.style.display = 'flex';
+                requestAnimationFrame(() => {
+                    overlay.setAttribute('aria-hidden', 'false');
+                    overlay.classList.add('show');
+                    if (isPrompt) input.focus();
+                    else confirmBtn.focus();
+                });
             });
         },
 

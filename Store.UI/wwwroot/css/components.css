@@ -970,18 +970,45 @@ tbody tr:hover { background: color-mix(in srgb, var(--ops-brand, var(--brand)) 4
 
 /* ── AppDialog (Custom Modals) ──────────────── */
 .dialog-overlay {
-    position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);
-    display: flex; align-items: center; justify-content: center; z-index: var(--z-dialog, 9999);
-    opacity: 0; visibility: hidden; transition: opacity 0.2s ease, visibility 0.2s ease;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(4px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: var(--z-dialog, 9999);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
 }
-.dialog-overlay.show { opacity: 1; visibility: visible; }
+.dialog-overlay.show,
+.dialog-overlay[aria-hidden="false"]:not([hidden]) {
+    display: flex !important;
+    opacity: 1;
+    visibility: visible;
+}
+.dialog-overlay[aria-hidden="true"]:not(.show),
+.dialog-overlay[hidden] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+}
 .dialog-box {
-    background: var(--ops-paper, var(--surface, #ffffff)); border-radius: var(--radius-lg, 12px);
-    width: min(420px, 92vw); box-shadow: 0 20px 40px rgba(0,0,0,0.25);
-    transform: scale(0.95) translateY(10px); transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-    display: flex; flex-direction: column; overflow: hidden;
+    background: var(--ops-paper, var(--surface, #ffffff));
+    border-radius: var(--radius-lg, 12px);
+    width: min(420px, 92vw);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+    transform: scale(0.95) translateY(10px);
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
-.dialog-overlay.show .dialog-box { transform: scale(1) translateY(0); }
+.dialog-overlay.show .dialog-box,
+.dialog-overlay[aria-hidden="false"] .dialog-box {
+    transform: scale(1) translateY(0);
+}
 .dialog-head { display: flex; align-items: center; gap: 12px; padding: 20px 24px 12px; }
 .dialog-icon {
     width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
