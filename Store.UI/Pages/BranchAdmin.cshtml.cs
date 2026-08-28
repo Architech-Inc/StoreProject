@@ -9,6 +9,7 @@ namespace StoreUI.Pages;
 
 public class BranchAdminModel : SecurePageModel
 {
+    private readonly IBranchManager _branchManager;
     private readonly IApiClientService _apiClient;
     private readonly IUserService _userService;
 
@@ -16,6 +17,15 @@ public class BranchAdminModel : SecurePageModel
     public IReadOnlyList<UserBranchRoleDto> Assignments { get; private set; } = Array.Empty<UserBranchRoleDto>();
     public IReadOnlyList<UserDto> AllUsers { get; private set; } = Array.Empty<UserDto>();
     public IReadOnlyList<RoleMatrixDto> RoleMatrix { get; private set; } = Array.Empty<RoleMatrixDto>();
+
+    // ─── KPI Metrics ──────────────────────────────────────────────────────────
+    public int TotalBranches => Branches.Count;
+    public int ActiveBranchesCount => Branches.Count(b => b.IsActive);
+    public int InactiveBranchesCount => Branches.Count(b => !b.IsActive);
+    public int TotalAssignmentsCount => Assignments.Count;
+    public int MultiBranchUsersCount => Assignments
+        .GroupBy(a => a.UserId)
+        .Count(g => g.Select(x => x.BranchId).Distinct().Count() > 1);
 
     [TempData] public string? StatusMessage { get; set; }
 
@@ -31,8 +41,12 @@ public class BranchAdminModel : SecurePageModel
     [BindProperty] public int AssignBranchId { get; set; }
     [BindProperty] public int AssignRoleId { get; set; }
 
-    public BranchAdminModel(IApiClientService apiClient, IUserService userService)
+    public BranchAdminModel(
+        IBranchManager branchManager,
+        IApiClientService apiClient,
+        IUserService userService)
     {
+        _branchManager = branchManager;
         _apiClient = apiClient;
         _userService = userService;
     }
@@ -81,7 +95,7 @@ public class BranchAdminModel : SecurePageModel
         if (!HasPermission(permissions, PermissionKeys.AdminBranches))
             return Forbid();
 
-        var branches = await _apiClient.GetAsync<List<BranchDto>>("/api/admin/branches", ct) ?? new List<BranchDto>();
+        var branches = await _branchManager.GetBranchesAsync(ct);
         var query = q?.Trim().ToLowerInvariant();
         var results = branches
             .Where(b => string.IsNullOrEmpty(query) ||
@@ -108,6 +122,17 @@ public class BranchAdminModel : SecurePageModel
         if (!HasPermission(permissions, PermissionKeys.AdminBranches))
             return AccessDenied();
 
+        // ── Deactivation Guardrail Check ──
+        if (EditBranchId.HasValue && !BranchIsActive)
+        {
+            var (canDeactivate, reason) = await _branchManager.ValidateDeactivationAsync(EditBranchId.Value, ct);
+            if (!canDeactivate)
+            {
+                StatusMessage = $"Error: {reason}";
+                return RedirectToPage();
+            }
+        }
+
         var req = new UpsertBranchRequest
         {
             BranchId = EditBranchId,
@@ -117,10 +142,10 @@ public class BranchAdminModel : SecurePageModel
             IsActive = BranchIsActive
         };
 
-        var result = await _apiClient.PostAsync<BranchDto>("/api/admin/branches", req, ct);
+        var result = await _branchManager.UpsertBranchAsync(req, ct);
         StatusMessage = result is not null
-            ? $"Branch '{result.Name}' saved."
-            : "Failed to save branch.";
+            ? $"Branch '{result.Name}' saved successfully."
+            : "Error: Failed to save branch.";
 
         return RedirectToPage();
     }
@@ -142,10 +167,10 @@ public class BranchAdminModel : SecurePageModel
             RoleId = AssignRoleId
         };
 
-        var result = await _apiClient.PostAsync<UserBranchRoleDto>("/api/admin/branches/assignments", req, ct);
+        var result = await _branchManager.AssignUserAsync(req, ct);
         StatusMessage = result is not null
             ? $"Assigned {result.UserName} to {result.BranchName} as {result.RoleName}."
-            : "Failed to assign user.";
+            : "Error: Failed to assign user.";
 
         return RedirectToPage();
     }
@@ -160,17 +185,17 @@ public class BranchAdminModel : SecurePageModel
         if (!HasPermission(permissions, PermissionKeys.AdminBranches))
             return AccessDenied();
 
-        var ok = await _apiClient.DeleteAsync($"/api/admin/branches/assignments/{assignmentId}", ct);
-        StatusMessage = ok ? "Assignment removed." : "Failed to remove assignment.";
+        var ok = await _branchManager.RevokeAssignmentAsync(assignmentId, ct);
+        StatusMessage = ok ? "Branch assignment revoked." : "Error: Failed to remove assignment.";
 
         return RedirectToPage();
     }
 
     private async Task LoadDataAsync(CancellationToken ct)
     {
-        var branchesTask = _apiClient.GetAsync<List<BranchDto>>("/api/admin/branches", ct);
-        var assignmentsTask = _apiClient.GetAsync<List<UserBranchRoleDto>>("/api/admin/branches/assignments", ct);
-        var usersTask = _userService.GetAllAsync(new Store.Models.DTOs.Common.PagedRequest { Page = 1, PageSize = 500 }, ct);
+        var branchesTask = _branchManager.GetBranchesAsync(ct);
+        var assignmentsTask = _branchManager.GetAssignmentsAsync(null, null, ct);
+        var usersTask = _userService.GetAllAsync(new PagedRequest { Page = 1, PageSize = 500 }, ct);
         var matrixTask = _apiClient.GetAsync<List<RoleMatrixDto>>("/api/admin/role-matrix", ct);
 
         await Task.WhenAll(branchesTask, assignmentsTask, usersTask, matrixTask);

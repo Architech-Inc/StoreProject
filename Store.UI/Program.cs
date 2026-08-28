@@ -79,6 +79,8 @@ builder.Services.AddScoped<IInvoiceManager, InvoiceManager>();
 builder.Services.AddScoped<IUserManager, UserManager>();
 builder.Services.AddScoped<ILookupManager, LookupManager>();
 builder.Services.AddScoped<ICommunicationManager, CommunicationManager>();
+builder.Services.AddScoped<IBranchManager, BranchManager>();
+builder.Services.AddScoped<IPaymentsManager, PaymentsManager>();
 
 var app = builder.Build();
 

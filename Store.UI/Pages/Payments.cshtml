@@ -19,6 +19,12 @@
             <span>Electronic Settlement Gateway &amp; Provider Feeds</span>
         </div>
         <div class="pay-header-actions">
+            <a href="?handler=ExportCsv&status=@((int?)Model.StatusFilter)&from=@Model.FromDate?.ToString("yyyy-MM-dd")&to=@Model.ToDate?.ToString("yyyy-MM-dd")" class="btn-pay-action btn-pay-secondary">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Export Settlement CSV
+            </a>
             <a href="/Invoices" class="btn-pay-action btn-pay-secondary">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -210,12 +216,14 @@
                                 <th style="text-align:right;">Amount (XAF)</th>
                                 <th style="text-align:center;">Status</th>
                                 <th>Provider Reference</th>
+                                <th style="text-align:center;">Polling &amp; Audit</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var tx in Model.Transactions)
                             {
-                                <tr>
+                                var isPending = string.Equals(tx.Status, "Pending", StringComparison.OrdinalIgnoreCase);
+                                <tr id="row-@tx.MobileMoneyTransactionId">
                                     <td style="font-size:0.78rem; color:#64748b; white-space:nowrap;">
                                         @tx.DateCreated.ToLocalTime().ToString("dd MMM HH:mm")
                                     </td>
@@ -237,17 +245,36 @@
                                         @{
                                             var badgeClass = tx.Status switch
                                             {
-                                                "Completed" => "status-completed",
-                                                "Pending"   => "status-pending",
-                                                "Failed"    => "status-failed",
-                                                "TimedOut"  => "status-timedout",
-                                                _           => "status-generic"
+                                                "Completed" or "Successful" => "status-completed",
+                                                "Pending"                   => "status-pending",
+                                                "Failed"                    => "status-failed",
+                                                "TimedOut"                  => "status-timedout",
+                                                _                           => "status-generic"
                                             };
                                         }
-                                        <span class="pay-status-badge @badgeClass">@tx.Status</span>
+                                        <span class="pay-status-badge @badgeClass cell-status">@tx.Status</span>
                                     </td>
-                                    <td style="font-family:'JetBrains Mono', monospace; font-size:0.75rem; color:#64748b;">
+                                    <td style="font-family:'JetBrains Mono', monospace; font-size:0.75rem; color:#64748b;" class="cell-provider-ref">
                                         @(tx.ProviderTransactionId ?? "—")
+                                    </td>
+                                    <td style="text-align:center;" class="cell-action">
+                                        @if (isPending)
+                                        {
+                                            <button type="button" 
+                                                    class="btn-tx-poll" 
+                                                    data-tx-id="@tx.MobileMoneyTransactionId" 
+                                                    onclick="pollTxStatus(this)"
+                                                    title="Re-query status directly from payment gateway">
+                                                <svg class="poll-icon" xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                </svg>
+                                                <span>Poll Gateway</span>
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <span style="font-size:0.72rem; color:#94a3b8; font-weight:600;">Settled</span>
+                                        }
                                     </td>
                                 </tr>
                             }
@@ -558,6 +585,38 @@
     .status-failed    { background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; }
     .status-timedout  { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
 
+    .btn-tx-poll {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 3px 8px;
+        border-radius: 6px;
+        background: #fffbeb;
+        color: #b45309;
+        border: 1px solid #fde68a;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+    .btn-tx-poll:hover {
+        background: #fef3c7;
+        color: #92400e;
+        transform: translateY(-1px);
+    }
+    .btn-tx-poll.loading {
+        opacity: 0.7;
+        cursor: wait;
+    }
+    .btn-tx-poll.loading .poll-icon {
+        animation: spin 0.8s linear infinite;
+    }
+
+    @@keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
     .pay-pagination {
         display: flex;
         align-items: center;
@@ -597,3 +656,60 @@
         gap: 8px;
     }
 </style>
+
+@* ── TRANSACTION STATUS POLLING SCRIPT ── *@
+<script>
+    async function pollTxStatus(btn) {
+        if (btn.classList.contains('loading')) return;
+
+        const txId = btn.getAttribute('data-tx-id');
+        if (!txId) return;
+
+        btn.classList.add('loading');
+
+        try {
+            const resp = await fetch(`?handler=QueryStatus&id=${txId}`);
+            if (!resp.ok) {
+                const errData = await resp.json().catch(() => ({}));
+                throw new Error(errData.message || `Server responded with ${resp.status}`);
+            }
+
+            const data = await resp.json();
+            if (!data.success) {
+                throw new Error(data.message || 'Unable to retrieve status from gateway.');
+            }
+
+            const row = document.getElementById(`row-${txId}`);
+            if (row) {
+                const statusCell = row.querySelector('.cell-status');
+                const refCell = row.querySelector('.cell-provider-ref');
+                const actionCell = row.querySelector('.cell-action');
+
+                if (statusCell) {
+                    statusCell.textContent = data.status;
+                    statusCell.className = `pay-status-badge cell-status ${data.isSuccess ? 'status-completed' : (data.isPending ? 'status-pending' : 'status-failed')}`;
+                }
+
+                if (refCell && data.providerRef !== 'N/A') {
+                    refCell.textContent = data.providerRef;
+                }
+
+                if (actionCell && !data.isPending) {
+                    actionCell.innerHTML = '<span style="font-size:0.72rem; color:#94a3b8; font-weight:600;">Settled</span>';
+                }
+            }
+
+            if (window.showToast) {
+                window.showToast(data.message, data.isSuccess ? 'success' : (data.isPending ? 'info' : 'warning'));
+            }
+        } catch (err) {
+            if (window.showToast) {
+                window.showToast(`Polling error: ${err.message}`, 'error');
+            } else {
+                alert(`Error: ${err.message}`);
+            }
+        } finally {
+            btn.classList.remove('loading');
+        }
+    }
+</script>

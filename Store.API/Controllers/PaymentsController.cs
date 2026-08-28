@@ -94,6 +94,14 @@ public class PaymentsController : ControllerBase
         return Ok(rows);
     }
 
+    [HttpGet("momo/{id:guid}")]
+    [Authorize(Policy = PermissionKeys.PaymentsRead)]
+    public async Task<IActionResult> GetTransactionById(Guid id, CancellationToken ct = default)
+    {
+        var tx = await _momo.GetTransactionByIdAsync(id, ct);
+        return tx is not null ? Ok(tx) : NotFound();
+    }
+
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
     private bool ValidateCallbackKey()

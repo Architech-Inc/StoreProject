@@ -196,6 +196,12 @@ public class MobileMoneyService : IMobileMoneyService
         return rows;
     }
 
+    public async Task<MobileMoneyTransactionDto?> GetTransactionByIdAsync(Guid transactionId, CancellationToken ct = default)
+    {
+        var tx = await _db.MobileMoneyTransactions.AsNoTracking().FirstOrDefaultAsync(t => t.MobileMoneyTransactionId == transactionId, ct);
+        return tx is not null ? MapToDto(tx) : null;
+    }
+
     private static MobileMoneyTransactionDto MapToDto(MobileMoneyTransaction t) => new()
     {
         MobileMoneyTransactionId = t.MobileMoneyTransactionId,

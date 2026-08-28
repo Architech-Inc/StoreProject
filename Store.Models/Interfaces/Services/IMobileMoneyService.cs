@@ -10,4 +10,5 @@ public interface IMobileMoneyService
     Task<MobileMoneyTransactionDto?> HandleOrangeMoneyCallbackAsync(OrangeMoneyCallbackRequest callback, CancellationToken ct = default);
     Task<SettlementReportDto> GetSettlementReportAsync(DateTime fromDateUtc, DateTime toDateUtc, CancellationToken ct = default);
     Task<IReadOnlyList<MobileMoneyTransactionDto>> GetTransactionsAsync(int page, int pageSize, MobileMoneyStatus? status = null, CancellationToken ct = default);
+    Task<MobileMoneyTransactionDto?> GetTransactionByIdAsync(Guid transactionId, CancellationToken ct = default);
 }

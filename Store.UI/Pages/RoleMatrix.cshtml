@@ -3,16 +3,18 @@
 @{
     ViewData["Title"] = "Role Permission Matrix";
     ViewData["ActivePage"] = "RoleMatrix";
-    ViewData["PageDescription"] = "Fine-grained system capability matrix and module access control.";
+    ViewData["PageDescription"] = "Fine-grained system capability matrix, RBAC policy enforcement, and domain module access control.";
     Layout = "~/Pages/Shared/_AppLayout.cshtml";
 }
+
+@Html.AntiForgeryToken()
 
 <div class="matrix-container">
     @* ── ACTION TOOLBAR ── *@
     <div class="matrix-action-bar">
         <div class="matrix-status-pill">
             <span class="status-indicator-dot"></span>
-            <span>Role-Based Access Control (RBAC) &amp; Security Policy</span>
+            <span>Role-Based Access Control (RBAC) &amp; Security Policy Hub</span>
         </div>
         <div class="matrix-header-actions">
             <a href="/Users" class="btn-matrix-action btn-matrix-secondary">
@@ -30,72 +32,156 @@
         </div>
     </div>
 
-    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
-    {
-        <div class="matrix-alert ok">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span>@Model.StatusMessage</span>
+    @* ── 4-CARD FLUENT 2.0 KPI GRID ── *@
+    <div class="matrix-kpi-grid">
+        @* KPI 1: Total Configured Roles *@
+        <div class="matrix-kpi-card">
+            <div class="kpi-icon-wrap kpi-emerald">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+            </div>
+            <div class="kpi-data">
+                <span class="kpi-label">Configured System Roles</span>
+                <span class="kpi-value">@Model.TotalRoles <small>Roles</small></span>
+                <span class="kpi-subtext">Active authorization groups</span>
+            </div>
         </div>
-    }
+
+        @* KPI 2: Discrete Security Capabilities *@
+        <div class="matrix-kpi-card">
+            <div class="kpi-icon-wrap kpi-teal">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                </svg>
+            </div>
+            <div class="kpi-data">
+                <span class="kpi-label">Security Capabilities</span>
+                <span class="kpi-value">@Model.TotalCapabilities <small>Keys</small></span>
+                <span class="kpi-subtext">Across 4 domain groups</span>
+            </div>
+        </div>
+
+        @* KPI 3: Elevated Admin Roles *@
+        <div class="matrix-kpi-card">
+            <div class="kpi-icon-wrap kpi-amber">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+            </div>
+            <div class="kpi-data">
+                <span class="kpi-label">Elevated Admin Roles</span>
+                <span class="kpi-value" style="color:#d97706;">@Model.ElevatedRolesCount <small>Supervisory</small></span>
+                <span class="kpi-subtext">Possess branch/policy rights</span>
+            </div>
+        </div>
+
+        @* KPI 4: Granted Permission Ratio *@
+        <div class="matrix-kpi-card">
+            <div class="kpi-icon-wrap kpi-purple">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+            </div>
+            <div class="kpi-data">
+                <span class="kpi-label">Granted Matrix Ratio</span>
+                <span class="kpi-value" style="color:#7c3aed;">@Model.SecurityGrantRatio%</span>
+                <span class="kpi-subtext">@Model.GrantedCapabilitiesCount of @(Model.TotalRoles * Model.TotalCapabilities) grants active</span>
+            </div>
+        </div>
+    </div>
 
     @* ── MATRIX GRID PANEL ── *@
     <div class="matrix-panel">
         <div class="panel-header-dock">
             <div class="panel-title-wrap">
                 <h3>System Capability &amp; Role Authorization Matrix</h3>
-                <p>Click any cell to toggle permission grant for the specified role in real-time.</p>
+                <p>Click any cell to toggle permission grant for the specified role in real-time with instant asynchronous policy persistence.</p>
+            </div>
+            <div class="domain-legend-dock">
+                @foreach (var domain in Model.Domains)
+                {
+                    <span class="legend-badge @domain.ColorClass">
+                        <span class="legend-dot" style="background:@domain.BadgeColor;"></span>
+                        @domain.DomainName
+                    </span>
+                }
             </div>
         </div>
         <div class="matrix-table-wrap">
             <table class="matrix-table">
                 <thead>
-                    <tr>
-                        <th class="sticky-col">Role Title</th>
-                        @foreach (var perm in Model.PermissionColumns)
+                    @* ── Tier 1: Domain Group Headers ── *@
+                    <tr class="domain-header-row">
+                        <th class="sticky-col" rowspan="2">
+                            <div class="role-title-head">Role Title</div>
+                        </th>
+                        @foreach (var domain in Model.Domains)
                         {
-                            <th>
-                                <div class="perm-header-cell">
-                                    <span>@perm</span>
-                                </div>
+                            <th colspan="@domain.Permissions.Count" class="domain-group-th @domain.ColorClass">
+                                <span>@domain.DomainName</span>
                             </th>
+                        }
+                    </tr>
+                    @* ── Tier 2: Specific Permission Keys ── *@
+                    <tr class="perm-key-row">
+                        @foreach (var domain in Model.Domains)
+                        {
+                            @foreach (var perm in domain.Permissions)
+                            {
+                                <th class="perm-key-th @domain.ColorClass">
+                                    <div class="perm-header-cell">
+                                        <code>@perm</code>
+                                    </div>
+                                </th>
+                            }
                         }
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var row in Model.Matrix)
                     {
+                        var isElevated = row.Permissions.Any(p => p.Key.StartsWith("admin.", StringComparison.OrdinalIgnoreCase) && p.Value);
                         <tr>
                             <td class="sticky-col">
-                                <strong style="color:#0f172a; font-size:0.88rem;">@row.RoleName</strong>
+                                <div class="role-cell-wrap">
+                                    <strong class="role-name">@row.RoleName</strong>
+                                    @if (isElevated)
+                                    {
+                                        <span class="role-elevated-badge">Elevated</span>
+                                    }
+                                </div>
                             </td>
-                            @foreach (var perm in Model.PermissionColumns)
+                            @foreach (var domain in Model.Domains)
                             {
-                                var current = row.Permissions.TryGetValue(perm, out var allowed) && allowed;
-                                <td>
-                                    <form method="post" asp-page-handler="Toggle" style="margin:0; display:flex; justify-content:center;">
-                                        <input type="hidden" name="roleId" value="@row.RoleId" />
-                                        <input type="hidden" name="permissionKey" value="@perm" />
-                                        <input type="hidden" name="currentValue" value="@current" />
-                                        <button type="submit" class="toggle-btn @(current ? "toggle-allowed" : "toggle-denied")">
+                                @foreach (var perm in domain.Permissions)
+                                {
+                                    var current = row.Permissions.TryGetValue(perm, out var allowed) && allowed;
+                                    <td>
+                                        <button type="button" 
+                                                class="toggle-btn @(current ? "toggle-allowed" : "toggle-denied")"
+                                                data-role-id="@row.RoleId"
+                                                data-role-name="@row.RoleName"
+                                                data-perm-key="@perm"
+                                                data-allowed="@(current ? "true" : "false")"
+                                                onclick="togglePermissionAjax(this)">
                                             @if (current)
                                             {
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
                                                 </svg>
-                                                <span>Allowed</span>
+                                                <span class="toggle-text">Allowed</span>
                                             }
                                             else
                                             {
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
                                                 </svg>
-                                                <span>Denied</span>
+                                                <span class="toggle-text">Denied</span>
                                             }
                                         </button>
-                                    </form>
-                                </td>
+                                    </td>
+                                }
                             }
                         </tr>
                     }
@@ -182,18 +268,74 @@
         border-color: #cbd5e1;
     }
 
-    .matrix-alert {
+    /* ── 4-Card KPI Grid ── */
+    .matrix-kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1rem;
+    }
+
+    .matrix-kpi-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1.25rem;
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .matrix-kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    .kpi-icon-wrap {
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
         display: flex;
         align-items: center;
-        gap: 10px;
-        padding: 12px 16px;
-        border-radius: 8px;
-        font-size: 0.85rem;
+        justify-content: center;
+        flex-shrink: 0;
     }
-    .matrix-alert.ok {
-        background: #ecfdf5;
-        color: #059669;
-        border: 1px solid #a7f3d0;
+    .kpi-emerald { background: #ecfdf5; color: #059669; }
+    .kpi-teal    { background: #f0fdfa; color: #0d9488; }
+    .kpi-amber   { background: #fffbeb; color: #d97706; }
+    .kpi-purple  { background: #f5f3ff; color: #7c3aed; }
+
+    .kpi-data {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+    }
+    .kpi-label {
+        font-size: 0.76rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #64748b;
+    }
+    .kpi-value {
+        font-size: 1.45rem;
+        font-weight: 800;
+        color: #0f172a;
+        line-height: 1.2;
+    }
+    .kpi-value small {
+        font-size: 0.82rem;
+        font-weight: 500;
+        color: #64748b;
+        margin-left: 2px;
+    }
+    .kpi-subtext {
+        font-size: 0.75rem;
+        color: #94a3b8;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     /* ── Matrix Panel ── */
@@ -209,6 +351,8 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
         padding: 1.15rem 1.25rem;
         border-bottom: 1px solid #e2e8f0;
         background: #ffffff;
@@ -226,6 +370,33 @@
         margin: 2px 0 0 0;
     }
 
+    .domain-legend-dock {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .legend-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        padding: 3px 10px;
+        border-radius: 6px;
+        border: 1px solid transparent;
+    }
+    .legend-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+    }
+
+    .domain-inventory { background: #f0f9ff; color: #0369a1; border-color: #bae6fd; }
+    .domain-pricing   { background: #faf5ff; color: #6b21a8; border-color: #e9d5ff; }
+    .domain-cash      { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+    .domain-admin     { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+
     .matrix-table-wrap {
         overflow-x: auto;
         max-width: 100%;
@@ -237,18 +408,26 @@
         font-size: 0.80rem;
     }
 
-    .matrix-table th {
-        background: #f8fafc;
-        color: #64748b;
+    .domain-group-th {
+        padding: 0.55rem 0.5rem;
         font-size: 0.72rem;
-        font-weight: 700;
+        font-weight: 800;
         text-transform: uppercase;
-        letter-spacing: 0.04em;
-        padding: 0.85rem 0.75rem;
+        letter-spacing: 0.05em;
+        text-align: center;
+        border-bottom: 1px solid #e2e8f0;
+        border-right: 1px solid #e2e8f0;
+    }
+
+    .perm-key-th {
+        background: #f8fafc;
+        color: #475569;
+        font-size: 0.70rem;
+        padding: 0.65rem 0.5rem;
         border-bottom: 1px solid #e2e8f0;
         border-right: 1px solid #f1f5f9;
-        white-space: nowrap;
         text-align: center;
+        white-space: nowrap;
     }
 
     .matrix-table td {
@@ -269,19 +448,48 @@
         z-index: 2;
         text-align: left !important;
         padding-left: 1.25rem !important;
-        min-width: 160px;
+        min-width: 180px;
         box-shadow: 2px 0 6px rgba(0,0,0,0.03);
     }
     .matrix-table th.sticky-col {
         background: #f8fafc;
         z-index: 3;
+        vertical-align: middle;
     }
 
-    .perm-header-cell {
+    .role-title-head {
+        font-size: 0.78rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #0f172a;
+    }
+
+    .role-cell-wrap {
         display: flex;
         align-items: center;
-        justify-content: center;
-        font-family: 'JetBrains Mono', monospace;
+        gap: 8px;
+    }
+    .role-name {
+        color: #0f172a;
+        font-size: 0.88rem;
+        font-weight: 700;
+    }
+    .role-elevated-badge {
+        font-size: 0.65rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        background: #fffbeb;
+        color: #b45309;
+        border: 1px solid #fde68a;
+        padding: 1px 6px;
+        border-radius: 4px;
+    }
+
+    .perm-header-cell code {
+        font-family: 'JetBrains Mono', Consolas, monospace;
+        font-size: 0.72rem;
+        color: #334155;
     }
 
     .toggle-btn {
@@ -318,4 +526,91 @@
         color: #475569;
         transform: scale(1.04);
     }
+
+    .toggle-loading {
+        opacity: 0.6;
+        cursor: wait;
+    }
 </style>
+
+@* ── ASYNC AJAX TOGGLE SCRIPT ── *@
+<script>
+    async function togglePermissionAjax(btn) {
+        if (btn.classList.contains('toggle-loading')) return;
+
+        const roleId = parseInt(btn.getAttribute('data-role-id'), 10);
+        const roleName = btn.getAttribute('data-role-name') || 'Role';
+        const permKey = btn.getAttribute('data-perm-key');
+        const currentlyAllowed = btn.getAttribute('data-allowed') === 'true';
+        const targetAllowed = !currentlyAllowed;
+
+        // Optimistic UI state flip
+        applyBtnState(btn, targetAllowed);
+        btn.classList.add('toggle-loading');
+
+        const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+        const requestVerificationToken = tokenInput ? tokenInput.value : '';
+
+        try {
+            const resp = await fetch('?handler=ToggleAjax', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': requestVerificationToken
+                },
+                body: JSON.stringify({
+                    roleId: roleId,
+                    permissionKey: permKey,
+                    isAllowed: targetAllowed
+                })
+            });
+
+            if (!resp.ok) {
+                const errData = await resp.json().catch(() => ({}));
+                throw new Error(errData.message || `Server error (${resp.status})`);
+            }
+
+            const data = await resp.json();
+            if (!data.success) {
+                throw new Error(data.message || 'Permission update was rejected.');
+            }
+
+            // Confirmed server state
+            applyBtnState(btn, data.isAllowed);
+            if (window.showToast) {
+                window.showToast(data.message || `${roleName}: ${permKey} updated.`, 'success');
+            }
+        } catch (err) {
+            // Rollback optimistic state
+            applyBtnState(btn, currentlyAllowed);
+            if (window.showToast) {
+                window.showToast(`Failed to update ${permKey}: ${err.message}`, 'error');
+            } else {
+                alert(`Error: ${err.message}`);
+            }
+        } finally {
+            btn.classList.remove('toggle-loading');
+        }
+    }
+
+    function applyBtnState(btn, isAllowed) {
+        btn.setAttribute('data-allowed', isAllowed ? 'true' : 'false');
+        if (isAllowed) {
+            btn.className = 'toggle-btn toggle-allowed';
+            btn.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                </svg>
+                <span class="toggle-text">Allowed</span>
+            `;
+        } else {
+            btn.className = 'toggle-btn toggle-denied';
+            btn.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                <span class="toggle-text">Denied</span>
+            `;
+        }
+    }
+</script>
