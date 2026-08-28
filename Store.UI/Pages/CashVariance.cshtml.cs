@@ -100,23 +100,17 @@ public class CashVarianceModel : SecurePageModel
             return Unauthorized();
 
         _apiClient.SetToken(token);
-        var shifts = await _apiClient.GetAsync<List<CashierShiftDto>>("/api/cash/shifts?page=1&pageSize=30", ct) ?? new();
-        var query = q?.Trim().ToLowerInvariant();
+        var shifts = await _varianceManager.SearchShiftsAsync(q, 30, ct);
 
-        var results = shifts
-            .Where(s => string.IsNullOrEmpty(query) ||
-                        s.CashierShiftId.ToString().ToLowerInvariant().Contains(query) ||
-                        s.Status.ToString().ToLowerInvariant().Contains(query) ||
-                        (s.Notes?.ToLowerInvariant().Contains(query) ?? false))
-            .Select(s => new
-            {
-                id = s.CashierShiftId.ToString(),
-                title = $"Shift #{s.CashierShiftId.ToString()[..8]} ({s.OpenedAtUtc:dd MMM HH:mm})",
-                sub = $"Float: {s.OpeningFloat:N0} XAF | Exp. Close: {(s.ExpectedClosingAmount?.ToString("N0") ?? "0")} XAF | {s.Status}",
-                badge = s.Status.ToString(),
-                expected = s.ExpectedClosingAmount ?? s.OpeningFloat,
-                actual = s.ClosingFloat ?? 0
-            });
+        var results = shifts.Select(s => new
+        {
+            id = s.CashierShiftId.ToString(),
+            title = $"Shift #{s.CashierShiftId.ToString()[..8]} ({s.OpenedAtUtc:dd MMM HH:mm})",
+            sub = $"Float: {s.OpeningFloat:N0} XAF | Exp. Close: {(s.ExpectedClosingAmount?.ToString("N0") ?? "0")} XAF | {s.Status}",
+            badge = s.Status.ToString(),
+            expected = s.ExpectedClosingAmount ?? s.OpeningFloat,
+            actual = s.ClosingFloat ?? 0
+        });
 
         return new JsonResult(results);
     }

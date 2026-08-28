@@ -668,39 +668,63 @@
         btn.classList.add('loading');
 
         try {
-            const resp = await fetch(`?handler=QueryStatus&id=${txId}`);
-            if (!resp.ok) {
-                const errData = await resp.json().catch(() => ({}));
-                throw new Error(errData.message || `Server responded with ${resp.status}`);
-            }
-
-            const data = await resp.json();
-            if (!data.success) {
-                throw new Error(data.message || 'Unable to retrieve status from gateway.');
-            }
-
-            const row = document.getElementById(`row-${txId}`);
-            if (row) {
-                const statusCell = row.querySelector('.cell-status');
-                const refCell = row.querySelector('.cell-provider-ref');
-                const actionCell = row.querySelector('.cell-action');
-
-                if (statusCell) {
-                    statusCell.textContent = data.status;
-                    statusCell.className = `pay-status-badge cell-status ${data.isSuccess ? 'status-completed' : (data.isPending ? 'status-pending' : 'status-failed')}`;
+            const pollFn = async (attempt) => {
+                const resp = await fetch(`?handler=QueryStatus&id=${txId}`);
+                if (!resp.ok) {
+                    const errData = await resp.json().catch(() => ({}));
+                    throw new Error(errData.message || `Server responded with status ${resp.status}`);
                 }
 
-                if (refCell && data.providerRef !== 'N/A') {
-                    refCell.textContent = data.providerRef;
+                const data = await resp.json();
+                if (!data.success) {
+                    throw new Error(data.message || 'Unable to retrieve status from gateway.');
                 }
 
-                if (actionCell && !data.isPending) {
-                    actionCell.innerHTML = '<span style="font-size:0.72rem; color:#94a3b8; font-weight:600;">Settled</span>';
-                }
+                // If not pending (i.e. completed or failed), terminal state reached
+                return { done: !data.isPending, data: data };
+            };
+
+            let resultData = null;
+            if (typeof window.pollWithExponentialBackoff === 'function') {
+                const pollResult = await window.pollWithExponentialBackoff(pollFn, {
+                    maxAttempts: 3,
+                    initialDelayMs: 1500,
+                    onRetry: (attempt, delayMs) => {
+                        if (window.showToast) {
+                            window.showToast(`Gateway pending... retrying status verification in ${(delayMs/1000).toFixed(1)}s (Attempt ${attempt}/3)`, 'info');
+                        }
+                    }
+                });
+                resultData = pollResult?.data;
+            } else {
+                const singleRes = await pollFn(1);
+                resultData = singleRes?.data;
             }
 
-            if (window.showToast) {
-                window.showToast(data.message, data.isSuccess ? 'success' : (data.isPending ? 'info' : 'warning'));
+            if (resultData) {
+                const row = document.getElementById(`row-${txId}`);
+                if (row) {
+                    const statusCell = row.querySelector('.cell-status');
+                    const refCell = row.querySelector('.cell-provider-ref');
+                    const actionCell = row.querySelector('.cell-action');
+
+                    if (statusCell) {
+                        statusCell.textContent = resultData.status;
+                        statusCell.className = `pay-status-badge cell-status ${resultData.isSuccess ? 'status-completed' : (resultData.isPending ? 'status-pending' : 'status-failed')}`;
+                    }
+
+                    if (refCell && resultData.providerRef !== 'N/A') {
+                        refCell.textContent = resultData.providerRef;
+                    }
+
+                    if (actionCell && !resultData.isPending) {
+                        actionCell.innerHTML = '<span style="font-size:0.72rem; color:#94a3b8; font-weight:600;">Settled</span>';
+                    }
+                }
+
+                if (window.showToast) {
+                    window.showToast(resultData.message, resultData.isSuccess ? 'success' : (resultData.isPending ? 'info' : 'warning'));
+                }
             }
         } catch (err) {
             if (window.showToast) {

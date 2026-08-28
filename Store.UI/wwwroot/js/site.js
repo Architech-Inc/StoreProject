@@ -1522,6 +1522,39 @@
         }
     }, true); // Use capture phase to intercept before inline onclicks run
 
+    // --- Resilient Polling Utility with Exponential Backoff & Jitter ---
+    window.pollWithExponentialBackoff = async function(pollFn, options = {}) {
+        const maxAttempts = options.maxAttempts || 5;
+        const initialDelayMs = options.initialDelayMs || 1500;
+        const maxDelayMs = options.maxDelayMs || 12000;
+        const factor = options.factor || 1.8;
+
+        let delay = initialDelayMs;
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                const result = await pollFn(attempt);
+                if (result && result.done) {
+                    return result;
+                }
+                if (attempt === maxAttempts) {
+                    return result || { done: false, timeout: true };
+                }
+            } catch (err) {
+                if (attempt === maxAttempts) {
+                    throw err;
+                }
+            }
+
+            // Jitter +/- 20%
+            const jitter = delay * (0.8 + Math.random() * 0.4);
+            if (typeof options.onRetry === 'function') {
+                options.onRetry(attempt, Math.round(jitter));
+            }
+            await new Promise(res => setTimeout(res, jitter));
+            delay = Math.min(maxDelayMs, delay * factor);
+        }
+    };
+
 })();
 
 

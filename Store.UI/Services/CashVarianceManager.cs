@@ -1,5 +1,6 @@
 using System.Text;
 using Store.Models.DTOs.Cash;
+using Store.Models.DTOs.Operations;
 using Store.Models.Enums;
 
 namespace StoreUI.Services;
@@ -35,6 +36,20 @@ public class CashVarianceManager : ICashVarianceManager
     {
         return await _apiClient.GetAsync<List<CashVarianceDto>>($"/api/cash/variances/by-shift/{shiftId}", ct)
             ?? new List<CashVarianceDto>();
+    }
+
+    public async Task<List<CashierShiftDto>> SearchShiftsAsync(string? query = null, int limit = 30, CancellationToken ct = default)
+    {
+        var shifts = await _apiClient.GetAsync<List<CashierShiftDto>>($"/api/cash/shifts?page=1&pageSize={limit}", ct) ?? new();
+        if (string.IsNullOrWhiteSpace(query))
+            return shifts;
+
+        var q = query.Trim().ToLowerInvariant();
+        return shifts.Where(s =>
+            s.CashierShiftId.ToString().ToLowerInvariant().Contains(q) ||
+            s.Status.ToString().ToLowerInvariant().Contains(q) ||
+            (s.Notes?.ToLowerInvariant().Contains(q) ?? false)
+        ).ToList();
     }
 
     public async Task<CashVarianceDto?> RecordAsync(RecordCashVarianceRequest request, CancellationToken ct = default)

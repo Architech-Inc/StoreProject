@@ -277,6 +277,15 @@
                                             </svg>
                                             Inspect
                                         </button>
+                                        <button type="button"
+                                                class="btn-table-action"
+                                                style="color:#0f766e; border-color:#ccfbf1; background:#f0fdfa;"
+                                                onclick='openVarianceSlipModal(@v.CashVarianceRecordId, "@v.CashierShiftId", @v.ExpectedAmount, @v.ActualAmount, "@(v.ReasonCode ?? "")", "@(v.Status)", "@v.RecordedByUser", "@(v.ReviewedByUser ?? "")", "@(v.Notes?.Replace("\"", "\\\"") ?? "")", "@(v.ReviewNotes?.Replace("\"", "\\\"") ?? "")", "@v.DateCreated.ToString("yyyy-MM-dd HH:mm")", "@(v.ReviewedAt?.ToString("yyyy-MM-dd HH:mm") ?? "")")'>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                                            </svg>
+                                            Slip
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
@@ -491,12 +500,113 @@
             <p id="dReviewNotes" class="drawer-notes-box"></p>
         </div>
     </div>
-    <div class="drawer-footer">
-        <button type="button" class="btn-var-action btn-var-secondary" style="width:100%; justify-content:center;" onclick="closeDrawer()">
+    <div class="drawer-footer" style="display:flex; gap:8px;">
+        <button type="button" class="btn-var-action btn-var-secondary" style="flex:1; justify-content:center;" onclick="closeDrawer()">
             <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
-            Close Inspector
+            Close
+        </button>
+        <button type="button" class="btn-var-action btn-var-primary" style="flex:1.4; justify-content:center;" onclick="printActiveDrawerVoucher()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+            Print Audit Voucher
+        </button>
+    </div>
+</div>
+
+@* ═════════════════════════════════════════════════════════════ *@
+@* ── MODAL 3: PRINTABLE VARIANCE AUDIT SLIP ─────────────────── *@
+@* ═════════════════════════════════════════════════════════════ *@
+<div class="var-modal-overlay" id="varianceSlipModalOverlay" onclick="closeVarianceSlipModal()"></div>
+<div class="var-modal" id="varianceSlipModal" style="max-width:540px;">
+    <div class="var-modal-header">
+        <h3 style="margin:0; font-size:1.15rem; color:#019c01; display:flex; align-items:center; gap:8px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+            Cash Variance Audit Voucher
+        </h3>
+        <button type="button" class="btn-close" onclick="closeVarianceSlipModal()" aria-label="Close">×</button>
+    </div>
+    <div class="var-modal-body" style="padding:1.25rem;">
+        <div id="printableVarianceSlipContent" class="variance-voucher-print">
+            <div style="text-align:center; border-bottom:2px solid #0f172a; padding-bottom:8px; margin-bottom:12px;">
+                <h2 style="margin:0; font-size:1.15rem; font-weight:800; color:#0f172a; letter-spacing:0.5px;">CLEXAN FOODS RETAIL</h2>
+                <div style="font-size:0.72rem; color:#64748b;">Fiscal Loss Prevention &amp; Float Audit Control</div>
+                <div style="font-size:0.85rem; font-weight:800; margin-top:4px; color:#e11d48;" id="vSlipTitle">CASH VARIANCE AUDIT VOUCHER</div>
+                <div style="font-size:0.72rem; color:#64748b;" id="vSlipRef"></div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:0.78rem; margin-bottom:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:8px 10px;">
+                <div>
+                    <span style="color:#64748b; font-size:0.68rem; text-transform:uppercase; display:block;">Cashier User:</span>
+                    <strong id="vSlipCashier" style="color:#0f172a;"></strong>
+                </div>
+                <div>
+                    <span style="color:#64748b; font-size:0.68rem; text-transform:uppercase; display:block;">Audit Status:</span>
+                    <strong id="vSlipStatus" style="color:#0f172a;"></strong>
+                </div>
+                <div>
+                    <span style="color:#64748b; font-size:0.68rem; text-transform:uppercase; display:block;">Date Recorded:</span>
+                    <span id="vSlipDate" style="color:#0f172a;"></span>
+                </div>
+                <div>
+                    <span style="color:#64748b; font-size:0.68rem; text-transform:uppercase; display:block;">Supervisor:</span>
+                    <span id="vSlipReviewer" style="color:#0f172a;"></span>
+                </div>
+            </div>
+
+            <table style="width:100%; border-collapse:collapse; margin-bottom:12px; font-size:0.80rem;">
+                <tr style="border-bottom:1px solid #e2e8f0;">
+                    <td style="padding:5px 0; color:#64748b;">Expected Drawer Cash:</td>
+                    <td style="padding:5px 0; text-align:right; font-weight:700;" id="vSlipExpected"></td>
+                </tr>
+                <tr style="border-bottom:1px solid #e2e8f0;">
+                    <td style="padding:5px 0; color:#64748b;">Actual Physical Declaration:</td>
+                    <td style="padding:5px 0; text-align:right; font-weight:700;" id="vSlipActual"></td>
+                </tr>
+                <tr style="border-bottom:2px solid #0f172a; font-weight:800; font-size:0.90rem;">
+                    <td style="padding:6px 0;">Discrepancy Delta:</td>
+                    <td style="padding:6px 0; text-align:right;" id="vSlipDelta"></td>
+                </tr>
+            </table>
+
+            <div style="font-size:0.75rem; margin-bottom:8px;">
+                <span style="color:#64748b; font-weight:700; text-transform:uppercase; display:block; margin-bottom:2px;">Reason / Category:</span>
+                <span id="vSlipReason" style="font-weight:600; color:#0f172a;"></span>
+            </div>
+
+            <div style="font-size:0.75rem; margin-bottom:8px;">
+                <span style="color:#64748b; font-weight:700; text-transform:uppercase; display:block; margin-bottom:2px;">Cashier Declaration Memo:</span>
+                <div id="vSlipNotes" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:4px; padding:5px 8px; font-style:italic;"></div>
+            </div>
+
+            <div style="font-size:0.75rem; margin-bottom:14px;">
+                <span style="color:#64748b; font-weight:700; text-transform:uppercase; display:block; margin-bottom:2px;">Supervisory Audit Determination:</span>
+                <div id="vSlipReviewNotes" style="background:#fffbeb; border:1px solid #fef3c7; border-radius:4px; padding:5px 8px;"></div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:20px; padding-top:10px; border-top:1px dashed #cbd5e1;">
+                <div style="text-align:center;">
+                    <div style="border-top:1px solid #0f172a; width:80%; margin:24px auto 4px auto;"></div>
+                    <span style="font-size:0.68rem; color:#64748b; text-transform:uppercase;">Cashier Signature &amp; Date</span>
+                </div>
+                <div style="text-align:center;">
+                    <div style="border-top:1px solid #0f172a; width:80%; margin:24px auto 4px auto;"></div>
+                    <span style="font-size:0.68rem; color:#64748b; text-transform:uppercase;">Supervisor / Auditor Sign-off</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="var-modal-footer">
+        <button type="button" class="btn-var-secondary" onclick="closeVarianceSlipModal()">Close</button>
+        <button type="button" class="btn-var-primary" onclick="printVarianceSlip()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+            Print Voucher Slip
         </button>
     </div>
 </div>
@@ -1062,10 +1172,30 @@
 
     .text-teal { color: #0d9488 !important; }
     .text-rose { color: #e11d48 !important; }
+
+    @@media print {
+        body * {
+            visibility: hidden;
+        }
+        #printableVarianceSlipContent, #printableVarianceSlipContent * {
+            visibility: visible;
+        }
+        #printableVarianceSlipContent {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            border: none;
+            box-shadow: none;
+            padding: 0;
+        }
+    }
 </style>
 
 @* ── JAVASCRIPT INTERACTIONS ── *@
 <script>
+    let activeDrawerVarianceData = null;
+
     function filterVarianceTable() {
         const query = document.getElementById('varianceSearchInput')?.value.toLowerCase() || '';
         const rows = document.querySelectorAll('#varianceTable tbody tr');
@@ -1187,8 +1317,49 @@
         document.getElementById('reviewModal').style.display = 'none';
     }
 
+    // Modal 3: Printable Variance Voucher Slip
+    function openVarianceSlipModal(id, shiftId, expected, actual, reason, status, cashier, reviewer, notes, reviewNotes, recordedDate, reviewedDate) {
+        const delta = actual - expected;
+        document.getElementById('vSlipRef').textContent = `Record #VAR-${id} | Shift: #${shiftId.substring(0, 8)}`;
+        document.getElementById('vSlipCashier').textContent = cashier || '—';
+        document.getElementById('vSlipStatus').textContent = status || 'Pending';
+        document.getElementById('vSlipDate').textContent = recordedDate || '—';
+        document.getElementById('vSlipReviewer').textContent = reviewer || 'Awaiting Review';
+
+        document.getElementById('vSlipExpected').textContent = expected.toLocaleString() + ' XAF';
+        document.getElementById('vSlipActual').textContent = actual.toLocaleString() + ' XAF';
+
+        const deltaEl = document.getElementById('vSlipDelta');
+        deltaEl.textContent = (delta >= 0 ? '+' : '') + delta.toLocaleString() + ' XAF';
+        deltaEl.style.color = delta < 0 ? '#e11d48' : delta > 0 ? '#0d9488' : '#0f172a';
+
+        document.getElementById('vSlipReason').textContent = reason || 'Unclassified Discrepancy';
+        document.getElementById('vSlipNotes').textContent = notes || 'No cashier explanation notes submitted.';
+        document.getElementById('vSlipReviewNotes').textContent = reviewNotes || 'Awaiting supervisory resolution and auditor review determination.';
+
+        document.getElementById('varianceSlipModalOverlay').style.display = 'block';
+        document.getElementById('varianceSlipModal').style.display = 'block';
+    }
+
+    function closeVarianceSlipModal() {
+        document.getElementById('varianceSlipModalOverlay').style.display = 'none';
+        document.getElementById('varianceSlipModal').style.display = 'none';
+    }
+
+    function printVarianceSlip() {
+        setTimeout(() => window.print(), 100);
+    }
+
+    function printActiveDrawerVoucher() {
+        if (!activeDrawerVarianceData) return;
+        const d = activeDrawerVarianceData;
+        openVarianceSlipModal(d.id, d.shiftId, d.expected, d.actual, d.reason, d.status, d.cashier, d.reviewer, d.notes, d.reviewNotes, d.recordedDate, d.reviewedDate);
+    }
+
     // Drawer: Inspector
     function openDrawer(id, shiftId, expected, actual, reason, status, cashier, reviewer, notes, reviewNotes, recordedDate, reviewedDate) {
+        activeDrawerVarianceData = { id, shiftId, expected, actual, reason, status, cashier, reviewer, notes, reviewNotes, recordedDate, reviewedDate };
+
         document.getElementById('drawerRecordId').textContent = `Record #${id} (Shift: ${shiftId.substring(0,8)}…)`;
         document.getElementById('dExpected').textContent = expected.toLocaleString() + ' XAF';
         document.getElementById('dActual').textContent = actual.toLocaleString() + ' XAF';
