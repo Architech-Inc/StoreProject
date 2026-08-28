@@ -295,6 +295,23 @@ public class StoreOperationsService : IStoreOperationsService
         }).ToList();
     }
 
+    public async Task<PricingOpsMetricsDto> GetPricingOpsMetricsAsync(CancellationToken ct = default)
+    {
+        var taxes = await _uow.Repository<TaxProfile>().Query().AsNoTracking().Where(t => t.IsActive).ToListAsync(ct);
+        var bundles = await _uow.Repository<BundleRule>().Query().AsNoTracking().Where(b => b.IsActive).CountAsync(ct);
+        var segments = await _uow.Repository<CustomerSegmentPrice>().Query().AsNoTracking().Where(s => s.IsActive).CountAsync(ct);
+
+        decimal avgTax = taxes.Count > 0 ? Math.Round(taxes.Average(t => t.RatePercent), 2) : 0;
+
+        return new PricingOpsMetricsDto
+        {
+            ActiveTaxProfilesCount = taxes.Count,
+            ActiveBundleRulesCount = bundles,
+            ActiveSegmentPricingsCount = segments,
+            AverageTaxRatePercent = avgTax
+        };
+    }
+
     public async Task<IReadOnlyList<TaxProfileDto>> GetTaxProfilesAsync(CancellationToken ct = default)
     {
         return await _uow.Repository<TaxProfile>().Query()
@@ -424,6 +441,8 @@ public class StoreOperationsService : IStoreOperationsService
                 CustomerSegmentPriceId = x.CustomerSegmentPriceId,
                 ItemId = x.ItemId,
                 ItemName = x.Item.Name,
+                BaseUnitPrice = x.Item.UnitPrice,
+                UnitCostPrice = x.Item.CostPrice ?? 0,
                 Segment = x.Segment,
                 PriceOverride = x.PriceOverride,
                 ValidFrom = x.ValidFrom,
@@ -456,16 +475,17 @@ public class StoreOperationsService : IStoreOperationsService
 
         await _uow.SaveChangesAsync(ct);
 
-        var itemName = await _uow.Repository<Item>().Query()
+        var item = await _uow.Repository<Item>().Query()
             .Where(i => i.ItemId == entity.ItemId)
-            .Select(i => i.Name)
             .FirstAsync(ct);
 
         return new SegmentPricingDto
         {
             CustomerSegmentPriceId = entity.CustomerSegmentPriceId,
             ItemId = entity.ItemId,
-            ItemName = itemName,
+            ItemName = item.Name,
+            BaseUnitPrice = item.UnitPrice,
+            UnitCostPrice = item.CostPrice ?? 0,
             Segment = entity.Segment,
             PriceOverride = entity.PriceOverride,
             ValidFrom = entity.ValidFrom,
@@ -554,6 +574,7 @@ public class StoreOperationsService : IStoreOperationsService
             ItemId = item.ItemId,
             ItemName = item.Name,
             BaseUnitPrice = unitBase,
+            UnitCostPrice = item.CostPrice ?? 0,
             TaxRatePercent = taxRate,
             SegmentPrice = segmentUnit,
             DiscountPerUnit = Math.Round(discountPerUnit, 2),

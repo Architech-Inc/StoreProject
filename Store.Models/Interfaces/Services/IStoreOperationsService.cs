@@ -13,6 +13,7 @@ public interface IStoreOperationsService
     Task<InventoryOperationResultDto> AdjustStockAsync(StockAdjustmentAuditRequest request, Guid? actingUserId, CancellationToken ct = default);
     Task<IReadOnlyList<ReorderSuggestionDto>> GetLowStockReorderSuggestionsAsync(CancellationToken ct = default);
 
+    Task<PricingOpsMetricsDto> GetPricingOpsMetricsAsync(CancellationToken ct = default);
     Task<IReadOnlyList<TaxProfileDto>> GetTaxProfilesAsync(CancellationToken ct = default);
     Task<TaxProfileDto> UpsertTaxProfileAsync(UpsertTaxProfileRequest request, CancellationToken ct = default);
     Task<IReadOnlyList<BundleRuleDto>> GetBundleRulesAsync(CancellationToken ct = default);

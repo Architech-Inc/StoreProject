@@ -642,7 +642,12 @@
                                             <span class="badge badge-teal">Approved</span>
                                             break;
                                         case "Dispatched":
-                                            <span class="badge badge-purple">In Transit 🚚</span>
+                                            <span class="badge badge-purple" style="display:inline-flex; align-items:center; gap:4px;">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1" />
+                                                </svg>
+                                                In Transit
+                                            </span>
                                             break;
                                         case "Received":
                                             <span class="badge badge-success">Received</span>
@@ -668,32 +673,46 @@
 
                                         @if (Model.CanApprove && t.Status == "Requested")
                                         {
-                                            <button type="button" class="btn-table-action primary" onclick="openApproveModal(@t.StockTransferId)">
-                                                ✓ Approve
+                                            <button type="button" class="btn-table-action primary" onclick="openApproveModal(@t.StockTransferId)" style="display:inline-flex; align-items:center; gap:4px;">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                                </svg>
+                                                Approve
                                             </button>
-                                            <button type="button" class="btn-table-action danger" onclick="openRejectModal(@t.StockTransferId)">
-                                                ✕ Reject
+                                            <button type="button" class="btn-table-action danger" onclick="openRejectModal(@t.StockTransferId)" style="display:inline-flex; align-items:center; gap:4px;">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
+                                                Reject
                                             </button>
                                         }
 
                                         @if (Model.CanWrite && t.Status == "Approved")
                                         {
-                                            <button type="button" class="btn-table-action purple" data-transfer="@transferJson" onclick="openDispatchModal(this)">
-                                                🚚 Dispatch
+                                            <button type="button" class="btn-table-action purple" data-transfer="@transferJson" onclick="openDispatchModal(this)" style="display:inline-flex; align-items:center; gap:4px;">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1" />
+                                                </svg>
+                                                Dispatch
                                             </button>
                                         }
 
                                         @if (Model.CanWrite && t.Status == "Dispatched")
                                         {
-                                            <button type="button" class="btn-table-action primary" data-transfer="@transferJson" onclick="openReceiveModal(this)">
-                                                📥 Receive
+                                            <button type="button" class="btn-table-action primary" data-transfer="@transferJson" onclick="openReceiveModal(this)" style="display:inline-flex; align-items:center; gap:4px;">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                                </svg>
+                                                Receive
                                             </button>
                                         }
 
                                         @if (Model.CanWrite && t.Status != "Received" && t.Status != "Cancelled")
                                         {
-                                            <button type="button" class="btn-table-action danger" title="Cancel Transfer" onclick="openCancelModal(@t.StockTransferId)">
-                                                ✕
+                                            <button type="button" class="btn-table-action danger" title="Cancel Transfer" onclick="openCancelModal(@t.StockTransferId)" style="display:inline-flex; align-items:center; justify-content:center;">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
                                             </button>
                                         }
                                     </div>
@@ -837,7 +856,12 @@
         <div class="transfer-modal-body">
             <div class="transfer-live-banner" style="background:rgba(147, 51, 234, 0.08); border-color:rgba(147, 51, 234, 0.2);">
                 <span id="dispatchRouteLabel" style="font-weight:600; color:#9333ea;">Route</span>
-                <span style="font-size:0.80rem; color:var(--text-secondary);">⚠️ Stock will be deducted from origin branch upon dispatch.</span>
+                <span style="font-size:0.80rem; color:var(--text-secondary); display:inline-flex; align-items:center; gap:4px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#d97706">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    Stock will be deducted from origin branch upon dispatch.
+                </span>
             </div>
 
             <div style="font-size:0.84rem; font-weight:600; margin-bottom:4px;">Dispatched Items Checklist:</div>

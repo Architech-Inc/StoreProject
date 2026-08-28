@@ -70,6 +70,7 @@ builder.Services.AddScoped<IPurchaseOrderManager, PurchaseOrderManager>();
 builder.Services.AddScoped<IAuditLogManager, AuditLogManager>();
 builder.Services.AddScoped<IDiscountManager, DiscountManager>();
 builder.Services.AddScoped<IDiscountOverrideManager, DiscountOverrideManager>();
+builder.Services.AddScoped<IPricingOpsManager, PricingOpsManager>();
 
 var app = builder.Build();
 

@@ -1,73 +1,93 @@
 using Microsoft.AspNetCore.Mvc;
-using Store.Models.DTOs.Common;
-using Store.Models.DTOs.Items;
 using Store.Models.DTOs.Operations;
 using Store.Models.Enums;
-using Store.Models.Interfaces.Services;
 using StoreUI.Services;
 
 namespace StoreUI.Pages;
 
 public class PricingOpsModel : SecurePageModel
 {
+    private readonly IPricingOpsManager _pricingManager;
     private readonly IApiClientService _apiClient;
-    private readonly IItemService _itemService;
 
-    public IReadOnlyList<ItemDto> Items { get; private set; } = Array.Empty<ItemDto>();
-    public IReadOnlyList<TaxProfileDto> TaxProfiles { get; private set; } = Array.Empty<TaxProfileDto>();
-    public IReadOnlyList<BundleRuleDto> BundleRules { get; private set; } = Array.Empty<BundleRuleDto>();
-    public IReadOnlyList<SegmentPricingDto> SegmentPricings { get; private set; } = Array.Empty<SegmentPricingDto>();
+    public PricingOpsMetricsDto Metrics { get; private set; } = new();
+    public List<TaxProfileDto> TaxProfiles { get; private set; } = new();
+    public List<BundleRuleDto> BundleRules { get; private set; } = new();
+    public List<SegmentPricingDto> SegmentPricings { get; private set; } = new();
 
-    [BindProperty] public string TaxName { get; set; } = string.Empty;
-    [BindProperty] public decimal TaxRate { get; set; }
-    [BindProperty] public TaxApplicationType TaxApplicationType { get; set; }
+    [BindProperty(SupportsGet = true)]
+    public string ActiveTab { get; set; } = "simulator";
 
-    [BindProperty] public string BundleName { get; set; } = string.Empty;
-    [BindProperty] public Guid BundleTriggerItemId { get; set; }
-    [BindProperty] public Guid BundleRewardItemId { get; set; }
-    [BindProperty] public int BundleTriggerQty { get; set; } = 2;
-    [BindProperty] public int BundleRewardQty { get; set; } = 1;
-    [BindProperty] public decimal BundleDiscountPercent { get; set; } = 10;
+    [BindProperty]
+    public UpsertTaxProfileRequest TaxRequest { get; set; } = new();
 
-    [BindProperty] public Guid SegmentItemId { get; set; }
-    [BindProperty] public CustomerSegment Segment { get; set; }
-    [BindProperty] public decimal SegmentPrice { get; set; }
+    [BindProperty]
+    public UpsertBundleRuleRequest BundleRequest { get; set; } = new();
 
-    [BindProperty] public Guid PreviewItemId { get; set; }
-    [BindProperty] public int PreviewQty { get; set; } = 1;
-    [BindProperty] public CustomerSegment PreviewSegment { get; set; }
-
-    public PricingPreviewDto? Preview { get; private set; }
+    [BindProperty]
+    public UpsertSegmentPricingRequest SegmentRequest { get; set; } = new();
 
     public bool CanRead { get; private set; }
     public bool CanWrite { get; private set; }
 
-    [TempData] public string? StatusMessage { get; set; }
+    [TempData]
+    public string? StatusMessage { get; set; }
 
-    public PricingOpsModel(IApiClientService apiClient, IItemService itemService)
+    public PricingOpsModel(
+        IPricingOpsManager pricingManager,
+        IApiClientService apiClient)
     {
+        _pricingManager = pricingManager;
         _apiClient = apiClient;
-        _itemService = itemService;
     }
 
-    public async Task<IActionResult> OnGetAsync(CancellationToken ct)
+    public async Task<IActionResult> OnGetAsync(CancellationToken ct = default)
     {
         if (!TryGetSecurityContext(out var token, out var permissions))
-        {
             return GoToLogin();
-        }
 
         _apiClient.SetToken(token);
-        CanRead = HasPermission(permissions, PermissionKeys.PricingRead);
+        CanRead = HasPermission(permissions, PermissionKeys.PricingRead) ||
+                  HasPermission(permissions, PermissionKeys.InventoryRead);
         CanWrite = HasPermission(permissions, PermissionKeys.PricingWrite);
 
         if (!CanRead)
-        {
             return AccessDenied();
-        }
 
-        await LoadAsync(ct);
+        Metrics = await _pricingManager.GetMetricsAsync(ct);
+        TaxProfiles = await _pricingManager.GetTaxProfilesAsync(ct);
+        BundleRules = await _pricingManager.GetBundleRulesAsync(ct);
+        SegmentPricings = await _pricingManager.GetSegmentPricingsAsync(ct);
+
         return Page();
+    }
+
+    public async Task<IActionResult> OnGetSimulateAsync(
+        [FromQuery] Guid itemId,
+        [FromQuery] int quantity,
+        [FromQuery] CustomerSegment segment,
+        CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return Unauthorized();
+
+        _apiClient.SetToken(token);
+
+        if (itemId == Guid.Empty)
+            return BadRequest(new { message = "Valid Item ID is required." });
+
+        var req = new PricingPreviewRequest
+        {
+            ItemId = itemId,
+            Quantity = quantity < 1 ? 1 : quantity,
+            Segment = segment
+        };
+
+        var preview = await _pricingManager.GetPricingPreviewAsync(req, ct);
+        if (preview is null)
+            return NotFound(new { message = "Item pricing profile not found." });
+
+        return new JsonResult(preview);
     }
 
     public async Task<IActionResult> OnGetSearchItemsAsync([FromQuery] string? q, CancellationToken ct = default)
@@ -76,125 +96,102 @@ public class PricingOpsModel : SecurePageModel
             return Unauthorized();
 
         _apiClient.SetToken(token);
-        var result = await _itemService.GetAllAsync(new PagedRequest { Page = 1, PageSize = 15, SearchTerm = q?.Trim() }, ct);
-        var items = result.Items.Select(i => new
+
+        var items = await _pricingManager.SearchItemsAsync(q, ct);
+        var list = items.Select(i => new
         {
             id = i.ItemId.ToString(),
             title = i.Name,
-            sub = $"Barcode: {(string.IsNullOrEmpty(i.Barcode) ? "N/A" : i.Barcode)} | Price: {i.UnitPrice:N2} XAF",
-            badge = i.CategoryName ?? "Item"
+            sub = $"Barcode: {(string.IsNullOrEmpty(i.Barcode) ? "N/A" : i.Barcode)} | Price: {i.UnitPrice:N0} XAF | Cost: {i.CostPrice:N0} XAF",
+            unitPrice = i.UnitPrice,
+            costPrice = i.CostPrice,
+            badge = i.CategoryName ?? "General"
         });
 
-        return new JsonResult(items);
+        return new JsonResult(list);
     }
 
-    public async Task<IActionResult> OnPostTaxAsync(CancellationToken ct)
+    public async Task<IActionResult> OnGetExportCsvAsync([FromQuery] string? type, CancellationToken ct = default)
     {
-        return await HandleWriteAsync(async () =>
-        {
-            var req = new UpsertTaxProfileRequest
-            {
-                Name = TaxName,
-                RatePercent = TaxRate,
-                ApplicationType = TaxApplicationType,
-                IsActive = true
-            };
-            await _apiClient.PostAsync<TaxProfileDto>("/api/pricing/tax-profiles", req, ct);
-            StatusMessage = "Tax profile saved.";
-        });
-    }
-
-    public async Task<IActionResult> OnPostBundleAsync(CancellationToken ct)
-    {
-        return await HandleWriteAsync(async () =>
-        {
-            var req = new UpsertBundleRuleRequest
-            {
-                Name = BundleName,
-                TriggerItemId = BundleTriggerItemId,
-                RewardItemId = BundleRewardItemId,
-                TriggerQuantity = BundleTriggerQty,
-                RewardQuantity = BundleRewardQty,
-                RewardDiscountPercent = BundleDiscountPercent,
-                IsActive = true
-            };
-            await _apiClient.PostAsync<BundleRuleDto>("/api/pricing/bundles", req, ct);
-            StatusMessage = "Bundle rule saved.";
-        });
-    }
-
-    public async Task<IActionResult> OnPostSegmentAsync(CancellationToken ct)
-    {
-        return await HandleWriteAsync(async () =>
-        {
-            var req = new UpsertSegmentPricingRequest
-            {
-                ItemId = SegmentItemId,
-                Segment = Segment,
-                PriceOverride = SegmentPrice,
-                IsActive = true
-            };
-            await _apiClient.PostAsync<SegmentPricingDto>("/api/pricing/segment-pricing", req, ct);
-            StatusMessage = "Segment pricing saved.";
-        });
-    }
-
-    public async Task<IActionResult> OnPostPreviewAsync(CancellationToken ct)
-    {
-        if (!TryGetSecurityContext(out var token, out var permissions))
-        {
-            return GoToLogin();
-        }
+        if (!TryGetSecurityContext(out var token, out _))
+            return Unauthorized();
 
         _apiClient.SetToken(token);
-        if (!HasPermission(permissions, PermissionKeys.PricingRead))
+
+        var targetType = (type ?? "segments").ToLowerInvariant();
+        byte[] bytes;
+        string filename;
+
+        if (targetType == "taxes")
         {
-            return AccessDenied();
+            var list = await _pricingManager.GetTaxProfilesAsync(ct);
+            bytes = _pricingManager.ExportTaxesCsv(list);
+            filename = $"tax_profiles_{DateTime.UtcNow:yyyyMMdd_HHmm}.csv";
+        }
+        else if (targetType == "bundles")
+        {
+            var list = await _pricingManager.GetBundleRulesAsync(ct);
+            bytes = _pricingManager.ExportBundlesCsv(list);
+            filename = $"bundle_rules_{DateTime.UtcNow:yyyyMMdd_HHmm}.csv";
+        }
+        else
+        {
+            var list = await _pricingManager.GetSegmentPricingsAsync(ct);
+            bytes = _pricingManager.ExportSegmentsCsv(list);
+            filename = $"segment_pricings_{DateTime.UtcNow:yyyyMMdd_HHmm}.csv";
         }
 
-        var req = new PricingPreviewRequest
-        {
-            ItemId = PreviewItemId,
-            Quantity = PreviewQty,
-            Segment = PreviewSegment
-        };
-
-        Preview = await _apiClient.PostAsync<PricingPreviewDto>("/api/pricing/preview", req, ct);
-        CanRead = true;
-        CanWrite = HasPermission(permissions, PermissionKeys.PricingWrite);
-        await LoadAsync(ct);
-        return Page();
+        return File(bytes, "text/csv", filename);
     }
 
-    private async Task<IActionResult> HandleWriteAsync(Func<Task> operation)
+    public async Task<IActionResult> OnPostTaxAsync(CancellationToken ct = default)
+    {
+        return await HandleWriteAsync(async () =>
+        {
+            var res = await _pricingManager.UpsertTaxProfileAsync(TaxRequest, ct);
+            StatusMessage = $"Tax profile '{res.Name}' ({res.RatePercent}% {res.ApplicationType}) saved successfully.";
+        }, "taxes");
+    }
+
+    public async Task<IActionResult> OnPostBundleAsync(CancellationToken ct = default)
+    {
+        return await HandleWriteAsync(async () =>
+        {
+            var res = await _pricingManager.UpsertBundleRuleAsync(BundleRequest, ct);
+            StatusMessage = $"Bundle combo rule '{res.Name}' saved successfully.";
+        }, "bundles");
+    }
+
+    public async Task<IActionResult> OnPostSegmentAsync(CancellationToken ct = default)
+    {
+        return await HandleWriteAsync(async () =>
+        {
+            var res = await _pricingManager.UpsertSegmentPricingAsync(SegmentRequest, ct);
+            StatusMessage = $"Customer tier pricing override for '{res.ItemName}' ({res.Segment}: {res.PriceOverride:N0} XAF) saved.";
+        }, "segments");
+    }
+
+    private async Task<IActionResult> HandleWriteAsync(Func<Task> operation, string tab)
     {
         if (!TryGetSecurityContext(out var token, out var permissions))
-        {
             return GoToLogin();
-        }
 
         _apiClient.SetToken(token);
         if (!HasPermission(permissions, PermissionKeys.PricingWrite))
         {
-            return AccessDenied();
+            StatusMessage = "Error: You do not have permission to modify pricing rules.";
+            return RedirectToPage(new { ActiveTab = tab });
         }
 
-        await operation();
-        return RedirectToPage();
-    }
+        try
+        {
+            await operation();
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: Failed to save pricing rule - {ex.Message}";
+        }
 
-    private async Task LoadAsync(CancellationToken ct)
-    {
-        var items = await _itemService.GetAllAsync(new PagedRequest { Page = 1, PageSize = 200 }, ct);
-        Items = items.Items.OrderBy(x => x.Name).ToList();
-
-        TaxProfiles = await _apiClient.GetAsync<List<TaxProfileDto>>("/api/pricing/tax-profiles", ct)
-            ?? new List<TaxProfileDto>();
-
-        BundleRules = await _apiClient.GetAsync<List<BundleRuleDto>>("/api/pricing/bundles", ct)
-            ?? new List<BundleRuleDto>();
-
-        SegmentPricings = await _apiClient.GetAsync<List<SegmentPricingDto>>("/api/pricing/segment-pricing", ct)
-            ?? new List<SegmentPricingDto>();
+        return RedirectToPage(new { ActiveTab = tab });
     }
 }

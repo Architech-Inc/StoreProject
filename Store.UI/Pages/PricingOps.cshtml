@@ -1,169 +1,1198 @@
 @page
-@using Store.Models.Enums
 @model StoreUI.Pages.PricingOpsModel
 @{
-    ViewData["Title"] = "Pricing & Promotions";
-    ViewData["PageDescription"] = "Tax profiles, bundle rules, segment pricing, and transaction preview.";
+    ViewData["Title"] = "Pricing & Fiscal Operations";
+    ViewData["ActivePage"] = "PricingOps";
+    ViewData["PageDescription"] = "Manage multi-tier customer pricing, bundle & BOGO deals, tax profiles, and simulate real-time profit margins.";
+    Layout = "~/Pages/Shared/_AppLayout.cshtml";
 }
 
 @section Styles {
-    <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
+    <style>
+        .pricing-hub-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding-bottom: 40px;
+        }
+
+        /* Status Toast Banner */
+        .toast-banner {
+            padding: 12px 18px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: fadeIn 0.3s ease;
+        }
+        .toast-banner.success {
+            background: #ecfdf5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+        .toast-banner.error {
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        /* 4-Card KPI Grid */
+        .pricing-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+        }
+        .pricing-kpi-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 18px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .pricing-kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+        }
+        .kpi-icon-box {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .kpi-icon-box.teal { background: #f0fdfa; color: #0d9488; }
+        .kpi-icon-box.purple { background: #f5f3ff; color: #7c3aed; }
+        .kpi-icon-box.amber { background: #fffbeb; color: #d97706; }
+        .kpi-icon-box.emerald { background: #ecfdf5; color: #059669; }
+
+        .kpi-content {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+        .kpi-label {
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+        .kpi-value {
+            font-size: 1.45rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .kpi-sub {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-top: 2px;
+        }
+
+        /* Navigational Tabs */
+        .pricing-tabs-dock {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 8px 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+            overflow-x: auto;
+        }
+        .tab-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: #64748b;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        .tab-btn svg {
+            flex-shrink: 0;
+        }
+        .tab-btn:hover {
+            color: #0f172a;
+            background: #f1f5f9;
+        }
+        .tab-btn.active {
+            color: #ffffff;
+            background: #019c01;
+            box-shadow: 0 2px 6px rgba(1, 156, 1, 0.25);
+        }
+
+        /* Card Panels */
+        .pricing-panel {
+            display: none;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .pricing-panel.active {
+            display: flex;
+        }
+
+        /* Toolbar */
+        .panel-toolbar {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 14px 18px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }
+        .toolbar-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+        }
+        .search-box-wrap {
+            position: relative;
+            min-width: 240px;
+            max-width: 360px;
+            flex: 1;
+        }
+        .search-box-wrap svg {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            pointer-events: none;
+        }
+        .search-input {
+            width: 100%;
+            height: 38px;
+            padding: 0 12px 0 36px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            color: #1e293b;
+            outline: none;
+            background: #f8fafc;
+            transition: all 0.2s ease;
+        }
+        .search-input:focus {
+            border-color: #019c01;
+            background: #ffffff;
+            box-shadow: 0 0 0 3px rgba(1, 156, 1, 0.12);
+        }
+
+        /* Buttons */
+        .btn-brand-primary {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            background: #019c01;
+            color: #ffffff;
+            font-size: 0.88rem;
+            font-weight: 600;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(1, 156, 1, 0.2);
+        }
+        .btn-brand-primary:hover {
+            background: #018001;
+            color: #ffffff;
+        }
+        .btn-brand-secondary {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            background: #ffffff;
+            color: #475569;
+            font-size: 0.88rem;
+            font-weight: 500;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+        .btn-brand-secondary:hover {
+            background: #f8fafc;
+            color: #0f172a;
+            border-color: #94a3b8;
+        }
+
+        /* Table Card */
+        .pricing-table-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        }
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+        }
+        .modern-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.88rem;
+        }
+        .modern-table thead th {
+            background: #f8fafc;
+            color: #475569;
+            font-weight: 600;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 12px 16px;
+            border-bottom: 1px solid #e2e8f0;
+            white-space: nowrap;
+        }
+        .modern-table tbody tr {
+            border-bottom: 1px solid #f1f5f9;
+            transition: background 0.15s ease;
+        }
+        .modern-table tbody tr:hover {
+            background: #f8fafc;
+        }
+        .modern-table td {
+            padding: 14px 16px;
+            color: #1e293b;
+            vertical-align: middle;
+        }
+
+        /* Badges */
+        .badge-pill {
+            display: inline-block;
+            font-size: 0.74rem;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 6px;
+            text-transform: capitalize;
+        }
+        .badge-pill.active { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+        .badge-pill.inactive { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
+        .badge-pill.exclusive { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+        .badge-pill.inclusive { background: #fdf4ff; color: #c026d3; border: 1px solid #f5d0fe; }
+        .badge-pill.wholesale { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+        .badge-pill.vip { background: #faf5ff; color: #7e22ce; border: 1px solid #e9d5ff; }
+        .badge-pill.standard { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+
+        /* Simulator Styles */
+        .simulator-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .simulator-inputs-dock {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr auto;
+            gap: 14px;
+            align-items: flex-end;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 16px;
+        }
+        .step-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 14px;
+        }
+        .step-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            position: relative;
+        }
+        .step-card.highlight {
+            background: #ecfdf5;
+            border-color: #a7f3d0;
+        }
+        .step-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #64748b;
+        }
+        .step-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .margin-safety-banner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
+        }
+        .margin-safety-banner.loss-warning {
+            background: #fef2f2;
+            border-color: #fecaca;
+            color: #991b1b;
+        }
+        .margin-safety-banner.healthy {
+            background: #ecfdf5;
+            border-color: #a7f3d0;
+            color: #065f46;
+        }
+
+        /* Modals */
+        .modern-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 9998;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        .modern-modal-overlay.open {
+            display: block;
+            opacity: 1;
+        }
+        .modern-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.95);
+            background: #ffffff;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+            z-index: 9999;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            opacity: 0;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+        }
+        .modern-modal.open {
+            display: flex;
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+        }
+        .modal-header {
+            padding: 18px 24px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #f8fafc;
+        }
+        .modal-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-close-modal {
+            background: transparent;
+            border: none;
+            font-size: 1.25rem;
+            color: #94a3b8;
+            cursor: pointer;
+            padding: 4px;
+            line-height: 1;
+            border-radius: 6px;
+        }
+        .modal-body {
+            padding: 20px 24px;
+            overflow-y: auto;
+            max-height: calc(85vh - 140px);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .modal-footer {
+            padding: 14px 24px;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+            background: #f8fafc;
+        }
+        .form-row-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+        .form-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .form-label {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #334155;
+        }
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            color: #1e293b;
+            background: #ffffff;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            border-color: #019c01;
+            box-shadow: 0 0 0 3px rgba(1, 156, 1, 0.12);
+        }
+    </style>
 }
 
-<div class="ops-page">
-    
-
-    <nav class="page-jump" aria-label="Pricing sections">
-        <a href="#setup">Setup</a>
-        <a href="#preview">Preview</a>
-        <a href="#taxes">Tax Profiles</a>
-        <a href="#bundles">Bundle Rules</a>
-        <a href="#segments">Segment Pricing</a>
-    </nav>
-
+<div class="pricing-hub-container">
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
     {
-        <div class="status">@Model.StatusMessage</div>
+        <div class="toast-banner @(Model.StatusMessage.StartsWith("Error") ? "error" : "success")">
+            @if (Model.StatusMessage.StartsWith("Error"))
+            {
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            }
+            else
+            {
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+            }
+            <span>@Model.StatusMessage</span>
+        </div>
     }
 
-    @if (Model.CanWrite)
-    {
-        <section class="grid-3" id="setup">
-            <article class="card">
-                <h2>Tax Profile</h2>
-                <form method="post" asp-page-handler="Tax">
-                    <label>Name</label>
-                    <input asp-for="TaxName" required />
-                    <label>Rate %</label>
-                    <input asp-for="TaxRate" type="number" step="0.01" min="0" max="100" required />
-                    <label>Application</label>
-                    <select asp-for="TaxApplicationType">
-                        <option value="Exclusive">Exclusive</option>
-                        <option value="Inclusive">Inclusive</option>
+    <!-- 4-Card Interactive KPI Banner -->
+    <div class="pricing-kpi-grid">
+        <div class="pricing-kpi-card">
+            <div class="kpi-icon-box teal">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
+                </svg>
+            </div>
+            <div class="kpi-content">
+                <span class="kpi-label">Active Tax Profiles</span>
+                <span class="kpi-value" style="color: #0d9488;">@Model.Metrics.ActiveTaxProfilesCount</span>
+                <span class="kpi-sub">Avg Rate: @Model.Metrics.AverageTaxRatePercent%</span>
+            </div>
+        </div>
+
+        <div class="pricing-kpi-card">
+            <div class="kpi-icon-box purple">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                </svg>
+            </div>
+            <div class="kpi-content">
+                <span class="kpi-label">Active Bundle Rules</span>
+                <span class="kpi-value" style="color: #7c3aed;">@Model.Metrics.ActiveBundleRulesCount</span>
+                <span class="kpi-sub">BOGO & combo promotions</span>
+            </div>
+        </div>
+
+        <div class="pricing-kpi-card">
+            <div class="kpi-icon-box amber">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+            </div>
+            <div class="kpi-content">
+                <span class="kpi-label">Customer Tier Overrides</span>
+                <span class="kpi-value" style="color: #d97706;">@Model.Metrics.ActiveSegmentPricingsCount</span>
+                <span class="kpi-sub">Wholesale & VIP custom rates</span>
+            </div>
+        </div>
+
+        <div class="pricing-kpi-card">
+            <div class="kpi-icon-box emerald">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+            </div>
+            <div class="kpi-content">
+                <span class="kpi-label">Simulator Engine</span>
+                <span class="kpi-value" style="color: #059669; font-size: 1.15rem;">Active & Ready</span>
+                <span class="kpi-sub">Live margin & fiscal calculator</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs Dock -->
+    <div class="pricing-tabs-dock">
+        <button type="button" class="tab-btn @(Model.ActiveTab == "simulator" ? "active" : "")" onclick="switchTab('simulator')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+            Live Pricing & Margin Simulator
+        </button>
+        <button type="button" class="tab-btn @(Model.ActiveTab == "bundles" ? "active" : "")" onclick="switchTab('bundles')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+            </svg>
+            Bundle & BOGO Combos (@Model.BundleRules.Count)
+        </button>
+        <button type="button" class="tab-btn @(Model.ActiveTab == "segments" ? "active" : "")" onclick="switchTab('segments')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            Customer Segment Pricing (@Model.SegmentPricings.Count)
+        </button>
+        <button type="button" class="tab-btn @(Model.ActiveTab == "taxes" ? "active" : "")" onclick="switchTab('taxes')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
+            </svg>
+            Tax Profiles & Fiscal Rules (@Model.TaxProfiles.Count)
+        </button>
+    </div>
+
+    <!-- PANEL 1: Live Pricing Simulator -->
+    <div class="pricing-panel @(Model.ActiveTab == "simulator" ? "active" : "")" id="panel-simulator">
+        <div class="simulator-card">
+            <div>
+                <h3 style="margin:0 0 4px 0; font-size: 1.15rem; color: #0f172a;">Live Transaction Pricing & Margin Workbench</h3>
+                <p style="margin:0; font-size: 0.85rem; color: #64748b;">
+                    Simulate how base prices transform through customer tiers, active bundle rules, and tax schedules with instant gross margin analytics in <strong>XAF</strong>.
+                </p>
+            </div>
+
+            <div class="simulator-inputs-dock">
+                <div class="form-field">
+                    <label class="form-label">Select Catalog Product</label>
+                    <select id="simItemSelect" class="form-select" onchange="runSimulation()">
+                        <option value="">-- Choose Product to Simulate --</option>
                     </select>
-                    <button type="submit">Save Tax Profile</button>
-                </form>
-            </article>
+                </div>
 
-            <article class="card">
-                <h2>Bundle &amp; BOGO Rule</h2>
-                <form method="post" asp-page-handler="Bundle">
-                    <label>Rule Name *</label>
-                    <input asp-for="BundleName" required placeholder="e.g. Buy 2 Shirts Get 1 Tie 50% Off" />
-                    <label>Trigger Item *</label>
-                    <div class="smart-lookup-wrap" data-url="?handler=SearchItems" data-placeholder="Search trigger item...">
-                        <input type="hidden" asp-for="BundleTriggerItemId" required />
-                    </div>
-                    <label>Reward Item *</label>
-                    <div class="smart-lookup-wrap" data-url="?handler=SearchItems" data-placeholder="Search reward item...">
-                        <input type="hidden" asp-for="BundleRewardItemId" required />
-                    </div>
-                    <label>Trigger Qty</label>
-                    <input asp-for="BundleTriggerQty" type="number" min="1" required />
-                    <label>Reward Qty</label>
-                    <input asp-for="BundleRewardQty" type="number" min="1" required />
-                    <label>Reward Discount %</label>
-                    <input asp-for="BundleDiscountPercent" type="number" step="0.01" min="0" max="100" required />
-                    <button type="submit">Save Bundle Rule</button>
-                </form>
-            </article>
+                <div class="form-field">
+                    <label class="form-label">Quantity</label>
+                    <input type="number" id="simQuantity" class="form-input" min="1" value="1" oninput="runSimulation()" />
+                </div>
 
-            <article class="card">
-                <h2>Segment Pricing</h2>
-                <form method="post" asp-page-handler="Segment">
-                    <label>Select Item *</label>
-                    <div class="smart-lookup-wrap" data-url="?handler=SearchItems" data-placeholder="Search item...">
-                        <input type="hidden" asp-for="SegmentItemId" required />
-                    </div>
-                    <label>Segment</label>
-                    <select asp-for="Segment">
-                        <option value="Standard">Standard</option>
-                        <option value="Wholesale">Wholesale</option>
-                        <option value="Vip">Vip</option>
+                <div class="form-field">
+                    <label class="form-label">Customer Tier</label>
+                    <select id="simSegment" class="form-select" onchange="runSimulation()">
+                        <option value="Standard">Standard Retail</option>
+                        <option value="Wholesale">Wholesale Tier</option>
+                        <option value="Vip">VIP / Loyalty</option>
                     </select>
-                    <label>Override Price *</label>
-                    <input asp-for="SegmentPrice" type="number" step="0.01" min="0" required placeholder="0.00" />
-                    <button type="submit">Save Segment Price</button>
-                </form>
-            </article>
-        </section>
-    }
+                </div>
 
-    <section class="card" id="preview">
-        <h2>Pricing Preview</h2>
-        <form method="post" asp-page-handler="Preview" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
-            <div style="flex:2;min-width:220px;">
-                <label style="font-size:0.83rem;margin-bottom:4px;display:block;">Select Item</label>
-                <div class="smart-lookup-wrap" data-url="?handler=SearchItems" data-placeholder="Search item to test...">
-                    <input type="hidden" asp-for="PreviewItemId" required />
+                <button type="button" class="btn-brand-primary" onclick="runSimulation()" style="height: 38px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Calculate
+                </button>
+            </div>
+
+            <!-- Simulation Result Container -->
+            <div id="simResultContainer" style="display: none; flex-direction: column; gap: 16px;">
+                <div class="step-cards-grid">
+                    <div class="step-card">
+                        <span class="step-label">Catalog Base Price</span>
+                        <span class="step-value" id="resBasePrice">0 XAF</span>
+                        <small style="color: #64748b; font-size: 0.74rem;">Standard single unit</small>
+                    </div>
+
+                    <div class="step-card">
+                        <span class="step-label">Tier Effective Unit</span>
+                        <span class="step-value" id="resSegmentPrice" style="color: #2563eb;">0 XAF</span>
+                        <small style="color: #64748b; font-size: 0.74rem;" id="resTierName">Standard</small>
+                    </div>
+
+                    <div class="step-card">
+                        <span class="step-label">Bundle / Promo Discount</span>
+                        <span class="step-value" id="resDiscount" style="color: #7c3aed;">0 XAF</span>
+                        <small style="color: #64748b; font-size: 0.74rem;" id="resPromoNote">No combo applied</small>
+                    </div>
+
+                    <div class="step-card">
+                        <span class="step-label">Tax Assessment</span>
+                        <span class="step-value" id="resTax">0 XAF</span>
+                        <small style="color: #64748b; font-size: 0.74rem;" id="resTaxRate">0%</small>
+                    </div>
+
+                    <div class="step-card highlight">
+                        <span class="step-label" style="color: #065f46;">Cart Grand Total</span>
+                        <span class="step-value" id="resGrandTotal" style="color: #019c01;">0 XAF</span>
+                        <small style="color: #059669; font-size: 0.74rem;">Final customer payable</small>
+                    </div>
+                </div>
+
+                <!-- Margin & Safety Guard Banner -->
+                <div class="margin-safety-banner" id="resMarginBanner">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: center;" id="resMarginIcon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                            </svg>
+                        </div>
+                        <div>
+                            <div style="font-weight: 700; font-size: 1rem;" id="resMarginTitle">Profitability & Margin Analysis</div>
+                            <div style="font-size: 0.82rem;" id="resMarginDesc">Unit Cost: 0 XAF | Net Profit: 0 XAF / unit</div>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 1.35rem; font-weight: 800;" id="resMarginPercent">0%</div>
+                        <div style="font-size: 0.74rem; text-transform: uppercase; font-weight: 600;">Gross Margin</div>
+                    </div>
                 </div>
             </div>
-            <div style="flex:1;min-width:100px;">
-                <label style="font-size:0.83rem;margin-bottom:4px;display:block;">Qty</label>
-                <input asp-for="PreviewQty" type="number" min="1" required style="width:100%;box-sizing:border-box;" />
+        </div>
+    </div>
+
+    <!-- PANEL 2: Bundle & BOGO Combos -->
+    <div class="pricing-panel @(Model.ActiveTab == "bundles" ? "active" : "")" id="panel-bundles">
+        <div class="panel-toolbar">
+            <div class="toolbar-left">
+                <div class="search-box-wrap">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <input type="text" id="bundleSearchInput" class="search-input" placeholder="Search bundle rules..." oninput="filterTable('bundleTable', this.value)" />
+                </div>
             </div>
-            <div style="flex:1;min-width:120px;">
-                <label style="font-size:0.83rem;margin-bottom:4px;display:block;">Segment</label>
-                <select asp-for="PreviewSegment" style="width:100%;box-sizing:border-box;">
-                    <option value="Standard">Standard</option>
-                    <option value="Wholesale">Wholesale</option>
-                    <option value="Vip">Vip</option>
+            <div style="display: flex; gap: 10px;">
+                <a asp-page-handler="ExportCsv" asp-route-type="bundles" class="btn-brand-secondary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    CSV
+                </a>
+                @if (Model.CanWrite)
+                {
+                    <button type="button" class="btn-brand-primary" onclick="openBundleModal()">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        New Bundle Rule
+                    </button>
+                }
+            </div>
+        </div>
+
+        <div class="pricing-table-card">
+            <div class="table-responsive">
+                <table class="modern-table" id="bundleTable">
+                    <thead>
+                        <tr>
+                            <th>Rule Name</th>
+                            <th>Trigger Condition</th>
+                            <th>Reward Benefit</th>
+                            <th>Schedule Validity</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!Model.BundleRules.Any())
+                        {
+                            <tr><td colspan="5" style="text-align:center; padding:32px; color:#64748b;">No bundle rules created yet.</td></tr>
+                        }
+                        @foreach (var b in Model.BundleRules)
+                        {
+                            <tr>
+                                <td>
+                                    <strong style="color: #0f172a;">@b.Name</strong>
+                                </td>
+                                <td>
+                                    <span style="font-weight: 600; color: #1e293b;">Buy @b.TriggerQuantity&times; @b.TriggerItemName</span>
+                                </td>
+                                <td>
+                                    <span style="font-weight: 600; color: #7c3aed;">
+                                        Get @b.RewardQuantity&times; @b.RewardItemName @(b.RewardDiscountPercent >= 100 ? "FREE" : $"@ {b.RewardDiscountPercent:0.##}% OFF")
+                                    </span>
+                                </td>
+                                <td>
+                                    <span style="font-size: 0.8rem; color: #64748b;">
+                                        @(b.ValidFrom.HasValue ? b.ValidFrom.Value.ToString("dd MMM yyyy") : "Always") &rarr; @(b.ValidTo.HasValue ? b.ValidTo.Value.ToString("dd MMM yyyy") : "Indefinite")
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge-pill @(b.IsActive ? "active" : "inactive")">@(b.IsActive ? "Active" : "Inactive")</span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANEL 3: Customer Segment Pricing -->
+    <div class="pricing-panel @(Model.ActiveTab == "segments" ? "active" : "")" id="panel-segments">
+        <div class="panel-toolbar">
+            <div class="toolbar-left">
+                <div class="search-box-wrap">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <input type="text" id="segmentSearchInput" class="search-input" placeholder="Search item or tier..." oninput="filterTable('segmentTable', this.value)" />
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <a asp-page-handler="ExportCsv" asp-route-type="segments" class="btn-brand-secondary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    CSV
+                </a>
+                @if (Model.CanWrite)
+                {
+                    <button type="button" class="btn-brand-primary" onclick="openSegmentModal()">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        New Tier Override
+                    </button>
+                }
+            </div>
+        </div>
+
+        <div class="pricing-table-card">
+            <div class="table-responsive">
+                <table class="modern-table" id="segmentTable">
+                    <thead>
+                        <tr>
+                            <th>Catalog Product</th>
+                            <th>Customer Tier</th>
+                            <th>Base Catalog Price</th>
+                            <th>Tier Override Price</th>
+                            <th>Estimated Margin</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!Model.SegmentPricings.Any())
+                        {
+                            <tr><td colspan="6" style="text-align:center; padding:32px; color:#64748b;">No customer segment price overrides configured.</td></tr>
+                        }
+                        @foreach (var s in Model.SegmentPricings)
+                        {
+                            var segClass = s.Segment.ToString().ToLowerInvariant();
+                            <tr>
+                                <td>
+                                    <strong style="color: #0f172a;">@s.ItemName</strong>
+                                </td>
+                                <td>
+                                    <span class="badge-pill @segClass">@s.Segment</span>
+                                </td>
+                                <td>
+                                    <span style="color: #64748b;">@s.BaseUnitPrice.ToString("N0") XAF</span>
+                                </td>
+                                <td>
+                                    <strong style="color: #019c01; font-size: 0.92rem;">@s.PriceOverride.ToString("N0") XAF</strong>
+                                </td>
+                                <td>
+                                    <span style="font-weight: 700; color: @(s.MarginPercent < 0 ? "#dc2626" : (s.MarginPercent < 15 ? "#d97706" : "#059669"));">
+                                        @s.MarginPercent%
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge-pill @(s.IsActive ? "active" : "inactive")">@(s.IsActive ? "Active" : "Inactive")</span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANEL 4: Tax Profiles -->
+    <div class="pricing-panel @(Model.ActiveTab == "taxes" ? "active" : "")" id="panel-taxes">
+        <div class="panel-toolbar">
+            <div class="toolbar-left">
+                <div class="search-box-wrap">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <input type="text" id="taxSearchInput" class="search-input" placeholder="Search tax profile..." oninput="filterTable('taxTable', this.value)" />
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <a asp-page-handler="ExportCsv" asp-route-type="taxes" class="btn-brand-secondary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    CSV
+                </a>
+                @if (Model.CanWrite)
+                {
+                    <button type="button" class="btn-brand-primary" onclick="openTaxModal()">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        New Tax Profile
+                    </button>
+                }
+            </div>
+        </div>
+
+        <div class="pricing-table-card">
+            <div class="table-responsive">
+                <table class="modern-table" id="taxTable">
+                    <thead>
+                        <tr>
+                            <th>Tax Profile Name</th>
+                            <th>Fiscal Rate (%)</th>
+                            <th>Application Type</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!Model.TaxProfiles.Any())
+                        {
+                            <tr><td colspan="4" style="text-align:center; padding:32px; color:#64748b;">No tax profiles created yet.</td></tr>
+                        }
+                        @foreach (var t in Model.TaxProfiles)
+                        {
+                            var appClass = t.ApplicationType.ToString().ToLowerInvariant();
+                            <tr>
+                                <td>
+                                    <strong style="color: #0f172a;">@t.Name</strong>
+                                </td>
+                                <td>
+                                    <span style="font-weight: 700; color: #0f172a; font-size: 0.92rem;">@t.RatePercent%</span>
+                                </td>
+                                <td>
+                                    <span class="badge-pill @appClass">@t.ApplicationType</span>
+                                </td>
+                                <td>
+                                    <span class="badge-pill @(t.IsActive ? "active" : "inactive")">@(t.IsActive ? "Active" : "Inactive")</span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Tax Profile -->
+<div class="modern-modal-overlay" id="taxModalOverlay" onclick="closeTaxModal()"></div>
+<div class="modern-modal" id="taxModal">
+    <div class="modal-header">
+        <h3 class="modal-title">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#0d9488">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
+            </svg>
+            Upsert Tax Profile
+        </h3>
+        <button type="button" class="btn-close-modal" onclick="closeTaxModal()">&times;</button>
+    </div>
+    <form method="post" asp-page-handler="Tax">
+        @Html.AntiForgeryToken()
+        <div class="modal-body">
+            <div class="form-field">
+                <label class="form-label">Profile Name <span style="color:#dc2626;">*</span></label>
+                <input type="text" name="TaxRequest.Name" class="form-input" required placeholder="e.g. Standard VAT 19.25%" />
+            </div>
+
+            <div class="form-row-group">
+                <div class="form-field">
+                    <label class="form-label">Tax Rate (%) <span style="color:#dc2626;">*</span></label>
+                    <input type="number" name="TaxRequest.RatePercent" class="form-input" min="0" max="100" step="0.01" value="19.25" required />
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Application Type <span style="color:#dc2626;">*</span></label>
+                    <select name="TaxRequest.ApplicationType" class="form-select">
+                        <option value="Exclusive">Exclusive (Added to Subtotal)</option>
+                        <option value="Inclusive">Inclusive (Embedded in Price)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-brand-secondary" onclick="closeTaxModal()">Cancel</button>
+            <button type="submit" class="btn-brand-primary">Save Tax Profile</button>
+        </div>
+    </form>
+</div>
+
+<!-- Modal: Bundle Rule -->
+<div class="modern-modal-overlay" id="bundleModalOverlay" onclick="closeBundleModal()"></div>
+<div class="modern-modal" id="bundleModal" style="max-width: 640px;">
+    <div class="modal-header">
+        <h3 class="modal-title">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#7c3aed">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+            </svg>
+            Upsert Bundle / BOGO Rule
+        </h3>
+        <button type="button" class="btn-close-modal" onclick="closeBundleModal()">&times;</button>
+    </div>
+    <form method="post" asp-page-handler="Bundle">
+        @Html.AntiForgeryToken()
+        <div class="modal-body">
+            <div class="form-field">
+                <label class="form-label">Rule Name <span style="color:#dc2626;">*</span></label>
+                <input type="text" name="BundleRequest.Name" class="form-input" required placeholder="e.g. Buy 2 Loaves Get 1 Butter 50% Off" />
+            </div>
+
+            <div class="form-row-group">
+                <div class="form-field">
+                    <label class="form-label">Trigger Item <span style="color:#dc2626;">*</span></label>
+                    <select name="BundleRequest.TriggerItemId" id="bundleTriggerSelect" class="form-select" required>
+                        <option value="">-- Choose Trigger Item --</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Trigger Quantity</label>
+                    <input type="number" name="BundleRequest.TriggerQuantity" class="form-input" min="1" value="2" required />
+                </div>
+            </div>
+
+            <div class="form-row-group">
+                <div class="form-field">
+                    <label class="form-label">Reward Item <span style="color:#dc2626;">*</span></label>
+                    <select name="BundleRequest.RewardItemId" id="bundleRewardSelect" class="form-select" required>
+                        <option value="">-- Choose Reward Item --</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Reward Quantity</label>
+                    <input type="number" name="BundleRequest.RewardQuantity" class="form-input" min="1" value="1" required />
+                </div>
+            </div>
+
+            <div class="form-field">
+                <label class="form-label">Reward Discount (%) <span style="color:#dc2626;">*</span></label>
+                <input type="number" name="BundleRequest.RewardDiscountPercent" class="form-input" min="0" max="100" step="0.01" value="50" required />
+                <small style="color: #64748b;">Set to 100% for classic BOGO (Buy X Get Y Free).</small>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-brand-secondary" onclick="closeBundleModal()">Cancel</button>
+            <button type="submit" class="btn-brand-primary">Save Bundle Rule</button>
+        </div>
+    </form>
+</div>
+
+<!-- Modal: Segment Pricing -->
+<div class="modern-modal-overlay" id="segmentModalOverlay" onclick="closeSegmentModal()"></div>
+<div class="modern-modal" id="segmentModal">
+    <div class="modal-header">
+        <h3 class="modal-title">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#d97706">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            Upsert Customer Tier Override
+        </h3>
+        <button type="button" class="btn-close-modal" onclick="closeSegmentModal()">&times;</button>
+    </div>
+    <form method="post" asp-page-handler="Segment">
+        @Html.AntiForgeryToken()
+        <div class="modal-body">
+            <div class="form-field">
+                <label class="form-label">Catalog Product <span style="color:#dc2626;">*</span></label>
+                <select name="SegmentRequest.ItemId" id="segmentItemSelect" class="form-select" required>
+                    <option value="">-- Choose Product --</option>
                 </select>
             </div>
-            <button type="submit" class="button-primary">Preview Total</button>
-        </form>
 
-        @if (Model.Preview is not null)
-        {
-            <div class="preview-grid">
-                <p><strong>Item:</strong> @Model.Preview.ItemName</p>
-                <p><strong>Base:</strong> @Model.Preview.BaseUnitPrice.ToString("N2")</p>
-                <p><strong>Segment:</strong> @Model.Preview.SegmentPrice.ToString("N2")</p>
-                <p><strong>Discount/Unit:</strong> @Model.Preview.DiscountPerUnit.ToString("N2")</p>
-                <p><strong>Bundle Discount:</strong> @Model.Preview.BundleDiscountTotal.ToString("N2")</p>
-                <p><strong>Subtotal:</strong> @Model.Preview.Subtotal.ToString("N2")</p>
-                <p><strong>Tax:</strong> @Model.Preview.TaxAmount.ToString("N2")</p>
-                <p><strong>Grand Total:</strong> @Model.Preview.GrandTotal.ToString("N2")</p>
+            <div class="form-row-group">
+                <div class="form-field">
+                    <label class="form-label">Customer Tier <span style="color:#dc2626;">*</span></label>
+                    <select name="SegmentRequest.Segment" class="form-select">
+                        <option value="Wholesale">Wholesale Tier</option>
+                        <option value="Vip">VIP / Loyalty</option>
+                        <option value="Standard">Standard Retail</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Override Price (XAF) <span style="color:#dc2626;">*</span></label>
+                    <input type="number" name="SegmentRequest.PriceOverride" class="form-input" min="0" step="100" required placeholder="e.g. 8500" />
+                </div>
             </div>
-        }
-    </section>
-
-    <section class="card" id="taxes">
-        <h2>Tax Profiles</h2>
-        <table>
-            <thead><tr><th>Name</th><th>Rate</th><th>Type</th><th>Active</th></tr></thead>
-            <tbody>
-            @foreach (var row in Model.TaxProfiles)
-            {
-                <tr><td>@row.Name</td><td>@row.RatePercent%</td><td>@row.ApplicationType</td><td>@row.IsActive</td></tr>
-            }
-            </tbody>
-        </table>
-    </section>
-
-    <section class="card" id="bundles">
-        <h2>Bundle Rules</h2>
-        <table>
-            <thead><tr><th>Name</th><th>Trigger</th><th>Reward</th><th>Discount</th><th>Active</th></tr></thead>
-            <tbody>
-            @foreach (var row in Model.BundleRules)
-            {
-                <tr><td>@row.Name</td><td>@row.TriggerItemName x@row.TriggerQuantity</td><td>@row.RewardItemName x@row.RewardQuantity</td><td>@row.RewardDiscountPercent%</td><td>@row.IsActive</td></tr>
-            }
-            </tbody>
-        </table>
-    </section>
-
-    <section class="card" id="segments">
-        <h2>Customer Segment Pricing</h2>
-        <table>
-            <thead><tr><th>Item</th><th>Segment</th><th>Price</th><th>Active</th></tr></thead>
-            <tbody>
-            @foreach (var row in Model.SegmentPricings)
-            {
-                <tr><td>@row.ItemName</td><td>@row.Segment</td><td>@row.PriceOverride.ToString("N2")</td><td>@row.IsActive</td></tr>
-            }
-            </tbody>
-        </table>
-    </section>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-brand-secondary" onclick="closeSegmentModal()">Cancel</button>
+            <button type="submit" class="btn-brand-primary">Save Tier Override</button>
+        </div>
+    </form>
 </div>
+
+@section Scripts {
+    <script>
+        let cachedItems = [];
+
+        async function initCatalogData() {
+            try {
+                const res = await fetch('?handler=SearchItems');
+                if (res.ok) {
+                    cachedItems = await res.json();
+                    populateSelect('simItemSelect', cachedItems, true);
+                    populateSelect('bundleTriggerSelect', cachedItems, false);
+                    populateSelect('bundleRewardSelect', cachedItems, false);
+                    populateSelect('segmentItemSelect', cachedItems, false);
+                }
+            } catch (e) {
+                console.error("Failed to load catalog items", e);
+            }
+        }
+
+        function populateSelect(elemId, items, includePlaceholder) {
+            const select = document.getElementById(elemId);
+            if (!select) return;
+            select.innerHTML = includePlaceholder ? '<option value="">-- Choose Product --</option>' : '';
+            items.forEach(i => {
+                select.innerHTML += `<option value="${i.id}">${escapeHtml(i.title)} (${formatNumber(i.unitPrice)} XAF)</option>`;
+            });
+        }
+
+        async function runSimulation() {
+            const itemId = document.getElementById('simItemSelect').value;
+            const qty = document.getElementById('simQuantity').value || 1;
+            const seg = document.getElementById('simSegment').value;
+
+            if (!itemId) {
+                document.getElementById('simResultContainer').style.display = 'none';
+                return;
+            }
+
+            try {
+                const res = await fetch(`?handler=Simulate&itemId=${itemId}&quantity=${qty}&segment=${seg}`);
+                if (!res.ok) return;
+                const d = await res.json();
+
+                document.getElementById('resBasePrice').textContent = `${formatNumber(d.baseUnitPrice)} XAF`;
+                document.getElementById('resSegmentPrice').textContent = `${formatNumber(d.segmentPrice)} XAF`;
+                document.getElementById('resTierName').textContent = `${seg} Tier`;
+
+                const totalDisc = (d.discountPerUnit * qty) + d.bundleDiscountTotal;
+                document.getElementById('resDiscount').textContent = totalDisc > 0 ? `-${formatNumber(totalDisc)} XAF` : '0 XAF';
+                document.getElementById('resPromoNote').textContent = d.bundleDiscountTotal > 0 ? `Includes ${formatNumber(d.bundleDiscountTotal)} XAF combo deal` : 'No bundle discount';
+
+                document.getElementById('resTax').textContent = `${formatNumber(d.taxAmount)} XAF`;
+                document.getElementById('resTaxRate').textContent = `${d.taxRatePercent}% Fiscal Rate`;
+
+                document.getElementById('resGrandTotal').textContent = `${formatNumber(d.grandTotal)} XAF`;
+
+                // Margin Banner
+                const banner = document.getElementById('resMarginBanner');
+                const isLoss = d.isLossLeader;
+                banner.className = `margin-safety-banner ${isLoss ? 'loss-warning' : 'healthy'}`;
+                
+                const iconContainer = document.getElementById('resMarginIcon');
+                if (isLoss) {
+                    iconContainer.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#dc2626"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>`;
+                } else {
+                    iconContainer.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#059669"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>`;
+                }
+                
+                document.getElementById('resMarginTitle').textContent = isLoss ? 'Loss-Leader Warning (Below Cost!)' : 'Profitable Transaction';
+                document.getElementById('resMarginDesc').textContent = `Unit Cost: ${formatNumber(d.unitCostPrice)} XAF | Profit: ${formatNumber(d.estimatedProfitPerUnit)} XAF / unit`;
+                document.getElementById('resMarginPercent').textContent = `${d.grossMarginPercent}%`;
+
+                document.getElementById('simResultContainer').style.display = 'flex';
+            } catch (e) {
+                console.error("Simulation error", e);
+            }
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.pricing-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+            const panel = document.getElementById(`panel-${tabId}`);
+            if (panel) panel.classList.add('active');
+
+            const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick')?.includes(tabId));
+            if (activeBtn) activeBtn.classList.add('active');
+        }
+
+        function filterTable(tableId, query) {
+            const q = query.toLowerCase();
+            const rows = document.querySelectorAll(`#${tableId} tbody tr`);
+            rows.forEach(r => {
+                const txt = r.textContent.toLowerCase();
+                r.style.display = txt.includes(q) ? '' : 'none';
+            });
+        }
+
+        function openTaxModal() {
+            document.getElementById('taxModalOverlay').classList.add('open');
+            document.getElementById('taxModal').classList.add('open');
+        }
+        function closeTaxModal() {
+            document.getElementById('taxModalOverlay').classList.remove('open');
+            document.getElementById('taxModal').classList.remove('open');
+        }
+
+        function openBundleModal() {
+            document.getElementById('bundleModalOverlay').classList.add('open');
+            document.getElementById('bundleModal').classList.add('open');
+        }
+        function closeBundleModal() {
+            document.getElementById('bundleModalOverlay').classList.remove('open');
+            document.getElementById('bundleModal').classList.remove('open');
+        }
+
+        function openSegmentModal() {
+            document.getElementById('segmentModalOverlay').classList.add('open');
+            document.getElementById('segmentModal').classList.add('open');
+        }
+        function closeSegmentModal() {
+            document.getElementById('segmentModalOverlay').classList.remove('open');
+            document.getElementById('segmentModal').classList.remove('open');
+        }
+
+        function formatNumber(num) {
+            return Number(num || 0).toLocaleString('en-US');
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initCatalogData();
+        });
+    </script>
+}

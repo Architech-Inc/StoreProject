@@ -3,6 +3,14 @@ using Store.Models.Enums;
 
 namespace Store.Models.DTOs.Operations;
 
+public class PricingOpsMetricsDto
+{
+    public int ActiveTaxProfilesCount { get; set; }
+    public int ActiveBundleRulesCount { get; set; }
+    public int ActiveSegmentPricingsCount { get; set; }
+    public decimal AverageTaxRatePercent { get; set; }
+}
+
 public class TaxProfileDto
 {
     public int TaxProfileId { get; set; }
@@ -74,11 +82,17 @@ public class SegmentPricingDto
     public long CustomerSegmentPriceId { get; set; }
     public Guid ItemId { get; set; }
     public string ItemName { get; set; } = string.Empty;
+    public decimal BaseUnitPrice { get; set; }
+    public decimal UnitCostPrice { get; set; }
     public CustomerSegment Segment { get; set; }
     public decimal PriceOverride { get; set; }
     public DateTime? ValidFrom { get; set; }
     public DateTime? ValidTo { get; set; }
     public bool IsActive { get; set; }
+
+    public decimal MarginPercent => PriceOverride > 0
+        ? Math.Round(((PriceOverride - UnitCostPrice) / PriceOverride) * 100m, 1)
+        : 0;
 }
 
 public class UpsertSegmentPricingRequest
@@ -114,6 +128,7 @@ public class PricingPreviewDto
     public Guid ItemId { get; set; }
     public string ItemName { get; set; } = string.Empty;
     public decimal BaseUnitPrice { get; set; }
+    public decimal UnitCostPrice { get; set; }
     public decimal TaxRatePercent { get; set; }
     public decimal SegmentPrice { get; set; }
     public decimal DiscountPerUnit { get; set; }
@@ -121,6 +136,14 @@ public class PricingPreviewDto
     public decimal Subtotal { get; set; }
     public decimal TaxAmount { get; set; }
     public decimal GrandTotal { get; set; }
+
+    public decimal EffectiveUnitPrice => SegmentPrice - DiscountPerUnit;
+    public decimal EstimatedProfitPerUnit => EffectiveUnitPrice - UnitCostPrice;
+    public decimal TotalProfit => Math.Round((EstimatedProfitPerUnit * 1) - BundleDiscountTotal, 2);
+    public decimal GrossMarginPercent => EffectiveUnitPrice > 0
+        ? Math.Round((EstimatedProfitPerUnit / EffectiveUnitPrice) * 100m, 1)
+        : 0;
+    public bool IsLossLeader => EstimatedProfitPerUnit < 0;
 }
 
 // ─── Promotion Effectiveness ──────────────────────────────────────────────────

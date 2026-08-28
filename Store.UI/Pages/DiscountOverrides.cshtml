@@ -686,24 +686,36 @@
                                             @if (Model.CanApprove)
                                             {
                                                 <button type="button" class="btn-table-action emerald" onclick="openReviewModal(@r.DiscountOverrideRequestId, true, '@r.RequestedByUser', '@r.ValueFormatted', '@r.ScopeLabel')" title="Approve">
-                                                    ✅ Approve
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                                    </svg>
+                                                    Approve
                                                 </button>
                                                 <button type="button" class="btn-table-action danger" onclick="openReviewModal(@r.DiscountOverrideRequestId, false, '@r.RequestedByUser', '@r.ValueFormatted', '@r.ScopeLabel')" title="Reject">
-                                                    ❌ Reject
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
+                                                    Reject
                                                 </button>
                                             }
                                             <form method="post" asp-page-handler="Cancel" style="margin:0;">
                                                 @Html.AntiForgeryToken()
                                                 <input type="hidden" name="CancelRequestId" value="@r.DiscountOverrideRequestId" />
                                                 <button type="submit" class="btn-table-action" onclick="return confirm('Cancel this override request?');" title="Cancel">
-                                                    🚫
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                                    </svg>
                                                 </button>
                                             </form>
                                         }
                                         else
                                         {
                                             <button type="button" class="btn-table-action" onclick="openInspectModal(@r.DiscountOverrideRequestId)" title="Inspect Audit Record">
-                                                🔍 Inspect
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                </svg>
+                                                Inspect
                                             </button>
                                         }
                                     </div>
@@ -843,10 +855,18 @@
                 <label class="form-label">Supervisory Decision</label>
                 <div style="display: flex; gap: 16px;">
                     <label style="display: flex; align-items: center; gap: 6px; font-size: 0.88rem; font-weight: 600; color: #059669; cursor: pointer;">
-                        <input type="radio" name="decisionRadio" value="true" checked onchange="setReviewDecision(true)" /> ✅ Approve Override
+                        <input type="radio" name="decisionRadio" value="true" checked onchange="setReviewDecision(true)" />
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#059669">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        Approve Override
                     </label>
                     <label style="display: flex; align-items: center; gap: 6px; font-size: 0.88rem; font-weight: 600; color: #dc2626; cursor: pointer;">
-                        <input type="radio" name="decisionRadio" value="false" onchange="setReviewDecision(false)" /> ❌ Reject Override
+                        <input type="radio" name="decisionRadio" value="false" onchange="setReviewDecision(false)" />
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#dc2626">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        Reject Override
                     </label>
                 </div>
             </div>
