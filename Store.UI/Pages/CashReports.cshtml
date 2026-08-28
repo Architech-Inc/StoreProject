@@ -1,114 +1,1333 @@
 @page
 @model StoreUI.Pages.CashReportsModel
+@using Store.Models.Enums
+@using Store.Models.DTOs.Operations
 @{
-    ViewData["Title"] = "Cash & Reports";
-    ViewData["PageDescription"] = "Shift lifecycle, Z-report, payment breakdown, and gross margin tracking.";
+    ViewData["Title"] = "Cash & Shift Reports / Z-Reports";
+    ViewData["ActivePage"] = "CashReports";
+    ViewData["PageDescription"] = "POS register shift lifecycle management, daily Z-report fiscal summaries, and printable end-of-day reconciliation vouchers.";
+    Layout = "~/Pages/Shared/_AppLayout.cshtml";
+    var r = Model.Report;
+    var s = Model.ActiveShift;
 }
 
-@section Styles {
-    <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
-}
+<div class="cash-reports-container">
+    @* ── ACTION TOOLBAR ── *@
+    <div class="cash-action-bar">
+        <div class="shift-live-status-pill @(s is not null ? "status-shift-active" : "status-shift-none")">
+            <span class="status-indicator-dot"></span>
+            @if (s is not null)
+            {
+                <span>Active Shift: <strong>#@s.CashierShiftId.ToString()[..8]</strong> (Float: @s.OpeningFloat.ToString("N0") XAF)</span>
+            }
+            else
+            {
+                <span>No Active Register Shift</span>
+            }
+        </div>
+        <div class="cash-header-actions">
+            @if (r is not null)
+            {
+                <a asp-page-handler="ExportCsv"
+                   asp-route-date="@Model.ReportDateUtc.ToString("yyyy-MM-dd")"
+                   class="btn-cr-action btn-cr-secondary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Export CSV Z-Report
+                </a>
+                <button type="button" class="btn-cr-action btn-cr-secondary" onclick="printFiscalSlip()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg>
+                    Print Z-Report Slip
+                </button>
+            }
 
-<div class="ops-page">
-    
+            @if (Model.CanCashWrite)
+            {
+                @if (s is null)
+                {
+                    <button type="button" class="btn-cr-action btn-cr-primary" onclick="openOpenShiftModal()">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Open Register Shift
+                    </button>
+                }
+                else
+                {
+                    <button type="button" class="btn-cr-action btn-cr-danger" onclick="openCloseShiftModal(@s.OpeningFloat, @(s.ExpectedClosingAmount ?? s.OpeningFloat))">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                        Close Register Shift
+                    </button>
+                }
+            }
+        </div>
+    </div>
 
-    <nav class="page-jump" aria-label="Cash report sections">
-        <a href="#shift-actions">Shift Actions</a>
-        <a href="#active-shift">Active Shift</a>
-        <a href="#daily-report">Daily Z Report</a>
-    </nav>
+    @* ── DATE FILTER DOCK ── *@
+    <div class="cash-filter-dock">
+        <div class="cash-presets-group">
+            <span class="cash-presets-label">Report Period:</span>
+            <div class="cash-presets-pills">
+                <a asp-page="/CashReports" asp-route-preset="today" asp-route-tab="@Model.ActiveTab" class="preset-pill @(Model.ActivePreset == "today" ? "active" : "")">Today</a>
+                <a asp-page="/CashReports" asp-route-preset="yesterday" asp-route-tab="@Model.ActiveTab" class="preset-pill @(Model.ActivePreset == "yesterday" ? "active" : "")">Yesterday</a>
+            </div>
+        </div>
 
-    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+        <form method="get" class="cash-custom-date-form">
+            <input type="hidden" name="tab" value="@Model.ActiveTab" />
+            <div class="date-input-wrap">
+                <label for="reportDate">Fiscal Date (UTC)</label>
+                <input type="date" id="reportDate" name="date" value="@Model.ReportDateUtc.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
+            </div>
+            <button type="submit" class="btn-filter-apply">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Load Daily Z-Report
+            </button>
+        </form>
+    </div>
+
+    @* ── 4-CARD FLUENT 2.0 KPI GRID ── *@
+    @if (r is not null)
     {
-        <div class="status">@Model.StatusMessage</div>
+        var marginPct = r.NetSales > 0 ? (r.GrossMargin / r.NetSales * 100) : 0;
+
+        <div class="cash-kpi-grid">
+            @* KPI 1: Gross Sales *@
+            <div class="cash-kpi-card">
+                <div class="kpi-icon-wrap kpi-emerald">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div class="kpi-data">
+                    <span class="kpi-label">Gross Sales</span>
+                    <span class="kpi-value">@r.GrossSales.ToString("N0") <small>XAF</small></span>
+                    <span class="kpi-subtext">Across @r.InvoiceCount Total Invoices</span>
+                </div>
+            </div>
+
+            @* KPI 2: Net Revenue & Gross Margin *@
+            <div class="cash-kpi-card">
+                <div class="kpi-icon-wrap kpi-teal">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                </div>
+                <div class="kpi-data">
+                    <span class="kpi-label">Net Sales &amp; Margin</span>
+                    <span class="kpi-value">@r.NetSales.ToString("N0") <small>XAF</small></span>
+                    <span class="kpi-subtext">Profit Margin: <strong style="color:#059669;">@marginPct.ToString("F1")%</strong> (@r.GrossMargin.ToString("N0") XAF)</span>
+                </div>
+            </div>
+
+            @* KPI 3: Discounts Given *@
+            <div class="cash-kpi-card">
+                <div class="kpi-icon-wrap kpi-amber">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                    </svg>
+                </div>
+                <div class="kpi-data">
+                    <span class="kpi-label">Discounts &amp; Markdowns</span>
+                    <span class="kpi-value">@r.Discounts.ToString("N0") <small>XAF</small></span>
+                    <span class="kpi-subtext">Promotions &amp; POS Overrides</span>
+                </div>
+            </div>
+
+            @* KPI 4: Average Basket Size *@
+            <div class="cash-kpi-card">
+                <div class="kpi-icon-wrap kpi-purple">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                    </svg>
+                </div>
+                <div class="kpi-data">
+                    <span class="kpi-label">Average Basket</span>
+                    <span class="kpi-value">@r.AverageBasket.ToString("N0") <small>XAF</small></span>
+                    <span class="kpi-subtext">Per Transaction Spend</span>
+                </div>
+            </div>
+        </div>
     }
 
-    <section class="grid-2" id="shift-actions">
-        @if (Model.CanCashWrite)
-        {
-            <article class="card">
-                <h2>Open Shift</h2>
-                <form method="post" asp-page-handler="OpenShift">
-                    <label>Opening Float</label>
-                    <input asp-for="OpeningFloat" type="number" step="0.01" min="0" required />
-                    <label>Notes</label>
-                    <input asp-for="OpenNotes" />
-                    <button type="submit">Open Shift</button>
-                </form>
-            </article>
+    @* ── 3-TAB DOCK SWITCHER ── *@
+    <div class="cash-tabs-dock">
+        <button type="button" class="cash-tab-btn @(Model.ActiveTab == "zreport" ? "active" : "")" onclick="switchTab('zreport')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Daily Z-Report &amp; Sales Mix
+        </button>
+        <button type="button" class="cash-tab-btn @(Model.ActiveTab == "shift" ? "active" : "")" onclick="switchTab('shift')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Shift Lifecycle &amp; Float Control
+        </button>
+        <button type="button" class="cash-tab-btn @(Model.ActiveTab == "slip" ? "active" : "")" onclick="switchTab('slip')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+            Printable Fiscal Slip Voucher
+        </button>
+    </div>
 
-            <article class="card">
-                <h2>Close Shift</h2>
-                <form method="post" asp-page-handler="CloseShift">
-                    <label>Closing Float</label>
-                    <input asp-for="ClosingFloat" type="number" step="0.01" min="0" required />
-                    <label>Notes</label>
-                    <input asp-for="CloseNotes" />
-                    <button type="submit">Close Shift</button>
-                </form>
-            </article>
-        }
-    </section>
-
-    <section class="card" id="active-shift">
-        <h2>Active Shift</h2>
-        @if (Model.ActiveShift is null)
+    @* ═════════════════════════════════════════════════════════════ *@
+    @* ── TAB 1: DAILY Z-REPORT & SALES MIX ───────────────────────── *@
+    @* ═════════════════════════════════════════════════════════════ *@
+    <div id="tab-zreport" class="cash-tab-content @(Model.ActiveTab == "zreport" ? "active" : "")">
+        @if (r is null)
         {
-            <p>No open shift.</p>
+            <div class="cash-panel">
+                <div class="cash-empty-state">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <h4>No Z-Report Available</h4>
+                    <p>No settled sales recorded for @Model.ReportDateUtc.ToString("dd MMMM yyyy").</p>
+                </div>
+            </div>
         }
         else
         {
-            <div class="preview-grid">
-                <p><strong>Opened:</strong> @Model.ActiveShift.OpenedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC</p>
-                <p><strong>Opening Float:</strong> @Model.ActiveShift.OpeningFloat.ToString("N2")</p>
-                <p><strong>Status:</strong> @Model.ActiveShift.Status</p>
-            </div>
-        }
-    </section>
-
-    @if (Model.CanReportRead)
-    {
-        <section class="card" id="daily-report">
-            <h2>Daily Z Report</h2>
-            <form method="get" class="inline-form">
-                <input asp-for="ReportDateUtc" type="date" />
-                <button type="submit">Load Report</button>
-            </form>
-
-            @if (Model.Report is not null)
-            {
-                <div class="preview-grid">
-                    <p><strong>Gross Sales:</strong> @Model.Report.GrossSales.ToString("N2")</p>
-                    <p><strong>Discounts:</strong> @Model.Report.Discounts.ToString("N2")</p>
-                    <p><strong>Net Sales:</strong> @Model.Report.NetSales.ToString("N2")</p>
-                    <p><strong>COGS:</strong> @Model.Report.Cogs.ToString("N2")</p>
-                    <p><strong>Gross Margin:</strong> @Model.Report.GrossMargin.ToString("N2")</p>
-                    <p><strong>Invoices:</strong> @Model.Report.InvoiceCount</p>
-                    <p><strong>Average Basket:</strong> @Model.Report.AverageBasket.ToString("N2")</p>
+            <div style="display:grid; grid-template-columns: 1fr 1.35fr; gap:1.25rem;">
+                @* Left: Payment Breakdown Matrix *@
+                <div class="cash-panel">
+                    <div class="panel-header-dock">
+                        <div class="panel-title-wrap">
+                            <h3>Tender &amp; Payment Method Breakdown</h3>
+                            <p>Settled receipts distribution across cash and electronic payment channels.</p>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="cash-table">
+                            <thead>
+                                <tr>
+                                    <th>Payment Channel</th>
+                                    <th style="text-align:right;">Total Volume</th>
+                                    <th style="text-align:center;">Invoices</th>
+                                    <th style="text-align:right;">Share %</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var pay in r.PaymentBreakdown)
+                                {
+                                    var share = r.GrossSales > 0 ? (pay.TotalAmount / r.GrossSales * 100) : 0;
+                                    <tr>
+                                        <td>
+                                            <div style="display:flex; align-items:center; gap:8px;">
+                                                <span class="pay-icon-box">
+                                                    @if (pay.PaymentType.ToString().Contains("Cash", StringComparison.OrdinalIgnoreCase))
+                                                    {
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                                                        </svg>
+                                                    }
+                                                    else
+                                                    {
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                                                        </svg>
+                                                    }
+                                                </span>
+                                                <strong style="color:#0f172a;">@pay.PaymentType</strong>
+                                            </div>
+                                        </td>
+                                        <td style="text-align:right; font-weight:700; color:#0f172a;">
+                                            @pay.TotalAmount.ToString("N0") <small style="color:#64748b;">XAF</small>
+                                        </td>
+                                        <td style="text-align:center; font-weight:600;">@pay.InvoiceCount</td>
+                                        <td style="text-align:right;">
+                                            <span class="share-badge">@share.ToString("F1")%</span>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
-                <h3>Payment Breakdown</h3>
-                <table>
-                    <thead><tr><th>Type</th><th>Total</th><th>Invoices</th></tr></thead>
-                    <tbody>
-                    @foreach (var row in Model.Report.PaymentBreakdown)
-                    {
-                        <tr><td>@row.PaymentType</td><td>@row.TotalAmount.ToString("N2")</td><td>@row.InvoiceCount</td></tr>
-                    }
-                    </tbody>
-                </table>
+                @* Right: Top Products Sales Velocity *@
+                <div class="cash-panel">
+                    <div class="panel-header-dock">
+                        <div class="panel-title-wrap">
+                            <h3>Top 10 High-Velocity Products</h3>
+                            <p>Highest revenue-generating merchandise and realized profit margins.</p>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="cash-table">
+                            <thead>
+                                <tr>
+                                    <th>Item Description</th>
+                                    <th style="text-align:right;">Qty Sold</th>
+                                    <th style="text-align:right;">Gross Revenue</th>
+                                    <th style="text-align:right;">Gross Margin</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var prod in r.TopProducts)
+                                {
+                                    var pMarginPct = prod.Revenue > 0 ? (prod.GrossMargin / prod.Revenue * 100) : 0;
+                                    <tr>
+                                        <td>
+                                            <span style="font-weight:600; color:#0f172a;">@prod.ItemName</span>
+                                        </td>
+                                        <td style="text-align:right; font-weight:600;">@prod.QuantitySold</td>
+                                        <td style="text-align:right; font-weight:700; color:#0f172a;">
+                                            @prod.Revenue.ToString("N0") <small style="color:#64748b;">XAF</small>
+                                        </td>
+                                        <td style="text-align:right;">
+                                            <div style="display:flex; flex-direction:column; align-items:flex-end;">
+                                                <span style="font-weight:700; color:#059669;">@prod.GrossMargin.ToString("N0") <small>XAF</small></span>
+                                                <span style="font-size:0.72rem; color:#64748b;">@pMarginPct.ToString("F1")% Margin</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
 
-                <h3>Top Products</h3>
-                <table>
-                    <thead><tr><th>Item</th><th>Qty</th><th>Revenue</th><th>Margin</th></tr></thead>
-                    <tbody>
-                    @foreach (var row in Model.Report.TopProducts)
+    @* ═════════════════════════════════════════════════════════════ *@
+    @* ── TAB 2: SHIFT LIFECYCLE & FLOAT CONTROL ─────────────────── *@
+    @* ═════════════════════════════════════════════════════════════ *@
+    <div id="tab-shift" class="cash-tab-content @(Model.ActiveTab == "shift" ? "active" : "")">
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.25rem;">
+            @* Shift Status Card *@
+            <div class="cash-panel">
+                <div class="panel-header-dock">
+                    <div class="panel-title-wrap">
+                        <h3>Active Register Shift Monitor</h3>
+                        <p>Real-time cashier drawer assignment, opening float, and current status.</p>
+                    </div>
+                </div>
+                <div style="padding:1.5rem; display:flex; flex-direction:column; gap:16px;">
+                    @if (s is null)
                     {
-                        <tr><td>@row.ItemName</td><td>@row.QuantitySold</td><td>@row.Revenue.ToString("N2")</td><td>@row.GrossMargin.ToString("N2")</td></tr>
+                        <div style="padding:2rem 1rem; text-align:center; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:10px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" fill="none" viewBox="0 0 24 24" stroke="#94a3b8" style="margin-bottom:8px;">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
+                            <h4 style="margin:0; font-size:1rem; color:#0f172a;">No Active POS Shift Open</h4>
+                            <p style="font-size:0.82rem; color:#64748b; margin:4px 0 16px 0;">You must open a register shift with an assigned opening float before ringing up sales.</p>
+                            @if (Model.CanCashWrite)
+                            {
+                                <button type="button" class="btn-cr-action btn-cr-primary" onclick="openOpenShiftModal()">
+                                    + Open Register Shift Now
+                                </button>
+                            }
+                        </div>
                     }
-                    </tbody>
-                </table>
-            }
-        </section>
-    }
+                    else
+                    {
+                        <div class="active-shift-details-grid">
+                            <div class="shift-stat-box">
+                                <span class="stat-label">Shift Identifier</span>
+                                <span class="stat-value"><code style="font-size:0.92rem;">#@s.CashierShiftId.ToString()[..8]</code></span>
+                            </div>
+                            <div class="shift-stat-box">
+                                <span class="stat-label">Shift Status</span>
+                                <span class="status-badge status-reviewed">@s.Status</span>
+                            </div>
+                            <div class="shift-stat-box">
+                                <span class="stat-label">Opened At (UTC)</span>
+                                <span class="stat-value" style="font-size:0.90rem;">@s.OpenedAtUtc.ToString("dd MMM yyyy HH:mm")</span>
+                            </div>
+                            <div class="shift-stat-box">
+                                <span class="stat-label">Opening Float</span>
+                                <span class="stat-value text-emerald" style="font-size:1.15rem;">@s.OpeningFloat.ToString("N0") <small>XAF</small></span>
+                            </div>
+                            <div class="shift-stat-box">
+                                <span class="stat-label">Expected Drawer Cash</span>
+                                <span class="stat-value" style="font-size:1.15rem;">@((s.ExpectedClosingAmount ?? s.OpeningFloat).ToString("N0")) <small>XAF</small></span>
+                            </div>
+                            <div class="shift-stat-box">
+                                <span class="stat-label">Drawer Variance</span>
+                                <span class="stat-value" style="font-size:1.15rem; color:@(s.VarianceAmount < 0 ? "#e11d48" : s.VarianceAmount > 0 ? "#0d9488" : "#64748b");">
+                                    @(s.VarianceAmount.HasValue ? (s.VarianceAmount >= 0 ? "+" : "") + s.VarianceAmount.Value.ToString("N0") + " XAF" : "In Progress")
+                                </span>
+                            </div>
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(s.Notes))
+                        {
+                            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px;">
+                                <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#64748b;">Shift Memo:</span>
+                                <p style="font-size:0.84rem; color:#0f172a; margin:4px 0 0 0;">@s.Notes</p>
+                            </div>
+                        }
+
+                        @if (Model.CanCashWrite)
+                        {
+                            <div style="display:flex; justify-content:flex-end; margin-top:8px;">
+                                <button type="button" class="btn-cr-action btn-cr-danger" onclick="openCloseShiftModal(@s.OpeningFloat, @(s.ExpectedClosingAmount ?? s.OpeningFloat))">
+                                    Close &amp; Reconcile Shift
+                                </button>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+
+            @* Operational Guidelines *@
+            <div class="cash-panel">
+                <div class="panel-header-dock">
+                    <div class="panel-title-wrap">
+                        <h3>Cashier Float Governance Rules</h3>
+                        <p>Standard operating procedures for till management and dual-custody reconciliation.</p>
+                    </div>
+                </div>
+                <div style="padding:1.5rem; display:flex; flex-direction:column; gap:12px;">
+                    <div class="guideline-item">
+                        <div class="g-num">1</div>
+                        <div class="g-text">
+                            <strong>Shift Opening Verification:</strong> Always count physical cash float denominations in drawer before opening shift.
+                        </div>
+                    </div>
+                    <div class="guideline-item">
+                        <div class="g-num">2</div>
+                        <div class="g-text">
+                            <strong>Cash Drops &amp; Skims:</strong> Large currency banknotes exceeding 200,000 XAF should be dropped to safe with supervisor sign-off.
+                        </div>
+                    </div>
+                    <div class="guideline-item">
+                        <div class="g-num">3</div>
+                        <div class="g-text">
+                            <strong>Closing Count Declaration:</strong> Enter blind physical count into system. Any discrepancy is automatically sent to Cash Variance Audit Hub.
+                        </div>
+                    </div>
+                    <div class="guideline-item">
+                        <div class="g-num">4</div>
+                        <div class="g-text">
+                            <strong>End-of-Day Z-Report Sign-off:</strong> Print the official Z-Report voucher at store closing and archive with signed till tapes.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* ═════════════════════════════════════════════════════════════ *@
+    @* ── TAB 3: PRINTABLE FISCAL SLIP VOUCHER ───────────────────── *@
+    @* ═════════════════════════════════════════════════════════════ *@
+    <div id="tab-slip" class="cash-tab-content @(Model.ActiveTab == "slip" ? "active" : "")">
+        <div style="display:flex; justify-content:center;">
+            <div class="fiscal-slip-card" id="printableFiscalSlip">
+                <div class="slip-header">
+                    <h2>CLEXAN FOODS RETAIL</h2>
+                    <p>Commercial Intelligence &amp; POS Systems</p>
+                    <div class="slip-divider"></div>
+                    <h3>DAILY Z-REPORT FISCAL VOUCHER</h3>
+                    <p>Fiscal Date: <strong>@Model.ReportDateUtc.ToString("dd MMMM yyyy")</strong></p>
+                    <p>Generated: @DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm") UTC</p>
+                </div>
+
+                @if (r is not null)
+                {
+                    var marginPct = r.NetSales > 0 ? (r.GrossMargin / r.NetSales * 100) : 0;
+
+                    <div class="slip-section">
+                        <div class="slip-row bold">
+                            <span>GROSS SALES</span>
+                            <span>@r.GrossSales.ToString("N0") XAF</span>
+                        </div>
+                        <div class="slip-row">
+                            <span>Less Discounts / Markdowns</span>
+                            <span>-@r.Discounts.ToString("N0") XAF</span>
+                        </div>
+                        <div class="slip-divider-dashed"></div>
+                        <div class="slip-row bold highlight">
+                            <span>NET SALES REVENUE</span>
+                            <span>@r.NetSales.ToString("N0") XAF</span>
+                        </div>
+                        <div class="slip-row">
+                            <span>Cost of Goods Sold (COGS)</span>
+                            <span>@r.Cogs.ToString("N0") XAF</span>
+                        </div>
+                        <div class="slip-row bold">
+                            <span>GROSS PROFIT MARGIN</span>
+                            <span>@r.GrossMargin.ToString("N0") XAF (@marginPct.ToString("F1")%)</span>
+                        </div>
+                        <div class="slip-row">
+                            <span>Total Invoices Settled</span>
+                            <span>@r.InvoiceCount</span>
+                        </div>
+                        <div class="slip-row">
+                            <span>Average Basket Spend</span>
+                            <span>@r.AverageBasket.ToString("N0") XAF</span>
+                        </div>
+                    </div>
+
+                    <div class="slip-section">
+                        <div class="slip-section-title">PAYMENT TENDER BREAKDOWN</div>
+                        @foreach (var p in r.PaymentBreakdown)
+                        {
+                            <div class="slip-row">
+                                <span>@p.PaymentType (@p.InvoiceCount tx)</span>
+                                <span>@p.TotalAmount.ToString("N0") XAF</span>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="slip-section">
+                        <div class="slip-section-title">TOP REVENUE SKUs</div>
+                        @foreach (var top in r.TopProducts.Take(5))
+                        {
+                            <div class="slip-row small">
+                                <span>@top.QuantitySold x @top.ItemName</span>
+                                <span>@top.Revenue.ToString("N0") XAF</span>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="slip-signatures">
+                        <div class="sig-box">
+                            <span>Cashier Signature</span>
+                            <div class="sig-line"></div>
+                        </div>
+                        <div class="sig-box">
+                            <span>Supervisor / Manager</span>
+                            <div class="sig-line"></div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <p style="text-align:center; color:#64748b; padding:2rem 0;">No sales recorded for this date.</p>
+                }
+
+                <div class="slip-footer">
+                    <p>*** END OF FISCAL Z-REPORT ***</p>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+@* ═════════════════════════════════════════════════════════════ *@
+@* ── MODAL: OPEN SHIFT ──────────────────────────────────────── *@
+@* ═════════════════════════════════════════════════════════════ *@
+<div class="modern-modal-overlay" id="openShiftModalOverlay" onclick="closeOpenShiftModal()"></div>
+<div class="modern-modal" id="openShiftModal" style="max-width:480px;">
+    <div class="modal-header">
+        <h3 class="modal-title" style="color:#019c01;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Open POS Register Shift
+        </h3>
+        <button type="button" class="btn-close-modal" onclick="closeOpenShiftModal()" aria-label="Close">×</button>
+    </div>
+    <form method="post" asp-page-handler="OpenShift">
+        @Html.AntiForgeryToken()
+        <div class="modal-body">
+            <div class="form-group">
+                <label asp-for="OpeningFloat" class="form-label">Opening Float Amount (XAF) <span class="text-danger">*</span></label>
+                <input asp-for="OpeningFloat" type="number" step="1" min="0" class="form-control" placeholder="e.g. 25000" required />
+                <span style="font-size:0.75rem; color:#64748b;">Physical cash placed in register drawer at shift start.</span>
+            </div>
+            <div class="form-group">
+                <label asp-for="OpenNotes" class="form-label">Shift Notes / Opening Memo</label>
+                <input asp-for="OpenNotes" class="form-control" placeholder="e.g. Morning Shift - Till #1 (Main Cashier)" />
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-cr-secondary" onclick="closeOpenShiftModal()">Cancel</button>
+            <button type="submit" class="btn-cr-primary">Confirm &amp; Open Shift</button>
+        </div>
+    </form>
+</div>
+
+@* ═════════════════════════════════════════════════════════════ *@
+@* ── MODAL: CLOSE SHIFT ─────────────────────────────────────── *@
+@* ═════════════════════════════════════════════════════════════ *@
+<div class="modern-modal-overlay" id="closeShiftModalOverlay" onclick="closeCloseShiftModal()"></div>
+<div class="modern-modal" id="closeShiftModal" style="max-width:500px;">
+    <div class="modal-header">
+        <h3 class="modal-title" style="color:#e11d48;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            Close &amp; Reconcile Shift
+        </h3>
+        <button type="button" class="btn-close-modal" onclick="closeCloseShiftModal()" aria-label="Close">×</button>
+    </div>
+    <form method="post" asp-page-handler="CloseShift">
+        @Html.AntiForgeryToken()
+        <div class="modal-body">
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                <div>
+                    <span style="font-size:0.72rem; color:#64748b; text-transform:uppercase;">Opening Float:</span>
+                    <div id="closeOpeningFloatVal" style="font-weight:700; color:#0f172a;"></div>
+                </div>
+                <div>
+                    <span style="font-size:0.72rem; color:#64748b; text-transform:uppercase;">Expected Drawer:</span>
+                    <div id="closeExpectedFloatVal" style="font-weight:800; color:#019c01;"></div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="ClosingFloat" class="form-label">Physical Cash Count Declaration (XAF) <span class="text-danger">*</span></label>
+                <input asp-for="ClosingFloat" id="inputClosingCount" type="number" step="1" min="0" class="form-control" oninput="updateCloseVariance()" required />
+            </div>
+
+            @* Live Shift Close Variance Indicator *@
+            <div id="closeVarianceBox" class="live-variance-box variance-neutral">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:0.78rem; font-weight:600; text-transform:uppercase;">Drawer Variance Delta:</span>
+                    <span id="closeVarianceDelta" style="font-size:1.15rem; font-weight:800;">0 XAF</span>
+                </div>
+                <div id="closeVarianceMsg" style="font-size:0.75rem; margin-top:2px;">Drawer count perfectly balanced.</div>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="CloseNotes" class="form-label">Closing Handover Notes / Memo</label>
+                <textarea asp-for="CloseNotes" class="form-control" rows="2" placeholder="State reason for variance, drawer handover notes, or shift comments..."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-cr-secondary" onclick="closeCloseShiftModal()">Cancel</button>
+            <button type="submit" class="btn-cr-danger">Submit &amp; Close Shift</button>
+        </div>
+    </form>
+</div>
+
+@* ── STYLESHEET ── *@
+<style>
+    .cash-reports-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+        padding-bottom: 3rem;
+    }
+
+    .cash-action-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+        padding-bottom: 0.25rem;
+    }
+
+    .shift-live-status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        padding: 5px 14px;
+        border-radius: 9999px;
+    }
+
+    .status-shift-active {
+        background: #ecfdf5;
+        color: #059669;
+        border: 1px solid #a7f3d0;
+    }
+    .status-shift-none {
+        background: #f1f5f9;
+        color: #64748b;
+        border: 1px solid #e2e8f0;
+    }
+
+    .status-indicator-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: currentColor;
+    }
+
+    .cash-header-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .btn-cr-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .btn-cr-primary {
+        background: #019c01;
+        color: #ffffff !important;
+        border: 1px solid #019c01;
+    }
+    .btn-cr-primary:hover {
+        background: #017a01;
+        border-color: #017a01;
+        transform: translateY(-1px);
+    }
+
+    .btn-cr-secondary {
+        background: #ffffff;
+        color: #0f172a !important;
+        border: 1px solid #e2e8f0;
+    }
+    .btn-cr-secondary:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+    }
+
+    .btn-cr-danger {
+        background: #fff1f2;
+        color: #e11d48 !important;
+        border: 1px solid #fecdd3;
+    }
+    .btn-cr-danger:hover {
+        background: #e11d48;
+        color: #ffffff !important;
+        border-color: #e11d48;
+    }
+
+    /* ── Filter Dock ── */
+    .cash-filter-dock {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 0.85rem 1.25rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+
+    .cash-presets-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .cash-presets-label {
+        font-size: 0.80rem;
+        font-weight: 600;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .cash-presets-pills {
+        display: flex;
+        gap: 6px;
+    }
+
+    .preset-pill {
+        font-size: 0.78rem;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 6px;
+        text-decoration: none;
+        color: #64748b;
+        background: #f1f5f9;
+        border: 1px solid #e2e8f0;
+        transition: all 0.15s ease;
+    }
+    .preset-pill:hover {
+        color: #0f172a;
+        border-color: #cbd5e1;
+    }
+    .preset-pill.active {
+        color: #ffffff;
+        background: #019c01;
+        border-color: #019c01;
+    }
+
+    .cash-custom-date-form {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .date-input-wrap {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.80rem;
+        font-weight: 600;
+        color: #64748b;
+    }
+
+    .date-input-wrap input {
+        border-radius: 6px;
+        font-size: 0.82rem;
+        padding: 4px 8px;
+        border: 1px solid #cbd5e1;
+        background: #ffffff;
+        color: #0f172a;
+    }
+
+    .btn-filter-apply {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.80rem;
+        font-weight: 600;
+        padding: 5px 12px;
+        border-radius: 6px;
+        border: 1px solid #e2e8f0;
+        background: #f8fafc;
+        color: #0f172a;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .btn-filter-apply:hover {
+        background: #e2e8f0;
+    }
+
+    /* ── KPI Grid ── */
+    .cash-kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1rem;
+    }
+
+    .cash-kpi-card {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 1.15rem 1.25rem;
+        border-radius: 12px;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .cash-kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    }
+
+    .kpi-icon-wrap {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .kpi-emerald { background: #ecfdf5; color: #059669; }
+    .kpi-teal    { background: #f0fdfa; color: #0d9488; }
+    .kpi-amber   { background: #fffbeb; color: #d97706; }
+    .kpi-purple  { background: #f5f3ff; color: #7c3aed; }
+
+    .kpi-data {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .kpi-label {
+        font-size: 0.78rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #64748b;
+    }
+
+    .kpi-value {
+        font-size: 1.45rem;
+        font-weight: 800;
+        color: #0f172a;
+        line-height: 1.2;
+        margin: 2px 0;
+    }
+    .kpi-value small {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: #64748b;
+    }
+
+    .kpi-subtext {
+        font-size: 0.75rem;
+        color: #94a3b8;
+    }
+
+    /* ── Tab Dock ── */
+    .cash-tabs-dock {
+        display: flex;
+        gap: 6px;
+        border-bottom: 1px solid #e2e8f0;
+        padding-bottom: 2px;
+        overflow-x: auto;
+    }
+
+    .cash-tab-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0.65rem 1.15rem;
+        font-size: 0.88rem;
+        font-weight: 600;
+        color: #64748b;
+        background: transparent;
+        border: none;
+        border-bottom: 2px solid transparent;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+    .cash-tab-btn:hover {
+        color: #0f172a;
+    }
+    .cash-tab-btn.active {
+        color: #019c01;
+        border-bottom-color: #019c01;
+    }
+
+    .cash-tab-content {
+        display: none;
+    }
+    .cash-tab-content.active {
+        display: block;
+        animation: fadeIn 0.2s ease;
+    }
+
+    @@keyframes fadeIn {
+        from { opacity: 0; transform: translateY(4px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Panel & Tables ── */
+    .cash-panel {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        overflow: hidden;
+    }
+
+    .panel-header-dock {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.15rem 1.25rem;
+        border-bottom: 1px solid #e2e8f0;
+        background: #ffffff;
+    }
+
+    .panel-title-wrap h3 {
+        font-size: 1.05rem;
+        font-weight: 700;
+        margin: 0;
+        color: #0f172a;
+    }
+    .panel-title-wrap p {
+        font-size: 0.80rem;
+        color: #64748b;
+        margin: 2px 0 0 0;
+    }
+
+    .cash-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.84rem;
+    }
+    .cash-table th {
+        background: #f8fafc;
+        color: #64748b;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        padding: 0.85rem 1rem;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .cash-table td {
+        padding: 0.85rem 1rem;
+        border-bottom: 1px solid #f1f5f9;
+        color: #0f172a;
+    }
+    .cash-table tr:hover td {
+        background: #f8fafc;
+    }
+
+    .pay-icon-box {
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        background: #f1f5f9;
+        color: #475569;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .share-badge {
+        font-size: 0.75rem;
+        font-weight: 700;
+        background: #f1f5f9;
+        color: #0f172a;
+        padding: 2px 8px;
+        border-radius: 4px;
+    }
+
+    /* ── Shift Grid & Guideline Elements ── */
+    .active-shift-details-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+    }
+
+    .shift-stat-box {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+    }
+    .stat-label {
+        font-size: 0.72rem;
+        color: #64748b;
+        text-transform: uppercase;
+        font-weight: 600;
+    }
+    .stat-value {
+        font-weight: 700;
+        color: #0f172a;
+        margin-top: 2px;
+    }
+
+    .guideline-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        padding: 12px;
+        border-radius: 8px;
+    }
+    .g-num {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #019c01;
+        color: #ffffff;
+        font-size: 0.75rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .g-text {
+        font-size: 0.82rem;
+        color: #334155;
+        line-height: 1.4;
+    }
+
+    /* ── Printable Fiscal Slip Voucher ── */
+    .fiscal-slip-card {
+        width: 380px;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+        font-family: 'JetBrains Mono', monospace, sans-serif;
+    }
+
+    .slip-header {
+        text-align: center;
+        margin-bottom: 16px;
+    }
+    .slip-header h2 {
+        font-size: 1.15rem;
+        font-weight: 800;
+        margin: 0;
+        color: #0f172a;
+    }
+    .slip-header p {
+        font-size: 0.75rem;
+        color: #64748b;
+        margin: 2px 0;
+    }
+    .slip-header h3 {
+        font-size: 0.90rem;
+        font-weight: 700;
+        margin: 8px 0 4px 0;
+        color: #019c01;
+    }
+
+    .slip-divider {
+        height: 2px;
+        background: #0f172a;
+        margin: 10px 0;
+    }
+    .slip-divider-dashed {
+        border-top: 1px dashed #94a3b8;
+        margin: 8px 0;
+    }
+
+    .slip-section {
+        margin-bottom: 14px;
+    }
+    .slip-section-title {
+        font-size: 0.75rem;
+        font-weight: 800;
+        color: #64748b;
+        text-transform: uppercase;
+        border-bottom: 1px solid #e2e8f0;
+        padding-bottom: 4px;
+        margin-bottom: 6px;
+    }
+
+    .slip-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.80rem;
+        color: #334155;
+        padding: 2px 0;
+    }
+    .slip-row.bold {
+        font-weight: 700;
+        color: #0f172a;
+    }
+    .slip-row.highlight {
+        color: #019c01;
+        font-size: 0.88rem;
+    }
+    .slip-row.small {
+        font-size: 0.75rem;
+    }
+
+    .slip-signatures {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-top: 24px;
+    }
+    .sig-box {
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+    }
+    .sig-box span {
+        font-size: 0.70rem;
+        color: #64748b;
+        text-transform: uppercase;
+        font-weight: 600;
+    }
+    .sig-line {
+        border-bottom: 1px solid #0f172a;
+    }
+
+    .slip-footer {
+        text-align: center;
+        font-size: 0.70rem;
+        color: #94a3b8;
+        margin-top: 20px;
+    }
+
+    /* ── Modals ── */
+    .modern-modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(4px);
+        z-index: 9998;
+        display: none;
+    }
+
+    .modern-modal {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        width: 90%;
+        box-shadow: 0 20px 25px -5px rgba(0,0,0,0.15);
+        z-index: 9999;
+        display: none;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .modal-header {
+        padding: 1.15rem 1.5rem;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: #f8fafc;
+    }
+    .modal-title {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-close-modal {
+        background: transparent;
+        border: none;
+        font-size: 1.25rem;
+        color: #94a3b8;
+        cursor: pointer;
+    }
+    .btn-close-modal:hover {
+        color: #0f172a;
+    }
+
+    .modal-body {
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        background: #ffffff;
+    }
+    .modal-footer {
+        padding: 1rem 1.5rem;
+        border-top: 1px solid #e2e8f0;
+        background: #f8fafc;
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .form-label {
+        font-size: 0.80rem;
+        font-weight: 600;
+        color: #0f172a;
+    }
+
+    .live-variance-box {
+        padding: 12px 14px;
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+    }
+    .variance-neutral  { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+    .variance-shortage { background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; }
+    .variance-overage  { background: #f0fdfa; color: #0d9488; border: 1px solid #ccfbf1; }
+
+    .cash-empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 3.5rem 1.5rem;
+        color: #64748b;
+        gap: 8px;
+    }
+
+    @@media print {
+        body * {
+            visibility: hidden;
+        }
+        #printableFiscalSlip, #printableFiscalSlip * {
+            visibility: visible;
+        }
+        #printableFiscalSlip {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            border: none;
+            box-shadow: none;
+        }
+    }
+</style>
+
+@* ── JAVASCRIPT INTERACTIONS ── *@
+<script>
+    function switchTab(tabId) {
+        document.querySelectorAll('.cash-tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.cash-tab-content').forEach(c => c.classList.remove('active'));
+
+        const targetBtn = Array.from(document.querySelectorAll('.cash-tab-btn')).find(b => b.getAttribute('onclick')?.includes(tabId));
+        if (targetBtn) targetBtn.classList.add('active');
+
+        const content = document.getElementById(`tab-${tabId}`);
+        if (content) content.classList.add('active');
+    }
+
+    // Modal 1: Open Shift
+    function openOpenShiftModal() {
+        document.getElementById('openShiftModalOverlay').style.display = 'block';
+        document.getElementById('openShiftModal').style.display = 'flex';
+    }
+    function closeOpenShiftModal() {
+        document.getElementById('openShiftModalOverlay').style.display = 'none';
+        document.getElementById('openShiftModal').style.display = 'none';
+    }
+
+    // Modal 2: Close Shift
+    let expectedDrawerAmount = 0;
+    function openCloseShiftModal(openingFloat, expectedTotal) {
+        expectedDrawerAmount = expectedTotal;
+        document.getElementById('closeOpeningFloatVal').textContent = openingFloat.toLocaleString() + ' XAF';
+        document.getElementById('closeExpectedFloatVal').textContent = expectedTotal.toLocaleString() + ' XAF';
+        document.getElementById('inputClosingCount').value = expectedTotal;
+        updateCloseVariance();
+
+        document.getElementById('closeShiftModalOverlay').style.display = 'block';
+        document.getElementById('closeShiftModal').style.display = 'flex';
+    }
+    function closeCloseShiftModal() {
+        document.getElementById('closeShiftModalOverlay').style.display = 'none';
+        document.getElementById('closeShiftModal').style.display = 'none';
+    }
+
+    function updateCloseVariance() {
+        const count = parseFloat(document.getElementById('inputClosingCount')?.value) || 0;
+        const delta = count - expectedDrawerAmount;
+
+        const box = document.getElementById('closeVarianceBox');
+        const deltaLabel = document.getElementById('closeVarianceDelta');
+        const msg = document.getElementById('closeVarianceMsg');
+
+        if (!box || !deltaLabel || !msg) return;
+
+        deltaLabel.textContent = (delta >= 0 ? '+' : '') + delta.toLocaleString() + ' XAF';
+        box.className = 'live-variance-box ' + (delta < 0 ? 'variance-shortage' : delta > 0 ? 'variance-overage' : 'variance-neutral');
+
+        if (delta < 0) {
+            msg.textContent = 'Cash shortage detected! Register is missing ' + Math.abs(delta).toLocaleString() + ' XAF.';
+        } else if (delta > 0) {
+            msg.textContent = 'Cash surplus detected! Register has ' + delta.toLocaleString() + ' XAF in excess.';
+        } else {
+            msg.textContent = 'Drawer count perfectly balanced with expected amount.';
+        }
+    }
+
+    function printFiscalSlip() {
+        switchTab('slip');
+        setTimeout(() => window.print(), 150);
+    }
+</script>

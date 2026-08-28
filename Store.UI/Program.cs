@@ -73,6 +73,7 @@ builder.Services.AddScoped<IDiscountOverrideManager, DiscountOverrideManager>();
 builder.Services.AddScoped<IPricingOpsManager, PricingOpsManager>();
 builder.Services.AddScoped<IPromotionEffectivenessManager, PromotionEffectivenessManager>();
 builder.Services.AddScoped<ICashVarianceManager, CashVarianceManager>();
+builder.Services.AddScoped<ICashReportsManager, CashReportsManager>();
 
 var app = builder.Build();
 
