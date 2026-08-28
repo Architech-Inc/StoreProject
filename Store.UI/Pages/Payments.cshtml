@@ -99,17 +99,17 @@
 
             @* KPI 3: Pending Transactions *@
             <div class="pay-kpi-card">
-                <div class="kpi-icon-wrap @(s.PendingMobileMoneyTransactions > 0 ? "kpi-amber" : "kpi-emerald")">
+                <div class="kpi-icon-wrap @(s.PendingMobileMoneyTransactions.Count > 0 ? "kpi-amber" : "kpi-emerald")">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                 </div>
                 <div class="kpi-data">
                     <span class="kpi-label">Pending MoMo Authorizations</span>
-                    <span class="kpi-value" style="color:@(s.PendingMobileMoneyTransactions > 0 ? "#d97706" : "#059669");">
-                        @s.PendingMobileMoneyTransactions.ToString("N0") <small>Awaiting PIN</small>
+                    <span class="kpi-value" style="color:@(s.PendingMobileMoneyTransactions.Count > 0 ? "#d97706" : "#059669");">
+                        @s.PendingMobileMoneyTransactions.Count.ToString("N0") <small>Awaiting PIN</small>
                     </span>
-                    <span class="kpi-subtext">@(s.PendingMobileMoneyTransactions > 0 ? "USSD prompts in progress" : "All prompts resolved")</span>
+                    <span class="kpi-subtext">@(s.PendingMobileMoneyTransactions.Count > 0 ? "USSD prompts in progress" : "All prompts resolved")</span>
                 </div>
             </div>
 
