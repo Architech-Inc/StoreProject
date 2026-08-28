@@ -1,3 +1,4 @@
+using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Store.API.Contracts;
@@ -17,6 +18,22 @@ public class DiscountOverridesController : ControllerBase
 
     public DiscountOverridesController(IDiscountOverrideService overrideService)
         => _overrideService = overrideService;
+
+    [HttpGet("metrics")]
+    [Authorize(Policy = PermissionKeys.PricingRead)]
+    public async Task<IActionResult> GetMetrics(CancellationToken ct)
+    {
+        var metrics = await _overrideService.GetMetricsAsync(ct);
+        return Ok(ApiResponse<DiscountOverrideMetricsDto>.Ok(metrics));
+    }
+
+    [HttpGet("paged")]
+    [Authorize(Policy = PermissionKeys.PricingRead)]
+    public async Task<IActionResult> GetPaged([FromQuery] DiscountOverrideFilterRequest request, CancellationToken ct)
+    {
+        var result = await _overrideService.GetOverridesPagedAsync(request, ct);
+        return Ok(ApiResponse<PagedResult<DiscountOverrideDto>>.Ok(result));
+    }
 
     [HttpGet]
     [Authorize(Policy = PermissionKeys.PricingRead)]
@@ -81,5 +98,50 @@ public class DiscountOverridesController : ControllerBase
                 traceId: HttpContext.TraceIdentifier));
 
         return NoContent();
+    }
+
+    [HttpGet("export/csv")]
+    [Authorize(Policy = PermissionKeys.PricingRead)]
+    public async Task<IActionResult> ExportCsv([FromQuery] DiscountOverrideFilterRequest request, CancellationToken ct)
+    {
+        request.Page = 1;
+        request.PageSize = 2000;
+        var paged = await _overrideService.GetOverridesPagedAsync(request, ct);
+
+        var sb = new StringBuilder();
+        sb.AppendLine("Request ID,Created Date,Scope,Target,Type,Value,Est Impact (XAF),Status,Cashier Username,Cashier Name,Supervisor,Review Date,Justification,Review Notes");
+
+        foreach (var r in paged.Items)
+        {
+            sb.AppendLine(string.Join(",",
+                r.DiscountOverrideRequestId,
+                EscapeCsv(r.DateCreated.ToString("yyyy-MM-dd HH:mm")),
+                EscapeCsv(r.ScopeType),
+                EscapeCsv(r.ScopeLabel),
+                EscapeCsv(r.OverrideType),
+                EscapeCsv(r.ValueFormatted),
+                r.EstimatedImpactXaf.ToString("F2"),
+                EscapeCsv(r.Status),
+                EscapeCsv(r.RequestedByUser),
+                EscapeCsv(r.RequestedByFullName ?? ""),
+                EscapeCsv(r.ReviewedByUser ?? "—"),
+                EscapeCsv(r.ReviewedAt?.ToString("yyyy-MM-dd HH:mm") ?? "—"),
+                EscapeCsv(r.Justification ?? ""),
+                EscapeCsv(r.ReviewNotes ?? "")
+            ));
+        }
+
+        var bytes = Encoding.UTF8.GetBytes(sb.ToString());
+        return File(bytes, "text/csv", $"discount_overrides_ledger_{DateTime.UtcNow:yyyyMMdd_HHmm}.csv");
+    }
+
+    private static string EscapeCsv(string field)
+    {
+        if (string.IsNullOrEmpty(field)) return "\"\"";
+        if (field.Contains(',') || field.Contains('"') || field.Contains('\n') || field.Contains('\r'))
+        {
+            return $"\"{field.Replace("\"", "\"\"")}\"";
+        }
+        return $"\"{field}\"";
     }
 }

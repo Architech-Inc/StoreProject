@@ -1,50 +1,102 @@
 using Microsoft.AspNetCore.Mvc;
+using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Discounts;
+using Store.Models.DTOs.Operations;
 using Store.Models.Enums;
-using Store.Models.Interfaces.Services;
 using StoreUI.Services;
 
 namespace StoreUI.Pages;
 
 public class DiscountOverridesModel : SecurePageModel
 {
-    private readonly IDiscountOverrideService _overrideService;
+    private readonly IDiscountOverrideManager _overrideManager;
     private readonly IApiClientService _apiClient;
-    private readonly IInvoiceService _invoiceService;
-    private readonly IItemService _itemService;
 
-    public List<DiscountOverrideDto> Overrides { get; private set; } = new();
-    public string? FilterStatus { get; private set; }
+    public DiscountOverrideMetricsDto Metrics { get; private set; } = new();
+    public PagedResult<DiscountOverrideDto> OverridesPaged { get; private set; } = new();
+
+    [BindProperty(SupportsGet = true)]
+    public string? Search { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public string? Status { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public string? OverrideType { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public int PageNumber { get; set; } = 1;
 
     // Create
-    [BindProperty] public Guid? CreateInvoiceId { get; set; }
-    [BindProperty] public Guid? CreateItemId { get; set; }
-    [BindProperty] public DiscountType CreateOverrideType { get; set; }
-    [BindProperty] public decimal CreateOverrideValue { get; set; }
-    [BindProperty] public string? CreateJustification { get; set; }
+    [BindProperty]
+    public CreateDiscountOverrideRequest CreateRequest { get; set; } = new();
 
     // Review
-    [BindProperty] public int ReviewRequestId { get; set; }
-    [BindProperty] public bool ReviewApproved { get; set; }
-    [BindProperty] public string? ReviewNotes { get; set; }
+    [BindProperty]
+    public int ReviewRequestId { get; set; }
+
+    [BindProperty]
+    public ReviewDiscountOverrideRequest ReviewRequest { get; set; } = new();
 
     // Cancel
-    [BindProperty] public int CancelRequestId { get; set; }
+    [BindProperty]
+    public int CancelRequestId { get; set; }
 
-    [TempData] public string? StatusMessage { get; set; }
+    [TempData]
+    public string? StatusMessage { get; set; }
 
     public IEnumerable<DiscountType> DiscountTypes { get; } = Enum.GetValues<DiscountType>();
+    public bool CanApprove { get; private set; }
 
     public DiscountOverridesModel(
-        IDiscountOverrideService overrideService,
-        IApiClientService apiClient,
-        IInvoiceService invoiceService,
-        IItemService itemService)
+        IDiscountOverrideManager overrideManager,
+        IApiClientService apiClient)
     {
-        _overrideService = overrideService;
+        _overrideManager = overrideManager;
         _apiClient = apiClient;
-        _invoiceService = invoiceService;
-        _itemService = itemService;
+    }
+
+    public async Task<IActionResult> OnGetAsync(CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out var permissions))
+            return GoToLogin();
+
+        if (!HasPermission(permissions, PermissionKeys.PricingRead) &&
+            !HasPermission(permissions, PermissionKeys.CashWrite) &&
+            !HasPermission(permissions, PermissionKeys.InventoryRead))
+        {
+            return AccessDenied();
+        }
+
+        CanApprove = HasPermission(permissions, PermissionKeys.PricingWrite);
+        _apiClient.SetToken(token);
+
+        Metrics = await _overrideManager.GetMetricsAsync(ct);
+
+        var filter = new DiscountOverrideFilterRequest
+        {
+            Page = PageNumber < 1 ? 1 : PageNumber,
+            PageSize = 20,
+            SearchTerm = Search,
+            Status = Status,
+            OverrideType = OverrideType
+        };
+
+        OverridesPaged = await _overrideManager.GetOverridesPagedAsync(filter, ct);
+        return Page();
+    }
+
+    public async Task<IActionResult> OnGetDetailsJsonAsync(int id, CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _))
+            return Unauthorized();
+
+        _apiClient.SetToken(token);
+
+        var dto = await _overrideManager.GetOverrideByIdAsync(id, ct);
+        if (dto is null) return NotFound();
+
+        return new JsonResult(dto);
     }
 
     public async Task<IActionResult> OnGetSearchInvoicesAsync([FromQuery] string? q, CancellationToken ct = default)
@@ -53,19 +105,16 @@ public class DiscountOverridesModel : SecurePageModel
             return Unauthorized();
 
         _apiClient.SetToken(token);
-        var result = await _invoiceService.GetAllAsync(new Store.Models.DTOs.Common.PagedRequest { Page = 1, PageSize = 15 }, ct);
-        var query = q?.Trim().ToLowerInvariant();
-        var items = result.Items
-            .Where(inv => string.IsNullOrEmpty(query) ||
-                          (inv.CustomerName?.ToLowerInvariant().Contains(query) == true) ||
-                          inv.InvoiceId.ToString().ToLowerInvariant().Contains(query))
-            .Select(inv => new
-            {
-                id = inv.InvoiceId.ToString(),
-                title = $"Invoice #{inv.InvoiceId.ToString()[..8]} - {inv.TotalAmount:N0} XAF",
-                sub = $"Customer: {inv.CustomerName ?? "Walk-in"} | Date: {inv.DateCreated:yyyy-MM-dd HH:mm}",
-                badge = inv.IsPaid ? "Paid" : "Pending"
-            });
+
+        var invoices = await _overrideManager.SearchInvoicesAsync(q, ct);
+        var items = invoices.Select(inv => new
+        {
+            id = inv.InvoiceId.ToString(),
+            title = $"Invoice #{inv.InvoiceId.ToString()[..8]} - {inv.TotalAmount:N0} XAF",
+            sub = $"Customer: {inv.CustomerName ?? "Walk-in"} | Total: {inv.TotalAmount:N0} XAF",
+            totalAmount = inv.TotalAmount,
+            badge = inv.IsPaid ? "Paid" : "Pending"
+        });
 
         return new JsonResult(items);
     }
@@ -76,79 +125,107 @@ public class DiscountOverridesModel : SecurePageModel
             return Unauthorized();
 
         _apiClient.SetToken(token);
-        var result = await _itemService.GetAllAsync(new Store.Models.DTOs.Common.PagedRequest { Page = 1, PageSize = 15, SearchTerm = q?.Trim() }, ct);
-        var items = result.Items.Select(i => new
+
+        var items = await _overrideManager.SearchItemsAsync(q, ct);
+        var list = items.Select(i => new
         {
             id = i.ItemId.ToString(),
             title = i.Name,
-            sub = $"Barcode: {(string.IsNullOrEmpty(i.Barcode) ? "N/A" : i.Barcode)} | Price: {i.UnitPrice:N2} XAF",
-            badge = i.CategoryName ?? "Item"
+            sub = $"Barcode: {(string.IsNullOrEmpty(i.Barcode) ? "N/A" : i.Barcode)} | Price: {i.UnitPrice:N0} XAF",
+            unitPrice = i.UnitPrice,
+            badge = i.CategoryName ?? "General"
         });
 
-        return new JsonResult(items);
+        return new JsonResult(list);
     }
 
-    public async Task<IActionResult> OnGetAsync([FromQuery] string? status = null)
+    public async Task<IActionResult> OnGetExportCsvAsync(CancellationToken ct = default)
     {
         if (!TryGetSecurityContext(out var token, out _))
-            return GoToLogin();
-
-        _apiClient.SetToken(token);
-        FilterStatus = status;
-        Overrides = await _overrideService.GetAllAsync(status);
-        return Page();
-    }
-
-    public async Task<IActionResult> OnPostCreateAsync()
-    {
-        if (!TryGetSecurityContext(out var token, out _))
-            return GoToLogin();
+            return Unauthorized();
 
         _apiClient.SetToken(token);
 
-        var req = new CreateDiscountOverrideRequest
+        var filter = new DiscountOverrideFilterRequest
         {
-            InvoiceId = CreateInvoiceId,
-            ItemId = CreateItemId,
-            OverrideType = CreateOverrideType,
-            OverrideValue = CreateOverrideValue,
-            Justification = CreateJustification
+            Page = 1,
+            PageSize = 2000,
+            SearchTerm = Search,
+            Status = Status,
+            OverrideType = OverrideType
         };
 
-        await _overrideService.CreateAsync(req, Guid.Empty); // userId resolved by API via JWT
-        StatusMessage = "Override request submitted.";
-        return RedirectToPage();
+        var paged = await _overrideManager.GetOverridesPagedAsync(filter, ct);
+        var bytes = _overrideManager.ExportCsv(paged.Items);
+        var filename = $"discount_overrides_ledger_{DateTime.UtcNow:yyyyMMdd_HHmm}.csv";
+        return File(bytes, "text/csv", filename);
     }
 
-    public async Task<IActionResult> OnPostReviewAsync()
+    public async Task<IActionResult> OnPostCreateAsync(CancellationToken ct = default)
     {
         if (!TryGetSecurityContext(out var token, out _))
             return GoToLogin();
 
         _apiClient.SetToken(token);
 
-        var req = new ReviewDiscountOverrideRequest
+        try
         {
-            Approved = ReviewApproved,
-            ReviewNotes = ReviewNotes
-        };
+            var result = await _overrideManager.CreateOverrideAsync(CreateRequest, Guid.Empty, ct);
+            StatusMessage = $"Discount override request #{result.DiscountOverrideRequestId} submitted for manager review.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: Failed to submit override request - {ex.Message}";
+        }
 
-        var result = await _overrideService.ReviewAsync(ReviewRequestId, Guid.Empty, req);
-        StatusMessage = result is not null
-            ? (ReviewApproved ? "Override approved." : "Override rejected.")
-            : "Request is no longer pending or was not found.";
-        return RedirectToPage();
+        return RedirectToPage(new { Search, Status, OverrideType, PageNumber });
     }
 
-    public async Task<IActionResult> OnPostCancelAsync()
+    public async Task<IActionResult> OnPostReviewAsync(CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out var permissions))
+            return GoToLogin();
+
+        if (!HasPermission(permissions, PermissionKeys.PricingWrite))
+        {
+            StatusMessage = "Error: You do not have supervisory authority to approve or reject discount overrides.";
+            return RedirectToPage(new { Search, Status, OverrideType, PageNumber });
+        }
+
+        _apiClient.SetToken(token);
+
+        try
+        {
+            var result = await _overrideManager.ReviewOverrideAsync(ReviewRequestId, Guid.Empty, ReviewRequest, ct);
+            StatusMessage = result is not null
+                ? (ReviewRequest.Approved ? $"Override #{ReviewRequestId} approved successfully." : $"Override #{ReviewRequestId} rejected.")
+                : "Request is no longer pending or was not found.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: Failed to review override request - {ex.Message}";
+        }
+
+        return RedirectToPage(new { Search, Status, OverrideType, PageNumber });
+    }
+
+    public async Task<IActionResult> OnPostCancelAsync(CancellationToken ct = default)
     {
         if (!TryGetSecurityContext(out var token, out _))
             return GoToLogin();
 
         _apiClient.SetToken(token);
 
-        var ok = await _overrideService.CancelAsync(CancelRequestId, Guid.Empty);
-        StatusMessage = ok ? "Override request cancelled." : "Request is no longer pending or was not found.";
-        return RedirectToPage();
+        try
+        {
+            var ok = await _overrideManager.CancelOverrideAsync(CancelRequestId, Guid.Empty, ct);
+            StatusMessage = ok ? $"Override request #{CancelRequestId} cancelled." : "Request is no longer pending or was not found.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: Failed to cancel override - {ex.Message}";
+        }
+
+        return RedirectToPage(new { Search, Status, OverrideType, PageNumber });
     }
 }

@@ -3,213 +3,1052 @@
 @{
     ViewData["Title"] = "Discount Override Requests";
     ViewData["ActivePage"] = "DiscountOverrides";
-    ViewData["PageDescription"] = "Submit and manage discount override approval requests.";
+    ViewData["PageDescription"] = "Review, authorize, and audit cashier discount override approval requests at POS.";
     Layout = "~/Pages/Shared/_AppLayout.cshtml";
-
-    var statuses = new[] { "Pending", "Approved", "Rejected", "Cancelled" };
 }
 
 @section Styles {
-    <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
+    <style>
+        .override-hub-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding-bottom: 40px;
+        }
+
+        /* Status Toast Banner */
+        .toast-banner {
+            padding: 12px 18px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: fadeIn 0.3s ease;
+        }
+        .toast-banner.success {
+            background: #ecfdf5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+        .toast-banner.error {
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        /* 4-Card KPI Grid */
+        .override-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+        }
+        .override-kpi-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 18px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .override-kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+        }
+        .kpi-icon-box {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .kpi-icon-box.amber { background: #fffbeb; color: #d97706; }
+        .kpi-icon-box.emerald { background: #ecfdf5; color: #059669; }
+        .kpi-icon-box.purple { background: #f5f3ff; color: #7c3aed; }
+        .kpi-icon-box.teal { background: #f0fdfa; color: #0d9488; }
+
+        .kpi-content {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+        .kpi-label {
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+        .kpi-value {
+            font-size: 1.45rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .kpi-sub {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-top: 2px;
+        }
+
+        /* Filter Dock & Toolbar */
+        .override-toolbar {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 14px 18px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }
+        .toolbar-left {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            flex: 1;
+        }
+        .search-box-wrap {
+            position: relative;
+            min-width: 260px;
+            max-width: 360px;
+            flex: 1;
+        }
+        .search-box-wrap svg {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            pointer-events: none;
+        }
+        .search-input {
+            width: 100%;
+            height: 38px;
+            padding: 0 12px 0 36px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            color: #1e293b;
+            outline: none;
+            background: #f8fafc;
+            transition: all 0.2s ease;
+        }
+        .search-input:focus {
+            border-color: #019c01;
+            background: #ffffff;
+            box-shadow: 0 0 0 3px rgba(1, 156, 1, 0.12);
+        }
+        .status-pills {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .status-pill {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
+            color: #475569;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+        .status-pill:hover {
+            background: #f1f5f9;
+            color: #0f172a;
+            border-color: #cbd5e1;
+        }
+        .status-pill.active {
+            background: #019c01;
+            color: #ffffff;
+            border-color: #019c01;
+            font-weight: 600;
+            box-shadow: 0 2px 6px rgba(1, 156, 1, 0.25);
+        }
+        .toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Buttons */
+        .btn-brand-primary {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            background: #019c01;
+            color: #ffffff;
+            font-size: 0.88rem;
+            font-weight: 600;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(1, 156, 1, 0.2);
+        }
+        .btn-brand-primary:hover {
+            background: #018001;
+            color: #ffffff;
+        }
+        .btn-brand-secondary {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            background: #ffffff;
+            color: #475569;
+            font-size: 0.88rem;
+            font-weight: 500;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+        .btn-brand-secondary:hover {
+            background: #f8fafc;
+            color: #0f172a;
+            border-color: #94a3b8;
+        }
+
+        /* Table Card */
+        .override-table-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        }
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+        }
+        .modern-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.88rem;
+        }
+        .modern-table thead th {
+            background: #f8fafc;
+            color: #475569;
+            font-weight: 600;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 12px 16px;
+            border-bottom: 1px solid #e2e8f0;
+            white-space: nowrap;
+        }
+        .modern-table tbody tr {
+            border-bottom: 1px solid #f1f5f9;
+            transition: background 0.15s ease;
+        }
+        .modern-table tbody tr:hover {
+            background: #f8fafc;
+        }
+        .modern-table td {
+            padding: 14px 16px;
+            color: #1e293b;
+            vertical-align: middle;
+        }
+
+        /* Badges & Chips */
+        .badge-scope {
+            display: inline-block;
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+        .badge-scope.invoice { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+        .badge-scope.item { background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; }
+
+        .badge-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.76rem;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 6px;
+            text-transform: capitalize;
+        }
+        .badge-status.pending { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+        .badge-status.approved { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+        .badge-status.rejected { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+        .badge-status.cancelled { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
+
+        .user-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .user-avatar {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: #e2e8f0;
+            color: #475569;
+            font-size: 0.72rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Action Buttons */
+        .btn-table-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+            color: #475569;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-decoration: none;
+        }
+        .btn-table-action:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+            color: #0f172a;
+        }
+        .btn-table-action.emerald {
+            color: #059669;
+            border-color: #a7f3d0;
+            background: #ecfdf5;
+        }
+        .btn-table-action.emerald:hover { background: #d1fae5; }
+        .btn-table-action.danger {
+            color: #dc2626;
+            border-color: #fecaca;
+            background: #ffffff;
+        }
+        .btn-table-action.danger:hover { background: #fef2f2; }
+
+        /* Modals */
+        .modern-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 9998;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        .modern-modal-overlay.open {
+            display: block;
+            opacity: 1;
+        }
+        .modern-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.95);
+            background: #ffffff;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 680px;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+            z-index: 9999;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+            opacity: 0;
+        }
+        .modern-modal.open {
+            display: flex;
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+        }
+        .modal-header {
+            padding: 18px 24px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #f8fafc;
+        }
+        .modal-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-close-modal {
+            background: transparent;
+            border: none;
+            font-size: 1.25rem;
+            color: #94a3b8;
+            cursor: pointer;
+            padding: 4px;
+            line-height: 1;
+            border-radius: 6px;
+            transition: all 0.15s ease;
+        }
+        .btn-close-modal:hover {
+            color: #0f172a;
+            background: #e2e8f0;
+        }
+        .modal-body {
+            padding: 20px 24px;
+            overflow-y: auto;
+            max-height: calc(85vh - 140px);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .modal-footer {
+            padding: 14px 24px;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+            background: #f8fafc;
+        }
+
+        /* Form Controls */
+        .form-row-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+        .form-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .form-label {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #334155;
+        }
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            color: #1e293b;
+            background: #ffffff;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            border-color: #019c01;
+            box-shadow: 0 0 0 3px rgba(1, 156, 1, 0.12);
+        }
+    </style>
 }
 
-<div class="ops-page">
-    <div class="filter-bar" style="justify-content: space-between;">
-        <form method="get" class="filter-row">
-            <div class="filter-group">
-                <label for="statusFilter">Status</label>
-                <select id="statusFilter" name="status" onchange="this.form.submit()">
-                    <option value="">All</option>
-                    @foreach (var s in statuses)
-                    {
-                        <option value="@s" selected="@(Model.FilterStatus == s)">@s</option>
-                    }
-                </select>
+<div class="override-hub-container">
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="toast-banner @(Model.StatusMessage.StartsWith("Error") ? "error" : "success")">
+            @if (Model.StatusMessage.StartsWith("Error"))
+            {
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            }
+            else
+            {
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+            }
+            <span>@Model.StatusMessage</span>
+        </div>
+    }
+
+    <!-- 4-Card Interactive KPI Banner -->
+    <div class="override-kpi-grid">
+        <div class="override-kpi-card">
+            <div class="kpi-icon-box amber">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
             </div>
-        </form>
-        <button type="button" class="button-primary" data-open-modal="createOverrideModal">+ New Request</button>
+            <div class="kpi-content">
+                <span class="kpi-label">Pending Approvals</span>
+                <span class="kpi-value" style="color: #d97706;">@Model.Metrics.PendingCount</span>
+                <span class="kpi-sub">Awaiting manager decision</span>
+            </div>
+        </div>
+
+        <div class="override-kpi-card">
+            <div class="kpi-icon-box emerald">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div class="kpi-content">
+                <span class="kpi-label">Approved Overrides</span>
+                <span class="kpi-value" style="color: #059669;">@Model.Metrics.ApprovedCount</span>
+                <span class="kpi-sub">Authorized markdown exceptions</span>
+            </div>
+        </div>
+
+        <div class="override-kpi-card">
+            <div class="kpi-icon-box purple">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                </svg>
+            </div>
+            <div class="kpi-content">
+                <span class="kpi-label">Rejected / Blocked</span>
+                <span class="kpi-value">@Model.Metrics.RejectedCount</span>
+                <span class="kpi-sub">Unauthorized discount attempts</span>
+            </div>
+        </div>
+
+        <div class="override-kpi-card">
+            <div class="kpi-icon-box teal">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div class="kpi-content">
+                <span class="kpi-label">Valuation Impact</span>
+                <span class="kpi-value" style="font-size: 1.25rem;">@Model.Metrics.TotalEstimatedImpactXaf.ToString("N0") <small style="font-size: 0.8rem; font-weight: 500;">XAF</small></span>
+                <span class="kpi-sub">Total financial markdown granted</span>
+            </div>
+        </div>
     </div>
 
-    <div class="card" style="padding:0; overflow:hidden;">
-        @if (!Model.Overrides.Any())
-        {
-            <div class="empty-state">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    <!-- Filter Dock & Search Toolbar -->
+    <div class="override-toolbar">
+        <div class="toolbar-left">
+            <form method="get" id="overrideFilterForm" class="search-box-wrap">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
-                <h4>No Override Requests Found</h4>
-                <p>There are no records matching your criteria.</p>
+                <input type="text" name="Search" value="@Model.Search" class="search-input" placeholder="Search cashier, item, invoice, justification..." onchange="document.getElementById('overrideFilterForm').submit();" />
+                @if (!string.IsNullOrWhiteSpace(Model.Status))
+                {
+                    <input type="hidden" name="Status" value="@Model.Status" />
+                }
+            </form>
+
+            <!-- Status Filter Pills -->
+            <div class="status-pills">
+                <a href="?Search=@Model.Search" class="status-pill @(string.IsNullOrWhiteSpace(Model.Status) ? "active" : "")">All Requests</a>
+                <a href="?Status=Pending&Search=@Model.Search" class="status-pill @(Model.Status == "Pending" ? "active" : "")">Pending Approvals</a>
+                <a href="?Status=Approved&Search=@Model.Search" class="status-pill @(Model.Status == "Approved" ? "active" : "")">Approved</a>
+                <a href="?Status=Rejected&Search=@Model.Search" class="status-pill @(Model.Status == "Rejected" ? "active" : "")">Rejected</a>
+                <a href="?Status=Cancelled&Search=@Model.Search" class="status-pill @(Model.Status == "Cancelled" ? "active" : "")">Cancelled</a>
+            </div>
+        </div>
+
+        <div class="toolbar-right">
+            <a asp-page-handler="ExportCsv" asp-route-Search="@Model.Search" asp-route-Status="@Model.Status" class="btn-brand-secondary" title="Export Overrides Audit Ledger">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                CSV
+            </a>
+
+            <button type="button" class="btn-brand-primary" onclick="openCreateModal()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                New Override Request
+            </button>
+        </div>
+    </div>
+
+    <!-- Supervisory Data Table Card -->
+    <div class="override-table-card">
+        @if (!Model.OverridesPaged.Items.Any())
+        {
+            <div style="padding: 48px 24px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px;">
+                <div style="width: 64px; height: 64px; border-radius: 50%; background: #f1f5f9; color: #94a3b8; display: flex; align-items: center; justify-content: center;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                </div>
+                <h4 style="font-size: 1.05rem; font-weight: 600; color: #0f172a; margin: 0;">No Discount Override Requests</h4>
+                <p style="font-size: 0.85rem; color: #64748b; margin: 0; max-width: 360px;">
+                    No override records match your filter criteria. Use "+ New Override Request" to submit an exception.
+                </p>
             </div>
         }
         else
         {
-            <div class="table-wrap" style="margin:0; border:none; border-radius:0;">
-                <table>
+            <div class="table-responsive">
+                <table class="modern-table">
                     <thead>
                         <tr>
-                            <th>#</th>
-                            <th>Item</th>
-                            <th>Type</th>
-                            <th>Value</th>
-                            <th>Justification</th>
-                            <th>Requested By</th>
-                            <th>Status</th>
+                            <th>Request ID & Date</th>
+                            <th>Scope & Target</th>
+                            <th>Requested Markdown</th>
+                            <th>Cashier Requester</th>
+                            <th>Justification Reason</th>
+                            <th>Supervisory Status</th>
                             <th>Reviewed By</th>
-                            <th>Date</th>
-                            <th>Actions</th>
+                            <th style="text-align: right;">Supervisory Action</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var r in Model.Overrides)
+                        @foreach (var r in Model.OverridesPaged.Items)
                         {
-                            var badgeClass = r.Status switch
-                            {
-                                "Approved" => "badge-green",
-                                "Rejected" => "badge-red",
-                                "Cancelled" => "badge-gray",
-                                _ => "badge-yellow"
-                            };
+                            var scopeClass = r.ScopeType.ToLowerInvariant();
+                            var statusClass = r.Status.ToLowerInvariant();
                             <tr>
-                                <td>@r.DiscountOverrideRequestId</td>
-                                <td>@(r.ItemName ?? "—")</td>
-                                <td>@r.OverrideType</td>
                                 <td>
-                                    @if (r.OverrideType == "Percentage")
+                                    <div style="display: flex; flex-direction: column; gap: 2px;">
+                                        <span style="font-weight: 700; color: #0f172a;">#@r.DiscountOverrideRequestId</span>
+                                        <span style="font-size: 0.74rem; color: #64748b;">@r.DateCreated.ToString("dd MMM yyyy HH:mm")</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div style="display: flex; flex-direction: column; gap: 2px;">
+                                        <span class="badge-scope @scopeClass" style="width: fit-content;">@r.ScopeType</span>
+                                        <span style="font-size: 0.76rem; color: #334155; font-weight: 500;">@r.ScopeLabel</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div style="display: flex; flex-direction: column; gap: 2px;">
+                                        <span style="font-weight: 700; color: #019c01; font-size: 0.92rem;">@r.ValueFormatted</span>
+                                        @if (r.EstimatedImpactXaf > 0)
+                                        {
+                                            <span style="font-size: 0.74rem; color: #64748b;">Est: ~@r.EstimatedImpactXaf.ToString("N0") XAF</span>
+                                        }
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="user-chip">
+                                        <div class="user-avatar">
+                                            @(string.IsNullOrEmpty(r.RequestedByUser) ? "U" : r.RequestedByUser[..1].ToUpperInvariant())
+                                        </div>
+                                        <div style="display: flex; flex-direction: column; line-height: 1.2;">
+                                            <span style="font-weight: 600; font-size: 0.82rem; color: #0f172a;">@r.RequestedByUser</span>
+                                            @if (!string.IsNullOrWhiteSpace(r.RequestedByFullName))
+                                            {
+                                                <span style="font-size: 0.72rem; color: #64748b;">@r.RequestedByFullName</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span style="font-size: 0.8rem; color: #475569;" title="@(r.Justification ?? "")">
+                                        @(string.IsNullOrWhiteSpace(r.Justification) ? "—" : (r.Justification.Length > 36 ? r.Justification[..36] + "…" : r.Justification))
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge-status @statusClass">@r.Status</span>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrWhiteSpace(r.ReviewedByUser))
                                     {
-                                        <span>@r.OverrideValue%</span>
+                                        <div style="display: flex; flex-direction: column; line-height: 1.2;">
+                                            <span style="font-size: 0.8rem; font-weight: 600; color: #0f172a;">@r.ReviewedByUser</span>
+                                            <span style="font-size: 0.72rem; color: #64748b;">@(r.ReviewedAt?.ToString("dd MMM HH:mm") ?? "")</span>
+                                        </div>
                                     }
                                     else
                                     {
-                                        <span>@r.OverrideValue.ToString("N2")</span>
+                                        <span style="color: #94a3b8; font-size: 0.8rem;">—</span>
                                     }
                                 </td>
-                                <td title="@(r.Justification ?? "")">
-                                    @(string.IsNullOrWhiteSpace(r.Justification)
-                                        ? "—"
-                                        : (r.Justification!.Length > 40 ? r.Justification[..40] + "…" : r.Justification))
-                                </td>
-                                <td>@r.RequestedByUser</td>
-                                <td><span class="badge @badgeClass">@r.Status</span></td>
-                                <td>@(r.ReviewedByUser ?? "—")</td>
-                                <td>@r.DateCreated.ToLocalTime().ToString("dd MMM yyyy HH:mm")</td>
-                                <td>
-                                    @if (r.Status == "Pending")
-                                    {
-                                        <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                                            <form method="post" asp-page-handler="Review">
-                                                @Html.AntiForgeryToken()
-                                                <input type="hidden" name="ReviewRequestId" value="@r.DiscountOverrideRequestId" />
-                                                <input type="hidden" name="ReviewApproved" value="true" />
-                                                <button type="submit" class="button-primary" title="Approve">Approve</button>
-                                            </form>
-                                            <button type="button"
-                                                    class="button-command danger"
-                                                    data-open-modal="rejectOverrideModal"
-                                                    data-request-id="@r.DiscountOverrideRequestId"
-                                                    title="Reject">Reject</button>
-                                            <form method="post" asp-page-handler="Cancel"
-                                                  data-confirm="Cancel this override request?" data-confirm-type="danger">
+                                <td style="text-align: right;">
+                                    <div style="display: flex; align-items: center; justify-content: flex-end; gap: 4px;">
+                                        @if (r.Status == "Pending")
+                                        {
+                                            @if (Model.CanApprove)
+                                            {
+                                                <button type="button" class="btn-table-action emerald" onclick="openReviewModal(@r.DiscountOverrideRequestId, true, '@r.RequestedByUser', '@r.ValueFormatted', '@r.ScopeLabel')" title="Approve">
+                                                    ✅ Approve
+                                                </button>
+                                                <button type="button" class="btn-table-action danger" onclick="openReviewModal(@r.DiscountOverrideRequestId, false, '@r.RequestedByUser', '@r.ValueFormatted', '@r.ScopeLabel')" title="Reject">
+                                                    ❌ Reject
+                                                </button>
+                                            }
+                                            <form method="post" asp-page-handler="Cancel" style="margin:0;">
                                                 @Html.AntiForgeryToken()
                                                 <input type="hidden" name="CancelRequestId" value="@r.DiscountOverrideRequestId" />
-                                                <button type="submit" class="button-command" title="Cancel">Cancel</button>
+                                                <button type="submit" class="btn-table-action" onclick="return confirm('Cancel this override request?');" title="Cancel">
+                                                    🚫
+                                                </button>
                                             </form>
-                                        </div>
-                                    }
+                                        }
+                                        else
+                                        {
+                                            <button type="button" class="btn-table-action" onclick="openInspectModal(@r.DiscountOverrideRequestId)" title="Inspect Audit Record">
+                                                🔍 Inspect
+                                            </button>
+                                        }
+                                    </div>
                                 </td>
                             </tr>
                         }
                     </tbody>
                 </table>
             </div>
+
+            @if (Model.OverridesPaged.TotalPages > 1)
+            {
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-top: 1px solid #e2e8f0;">
+                    <span style="font-size: 0.82rem; color: #64748b;">
+                        Showing page <strong>@Model.OverridesPaged.Page</strong> of <strong>@Model.OverridesPaged.TotalPages</strong> (@Model.OverridesPaged.TotalCount total records)
+                    </span>
+                    <div style="display: flex; gap: 6px;">
+                        @if (Model.OverridesPaged.HasPreviousPage)
+                        {
+                            <a href="?PageNumber=@(Model.OverridesPaged.Page - 1)&Search=@Model.Search&Status=@Model.Status" class="btn-brand-secondary" style="padding: 4px 10px; font-size: 0.8rem;">Previous</a>
+                        }
+                        @if (Model.OverridesPaged.HasNextPage)
+                        {
+                            <a href="?PageNumber=@(Model.OverridesPaged.Page + 1)&Search=@Model.Search&Status=@Model.Status" class="btn-brand-secondary" style="padding: 4px 10px; font-size: 0.8rem;">Next</a>
+                        }
+                    </div>
+                </div>
+            }
         }
     </div>
 </div>
 
-<!-- Create Request Modal -->
-<div class="modal-overlay" id="createOverrideModal" hidden>
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="createOverrideTitle" style="width:min(520px,92vw);">
-        <div class="modal-head">
-            <h3 id="createOverrideTitle">New Override Request</h3>
-            <button type="button" class="btn-close" data-close-modal="createOverrideModal" aria-label="Close">×</button>
-        </div>
-        <form method="post" asp-page-handler="Create">
-            @Html.AntiForgeryToken()
-            <div class="form-grid" style="grid-template-columns:1fr;">
-                <div>
-                    <label>Invoice (optional)</label>
-                    <div class="smart-lookup-wrap" data-url="?handler=SearchInvoices" data-placeholder="Search invoice by customer or ID...">
-                        <input type="hidden" name="CreateInvoiceId" id="CreateInvoiceId" />
-                    </div>
+<!-- Create Override Modal -->
+<div class="modern-modal-overlay" id="createModalOverlay" onclick="closeCreateModal()"></div>
+<div class="modern-modal" id="createModal" style="max-width: 640px;">
+    <div class="modal-header">
+        <h3 class="modal-title">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#019c01">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            New Discount Override Request
+        </h3>
+        <button type="button" class="btn-close-modal" onclick="closeCreateModal()">&times;</button>
+    </div>
+    <form method="post" asp-page-handler="Create">
+        @Html.AntiForgeryToken()
+        <div class="modal-body">
+            <div class="form-field">
+                <label class="form-label">Scope & Target Selection</label>
+                <div style="display: flex; gap: 16px; background: #f8fafc; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; cursor: pointer;">
+                        <input type="radio" name="createScopeRadio" value="invoice" checked onchange="toggleCreateScope('invoice')" /> Whole Invoice / Cart
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; cursor: pointer;">
+                        <input type="radio" name="createScopeRadio" value="item" onchange="toggleCreateScope('item')" /> Specific Product
+                    </label>
                 </div>
-                <div>
-                    <label>Item (optional)</label>
-                    <div class="smart-lookup-wrap" data-url="?handler=SearchItems" data-placeholder="Search item by name or barcode...">
-                        <input type="hidden" name="CreateItemId" id="CreateItemId" />
-                    </div>
-                </div>
-                <div>
-                    <label for="CreateOverrideType">Override Type</label>
-                    <select id="CreateOverrideType" name="CreateOverrideType">
-                        @foreach (var t in Model.DiscountTypes)
-                        {
-                            <option value="@((int)t)">@t</option>
-                        }
+            </div>
+
+            <div class="form-field" id="invoiceField">
+                <label class="form-label">Select Active Invoice / Cart</label>
+                <select name="CreateRequest.InvoiceId" id="createInvoiceSelect" class="form-select">
+                    <option value="">-- Select Active Invoice --</option>
+                </select>
+            </div>
+
+            <div class="form-field" id="itemField" style="display:none;">
+                <label class="form-label">Select Catalog Product</label>
+                <select name="CreateRequest.ItemId" id="createItemSelect" class="form-select">
+                    <option value="">-- Select Product --</option>
+                </select>
+            </div>
+
+            <div class="form-row-group">
+                <div class="form-field">
+                    <label class="form-label">Override Type <span style="color: #dc2626;">*</span></label>
+                    <select name="CreateRequest.OverrideType" id="createTypeSelect" class="form-select" onchange="toggleCreateType(this.value)">
+                        <option value="Percentage">Percentage (%)</option>
+                        <option value="FixedAmount">Fixed Amount (XAF)</option>
                     </select>
                 </div>
-                <div>
-                    <label for="CreateOverrideValue">Override Value <span class="req">*</span></label>
-                    <input id="CreateOverrideValue" type="number" name="CreateOverrideValue" step="0.01" min="0.01" required placeholder="e.g. 10 for 10%" />
-                    <small class="help-text">Percentage: e.g. 10 for 10%. Fixed: deduction amount.</small>
-                </div>
-                <div>
-                    <label for="CreateJustification">Justification</label>
-                    <textarea id="CreateJustification" name="CreateJustification" rows="2" maxlength="1000"
-                              placeholder="Why is this override needed?"></textarea>
+                <div class="form-field">
+                    <label class="form-label" id="createValueLabel">Requested Markdown (%) <span style="color: #dc2626;">*</span></label>
+                    <input type="number" name="CreateRequest.OverrideValue" id="createValueInput" class="form-input" min="0.01" max="100" step="0.01" value="10" required />
                 </div>
             </div>
-            <div class="modal-actions">
-                <button type="button" class="button-command" data-close-modal="createOverrideModal">Cancel</button>
-                <button type="submit" class="button-primary">Submit Request</button>
+
+            <div class="form-field">
+                <label class="form-label">Justification Reason <span style="color: #dc2626;">*</span></label>
+                <textarea name="CreateRequest.Justification" class="form-textarea" rows="3" required placeholder="Explain why this discount exception is requested (e.g. VIP client volume break, damaged packaging match, manager approval on phone)..." maxlength="1000"></textarea>
             </div>
-        </form>
-    </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-brand-secondary" onclick="closeCreateModal()">Cancel</button>
+            <button type="submit" class="btn-brand-primary">Submit for Authorization</button>
+        </div>
+    </form>
 </div>
 
-<!-- Reject Modal -->
-<div class="modal-overlay" id="rejectOverrideModal" hidden>
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="rejectOverrideTitle" style="width:min(480px,92vw);">
-        <div class="modal-head">
-            <h3 id="rejectOverrideTitle">Reject Override</h3>
-            <button type="button" class="btn-close" data-close-modal="rejectOverrideModal" aria-label="Close">×</button>
-        </div>
-        <form method="post" asp-page-handler="Review">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="ReviewRequestId" id="rejectRequestId" />
-            <input type="hidden" name="ReviewApproved" value="false" />
-            <div class="form-grid" style="grid-template-columns:1fr;">
-                <div>
-                    <label for="ReviewNotes">Reason (optional)</label>
-                    <textarea id="ReviewNotes" class="form-control" name="ReviewNotes" rows="3" maxlength="1000"></textarea>
+<!-- Supervisory Review Modal -->
+<div class="modern-modal-overlay" id="reviewModalOverlay" onclick="closeReviewModal()"></div>
+<div class="modern-modal" id="reviewModal" style="max-width: 540px;">
+    <div class="modal-header">
+        <h3 class="modal-title" id="reviewModalTitle">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#019c01">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Review Override Request
+        </h3>
+        <button type="button" class="btn-close-modal" onclick="closeReviewModal()">&times;</button>
+    </div>
+    <form method="post" asp-page-handler="Review">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="ReviewRequestId" id="reviewRequestId" />
+        <input type="hidden" name="ReviewRequest.Approved" id="reviewApprovedHidden" value="true" />
+        <div class="modal-body">
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;">
+                <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+                    <span style="color: #64748b;">Request:</span>
+                    <strong id="reviewMetaId" style="color: #0f172a;">#104</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+                    <span style="color: #64748b;">Requested By:</span>
+                    <strong id="reviewMetaCashier" style="color: #0f172a;">cashier01</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+                    <span style="color: #64748b;">Scope:</span>
+                    <strong id="reviewMetaScope" style="color: #0f172a;">Product: Golden Penny</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+                    <span style="color: #64748b;">Requested Markdown:</span>
+                    <strong id="reviewMetaValue" style="color: #019c01; font-size: 1rem;">15% OFF</strong>
                 </div>
             </div>
-            <div class="modal-actions">
-                <button type="button" class="button-command" data-close-modal="rejectOverrideModal">Back</button>
-                <button type="submit" class="button-command danger">Reject</button>
+
+            <div class="form-field">
+                <label class="form-label">Supervisory Decision</label>
+                <div style="display: flex; gap: 16px;">
+                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.88rem; font-weight: 600; color: #059669; cursor: pointer;">
+                        <input type="radio" name="decisionRadio" value="true" checked onchange="setReviewDecision(true)" /> ✅ Approve Override
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.88rem; font-weight: 600; color: #dc2626; cursor: pointer;">
+                        <input type="radio" name="decisionRadio" value="false" onchange="setReviewDecision(false)" /> ❌ Reject Override
+                    </label>
+                </div>
             </div>
-        </form>
+
+            <div class="form-field">
+                <label class="form-label">Supervisory Review Notes</label>
+                <textarea name="ReviewRequest.ReviewNotes" id="reviewNotesInput" class="form-textarea" rows="3" placeholder="Add supervisor authorization comments or rejection reason..." maxlength="1000"></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-brand-secondary" onclick="closeReviewModal()">Cancel</button>
+            <button type="submit" class="btn-brand-primary" id="btnSubmitReview">Confirm Decision</button>
+        </div>
+    </form>
+</div>
+
+<!-- Forensic Inspection Modal -->
+<div class="modern-modal-overlay" id="inspectModalOverlay" onclick="closeInspectModal()"></div>
+<div class="modern-modal" id="inspectModal" style="max-width: 600px;">
+    <div class="modal-header">
+        <h3 class="modal-title">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#019c01">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Override Audit Inspection
+        </h3>
+        <button type="button" class="btn-close-modal" onclick="closeInspectModal()">&times;</button>
+    </div>
+    <div class="modal-body" id="inspectModalBody">
+        <div style="text-align: center; padding: 24px; color: #64748b;">Loading audit trail...</div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn-brand-secondary" onclick="closeInspectModal()">Close</button>
     </div>
 </div>
 
 @section Scripts {
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('[data-open-modal="rejectOverrideModal"]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const id = btn.getAttribute('data-request-id') || '';
-            const input = document.getElementById('rejectRequestId');
-            if (input) input.value = id;
+    <script>
+        async function initLookupData() {
+            try {
+                const [invRes, itmRes] = await Promise.all([
+                    fetch('?handler=SearchInvoices'),
+                    fetch('?handler=SearchItems')
+                ]);
+
+                if (invRes.ok) {
+                    const invoices = await invRes.json();
+                    const invSelect = document.getElementById('createInvoiceSelect');
+                    invSelect.innerHTML = '<option value="">-- Select Active Invoice --</option>';
+                    invoices.forEach(i => {
+                        invSelect.innerHTML += `<option value="${i.id}">${escapeHtml(i.title)} (${escapeHtml(i.sub)})</option>`;
+                    });
+                }
+
+                if (itmRes.ok) {
+                    const items = await itmRes.json();
+                    const itmSelect = document.getElementById('createItemSelect');
+                    itmSelect.innerHTML = '<option value="">-- Select Product --</option>';
+                    items.forEach(i => {
+                        itmSelect.innerHTML += `<option value="${i.id}">${escapeHtml(i.title)} (${formatNumber(i.unitPrice)} XAF)</option>`;
+                    });
+                }
+            } catch (e) {
+                console.error("Init override lookups failed", e);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initLookupData();
         });
-    });
-});
-</script>
+
+        function toggleCreateScope(scope) {
+            document.getElementById('invoiceField').style.display = scope === 'invoice' ? '' : 'none';
+            document.getElementById('itemField').style.display = scope === 'item' ? '' : 'none';
+        }
+
+        function toggleCreateType(type) {
+            const isPct = type === 'Percentage';
+            document.getElementById('createValueLabel').textContent = isPct ? 'Requested Markdown (%) *' : 'Requested Markdown (XAF) *';
+            const input = document.getElementById('createValueInput');
+            if (isPct) {
+                input.max = 100;
+                input.step = "0.01";
+            } else {
+                input.removeAttribute('max');
+                input.step = "100";
+            }
+        }
+
+        function openCreateModal() {
+            document.getElementById('createModalOverlay').classList.add('open');
+            document.getElementById('createModal').classList.add('open');
+        }
+
+        function closeCreateModal() {
+            document.getElementById('createModalOverlay').classList.remove('open');
+            document.getElementById('createModal').classList.remove('open');
+        }
+
+        function openReviewModal(id, approved, cashier, valueFormatted, scopeLabel) {
+            document.getElementById('reviewRequestId').value = id;
+            document.getElementById('reviewMetaId').textContent = `#${id}`;
+            document.getElementById('reviewMetaCashier').textContent = cashier;
+            document.getElementById('reviewMetaValue').textContent = valueFormatted;
+            document.getElementById('reviewMetaScope').textContent = scopeLabel;
+            setReviewDecision(approved);
+            document.querySelector(`input[name="decisionRadio"][value="${approved}"]`).checked = true;
+
+            document.getElementById('reviewModalOverlay').classList.add('open');
+            document.getElementById('reviewModal').classList.add('open');
+        }
+
+        function setReviewDecision(approved) {
+            document.getElementById('reviewApprovedHidden').value = approved ? 'true' : 'false';
+            const btn = document.getElementById('btnSubmitReview');
+            if (approved) {
+                btn.textContent = 'Approve Override';
+                btn.className = 'btn-brand-primary';
+            } else {
+                btn.textContent = 'Reject Override';
+                btn.className = 'btn-table-action danger';
+                btn.style.padding = '8px 16px';
+            }
+        }
+
+        function closeReviewModal() {
+            document.getElementById('reviewModalOverlay').classList.remove('open');
+            document.getElementById('reviewModal').classList.remove('open');
+        }
+
+        async function openInspectModal(id) {
+            document.getElementById('inspectModalOverlay').classList.add('open');
+            document.getElementById('inspectModal').classList.add('open');
+            const body = document.getElementById('inspectModalBody');
+            body.innerHTML = '<div style="text-align:center;padding:24px;color:#64748b;">Loading audit details...</div>';
+
+            try {
+                const res = await fetch(`?handler=DetailsJson&id=${id}`);
+                if (!res.ok) throw new Error("Failed to load details");
+                const d = await res.json();
+
+                const statusBadge = `<span class="badge-status ${d.status.toLowerCase()}">${d.status}</span>`;
+
+                body.innerHTML = `
+                    <div style="display:flex;flex-direction:column;gap:14px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;border-bottom:1px solid #e2e8f0;">
+                            <div>
+                                <h4 style="margin:0;font-size:1.1rem;color:#0f172a;">Override Request #${d.discountOverrideRequestId}</h4>
+                                <span style="font-size:0.76rem;color:#64748b;">Submitted on ${new Date(d.dateCreated).toLocaleString()}</span>
+                            </div>
+                            ${statusBadge}
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;background:#f8fafc;padding:14px;border-radius:10px;border:1px solid #e2e8f0;">
+                            <div>
+                                <span style="font-size:0.74rem;color:#64748b;text-transform:uppercase;font-weight:600;">Scope & Target</span>
+                                <div style="font-weight:600;color:#0f172a;font-size:0.88rem;">${escapeHtml(d.scopeLabel)}</div>
+                            </div>
+                            <div>
+                                <span style="font-size:0.74rem;color:#64748b;text-transform:uppercase;font-weight:600;">Requested Markdown</span>
+                                <div style="font-weight:700;color:#019c01;font-size:1rem;">${escapeHtml(d.valueFormatted)}</div>
+                            </div>
+                            <div>
+                                <span style="font-size:0.74rem;color:#64748b;text-transform:uppercase;font-weight:600;">Cashier Requester</span>
+                                <div style="font-weight:600;color:#0f172a;font-size:0.88rem;">${escapeHtml(d.requestedByUser)} ${d.requestedByFullName ? `(${escapeHtml(d.requestedByFullName)})` : ''}</div>
+                            </div>
+                            <div>
+                                <span style="font-size:0.74rem;color:#64748b;text-transform:uppercase;font-weight:600;">Supervisor Reviewer</span>
+                                <div style="font-weight:600;color:#0f172a;font-size:0.88rem;">${escapeHtml(d.reviewedByUser || 'Pending Review')}</div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <span style="font-size:0.78rem;font-weight:600;color:#334155;">Cashier Stated Justification:</span>
+                            <p style="margin:4px 0 0 0;font-size:0.88rem;color:#1e293b;background:#f1f5f9;padding:10px 12px;border-radius:8px;">${escapeHtml(d.justification || 'No justification provided.')}</p>
+                        </div>
+
+                        ${d.reviewNotes ? `
+                            <div>
+                                <span style="font-size:0.78rem;font-weight:600;color:#334155;">Supervisor Review Notes:</span>
+                                <p style="margin:4px 0 0 0;font-size:0.88rem;color:#1e293b;background:#ecfdf5;padding:10px 12px;border-radius:8px;border:1px solid #a7f3d0;">${escapeHtml(d.reviewNotes)}</p>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            } catch (e) {
+                body.innerHTML = `<div style="color:#dc2626;padding:16px;">Error loading details: ${escapeHtml(e.message)}</div>`;
+            }
+        }
+
+        function closeInspectModal() {
+            document.getElementById('inspectModalOverlay').classList.remove('open');
+            document.getElementById('inspectModal').classList.remove('open');
+        }
+
+        function formatNumber(num) {
+            return Number(num || 0).toLocaleString('en-US');
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+    </script>
 }
