@@ -74,6 +74,7 @@ builder.Services.AddScoped<IPricingOpsManager, PricingOpsManager>();
 builder.Services.AddScoped<IPromotionEffectivenessManager, PromotionEffectivenessManager>();
 builder.Services.AddScoped<ICashVarianceManager, CashVarianceManager>();
 builder.Services.AddScoped<ICashReportsManager, CashReportsManager>();
+builder.Services.AddScoped<IReconciliationManager, ReconciliationManager>();
 
 var app = builder.Build();
 
