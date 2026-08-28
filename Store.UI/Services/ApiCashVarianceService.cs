@@ -10,6 +10,12 @@ public class ApiCashVarianceService : ICashVarianceService
 
     public ApiCashVarianceService(IApiClientService client) => _client = client;
 
+    public async Task<CashVarianceMetricsDto> GetMetricsAsync()
+    {
+        return await _client.GetAsync<CashVarianceMetricsDto>("/api/cash/variances/metrics")
+            ?? new CashVarianceMetricsDto();
+    }
+
     public async Task<List<CashVarianceDto>> GetAllAsync(CashVarianceStatus? status = null)
     {
         var query = status.HasValue ? $"?status={status.Value}" : "";

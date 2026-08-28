@@ -13,10 +13,37 @@ public class CashVarianceService : ICashVarianceService
 
     public CashVarianceService(IUnitOfWork uow) => _uow = uow;
 
+    public async Task<CashVarianceMetricsDto> GetMetricsAsync()
+    {
+        var records = await _uow.Repository<CashVarianceRecord>().Query()
+            .AsNoTracking()
+            .ToListAsync();
+
+        var pending = records.Count(r => r.Status == CashVarianceStatus.Pending);
+        var reviewed = records.Count(r => r.Status == CashVarianceStatus.Reviewed);
+        var escalated = records.Count(r => r.Status == CashVarianceStatus.Escalated);
+
+        var netDiscrepancy = records.Sum(r => r.ActualAmount - r.ExpectedAmount);
+        var shortages = records.Where(r => r.ActualAmount < r.ExpectedAmount).Sum(r => r.ExpectedAmount - r.ActualAmount);
+        var overages = records.Where(r => r.ActualAmount > r.ExpectedAmount).Sum(r => r.ActualAmount - r.ExpectedAmount);
+
+        return new CashVarianceMetricsDto
+        {
+            TotalRecords = records.Count,
+            TotalPendingCount = pending,
+            TotalReviewedCount = reviewed,
+            TotalEscalatedCount = escalated,
+            NetDiscrepancyXaf = Math.Round(netDiscrepancy, 2),
+            TotalShortagesXaf = Math.Round(shortages, 2),
+            TotalOveragesXaf = Math.Round(overages, 2)
+        };
+    }
+
     public async Task<List<CashVarianceDto>> GetAllAsync(CashVarianceStatus? status = null)
     {
         var query = _uow.Repository<CashVarianceRecord>().Query()
             .AsNoTracking()
+            .Include(v => v.CashierShift)
             .Include(v => v.RecordedByUser)
             .Include(v => v.ReviewedByUser)
             .AsQueryable();
@@ -32,6 +59,7 @@ public class CashVarianceService : ICashVarianceService
     {
         var row = await _uow.Repository<CashVarianceRecord>().Query()
             .AsNoTracking()
+            .Include(v => v.CashierShift)
             .Include(v => v.RecordedByUser)
             .Include(v => v.ReviewedByUser)
             .FirstOrDefaultAsync(v => v.CashVarianceRecordId == id);
@@ -43,6 +71,7 @@ public class CashVarianceService : ICashVarianceService
     {
         var rows = await _uow.Repository<CashVarianceRecord>().Query()
             .AsNoTracking()
+            .Include(v => v.CashierShift)
             .Include(v => v.RecordedByUser)
             .Include(v => v.ReviewedByUser)
             .Where(v => v.CashierShiftId == cashierShiftId)
@@ -70,6 +99,7 @@ public class CashVarianceService : ICashVarianceService
 
         var loaded = await _uow.Repository<CashVarianceRecord>().Query()
             .AsNoTracking()
+            .Include(v => v.CashierShift)
             .Include(v => v.RecordedByUser)
             .FirstAsync(v => v.CashVarianceRecordId == record.CashVarianceRecordId);
 
@@ -79,6 +109,7 @@ public class CashVarianceService : ICashVarianceService
     public async Task<CashVarianceDto?> ReviewAsync(int id, Guid reviewedByUserId, ReviewCashVarianceRequest request)
     {
         var record = await _uow.Repository<CashVarianceRecord>().Query()
+            .Include(v => v.CashierShift)
             .Include(v => v.RecordedByUser)
             .Include(v => v.ReviewedByUser)
             .FirstOrDefaultAsync(v => v.CashVarianceRecordId == id);
@@ -106,10 +137,15 @@ public class CashVarianceService : ICashVarianceService
         ReasonCode = v.ReasonCode,
         Notes = v.Notes,
         Status = v.Status.ToString(),
+        RecordedByUserId = v.RecordedByUserId,
         RecordedByUser = v.RecordedByUser?.Username ?? string.Empty,
+        ReviewedByUserId = v.ReviewedByUserId,
         ReviewedByUser = v.ReviewedByUser?.Username,
         ReviewNotes = v.ReviewNotes,
         ReviewedAt = v.ReviewedAt,
-        DateCreated = v.DateCreated
+        DateCreated = v.DateCreated,
+        ShiftOpenedAtUtc = v.CashierShift?.OpenedAtUtc,
+        ShiftClosedAtUtc = v.CashierShift?.ClosedAtUtc,
+        ShiftOpeningFloat = v.CashierShift?.OpeningFloat
     };
 }

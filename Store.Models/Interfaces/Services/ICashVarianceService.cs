@@ -5,6 +5,8 @@ namespace Store.Models.Interfaces.Services;
 
 public interface ICashVarianceService
 {
+    Task<CashVarianceMetricsDto> GetMetricsAsync();
+
     Task<List<CashVarianceDto>> GetAllAsync(CashVarianceStatus? status = null);
 
     Task<CashVarianceDto?> GetByIdAsync(int id);
