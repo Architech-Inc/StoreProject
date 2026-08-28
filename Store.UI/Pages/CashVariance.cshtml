@@ -483,16 +483,21 @@
 
         <div class="drawer-section">
             <span class="drawer-section-title">Cashier Declaration Notes</span>
-            <p id="dNotes" style="font-size:0.84rem; color:var(--text-primary); margin:0; background:var(--bg-secondary); padding:10px; border-radius:6px; min-height:48px;"></p>
+            <p id="dNotes" class="drawer-notes-box"></p>
         </div>
 
         <div class="drawer-section">
             <span class="drawer-section-title">Supervisory Audit Notes</span>
-            <p id="dReviewNotes" style="font-size:0.84rem; color:var(--text-primary); margin:0; background:var(--bg-secondary); padding:10px; border-radius:6px; min-height:48px;"></p>
+            <p id="dReviewNotes" class="drawer-notes-box"></p>
         </div>
     </div>
     <div class="drawer-footer">
-        <button type="button" class="btn-var-secondary" style="width:100%;" onclick="closeDrawer()">Close Inspector</button>
+        <button type="button" class="btn-var-action btn-var-secondary" style="width:100%; justify-content:center;" onclick="closeDrawer()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            Close Inspector
+        </button>
     </div>
 </div>
 
@@ -582,12 +587,18 @@
     .variance-kpi-card {
         display: flex;
         align-items: center;
-        gap: 14px;
+        gap: 16px;
         padding: 1.15rem 1.25rem;
         border-radius: 12px;
-        background: var(--bg-surface);
-        border: 1px solid var(--border-color);
-        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .variance-kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
     }
 
     .kpi-icon-wrap {
@@ -600,10 +611,10 @@
         flex-shrink: 0;
     }
 
-    .kpi-emerald .kpi-icon-wrap { background: rgba(5, 150, 105, 0.12); color: #059669; }
-    .kpi-amber .kpi-icon-wrap   { background: rgba(217, 119, 6, 0.12); color: #d97706; }
-    .kpi-rose .kpi-icon-wrap    { background: rgba(225, 29, 72, 0.12); color: #e11d48; }
-    .kpi-teal .kpi-icon-wrap    { background: rgba(13, 148, 136, 0.12); color: #0d9488; }
+    .kpi-emerald .kpi-icon-wrap { background: #ecfdf5; color: #059669; }
+    .kpi-amber .kpi-icon-wrap   { background: #fffbeb; color: #d97706; }
+    .kpi-rose .kpi-icon-wrap    { background: #fff1f2; color: #e11d48; }
+    .kpi-teal .kpi-icon-wrap    { background: #f0fdfa; color: #0d9488; }
 
     .kpi-data {
         display: flex;
@@ -615,13 +626,13 @@
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.04em;
-        color: var(--text-secondary);
+        color: #64748b;
     }
 
     .kpi-value {
         font-size: 1.45rem;
         font-weight: 800;
-        color: var(--text-primary);
+        color: #0f172a;
         line-height: 1.2;
         margin: 2px 0;
     }
@@ -629,19 +640,19 @@
     .kpi-value small {
         font-size: 0.78rem;
         font-weight: 600;
-        color: var(--text-secondary);
+        color: #64748b;
     }
 
     .kpi-subtext {
         font-size: 0.75rem;
-        color: var(--text-secondary);
+        color: #94a3b8;
     }
 
     /* ── Tab Dock ── */
     .variance-tabs-dock {
         display: flex;
         gap: 6px;
-        border-bottom: 1px solid var(--border-color);
+        border-bottom: 1px solid #e2e8f0;
         padding-bottom: 2px;
         overflow-x: auto;
     }
@@ -653,7 +664,7 @@
         padding: 0.65rem 1.15rem;
         font-size: 0.88rem;
         font-weight: 600;
-        color: var(--text-secondary);
+        color: #64748b;
         background: transparent;
         border: none;
         border-bottom: 2px solid transparent;
@@ -663,7 +674,7 @@
     }
 
     .var-tab-btn:hover {
-        color: var(--text-primary);
+        color: #0f172a;
     }
 
     .var-tab-btn.active {
@@ -673,9 +684,10 @@
 
     /* ── Panel & Table ── */
     .variance-panel {
-        background: var(--bg-surface);
-        border: 1px solid var(--border-color);
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
         border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
         overflow: hidden;
     }
 
@@ -685,30 +697,37 @@
         align-items: center;
         flex-wrap: wrap;
         gap: 1rem;
-        padding: 1rem 1.25rem;
-        border-bottom: 1px solid var(--border-color);
+        padding: 1.15rem 1.25rem;
+        border-bottom: 1px solid #e2e8f0;
+        background: #ffffff;
     }
 
     .panel-title-wrap h3 {
         font-size: 1.05rem;
         font-weight: 700;
         margin: 0;
-        color: var(--text-primary);
+        color: #0f172a;
     }
 
     .panel-title-wrap p {
         font-size: 0.80rem;
-        color: var(--text-secondary);
+        color: #64748b;
         margin: 2px 0 0 0;
     }
 
     .panel-search-wrap input {
         border-radius: 6px;
         width: 260px;
-        padding: 5px 10px;
-        border: 1px solid var(--border-color);
-        background: var(--bg-surface);
-        color: var(--text-primary);
+        padding: 6px 12px;
+        border: 1px solid #cbd5e1;
+        background: #ffffff;
+        color: #0f172a;
+        font-size: 0.82rem;
+    }
+    .panel-search-wrap input:focus {
+        outline: none;
+        border-color: #019c01;
+        box-shadow: 0 0 0 2px rgba(1, 156, 1, 0.15);
     }
 
     .variance-table {
@@ -718,24 +737,24 @@
     }
 
     .variance-table th {
-        background: var(--bg-secondary);
-        color: var(--text-secondary);
+        background: #f8fafc;
+        color: #64748b;
         font-size: 0.75rem;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.04em;
-        padding: 0.75rem 1rem;
-        border-bottom: 1px solid var(--border-color);
+        padding: 0.85rem 1rem;
+        border-bottom: 1px solid #e2e8f0;
     }
 
     .variance-table td {
-        padding: 0.75rem 1rem;
-        border-bottom: 1px solid var(--border-color);
-        color: var(--text-primary);
+        padding: 0.85rem 1rem;
+        border-bottom: 1px solid #f1f5f9;
+        color: #0f172a;
     }
 
     .variance-table tr:hover td {
-        background: rgba(0,0,0,0.015);
+        background: #f8fafc;
     }
 
     /* ── Delta & Status Badges ── */
@@ -747,16 +766,16 @@
         font-family: 'JetBrains Mono', monospace;
     }
 
-    .delta-shortage { background: rgba(225, 29, 72, 0.1); color: #e11d48; }
-    .delta-overage  { background: rgba(13, 148, 136, 0.1); color: #0d9488; }
-    .delta-exact    { background: rgba(100, 116, 139, 0.1); color: #64748b; }
+    .delta-shortage { background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; }
+    .delta-overage  { background: #f0fdfa; color: #0d9488; border: 1px solid #ccfbf1; }
+    .delta-exact    { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
 
     .reason-pill {
         font-size: 0.72rem;
         font-weight: 600;
-        background: var(--bg-secondary);
-        color: var(--text-primary);
-        border: 1px solid var(--border-color);
+        background: #f1f5f9;
+        color: #334155;
+        border: 1px solid #cbd5e1;
         padding: 2px 8px;
         border-radius: 4px;
     }
@@ -767,14 +786,15 @@
         gap: 4px;
         font-size: 0.72rem;
         font-weight: 700;
-        padding: 3px 8px;
+        padding: 4px 10px;
         border-radius: 9999px;
         text-transform: uppercase;
+        letter-spacing: 0.03em;
     }
 
-    .status-reviewed  { background: rgba(5, 150, 105, 0.1); color: #059669; }
-    .status-escalated { background: rgba(225, 29, 72, 0.1); color: #e11d48; }
-    .status-pending   { background: rgba(217, 119, 6, 0.1); color: #d97706; }
+    .status-reviewed  { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+    .status-escalated { background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; }
+    .status-pending   { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
 
     .row-actions {
         display: flex;
@@ -789,19 +809,19 @@
         gap: 4px;
         font-size: 0.75rem;
         font-weight: 600;
-        padding: 3px 8px;
+        padding: 4px 10px;
         border-radius: 6px;
         cursor: pointer;
-        border: 1px solid var(--border-color);
-        background: var(--bg-surface);
-        color: var(--text-primary);
+        border: 1px solid #cbd5e1;
+        background: #ffffff;
+        color: #334155;
         transition: all 0.15s ease;
     }
 
     .btn-action-review {
         color: #d97706;
-        border-color: rgba(217, 119, 6, 0.3);
-        background: rgba(217, 119, 6, 0.05);
+        border-color: #fde68a;
+        background: #fffbeb;
     }
     .btn-action-review:hover {
         background: #d97706;
@@ -810,17 +830,18 @@
     }
 
     .btn-action-inspect:hover {
-        background: var(--bg-secondary);
-        border-color: var(--text-secondary);
+        background: #f1f5f9;
+        color: #0f172a;
+        border-color: #94a3b8;
     }
 
-    /* ── Modals & Drawer ── */
+    /* ── Modals & Drawer (Strict Solid Background & Elevated Z-Index) ── */
     .var-modal-overlay, .var-drawer-overlay {
         position: fixed;
         inset: 0;
-        background: rgba(0,0,0,0.45);
-        backdrop-filter: blur(2px);
-        z-index: 1050;
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(4px);
+        z-index: 9998;
         display: none;
     }
 
@@ -829,30 +850,32 @@
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        background: var(--bg-surface);
-        border: 1px solid var(--border-color);
-        border-radius: 12px;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
         width: min(560px, 94vw);
         max-height: 90vh;
         overflow-y: auto;
-        z-index: 1060;
+        z-index: 9999;
         display: none;
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
     }
 
     .var-modal-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 1rem 1.25rem;
-        border-bottom: 1px solid var(--border-color);
+        padding: 1.15rem 1.5rem;
+        border-bottom: 1px solid #e2e8f0;
+        background: #f8fafc;
     }
 
     .var-modal-body {
-        padding: 1.25rem;
+        padding: 1.5rem;
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 14px;
+        background: #ffffff;
     }
 
     .var-modal-footer {
@@ -860,9 +883,9 @@
         justify-content: flex-end;
         align-items: center;
         gap: 8px;
-        padding: 0.85rem 1.25rem;
-        border-top: 1px solid var(--border-color);
-        background: var(--bg-secondary);
+        padding: 1rem 1.5rem;
+        border-top: 1px solid #e2e8f0;
+        background: #f8fafc;
     }
 
     .form-group {
@@ -874,75 +897,75 @@
     .form-label {
         font-size: 0.80rem;
         font-weight: 600;
-        color: var(--text-primary);
+        color: #0f172a;
     }
 
     .live-variance-box {
-        padding: 10px 12px;
+        padding: 12px 14px;
         border-radius: 8px;
         display: flex;
         flex-direction: column;
     }
 
-    .variance-neutral  { background: rgba(100, 116, 139, 0.08); color: #64748b; border: 1px solid rgba(100, 116, 139, 0.2); }
-    .variance-shortage { background: rgba(225, 29, 72, 0.08); color: #e11d48; border: 1px solid rgba(225, 29, 72, 0.2); }
-    .variance-overage  { background: rgba(13, 148, 136, 0.08); color: #0d9488; border: 1px solid rgba(13, 148, 136, 0.2); }
+    .variance-neutral  { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+    .variance-shortage { background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; }
+    .variance-overage  { background: #f0fdfa; color: #0d9488; border: 1px solid #ccfbf1; }
 
     .shift-dropdown-results {
         position: absolute;
         top: 100%;
         left: 0;
         right: 0;
-        background: var(--bg-surface);
-        border: 1px solid var(--border-color);
-        border-radius: 6px;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
         max-height: 180px;
         overflow-y: auto;
-        z-index: 1070;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        z-index: 10000;
+        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
     }
 
     .shift-drop-item {
         padding: 8px 12px;
         cursor: pointer;
-        border-bottom: 1px solid var(--border-color);
+        border-bottom: 1px solid #f1f5f9;
     }
     .shift-drop-item:hover {
-        background: var(--bg-secondary);
+        background: #f8fafc;
     }
 
     .shift-selected-banner {
         margin-top: 6px;
-        padding: 6px 10px;
-        background: rgba(1, 156, 1, 0.08);
-        border: 1px solid rgba(1, 156, 1, 0.2);
-        border-radius: 6px;
+        padding: 8px 12px;
+        background: #ecfdf5;
+        border: 1px solid #a7f3d0;
+        border-radius: 8px;
         display: flex;
         flex-direction: column;
     }
 
     .review-context-card {
-        background: var(--bg-secondary);
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        padding: 10px 12px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 12px 14px;
     }
 
-    /* ── Slide-out Drawer ── */
+    /* ── Slide-out Drawer (Strict Solid White Background & Elevated Shadow) ── */
     .var-drawer {
         position: fixed;
         top: 0;
         right: 0;
         bottom: 0;
-        width: min(420px, 92vw);
-        background: var(--bg-surface);
-        border-left: 1px solid var(--border-color);
-        z-index: 1060;
+        width: min(480px, 94vw);
+        background: #ffffff !important;
+        border-left: 1px solid #e2e8f0;
+        z-index: 9999;
         display: flex;
         flex-direction: column;
-        box-shadow: -4px 0 20px rgba(0,0,0,0.1);
+        box-shadow: -8px 0 24px rgba(0,0,0,0.18);
         transform: translateX(100%);
-        transition: transform 0.25s ease;
+        transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .var-drawer.open {
@@ -953,45 +976,48 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 1.15rem 1.25rem;
-        border-bottom: 1px solid var(--border-color);
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid #e2e8f0;
+        background: #f8fafc;
     }
 
     .drawer-body {
-        padding: 1.25rem;
+        padding: 1.5rem;
         overflow-y: auto;
         display: flex;
         flex-direction: column;
         gap: 1.25rem;
+        background: #ffffff;
     }
 
     .drawer-footer {
-        padding: 1rem 1.25rem;
-        border-top: 1px solid var(--border-color);
-        background: var(--bg-secondary);
+        padding: 1.15rem 1.5rem;
+        border-top: 1px solid #e2e8f0;
+        background: #f8fafc;
     }
 
     .drawer-section {
         display: flex;
         flex-direction: column;
-        gap: 6px;
+        gap: 8px;
     }
 
     .drawer-section-title {
         font-size: 0.75rem;
         font-weight: 700;
         text-transform: uppercase;
-        color: var(--text-secondary);
-        letter-spacing: 0.04em;
+        color: #64748b;
+        letter-spacing: 0.05em;
     }
 
     .drawer-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 8px;
-        background: var(--bg-secondary);
-        border-radius: 8px;
-        padding: 10px 12px;
+        gap: 10px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 12px 14px;
     }
 
     .d-field {
@@ -1001,15 +1027,27 @@
 
     .d-label {
         font-size: 0.70rem;
-        color: var(--text-secondary);
+        color: #64748b;
         text-transform: uppercase;
+        font-weight: 600;
     }
 
     .d-val {
         font-size: 0.88rem;
         font-weight: 700;
-        color: var(--text-primary);
+        color: #0f172a;
         margin-top: 2px;
+    }
+
+    .drawer-notes-box {
+        font-size: 0.84rem;
+        color: #0f172a;
+        margin: 0;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        padding: 12px 14px;
+        border-radius: 8px;
+        min-height: 48px;
     }
 
     .variance-empty-state {
