@@ -1,0 +1,16 @@
+{
+  "extends": [
+    "development"
+  ],
+  "hints": {
+    "compat-api/css": [
+      "default",
+      {
+        "ignore": [
+          "-webkit-overflow-scrolling",
+          "border-bottom: 1px solid color-mix(in srgb, var(--ops-border, var(--border)) 40%, transparent)"
+        ]
+      }
+    ]
+  }
+}

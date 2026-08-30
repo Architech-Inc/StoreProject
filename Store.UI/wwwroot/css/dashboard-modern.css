@@ -57,13 +57,16 @@
 .main-nav::-webkit-scrollbar {
     width: 4px;
 }
+
 .main-nav::-webkit-scrollbar-track {
     background: transparent;
 }
+
 .main-nav::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.15);
     border-radius: 4px;
 }
+
 .main-nav::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.3);
 }
@@ -115,6 +118,7 @@
     color: var(--sidebar-muted);
     padding: 12px 12px 4px;
     pointer-events: none;
+    -webkit-user-select: none;
     user-select: none;
 }
 
@@ -131,6 +135,7 @@
     padding: 12px 12px 4px;
     cursor: pointer;
     color: var(--sidebar-muted);
+    -webkit-user-select: none;
     user-select: none;
     transition: color 0.2s;
 }
@@ -232,6 +237,7 @@
     left: 0;
     right: 0;
     background: rgba(40, 44, 42, 0.95);
+    -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: var(--radius-md);
@@ -407,19 +413,19 @@
     padding: var(--space-4);
 }
 
-.panel > header {
+.panel>header {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
     margin-bottom: var(--space-3);
 }
 
-.panel > header h2 {
+.panel>header h2 {
     margin: 0;
     font-size: 20px;
 }
 
-.panel > header span {
+.panel>header span {
     color: var(--text-secondary);
     font-size: 12px;
 }
@@ -549,7 +555,9 @@ th {
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 @media (max-width: 1100px) {

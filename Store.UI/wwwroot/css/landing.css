@@ -29,7 +29,10 @@ body.landing-body {
 }
 
 /* Typography */
-.landing-body h1, .landing-body h2, .landing-body h3, .landing-body .brand-logo {
+.landing-body h1,
+.landing-body h2,
+.landing-body h3,
+.landing-body .brand-logo {
     font-family: 'Outfit', system-ui, sans-serif;
 }
 
@@ -58,8 +61,15 @@ body.landing-body {
 }
 
 @keyframes pulseGlow {
-    0% { transform: scale(0.9) translate(0, 0); opacity: 0.5; }
-    100% { transform: scale(1.1) translate(20px, 20px); opacity: 0.8; }
+    0% {
+        transform: scale(0.9) translate(0, 0);
+        opacity: 0.5;
+    }
+
+    100% {
+        transform: scale(1.1) translate(20px, 20px);
+        opacity: 0.8;
+    }
 }
 
 /* Glassmorphism Header */
@@ -72,8 +82,8 @@ body.landing-body {
     align-items: center;
     padding: 20px 5%;
     background: rgba(5, 9, 6, 0.6);
-    backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
     border-bottom: 1px solid var(--landing-glass-border);
     z-index: 100;
     box-sizing: border-box;
@@ -99,6 +109,7 @@ body.landing-body {
 .brand-logo span {
     background: linear-gradient(90deg, #fff, #a1b0a6);
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
@@ -128,6 +139,7 @@ body.landing-body {
     border: 1px solid var(--landing-glass-border);
     color: #fff !important;
     font-weight: 600;
+    -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
     transition: all 0.3s ease;
     text-decoration: none;
@@ -204,6 +216,7 @@ body.landing-body {
     max-width: 900px;
     background: linear-gradient(135deg, #ffffff 0%, #a1b0a6 100%);
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
     animation: fadeInUp 0.8s ease 0.1s backwards;
 }
@@ -258,8 +271,8 @@ body.landing-body {
     border: 1px solid var(--landing-glass-border);
     border-radius: 24px;
     padding: 32px;
-    backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
     transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     display: flex;
     flex-direction: column;
@@ -339,6 +352,7 @@ body.landing-body {
         opacity: 0;
         transform: translateY(30px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -350,17 +364,22 @@ body.landing-body {
     .landing-nav {
         display: none;
     }
+
     .hero-title {
         font-size: 2.5rem;
     }
+
     .hero-actions {
         flex-direction: column;
         width: 100%;
         max-width: 300px;
     }
-    .btn-glass, .btn-primary-glow {
+
+    .btn-glass,
+    .btn-primary-glow {
         width: 100%;
     }
+
     .landing-footer {
         flex-direction: column;
         gap: 24px;

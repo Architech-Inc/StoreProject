@@ -5,11 +5,6 @@
     ViewData["ActivePage"] = "Catalog";
     ViewData["PageDescription"] = "Manage products and services — prices, margin analytics, stock, and barcode labels.";
 }
-
-@section Styles {
-    <link rel="stylesheet" href="~/css/operations.css" asp-append-version="true" />
-}
-
 <div class="ops-page">
 
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
