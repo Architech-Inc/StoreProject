@@ -47,8 +47,15 @@
 }
 
 @keyframes pulse-badge {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.15); }
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.15);
+    }
 }
 
 /* Slide-out Drawer */
@@ -56,6 +63,7 @@
     position: fixed;
     inset: 0;
     background: rgba(15, 23, 42, 0.6);
+    -webkit-backdrop-filter: blur(4px);
     backdrop-filter: blur(4px);
     z-index: 9990;
     opacity: 0;

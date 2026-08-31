@@ -6,7 +6,7 @@
 /* ── 1. INVOICES 360 FINANCIAL & BILLING HUB (Invoices.cshtml) ──────────── */
 .inv-container {
     max-width: 1440px;
-    margin: 0 auto;
+    /* margin: 0 auto; */
     color: var(--text-primary);
 }
 
