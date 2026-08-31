@@ -210,6 +210,13 @@ public class CustomerService : ICustomerService
 
         if (customer is null) return false;
 
+        // Guard against deleting customers with existing sales invoices for audit integrity
+        var hasInvoices = await _uow.Repository<Invoice>().ExistsAsync(i => i.CustomerId == customerId);
+        if (hasInvoices)
+        {
+            return false;
+        }
+
         _uow.Repository<Customer>().Remove(customer);
         await _uow.SaveChangesAsync(ct);
         return true;
