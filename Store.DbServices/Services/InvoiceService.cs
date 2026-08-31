@@ -54,7 +54,7 @@ public class InvoiceService : IInvoiceService
         if (invoice == null) return null;
 
         var cashierName = invoice.User?.Employee?.FirstName ?? invoice.User?.Username ?? "Staff Cashier";
-        var customerName = invoice.Customer?.FullName ?? "Walk-in Customer";
+        var customerName = invoice.Customer != null ? $"{invoice.Customer.FirstName} {invoice.Customer.LastName}".Trim() : "Walk-in Customer";
         var subtotal = invoice.Sales.Sum(s => s.Quantity * s.UnitPrice);
         var discount = invoice.Sales.Sum(s => (s.DiscountAmount ?? 0) * s.Quantity);
 
