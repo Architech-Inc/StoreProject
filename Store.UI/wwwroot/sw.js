@@ -3,15 +3,18 @@
  * Provides offline shell caching, asset caching, and background sync triggers.
  */
 
-const CACHE_NAME = 'clexan-pos-v1';
+const CACHE_NAME = 'clexan-pos-v2';
 const ASSETS_TO_CACHE = [
   '/',
   '/Pos',
+  '/manifest.json',
   '/css/pos.css',
   '/css/site.css',
+  '/css/pwa.css',
   '/css/modules/sales.css',
   '/js/site.js',
-  '/js/pos-offline.js'
+  '/js/pos-offline.js',
+  '/js/pwa-install.js'
 ];
 
 self.addEventListener('install', (event) => {
