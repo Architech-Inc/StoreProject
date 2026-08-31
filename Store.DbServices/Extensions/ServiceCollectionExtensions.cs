@@ -75,6 +75,7 @@ public static class ServiceCollectionExtensions
         
         services.AddHostedService<OfflineLogSyncWorker>();
         services.AddHostedService<LogRetentionWorker>();
+        services.AddHostedService<AutomatedReorderWorker>();
 
         return services;
     }

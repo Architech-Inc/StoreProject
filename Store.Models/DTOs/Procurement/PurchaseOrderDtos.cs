@@ -113,3 +113,14 @@ public class ReceiveItemLine
     [Range(0, int.MaxValue)]
     public int ReceivedQuantity { get; set; }
 }
+
+public class AutomatedReorderResultDto
+{
+    public int DepletedItemsDetected { get; set; }
+    public int OrdersCreatedCount { get; set; }
+    public int OrdersUpdatedCount { get; set; }
+    public decimal TotalEstimatedValuationXaf { get; set; }
+    public List<string> GeneratedReferences { get; set; } = new();
+    public string Message { get; set; } = string.Empty;
+}
+

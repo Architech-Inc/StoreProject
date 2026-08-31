@@ -141,4 +141,15 @@ public class PurchaseOrdersController : ControllerBase
 
         return Ok(ApiResponse<PurchaseOrderDto>.Ok(dto));
     }
+
+    [HttpPost("auto-reorder/trigger")]
+    [Authorize(Policy = PermissionKeys.InventoryWrite)]
+    public async Task<IActionResult> TriggerAutoReorder(CancellationToken ct)
+    {
+        var userIdClaim = User.FindFirst("uid")?.Value;
+        Guid.TryParse(userIdClaim, out var userId);
+
+        var result = await _poService.ExecuteAutomatedReorderAsync(userId == Guid.Empty ? null : userId, ct);
+        return Ok(ApiResponse<AutomatedReorderResultDto>.Ok(result, result.Message));
+    }
 }

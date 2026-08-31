@@ -288,6 +288,133 @@ public class PurchaseOrderService : IPurchaseOrderService
 
     // ─── helpers ──────────────────────────────────────────────────────────────
 
+    public async Task<AutomatedReorderResultDto> ExecuteAutomatedReorderAsync(Guid? actingUserId = null, CancellationToken ct = default)
+    {
+        var result = new AutomatedReorderResultDto();
+
+        // 1. Fetch depleted items
+        var depletedItems = await _uow.Repository<Item>().Query()
+            .Where(i => i.IsActive && i.ReorderLevel != null && i.ReorderLevel > 0 && i.InStock <= i.ReorderLevel)
+            .Include(i => i.Batches)
+            .ToListAsync(ct);
+
+        if (depletedItems.Count == 0)
+        {
+            result.Message = "Inventory check complete: all items are adequately stocked above reorder levels.";
+            return result;
+        }
+
+        result.DepletedItemsDetected = depletedItems.Count;
+
+        // 2. Fetch active suppliers
+        var allSuppliers = await _uow.Repository<Supplier>().Query()
+            .AsNoTracking()
+            .ToListAsync(ct);
+
+        if (allSuppliers.Count == 0)
+        {
+            result.Message = $"Detected {depletedItems.Count} depleted items, but no registered suppliers were found.";
+            return result;
+        }
+
+        var defaultSupplier = allSuppliers.First();
+
+        // 3. Fallback default user if actingUserId is null
+        Guid userId = actingUserId ?? Guid.Empty;
+        if (userId == Guid.Empty)
+        {
+            var adminUser = await _uow.Repository<User>().Query()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Status == UserStatus.Active, ct);
+            userId = adminUser?.UserId ?? Guid.NewGuid();
+        }
+
+        // 4. Group depleted items by Supplier (fallback to default supplier)
+        var groupedBySupplier = depletedItems.GroupBy(item => defaultSupplier.SupplierId);
+
+        foreach (var group in groupedBySupplier)
+        {
+            var supplierId = group.Key;
+            var supplier = allSuppliers.FirstOrDefault(s => s.SupplierId == supplierId) ?? defaultSupplier;
+
+            // Check if a Draft or Submitted PO already exists for this supplier created today
+            var today = DateTime.UtcNow.Date;
+            var existingPo = await _uow.Repository<PurchaseOrder>().Query()
+                .Include(p => p.Items)
+                .FirstOrDefaultAsync(p => p.SupplierId == supplierId && 
+                                         (p.Status == PurchaseOrderStatus.Draft || p.Status == PurchaseOrderStatus.Submitted) && 
+                                         p.DateCreated >= today, ct);
+
+            if (existingPo != null)
+            {
+                // Update existing PO
+                foreach (var item in group)
+                {
+                    if (!existingPo.Items.Any(i => i.ItemId == item.ItemId))
+                    {
+                        var qtyToOrder = Math.Max(1, (item.ReorderLevel!.Value * 2) - item.InStock);
+                        var cost = item.CostPrice ?? Math.Round(item.UnitPrice * 0.7m, 2);
+
+                        var line = new PurchaseOrderItem
+                        {
+                            ItemId = item.ItemId,
+                            OrderedQuantity = qtyToOrder,
+                            UnitCost = cost,
+                            Notes = $"Auto-replenish: Stock {item.InStock} <= Reorder {item.ReorderLevel}"
+                        };
+                        existingPo.Items.Add(line);
+                        result.TotalEstimatedValuationXaf += (qtyToOrder * cost);
+                    }
+                }
+
+                _uow.Repository<PurchaseOrder>().Update(existingPo);
+                result.OrdersUpdatedCount++;
+                if (existingPo.ReferenceNumber != null && !result.GeneratedReferences.Contains(existingPo.ReferenceNumber))
+                {
+                    result.GeneratedReferences.Add(existingPo.ReferenceNumber);
+                }
+            }
+            else
+            {
+                // Create a new PO
+                var refNum = $"PO-AUTO-{DateTime.UtcNow:yyyyMMdd}-{new Random().Next(100, 999)}";
+                var newPo = new PurchaseOrder
+                {
+                    SupplierId = supplierId,
+                    Status = PurchaseOrderStatus.Draft,
+                    ReferenceNumber = refNum,
+                    RequestedByUserId = userId,
+                    ExpectedDeliveryDate = DateTime.UtcNow.AddDays(3),
+                    Notes = $"Automated stock replenishment order generated on {DateTime.UtcNow:yyyy-MM-dd HH:mm}."
+                };
+
+                foreach (var item in group)
+                {
+                    var qtyToOrder = Math.Max(1, (item.ReorderLevel!.Value * 2) - item.InStock);
+                    var cost = item.CostPrice ?? Math.Round(item.UnitPrice * 0.7m, 2);
+
+                    newPo.Items.Add(new PurchaseOrderItem
+                    {
+                        ItemId = item.ItemId,
+                        OrderedQuantity = qtyToOrder,
+                        UnitCost = cost,
+                        Notes = $"Auto-replenish: Stock {item.InStock} <= Reorder {item.ReorderLevel}"
+                    });
+                    result.TotalEstimatedValuationXaf += (qtyToOrder * cost);
+                }
+
+                await _uow.Repository<PurchaseOrder>().AddAsync(newPo);
+                result.OrdersCreatedCount++;
+                result.GeneratedReferences.Add(refNum);
+            }
+        }
+
+        await _uow.SaveChangesAsync(ct);
+        result.Message = $"Auto-reorder evaluated {depletedItems.Count} depleted items. Created {result.OrdersCreatedCount} new POs and updated {result.OrdersUpdatedCount} existing draft POs.";
+
+        return result;
+    }
+
     private async Task<PurchaseOrder?> LoadWithNavsAsync(int id)
         => await _uow.Repository<PurchaseOrder>().Query()
             .AsNoTracking()
