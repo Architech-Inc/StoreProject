@@ -2,7 +2,7 @@ using Store.Models.Interfaces.Repositories;
 
 namespace Store.Models.Interfaces;
 
-public interface IUnitOfWork : IAsyncDisposable
+public interface IUnitOfWork : IDisposable, IAsyncDisposable
 {
     IRepository<T> Repository<T>() where T : class;
     Task<int> SaveChangesAsync(CancellationToken ct = default);

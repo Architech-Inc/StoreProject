@@ -39,7 +39,7 @@ public class LogRetentionWorker : BackgroundService
 
                 _logger.LogInformation("Executing log retention cleanup. Pruning logs older than {Threshold:u} ({Days} days retention)...", threshold, retentionDays);
 
-                using var scope = _services.CreateScope();
+                await using var scope = _services.CreateAsyncScope();
                 var auditSvc = scope.ServiceProvider.GetRequiredService<IAuditLogService>();
                 var commSvc = scope.ServiceProvider.GetRequiredService<ICommunicationLogService>();
 
