@@ -16,6 +16,9 @@ using Microsoft.Extensions.FileProviders;
 using System.IO;
 using Fido2NetLib;
 using Microsoft.EntityFrameworkCore;
+using Store.API.Hubs;
+using Store.API.Services;
+using Store.Models.Interfaces.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -86,6 +89,16 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
         options.Events = new JwtBearerEvents
         {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs/notifications"))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            },
             OnTokenValidated = async context =>
             {
                 var uow = context.HttpContext.RequestServices.GetRequiredService<Store.Models.Interfaces.IUnitOfWork>();
@@ -110,6 +123,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             }
         };
     });
+
+builder.Services.AddSignalR();
+builder.Services.AddScoped<IRealTimeNotificationService, RealTimeNotificationService>();
 
 builder.Services.AddAuthorization(options =>
 {
@@ -288,6 +304,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<Store.API.Hubs.StoreNotificationHub>("/hubs/notifications");
 app.MapHealthChecks("/health");
 
 app.Run();

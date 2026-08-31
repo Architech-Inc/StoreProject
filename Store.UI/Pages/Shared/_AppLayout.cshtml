@@ -74,6 +74,7 @@
     <link rel="stylesheet" href="~/css/modules/pricing-promotions.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/modules/admin-governance.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/command-palette.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/notification-center.css" asp-append-version="true" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" referrerpolicy="no-referrer" />
     @await RenderSectionAsync("Styles", required: false)
 </head>
@@ -208,10 +209,19 @@
                         <p>@ViewData["PageDescription"]</p>
                     }
                 </div>
-                <div class="topbar-search-trigger" id="topbarSearchTrigger" role="button" tabindex="0" title="Quick Search (Ctrl + K)">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                    <span>Search items, invoices, customers...</span>
-                    <kbd class="kbd-shortcut">Ctrl K</kbd>
+                <div class="topbar-actions">
+                    <div class="topbar-search-trigger" id="topbarSearchTrigger" role="button" tabindex="0" title="Quick Search (Ctrl + K)">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        <span>Search items, invoices, customers...</span>
+                        <kbd class="kbd-shortcut">Ctrl K</kbd>
+                    </div>
+                    <button type="button" class="topbar-notif-btn" id="topbarNotifBtn" aria-label="Open Activity Center" title="Activity & Alerts">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                        </svg>
+                        <span class="notif-badge" id="notifBadgeCount" style="display:none;">0</span>
+                    </button>
                 </div>
             </header>
             <div class="app-content">
@@ -244,6 +254,9 @@
 
     <!-- Global OmniSearch & Command Palette (Ctrl + K) -->
     <partial name="_CommandPalette" />
+
+    <!-- Real-Time Activity Center & Notification Drawer -->
+    <partial name="_NotificationCenter" />
 
     <!-- Global AppDialog Modal -->
     <div class="dialog-overlay" id="appDialogOverlay" aria-hidden="true" hidden style="display:none;">
@@ -292,8 +305,10 @@
 
     <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.1/dist/browser-image-compression.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="~/js/command-palette.js" asp-append-version="true"></script>
+    <script src="~/js/notifications-hub.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
     <script>
     (() => {

@@ -1,0 +1,58 @@
+<!-- Activity Center / Real-Time Notification Drawer -->
+<div class="notif-drawer-overlay" id="notifDrawerOverlay" aria-hidden="true">
+    <aside class="notif-drawer" id="notifDrawer" role="dialog" aria-labelledby="notifDrawerTitle" aria-modal="true">
+        <div class="notif-drawer-header">
+            <div class="notif-drawer-title-wrap">
+                <div class="notif-header-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h3 id="notifDrawerTitle">Activity Center</h3>
+                    <span class="notif-status-indicator" id="notifConnectionStatus">
+                        <span class="status-dot"></span> Live
+                    </span>
+                </div>
+            </div>
+            <div class="notif-header-actions">
+                <button type="button" class="btn-text-sm" id="notifMarkAllReadBtn" title="Mark all as read">Mark all read</button>
+                <button type="button" class="btn-icon-close" id="notifDrawerClose" aria-label="Close Activity Center">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="notif-filter-tabs">
+            <button type="button" class="notif-tab active" data-filter="all">All</button>
+            <button type="button" class="notif-tab" data-filter="DiscountApproval">Approvals</button>
+            <button type="button" class="notif-tab" data-filter="LowStock">Inventory</button>
+            <button type="button" class="notif-tab" data-filter="Security">Security</button>
+        </div>
+
+        <div class="notif-drawer-body" id="notifListContainer">
+            <div class="notif-list" id="notifList">
+                <!-- Notifications dynamically injected here -->
+            </div>
+            <div class="notif-empty" id="notifEmptyState" style="display:none;">
+                <div class="notif-empty-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M22 12h-6l-2 3h-4l-2-3H2"></path>
+                        <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path>
+                    </svg>
+                </div>
+                <h4>All Caught Up!</h4>
+                <p>No new activity or alerts right now. Real-time updates will appear here automatically.</p>
+            </div>
+        </div>
+
+        <div class="notif-drawer-footer">
+            <button type="button" class="btn-clear-history" id="notifClearHistoryBtn">Clear Notification History</button>
+            <label class="notif-sound-toggle">
+                <input type="checkbox" id="notifSoundToggle" checked />
+                <span>Sound Chime</span>
+            </label>
+        </div>
+    </aside>
+</div>

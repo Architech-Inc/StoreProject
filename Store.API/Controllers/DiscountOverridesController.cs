@@ -15,9 +15,15 @@ namespace Store.API.Controllers;
 public class DiscountOverridesController : ControllerBase
 {
     private readonly IDiscountOverrideService _overrideService;
+    private readonly IRealTimeNotificationService _notifications;
 
-    public DiscountOverridesController(IDiscountOverrideService overrideService)
-        => _overrideService = overrideService;
+    public DiscountOverridesController(
+        IDiscountOverrideService overrideService,
+        IRealTimeNotificationService notifications)
+    {
+        _overrideService = overrideService;
+        _notifications = notifications;
+    }
 
     [HttpGet("metrics")]
     [Authorize(Policy = PermissionKeys.PricingRead)]
@@ -62,6 +68,17 @@ public class DiscountOverridesController : ControllerBase
             return Unauthorized();
 
         var dto = await _overrideService.CreateAsync(request, userId);
+
+        _ = _notifications.BroadcastNotificationAsync(new Store.Models.DTOs.Notifications.StoreNotificationDto
+        {
+            Title = "Discount Override Requested",
+            Message = $"Cashier requested {dto.ValueFormatted} discount override ({dto.Justification ?? "No reason"}).",
+            Category = Store.Models.DTOs.Notifications.NotificationCategory.DiscountApproval,
+            Severity = "Warning",
+            TargetUrl = "/DiscountOverrides",
+            ActionLabel = "Review Request"
+        });
+
         return CreatedAtAction(nameof(GetById), new { id = dto.DiscountOverrideRequestId },
             ApiResponse<DiscountOverrideDto>.Ok(dto));
     }
@@ -79,6 +96,16 @@ public class DiscountOverridesController : ControllerBase
             return BadRequest(ApiErrorResponse.From("bad_request",
                 "Override request is not in Pending state or does not exist",
                 traceId: HttpContext.TraceIdentifier));
+
+        _ = _notifications.NotifyDiscountOverrideAsync(new Store.Models.DTOs.Notifications.DiscountOverrideNotificationDto
+        {
+            CashierUserId = dto.RequestedByUserId,
+            SupervisorUserId = userId,
+            Status = dto.Status,
+            RequestedDiscount = dto.OverrideValue,
+            Reason = dto.ReviewNotes,
+            SupervisorName = dto.ReviewedByUser
+        });
 
         return Ok(ApiResponse<DiscountOverrideDto>.Ok(dto));
     }
