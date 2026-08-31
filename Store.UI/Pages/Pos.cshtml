@@ -33,10 +33,22 @@
     <header class="pos-topbar">
         <div>
             <h1>POS Terminal</h1>
-            <p>Fast checkout flow for supermarket operations.</p>
+            <p>Fast checkout flow with offline resilience & background sync.</p>
         </div>
         <div class="pos-top-actions">
-            <a class="button-secondary" href="/Dashboard">Back to Dashboard</a>
+            <div class="pos-network-status" id="networkStatusBar">
+                <span class="status-dot online" id="statusDot"></span>
+                <span class="status-text" id="statusText">Online</span>
+                <button type="button" class="btn btn-sm button-secondary" id="refreshCacheBtn" title="Cache catalog for offline scanning">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                    Cache
+                </button>
+                <button type="button" class="btn btn-sm button-secondary" id="viewOfflineLedgerBtn" title="View offline transactions">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                    Queue (<span id="offlineCountBadge">0</span>)
+                </button>
+            </div>
+            <a class="button-secondary" href="/Dashboard">Dashboard</a>
             <form method="post" asp-page-handler="Logout">
                 <button type="submit" class="danger">Sign Out</button>
             </form>
@@ -172,11 +184,44 @@
     </div>
 </div>
 
+<div id="offlineLedgerBladeOverlay" class="blade-overlay" data-blade-id="offlineLedgerBlade"></div>
+<div id="offlineLedgerBlade" class="blade" data-overlay-id="offlineLedgerBladeOverlay">
+    <div class="blade-header">
+        <h3>Offline Transactions Ledger</h3>
+        <button type="button" class="btn-close" id="ledgerCloseBtn" aria-label="Close offline ledger">&times;</button>
+    </div>
+    <div class="blade-body">
+        <div class="ledger-actions-bar">
+            <p style="margin:0;font-size:0.85rem;color:var(--pos-muted)">Transactions recorded during network outages. Automatically syncs when server becomes reachable.</p>
+            <button type="button" class="button-primary" id="ledgerSyncNowBtn">Sync Queue</button>
+        </div>
+        <table class="table-compact">
+            <thead>
+                <tr>
+                    <th>Receipt #</th>
+                    <th>Queued At</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="offlineLedgerBody">
+                <tr><td colspan="4" style="text-align:center;color:var(--pos-muted)">No offline transactions recorded.</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
 @section Scripts {
+<script src="~/js/pos-offline.js" asp-append-version="true"></script>
 <script>
 (() => {
-    const catalog = @Html.Raw(catalogJson);
-    const customers = @Html.Raw(customersJson);
+    // Register Service Worker for offline shell caching
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(e => console.warn('[SW] Registration:', e));
+    }
+
+    let catalog = @Html.Raw(catalogJson);
+    let customers = @Html.Raw(customersJson);
 
     const cart = new Map();
     const catalogList = document.getElementById('catalogList');
@@ -198,6 +243,20 @@
     const saleNotes = document.getElementById('saleNotes');
     const couponCodeInput = document.getElementById('couponCode');
     const checkoutMessage = document.getElementById('checkoutMessage');
+
+    // Offline Resilience Controls
+    const statusDot = document.getElementById('statusDot');
+    const statusText = document.getElementById('statusText');
+    const refreshCacheBtn = document.getElementById('refreshCacheBtn');
+    const viewOfflineLedgerBtn = document.getElementById('viewOfflineLedgerBtn');
+    const offlineCountBadge = document.getElementById('offlineCountBadge');
+    const offlineQueueBanner = document.getElementById('offlineQueueBanner');
+    const offlineQueueCount = document.getElementById('offlineQueueCount');
+    const syncQueueBtn = document.getElementById('syncQueueBtn');
+    const offlineLedgerBlade = document.getElementById('offlineLedgerBlade');
+    const ledgerCloseBtn = document.getElementById('ledgerCloseBtn');
+    const offlineLedgerBody = document.getElementById('offlineLedgerBody');
+    const ledgerSyncNowBtn = document.getElementById('ledgerSyncNowBtn');
 
     const PAYMENT_LABELS = ['Cash', 'Card', 'Bank Transfer', 'Mobile Money', 'Cheque', 'Credit'];
 
@@ -293,176 +352,135 @@
 
     function getSuspendedSales() {
         const raw = localStorage.getItem(suspendedSalesStorageKey);
-        if (!raw) {
-            return [];
-        }
-
-        try {
-            const parsed = JSON.parse(raw);
-            return Array.isArray(parsed) ? parsed : [];
-        } catch {
-            return [];
-        }
+        if (!raw) return [];
+        try { return JSON.parse(raw) || []; }
+        catch { return []; }
     }
 
-    function setSuspendedSales(sales) {
-        localStorage.setItem(suspendedSalesStorageKey, JSON.stringify(sales));
-    }
-
-    function getEffectivePrice(item) {
-        if (!item.discountPercentage || item.discountPercentage <= 0) {
-            return Number(item.unitPrice);
-        }
-
-        const discount = Number(item.unitPrice) * (Number(item.discountPercentage) / 100);
-        return Number(item.unitPrice) - discount;
-    }
-
-    function renderCatalog(filterText = '') {
-        const q = filterText.trim().toLowerCase();
-        const filtered = q.length === 0
-            ? catalog
-            : catalog.filter(i => i.name.toLowerCase().includes(q) || (i.categoryName ?? '').toLowerCase().includes(q));
-
-        catalogList.innerHTML = '';
-
-        if (filtered.length === 0) {
-            catalogList.innerHTML = '<p class="catalog-empty">No matching products.</p>';
-            return;
-        }
-
-        for (const item of filtered) {
-            const card = document.createElement('article');
-            card.className = 'catalog-item';
-            const effectivePrice = getEffectivePrice(item);
-            card.innerHTML = `
-                <h3>${item.name}</h3>
-                <p>${item.categoryName ?? 'Uncategorized'} ${item.unit ? `• ${item.unit}` : ''}</p>
-                <div class="catalog-meta">
-                    <strong>${xaf(effectivePrice)} XAF</strong>
-                    <span>${item.inStock} in stock</span>
-                </div>
-                <button type="button" data-id="${item.itemId}">Add</button>
-            `;
-
-            card.querySelector('button').addEventListener('click', () => addToCart(item));
-            catalogList.appendChild(card);
-        }
+    function setSuspendedSales(list) {
+        localStorage.setItem(suspendedSalesStorageKey, JSON.stringify(list));
     }
 
     function renderSuspendedSales() {
         const sales = getSuspendedSales();
-        const previousValue = suspendedSaleSelect.value;
         suspendedSaleSelect.innerHTML = '<option value="">No suspended sale</option>';
+        for (const s of sales) {
+            const opt = document.createElement('option');
+            opt.value = s.id;
+            opt.textContent = `${s.label} (${s.lines?.length ?? 0} items)`;
+            suspendedSaleSelect.appendChild(opt);
+        }
+    }
 
-        for (const sale of sales) {
-            const option = document.createElement('option');
-            option.value = sale.id;
-            option.textContent = sale.label;
-            suspendedSaleSelect.appendChild(option);
+    function getEffectivePrice(item) {
+        const base = item.unitPrice ?? 0;
+        const discount = item.discountPercentage ?? 0;
+        if (discount > 0) return base * (1 - (discount / 100));
+        return base;
+    }
+
+    function getSubtotal() {
+        let total = 0;
+        for (const line of cart.values()) total += line.unitPrice * line.quantity;
+        return total;
+    }
+
+    function renderCatalog(filter = '') {
+        const needle = filter.trim().toLowerCase();
+        const filtered = needle
+            ? catalog.filter(i => (i.name?.toLowerCase() || '').includes(needle) || (i.barcode?.toLowerCase() || '').includes(needle))
+            : catalog;
+
+        catalogList.innerHTML = '';
+        if (filtered.length === 0) {
+            catalogList.innerHTML = '<p class="catalog-empty">No products found.</p>';
+            return;
         }
 
-        if (previousValue) {
-            suspendedSaleSelect.value = previousValue;
+        for (const item of filtered) {
+            const card = document.createElement('div');
+            card.className = 'catalog-card';
+            const price = getEffectivePrice(item);
+            card.innerHTML = `
+                <h4>${item.name}</h4>
+                <p class="meta">${item.categoryName || 'General'} &bull; ${item.inStock} in stock</p>
+                <div class="price">${xaf(price)} XAF</div>
+            `;
+            card.addEventListener('click', () => addToCart(item));
+            catalogList.appendChild(card);
         }
     }
 
     function addToCart(item) {
-        const existing = cart.get(item.itemId);
-        const currentQty = existing ? existing.quantity : 0;
-
-        if (currentQty + 1 > item.inStock) {
-            setMessage('Cannot exceed available stock.', true);
+        if (!item || item.inStock <= 0) {
+            setMessage('Item is out of stock.', true);
             return;
         }
 
-        cart.set(item.itemId, {
-            itemId: item.itemId,
-            name: item.name,
-            unitPrice: getEffectivePrice(item),
-            maxStock: item.inStock,
-            quantity: currentQty + 1
-        });
-
+        const effectivePrice = getEffectivePrice(item);
+        if (cart.has(item.itemId)) {
+            const existing = cart.get(item.itemId);
+            if (existing.quantity + 1 > item.inStock) {
+                setMessage(`Cannot add more than ${item.inStock} for ${item.name}.`, true);
+                return;
+            }
+            existing.quantity++;
+        } else {
+            cart.set(item.itemId, {
+                itemId: item.itemId,
+                name: item.name,
+                unitPrice: effectivePrice,
+                maxStock: item.inStock,
+                quantity: 1
+            });
+        }
         renderCart();
-    }
-
-    function setQuantity(itemId, quantity) {
-        const entry = cart.get(itemId);
-        if (!entry) {
-            return;
-        }
-
-        if (quantity <= 0) {
-            cart.delete(itemId);
-            renderCart();
-            return;
-        }
-
-        if (quantity > entry.maxStock) {
-            setMessage(`Cannot exceed stock (${entry.maxStock}) for ${entry.name}.`, true);
-            return;
-        }
-
-        entry.quantity = quantity;
-        renderCart();
-    }
-
-    function removeItem(itemId) {
-        cart.delete(itemId);
-        renderCart();
-    }
-
-    // amountTenderedInput shim for legacy suspend/resume compatibility
-    const amountTenderedInput = (typeof window.amountTenderedInput !== 'undefined') ? window.amountTenderedInput : { value: '0', addEventListener: () => {} };
-    if (typeof window.amountTenderedInput === 'undefined') { window.amountTenderedInput = amountTenderedInput; }
-
-    function getSubtotal() {
-        let total = 0;
-        for (const entry of cart.values()) {
-            total += entry.unitPrice * entry.quantity;
-        }
-        return total;
     }
 
     function renderCart() {
-        cartBody.innerHTML = '';
-
         if (cart.size === 0) {
-            cartTable.hidden = true;
             cartEmpty.hidden = false;
-            subtotalText.textContent = '0';
-            changeText.textContent = '0';
+            cartTable.hidden = true;
+            subtotalText.textContent = '0 XAF';
             updateTenderTotals();
             return;
         }
 
-        cartTable.hidden = false;
         cartEmpty.hidden = true;
+        cartTable.hidden = false;
+        cartBody.innerHTML = '';
 
-        for (const entry of cart.values()) {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${entry.name}</td>
-                <td>${xaf(entry.unitPrice)}</td>
-                <td><input type="number" min="1" max="${entry.maxStock}" value="${entry.quantity}" data-qty="${entry.itemId}" /></td>
-                <td>${xaf(entry.unitPrice * entry.quantity)}</td>
-                <td><button type="button" class="danger" data-del="${entry.itemId}">Remove</button></td>
+        for (const line of cart.values()) {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><strong>${line.name}</strong></td>
+                <td>${xaf(line.unitPrice)}</td>
+                <td>
+                    <input type="number" min="1" max="${line.maxStock}" value="${line.quantity}" data-qty="${line.itemId}" style="width:60px;padding:0.25rem" />
+                </td>
+                <td><strong>${xaf(line.unitPrice * line.quantity)}</strong></td>
+                <td><button type="button" class="danger" data-del="${line.itemId}" style="padding:0.2rem 0.45rem">&times;</button></td>
             `;
-            cartBody.appendChild(tr);
+            cartBody.appendChild(row);
         }
 
         for (const input of cartBody.querySelectorAll('[data-qty]')) {
             input.addEventListener('change', (e) => {
-                const target = e.target;
-                setQuantity(target.dataset.qty, Number(target.value));
+                const itemId = e.target.dataset.qty;
+                const qty = parseInt(e.target.value, 10) || 1;
+                const line = cart.get(itemId);
+                if (line) {
+                    line.quantity = Math.min(Math.max(1, qty), line.maxStock);
+                    renderCart();
+                }
             });
         }
 
         for (const button of cartBody.querySelectorAll('[data-del]')) {
             button.addEventListener('click', (e) => {
                 const target = e.target;
-                removeItem(target.dataset.del);
+                cart.delete(target.dataset.del);
+                renderCart();
             });
         }
 
@@ -477,7 +495,7 @@
         if (window.showToast) window.showToast(isError ? 'error' : 'success', message);
     }
 
-    function showReceipt(checkoutResult, saleLines) {
+    function showReceipt(checkoutResult, saleLines, isOffline = false) {
         const createdAt = checkoutResult.createdAt
             ? new Date(checkoutResult.createdAt).toLocaleString()
             : new Date().toLocaleString();
@@ -491,9 +509,17 @@
             </tr>
         `).join('');
 
+        const offlineBannerHtml = isOffline ? `
+            <div class="receipt-offline-watermark">
+                ⚡ OFFLINE TRANSACTION RECEIPT<br/>
+                <span style="font-size:0.8rem;font-weight:400">Recorded offline on terminal. Queued for server sync.</span>
+            </div>
+        ` : '';
+
         receiptContent.innerHTML = `
+            ${offlineBannerHtml}
             <div class="receipt-summary">
-                <p><strong>Invoice:</strong> ${checkoutResult.invoiceId}</p>
+                <p><strong>Receipt #:</strong> ${checkoutResult.invoiceId || checkoutResult.offlineReceiptNumber}</p>
                 <p><strong>Date:</strong> ${createdAt}</p>
                 <p><strong>Payment:</strong> ${checkoutResult.paymentType}</p>
                 <p><strong>Total:</strong> ${xaf(checkoutResult.totalAmount)} XAF</p>
@@ -578,9 +604,7 @@
             const maxStock = matchedItem ? matchedItem.inStock : line.maxStock;
             const safeQty = Math.min(line.quantity ?? 0, maxStock ?? 0);
 
-            if (!matchedItem || safeQty <= 0) {
-                continue;
-            }
+            if (!matchedItem || safeQty <= 0) continue;
 
             cart.set(matchedItem.itemId, {
                 itemId: matchedItem.itemId,
@@ -592,9 +616,8 @@
         }
 
         customerSelect.value = snapshot.customerId || '';
-        // Restore tender lines
         tenderLinesContainer.innerHTML = '';
-        const savedLines = snapshot.tenderLines ?? (snapshot.paymentType !== undefined ? [{ type: parseInt(snapshot.paymentType || '0', 10), amount: parseFloat(snapshot.amountTendered || '0') }] : []);
+        const savedLines = snapshot.tenderLines ?? [];
         if (savedLines.length > 0) {
             for (const tl of savedLines) addTenderLine(tl.type, tl.amount);
         } else {
@@ -604,9 +627,7 @@
 
         renderSuspendedSales();
         renderCart();
-        setMessage(removeAfterRestore
-            ? 'Suspended sale resumed into cart.'
-            : 'Suspended sale preview restored to cart.');
+        setMessage('Suspended sale resumed into cart.');
     }
 
     function deleteSuspendedSale() {
@@ -624,21 +645,18 @@
 
     let lastScannedBarcode = '';
     let lastScannedTime = 0;
-    const DUPLICATE_SCAN_COOLDOWN_MS = 800; // 800ms cooldown for identical barcode to prevent double-firing
+    const DUPLICATE_SCAN_COOLDOWN_MS = 800;
 
     function addByBarcode(rawCode) {
         const scanValue = normalizeBarcode(rawCode !== undefined ? rawCode : barcodeInput.value);
-        barcodeInput.value = ''; // Always clear immediately to prevent appending on rapid second scan
-        
+        barcodeInput.value = '';
         if (!scanValue) {
             setMessage('Scan or type a barcode first.', true);
             return;
         }
 
         const now = Date.now();
-        // Check for rapid accidental double-scan of the exact same item
         if (scanValue === lastScannedBarcode && (now - lastScannedTime) < DUPLICATE_SCAN_COOLDOWN_MS) {
-            console.warn(`[POS] Suppressed duplicate scan of "${scanValue}" (${now - lastScannedTime}ms since last scan)`);
             return;
         }
 
@@ -679,11 +697,17 @@
             lines: Array.from(cart.values()).map(v => ({ itemId: v.itemId, quantity: v.quantity }))
         };
         const saleLines = Array.from(cart.values());
-
         const antiforgery = checkoutForm.querySelector('input[name="__RequestVerificationToken"]')?.value;
 
         checkoutBtn.disabled = true;
         setMessage('Processing checkout...');
+
+        // If explicitly offline, handle immediately via IndexedDB
+        if (!navigator.onLine) {
+            await handleOfflineCheckout(payload, saleLines, subtotal, tendered - subtotal);
+            checkoutBtn.disabled = false;
+            return;
+        }
 
         try {
             const response = await fetch('?handler=Checkout', {
@@ -703,7 +727,6 @@
 
             cart.clear();
             saleNotes.value = '';
-            // Reset tender to single Cash line
             tenderLinesContainer.innerHTML = '';
             addTenderLine(0, 0);
             renderCart();
@@ -711,8 +734,16 @@
             showReceipt(body, saleLines);
             renderCatalog(catalogSearch.value);
         } catch {
-            // Network failure — queue the sale for later sync
-            enqueueOfflineSale(payload, saleLines);
+            // Server unreachable — transition to offline fallback
+            await handleOfflineCheckout(payload, saleLines, subtotal, tendered - subtotal);
+        } finally {
+            checkoutBtn.disabled = false;
+        }
+    }
+
+    async function handleOfflineCheckout(payload, saleLines, subtotal, changeGiven) {
+        try {
+            const offlineRecord = await StorePosOfflineDB.enqueueOfflineSale(payload, saleLines, subtotal, changeGiven);
             cart.clear();
             saleNotes.value = '';
             couponCodeInput.value = '';
@@ -720,9 +751,18 @@
             addTenderLine(0, 0);
             renderCart();
             renderCatalog(catalogSearch.value);
-            setMessage('Server unreachable. Sale saved to offline queue — will sync when connection restores.', true);
-        } finally {
-            checkoutBtn.disabled = false;
+            updateOfflineUIState();
+            setMessage(`⚡ OFFLINE SALE SAVED (${offlineRecord.offlineReceiptNumber}). Will auto-sync when online.`, false);
+            showReceipt({
+                offlineReceiptNumber: offlineRecord.offlineReceiptNumber,
+                paymentType: PAYMENT_LABELS[payload.paymentType],
+                totalAmount: subtotal,
+                amountTendered: payload.amountTendered,
+                changeGiven: changeGiven
+            }, saleLines, true);
+        } catch (err) {
+            console.error('[POS] Failed to record offline sale in IndexedDB:', err);
+            setMessage('Fatal: Could not save sale to offline storage.', true);
         }
     }
 
@@ -735,90 +775,170 @@
         }
     }
 
-    // ── Offline Queue (OFF-1/OFF-2) ──────────────────────────────────────
-    const OFFLINE_QUEUE_KEY = 'store-ui-pos-offline-queue';
-    const offlineQueueBanner = document.getElementById('offlineQueueBanner');
-    const offlineQueueCount = document.getElementById('offlineQueueCount');
-    const syncQueueBtn = document.getElementById('syncQueueBtn');
+    // ── Offline Resilience & Sync Management ─────────────────────────────
+    async function updateOfflineUIState() {
+        try {
+            const pending = await StorePosOfflineDB.getPendingQueue();
+            const count = pending.length;
 
-    function getOfflineQueue() {
-        try { return JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) || '[]'); }
-        catch { return []; }
-    }
+            offlineCountBadge.textContent = count;
+            if (count > 0) {
+                offlineQueueBanner.hidden = false;
+                offlineQueueCount.textContent = `${count} offline sale${count > 1 ? 's' : ''} pending sync`;
+            } else {
+                offlineQueueBanner.hidden = true;
+            }
 
-    function saveOfflineQueue(q) {
-        localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(q));
-    }
-
-    function renderOfflineBanner() {
-        const q = getOfflineQueue();
-        if (q.length === 0) {
-            offlineQueueBanner.hidden = true;
-        } else {
-            offlineQueueBanner.hidden = false;
-            offlineQueueCount.textContent = `${q.length} offline sale${q.length > 1 ? 's' : ''} pending sync`;
+            if (!navigator.onLine) {
+                statusDot.className = 'status-dot offline';
+                statusText.textContent = 'Offline Mode';
+            } else {
+                statusDot.className = 'status-dot online';
+                statusText.textContent = 'Online';
+            }
+        } catch (e) {
+            console.warn('[POS] Error updating offline UI state:', e);
         }
-    }
-
-    function enqueueOfflineSale(payload, saleLines) {
-        const q = getOfflineQueue();
-        q.push({
-            id: crypto.randomUUID(),
-            queuedAt: new Date().toISOString(),
-            payload,
-            saleLines
-        });
-        saveOfflineQueue(q);
-        renderOfflineBanner();
     }
 
     async function syncOfflineQueue() {
-        const q = getOfflineQueue();
-        if (q.length === 0) {
-            setMessage('No offline sales to sync.');
+        if (!navigator.onLine) {
+            setMessage('Cannot sync: Device is offline.', true);
             return;
         }
 
-        const antiforgery = checkoutForm.querySelector('input[name="__RequestVerificationToken"]')?.value;
-        syncQueueBtn.disabled = true;
-        let synced = 0;
-        let failed = 0;
-        const remaining = [];
-
-        for (const entry of q) {
-            try {
-                const resp = await fetch('?handler=Checkout', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'RequestVerificationToken': antiforgery
-                    },
-                    body: JSON.stringify(entry.payload)
-                });
-
-                const body = await resp.json();
-                if (resp.ok && body.success) {
-                    synced++;
-                } else {
-                    failed++;
-                    remaining.push(entry);
-                }
-            } catch {
-                failed++;
-                remaining.push(entry);
-            }
+        const pending = await StorePosOfflineDB.getPendingQueue();
+        if (pending.length === 0) {
+            setMessage('No offline sales to sync.');
+            updateOfflineUIState();
+            return;
         }
 
-        saveOfflineQueue(remaining);
-        renderOfflineBanner();
-        syncQueueBtn.disabled = false;
+        statusDot.className = 'status-dot syncing';
+        statusText.textContent = `Syncing (${pending.length})...`;
+        syncQueueBtn.disabled = true;
+        ledgerSyncNowBtn.disabled = true;
 
-        const msg = synced > 0
-            ? `Synced ${synced} offline sale${synced > 1 ? 's' : ''}.${failed > 0 ? ` ${failed} still pending.` : ''}`
-            : `Sync failed — ${failed} sale${failed > 1 ? 's' : ''} still queued.`;
-        setMessage(msg, failed > 0);
-        if (synced > 0) renderCatalog(catalogSearch.value);
+        const antiforgery = checkoutForm.querySelector('input[name="__RequestVerificationToken"]')?.value;
+        const batchPayload = pending.map(p => ({
+            clientTxId: p.clientTxId,
+            offlineReceiptNumber: p.offlineReceiptNumber,
+            payload: p.payload
+        }));
+
+        try {
+            const resp = await fetch('?handler=OfflineBatchSync', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': antiforgery
+                },
+                body: JSON.stringify(batchPayload)
+            });
+
+            const data = await resp.json();
+            if (resp.ok && data.success) {
+                for (const res of data.results || []) {
+                    if (res.success) {
+                        await StorePosOfflineDB.markSaleSynced(res.clientTxId, res.serverInvoiceId);
+                    } else {
+                        await StorePosOfflineDB.markSaleFailed(res.clientTxId, res.errorMessage);
+                    }
+                }
+
+                const msg = data.syncedCount > 0
+                    ? `Synced ${data.syncedCount} offline sale${data.syncedCount > 1 ? 's' : ''} successfully.${data.failedCount > 0 ? ` (${data.failedCount} failed)` : ''}`
+                    : `Sync failed for ${data.failedCount} transactions.`;
+                setMessage(msg, data.failedCount > 0);
+            } else {
+                setMessage('Batch sync failed on server.', true);
+            }
+        } catch (err) {
+            console.error('[POS] Sync network error:', err);
+            setMessage('Sync failed — server unreachable.', true);
+        } finally {
+            syncQueueBtn.disabled = false;
+            ledgerSyncNowBtn.disabled = false;
+            updateOfflineUIState();
+            renderOfflineLedger();
+        }
     }
+
+    async function refreshCatalogCache() {
+        if (!navigator.onLine) {
+            setMessage('Cannot refresh catalog: device is offline.', true);
+            return;
+        }
+
+        setMessage('Refreshing offline product catalog...');
+        refreshCacheBtn.disabled = true;
+
+        try {
+            const resp = await fetch('?handler=CatalogData');
+            const data = await resp.json();
+            if (resp.ok && data.success) {
+                catalog = data.items || [];
+                customers = data.customers || [];
+                await StorePosOfflineDB.cacheCatalog(catalog);
+                await StorePosOfflineDB.cacheCustomers(customers);
+                renderCatalog(catalogSearch.value);
+                setMessage(`Offline cache updated: ${catalog.length} items & ${customers.length} customers ready.`);
+            } else {
+                setMessage('Failed to refresh catalog cache.', true);
+            }
+        } catch (err) {
+            setMessage('Failed to refresh catalog cache: ' + err.message, true);
+        } finally {
+            refreshCacheBtn.disabled = false;
+        }
+    }
+
+    async function renderOfflineLedger() {
+        try {
+            const all = await StorePosOfflineDB.getAllQueue();
+            if (all.length === 0) {
+                offlineLedgerBody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--pos-muted);padding:1rem">No offline transactions recorded.</td></tr>';
+                return;
+            }
+
+            offlineLedgerBody.innerHTML = all.map(entry => {
+                const statusBadge = entry.status === 'synced'
+                    ? '<span class="badge badge-success">Synced</span>'
+                    : (entry.status === 'failed'
+                        ? '<span class="badge badge-danger" title="' + (entry.errorMessage || '') + '">Failed</span>'
+                        : '<span class="badge badge-warning">Pending</span>');
+
+                return `
+                    <tr>
+                        <td><strong>${entry.offlineReceiptNumber}</strong></td>
+                        <td>${new Date(entry.queuedAt).toLocaleTimeString()}</td>
+                        <td>${xaf(entry.totalAmount)} XAF</td>
+                        <td>${statusBadge}</td>
+                    </tr>
+                `;
+            }).join('');
+        } catch (e) {
+            console.warn('[POS] Error rendering ledger:', e);
+        }
+    }
+
+    // Event Listeners
+    window.addEventListener('online', () => {
+        updateOfflineUIState();
+        syncOfflineQueue();
+    });
+    window.addEventListener('offline', updateOfflineUIState);
+
+    refreshCacheBtn.addEventListener('click', refreshCatalogCache);
+    viewOfflineLedgerBtn.addEventListener('click', () => {
+        renderOfflineLedger();
+        window.openBlade('offlineLedgerBlade');
+    });
+    ledgerCloseBtn.addEventListener('click', () => window.closeBlade('offlineLedgerBlade'));
+    ledgerSyncNowBtn.addEventListener('click', syncOfflineQueue);
+    offlineLedgerBlade.addEventListener('click', (e) => {
+        if (e.target.dataset.close === 'offlineLedger') window.closeBlade('offlineLedgerBlade');
+    });
 
     addTenderLineBtn.addEventListener('click', () => addTenderLine());
     syncQueueBtn.addEventListener('click', syncOfflineQueue);
@@ -826,10 +946,7 @@
     barcodeAddBtn.addEventListener('click', () => addByBarcode());
     barcodeInput.addEventListener('focus', () => barcodeInput.select());
     barcodeInput.addEventListener('keydown', (e) => {
-        if (e.key !== 'Enter') {
-            return;
-        }
-
+        if (e.key !== 'Enter') return;
         e.preventDefault();
         addByBarcode();
     });
@@ -839,14 +956,12 @@
     receiptCloseBtn.addEventListener('click', closeReceipt);
     receiptPrintBtn.addEventListener('click', () => window.print());
     receiptBlade.addEventListener('click', (e) => {
-        const target = e.target;
-        if (target.dataset.close === 'receipt') {
-            closeReceipt();
-        }
+        if (e.target.dataset.close === 'receipt') closeReceipt();
     });
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && receiptBlade.classList.contains('open')) {
-            closeReceipt();
+        if (e.key === 'Escape') {
+            if (receiptBlade.classList.contains('open')) closeReceipt();
+            if (offlineLedgerBlade.classList.contains('open')) window.closeBlade('offlineLedgerBlade');
         }
     });
     clearCartBtn.addEventListener('click', () => {
@@ -858,14 +973,19 @@
         checkoutAsync();
     });
 
+    // Startup Initialization
     seedCustomers();
     addTenderLine(0, 0);
     renderSuspendedSales();
-    renderOfflineBanner();
     renderCatalog();
     renderCart();
 
-    // Deep-linking from Customers CRM Hub, Catalog, or Smart Scan Hub (e.g. /Pos?customerId=GUID or /Pos?itemId=GUID or /Pos?barcode=CODE)
+    // Cache initial data into IndexedDB
+    StorePosOfflineDB.cacheCatalog(catalog);
+    StorePosOfflineDB.cacheCustomers(customers);
+    updateOfflineUIState();
+
+    // Deep-linking
     const urlParams = new URLSearchParams(window.location.search);
     const paramCustomerId = urlParams.get('customerId') || '@(Model.CustomerId?.ToString() ?? "")';
     const paramItemId = urlParams.get('itemId') || urlParams.get('addItem') || '@(Model.ItemId?.ToString() ?? Model.AddItem?.ToString() ?? "")';

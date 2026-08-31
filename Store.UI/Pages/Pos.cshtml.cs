@@ -181,6 +181,130 @@ public class PosModel : PageModel
         }
     }
 
+    public async Task<IActionResult> OnGetCatalogDataAsync(CancellationToken ct)
+    {
+        var token = HttpContext.Session.GetString("access_token");
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return Unauthorized();
+        }
+
+        _apiClient.SetToken(token);
+
+        try
+        {
+            var itemsTask = _itemService.GetAllAsync(new PagedRequest { Page = 1, PageSize = 1000 }, ct);
+            var customersTask = _customerService.GetAllAsync(new PagedRequest { Page = 1, PageSize = 500 }, ct);
+
+            await Task.WhenAll(itemsTask, customersTask);
+
+            var items = (await itemsTask).Items
+                .Where(i => i.IsActive && i.InStock > 0)
+                .Select(i => new
+                {
+                    itemId = i.ItemId,
+                    name = i.Name,
+                    barcode = i.Barcode,
+                    unitPrice = i.UnitPrice,
+                    inStock = i.InStock,
+                    categoryName = i.CategoryName,
+                    unit = i.UnitAbbreviation,
+                    discountPercentage = i.DiscountPercentage
+                })
+                .ToList();
+
+            var customers = (await customersTask).Items
+                .Select(c => new
+                {
+                    customerId = c.CustomerId,
+                    fullName = c.FullName,
+                    primaryPhone = c.PrimaryPhone
+                })
+                .ToList();
+
+            return new JsonResult(new { success = true, items, customers });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch catalog data for offline sync");
+            return StatusCode(500, new { success = false, message = "Could not fetch catalog data." });
+        }
+    }
+
+    public async Task<IActionResult> OnPostOfflineBatchSyncAsync([FromBody] List<PosOfflineBatchEntry> batch, CancellationToken ct)
+    {
+        var token = HttpContext.Session.GetString("access_token");
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return new JsonResult(new { success = false, message = "Session expired. Please login again." })
+            {
+                StatusCode = StatusCodes.Status401Unauthorized
+            };
+        }
+
+        _apiClient.SetToken(token);
+
+        if (batch == null || batch.Count == 0)
+        {
+            return BadRequest(new { success = false, message = "Batch is empty." });
+        }
+
+        var results = new List<PosSyncResultItem>();
+        int synced = 0;
+        int failed = 0;
+
+        foreach (var entry in batch)
+        {
+            try
+            {
+                var create = new CreateInvoiceRequest
+                {
+                    CustomerId = entry.Payload.CustomerId,
+                    PaymentType = entry.Payload.PaymentType,
+                    AmountTendered = entry.Payload.AmountTendered,
+                    Notes = $"[Offline Sync: {entry.OfflineReceiptNumber}] {entry.Payload.Notes}".Trim(),
+                    Lines = entry.Payload.Lines.Select(l => new CreateSaleLineRequest
+                    {
+                        ItemId = l.ItemId,
+                        Quantity = l.Quantity
+                    }).ToList()
+                };
+
+                var created = await _invoiceService.CreateInvoiceAsync(create, null, ct);
+                synced++;
+                results.Add(new PosSyncResultItem
+                {
+                    ClientTxId = entry.ClientTxId,
+                    OfflineReceiptNumber = entry.OfflineReceiptNumber,
+                    Success = true,
+                    ServerInvoiceId = created.InvoiceId,
+                    TotalAmount = created.TotalAmount,
+                    ChangeGiven = created.ChangeGiven
+                });
+            }
+            catch (Exception ex)
+            {
+                failed++;
+                _logger.LogWarning(ex, "Failed to sync offline transaction {ClientTxId} ({Receipt})", entry.ClientTxId, entry.OfflineReceiptNumber);
+                results.Add(new PosSyncResultItem
+                {
+                    ClientTxId = entry.ClientTxId,
+                    OfflineReceiptNumber = entry.OfflineReceiptNumber,
+                    Success = false,
+                    ErrorMessage = ex.Message
+                });
+            }
+        }
+
+        return new JsonResult(new
+        {
+            success = true,
+            syncedCount = synced,
+            failedCount = failed,
+            results
+        });
+    }
+
     public IActionResult OnPostLogout()
     {
         HttpContext.Session.Remove("access_token");
@@ -201,5 +325,23 @@ public class PosModel : PageModel
     {
         public Guid ItemId { get; set; }
         public int Quantity { get; set; }
+    }
+
+    public sealed class PosOfflineBatchEntry
+    {
+        public string ClientTxId { get; set; } = string.Empty;
+        public string OfflineReceiptNumber { get; set; } = string.Empty;
+        public PosCheckoutRequest Payload { get; set; } = new();
+    }
+
+    public sealed class PosSyncResultItem
+    {
+        public string ClientTxId { get; set; } = string.Empty;
+        public string OfflineReceiptNumber { get; set; } = string.Empty;
+        public bool Success { get; set; }
+        public Guid? ServerInvoiceId { get; set; }
+        public decimal TotalAmount { get; set; }
+        public decimal ChangeGiven { get; set; }
+        public string? ErrorMessage { get; set; }
     }
 }
