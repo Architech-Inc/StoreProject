@@ -30,14 +30,17 @@ public class CashVarianceController : ControllerBase
 
     [HttpGet]
     [Authorize(Policy = PermissionKeys.CashRead)]
-    public async Task<IActionResult> GetAll([FromQuery] string? status)
+    public async Task<IActionResult> GetAll(
+        [FromQuery] string? status = null,
+        [FromQuery] DateTime? fromDate = null,
+        [FromQuery] DateTime? toDate = null)
     {
         CashVarianceStatus? parsed = null;
         if (!string.IsNullOrWhiteSpace(status) &&
             Enum.TryParse<CashVarianceStatus>(status, ignoreCase: true, out var s))
             parsed = s;
 
-        var list = await _varianceService.GetAllAsync(parsed);
+        var list = await _varianceService.GetAllAsync(parsed, fromDate, toDate);
         return Ok(ApiResponse<List<CashVarianceDto>>.Ok(list));
     }
 

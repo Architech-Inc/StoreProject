@@ -4,6 +4,7 @@ using Store.API.Application.Abstractions;
 using Store.API.Application.Users.Requests;
 using Store.API.Contracts;
 using Store.Models.DTOs.Common;
+using Store.Models.DTOs.Operations;
 using Store.Models.DTOs.Users;
 using Store.Models.Interfaces.Services;
 
@@ -26,7 +27,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet]
-    [Authorize(Roles = "Admin,Manager")]
+    [Authorize(Policy = PermissionKeys.AdminUsers)]
     public async Task<IActionResult> GetAll([FromQuery] PagedRequest request, CancellationToken ct)
     {
         var result = await _dispatcher.SendAsync(new GetUsersQuery(request), ct);
@@ -58,7 +59,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = PermissionKeys.AdminUsers)]
     public async Task<IActionResult> Create([FromBody] CreateUserRequest request, CancellationToken ct)
     {
         var user = await _dispatcher.SendAsync(new CreateUserCommand(request), ct);
@@ -66,7 +67,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = PermissionKeys.AdminUsers)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateUserRequest request, CancellationToken ct)
     {
         var user = await _dispatcher.SendAsync(new UpdateUserCommand(id, request), ct);
@@ -79,7 +80,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = PermissionKeys.AdminUsers)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
         var deleted = await _dispatcher.SendAsync(new DeleteUserCommand(id), ct);
@@ -149,7 +150,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost("{id:guid}/issue-temp-password")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = PermissionKeys.AdminUsers)]
     public async Task<IActionResult> IssueTempPassword(Guid id, CancellationToken ct)
     {
         var method = await _systemSettings.GetSettingAsync("Auth:PasswordRecoveryMethod", ct) ?? "Both";
@@ -238,7 +239,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost("{id}/sessions/revoke")]
-    [Authorize(Roles = "Admin,Manager")]
+    [Authorize(Policy = PermissionKeys.AdminUsers)]
     public async Task<IActionResult> RevokeUserSessions(Guid id, CancellationToken ct)
     {
         var success = await _dispatcher.SendAsync(new RevokeAllSessionsCommand(id), ct);
@@ -261,9 +262,6 @@ public class UsersController : ControllerBase
         try
         {
             var result = await _userService.RequestContactChangeAsync(userId, request, ct);
-            
-            // In a real app, here we would send an email/SMS with the verification link.
-            // For demonstration, we'll return the result directly.
             return Ok(ApiResponse<ContactChangeRequestDto>.Ok(result, "Contact change requested. Please verify your new contact info."));
         }
         catch (InvalidOperationException ex)
@@ -276,20 +274,18 @@ public class UsersController : ControllerBase
     [HttpGet("profile/contact-change/verify")]
     public async Task<IActionResult> VerifyContactChange([FromQuery] string token, CancellationToken ct)
     {
-        if (string.IsNullOrEmpty(token))
+        if (string.IsNullOrWhiteSpace(token) || token.Length < 10)
             return BadRequest(ApiErrorResponse.From("invalid_token", "Verification token is required."));
 
-        var success = await _userService.VerifyContactChangeAsync(token, ct);
+        var success = await _userService.VerifyContactChangeAsync(token.Trim(), ct);
         if (!success)
             return BadRequest(ApiErrorResponse.From("verification_failed", "Invalid or expired verification token."));
 
-        // Redirect to UI or return success
-        // In an API we'll return a success response, and the UI should handle the token via a separate page or API call.
         return Ok(ApiResponse<object>.Ok(null!, "Contact information verified. Waiting for administrator approval."));
     }
 
     [HttpGet("contact-changes/pending")]
-    [Authorize(Roles = "Admin,Manager")]
+    [Authorize(Policy = PermissionKeys.AdminUsers)]
     public async Task<IActionResult> GetPendingContactChanges(CancellationToken ct)
     {
         var requests = await _userService.GetPendingContactChangesAsync(ct);
@@ -297,7 +293,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost("contact-changes/{id}/approve")]
-    [Authorize(Roles = "Admin,Manager")]
+    [Authorize(Policy = PermissionKeys.AdminUsers)]
     public async Task<IActionResult> ApproveContactChange(Guid id, CancellationToken ct)
     {
         var userIdClaim = User.FindFirst("uid")?.Value;
@@ -312,7 +308,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost("contact-changes/{id}/reject")]
-    [Authorize(Roles = "Admin,Manager")]
+    [Authorize(Policy = PermissionKeys.AdminUsers)]
     public async Task<IActionResult> RejectContactChange(Guid id, CancellationToken ct)
     {
         var userIdClaim = User.FindFirst("uid")?.Value;
@@ -341,7 +337,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet("contact-changes/history")]
-    [Authorize(Roles = "Admin,Manager")]
+    [Authorize(Policy = PermissionKeys.AdminUsers)]
     public async Task<IActionResult> GetContactChangeHistory(CancellationToken ct)
     {
         var requests = await _userService.GetContactChangeHistoryAsync(ct);

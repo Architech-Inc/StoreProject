@@ -47,6 +47,13 @@ public class ApiBatchService : IBatchService
     public async Task<BatchDto?> GetByIdAsync(Guid id)
         => await _client.GetAsync<BatchDto>($"/api/batches/{id}");
 
+    public async Task<BatchDto?> GetByBatchNumberAsync(string batchNumber, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(batchNumber)) return null;
+        var paged = await GetBatchesPagedAsync(new BatchFilterRequest { SearchTerm = batchNumber.Trim(), Page = 1, PageSize = 10 }, ct);
+        return paged.Items?.FirstOrDefault(b => string.Equals(b.BatchNumber, batchNumber.Trim(), StringComparison.OrdinalIgnoreCase));
+    }
+
     public async Task<BatchDto> CreateAsync(CreateBatchRequest request)
     {
         var result = await _client.PostAsync<BatchDto>("/api/batches", request);

@@ -16,9 +16,14 @@ public class ApiCashVarianceService : ICashVarianceService
             ?? new CashVarianceMetricsDto();
     }
 
-    public async Task<List<CashVarianceDto>> GetAllAsync(CashVarianceStatus? status = null)
+    public async Task<List<CashVarianceDto>> GetAllAsync(CashVarianceStatus? status = null, DateTime? fromDate = null, DateTime? toDate = null)
     {
-        var query = status.HasValue ? $"?status={status.Value}" : "";
+        var qParams = new List<string>();
+        if (status.HasValue) qParams.Add($"status={status.Value}");
+        if (fromDate.HasValue) qParams.Add($"fromDate={Uri.EscapeDataString(fromDate.Value.ToString("yyyy-MM-dd"))}");
+        if (toDate.HasValue) qParams.Add($"toDate={Uri.EscapeDataString(toDate.Value.ToString("yyyy-MM-dd"))}");
+
+        var query = qParams.Count > 0 ? "?" + string.Join("&", qParams) : "";
         return await _client.GetAsync<List<CashVarianceDto>>($"/api/cash/variances{query}") ?? new();
     }
 

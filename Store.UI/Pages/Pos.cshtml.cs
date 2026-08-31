@@ -55,6 +55,10 @@ public class PosModel : PageModel
         var token = HttpContext.Session.GetString("access_token");
         if (string.IsNullOrWhiteSpace(token))
         {
+            if (!string.IsNullOrEmpty(HttpContext.Session.GetString("force_reset_userId")))
+            {
+                return RedirectToPage("/ForceResetPassword");
+            }
             return RedirectToPage("/Login");
         }
 

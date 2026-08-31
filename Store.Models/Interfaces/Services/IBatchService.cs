@@ -9,6 +9,7 @@ public interface IBatchService
     Task<PagedResult<BatchDto>> GetBatchesPagedAsync(BatchFilterRequest request, CancellationToken ct = default);
     Task<BatchMetricsDto> GetBatchMetricsAsync(CancellationToken ct = default);
     Task<BatchDto?> GetByIdAsync(Guid id);
+    Task<BatchDto?> GetByBatchNumberAsync(string batchNumber, CancellationToken ct = default);
     Task<BatchDto> CreateAsync(CreateBatchRequest request);
     Task<BatchDto?> UpdateAsync(Guid id, UpdateBatchRequest request);
     Task<bool> DeleteAsync(Guid id);

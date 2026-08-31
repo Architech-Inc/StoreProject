@@ -1,42 +1,44 @@
 using Microsoft.AspNetCore.Mvc;
+using Store.Models.DTOs.Operations;
 using Store.Models.DTOs.Users;
-using Store.Models.Enums;
-using Store.Models.Interfaces.Services;
 using StoreUI.Services;
 
 namespace StoreUI.Pages;
 
 public class ContactRequestsModel : SecurePageModel
 {
-    private readonly IUserService _userService;
+    private readonly IContactRequestManager _contactManager;
     private readonly IApiClientService _apiClient;
 
     public IReadOnlyCollection<ContactChangeRequestDto> PendingContactChanges { get; private set; } = Array.Empty<ContactChangeRequestDto>();
     public IReadOnlyCollection<ContactChangeRequestDto> HistoricalContactChanges { get; private set; } = Array.Empty<ContactChangeRequestDto>();
+    public ContactRequestMetricsDto Metrics { get; private set; } = new();
 
     [TempData] public string? StatusMessage { get; set; }
 
-    public ContactRequestsModel(IUserService userService, IApiClientService apiClient)
+    public ContactRequestsModel(IContactRequestManager contactManager, IApiClientService apiClient)
     {
-        _userService = userService;
+        _contactManager = contactManager;
         _apiClient = apiClient;
     }
 
     public async Task<IActionResult> OnGetAsync(CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out var token, out var permissions)) return GoToLogin();
+        if (!TryGetSecurityContext(out var token, out var perms)) return GoToLogin();
         
-        var role = JwtPermissionReader.GetClaim(token, "role") 
-                   ?? JwtPermissionReader.GetClaim(token, "http://schemas.microsoft.com/ws/2008/06/identity/claims/role");
-                   
-        if (role != "Admin" && role != "Manager") return RedirectToPage("/AccessDenied");
+        var canAdminUsers = perms.Contains(PermissionKeys.AdminUsers) || perms.Contains(PermissionKeys.AdminRoleMatrix);
+        if (!canAdminUsers)
+        {
+            var role = JwtPermissionReader.GetClaim(token, "role") 
+                       ?? JwtPermissionReader.GetClaim(token, "http://schemas.microsoft.com/ws/2008/06/identity/claims/role");
+            if (role != "Admin" && role != "Manager") return RedirectToPage("/AccessDenied");
+        }
 
         _apiClient.SetToken(token);
 
-        var pendingChanges = await _userService.GetPendingContactChangesAsync(ct);
-        PendingContactChanges = pendingChanges.Where(p => p.Status == ContactChangeStatus.PendingApproval || p.Status == ContactChangeStatus.PendingVerification).ToList();
-
-        HistoricalContactChanges = await _userService.GetContactChangeHistoryAsync(ct);
+        Metrics = await _contactManager.GetMetricsAsync(ct);
+        PendingContactChanges = await _contactManager.GetPendingAsync(ct);
+        HistoricalContactChanges = await _contactManager.GetHistoryAsync(ct);
 
         return Page();
     }
@@ -51,7 +53,7 @@ public class ContactRequestsModel : SecurePageModel
         {
             try
             {
-                var success = await _userService.ApproveContactChangeAsync(requestId, adminId, ct);
+                var success = await _contactManager.ApproveAsync(requestId, adminId, ct);
                 StatusMessage = success ? "Contact change request approved." : "Error: Failed to approve request.";
             }
             catch (Exception ex)
@@ -72,7 +74,7 @@ public class ContactRequestsModel : SecurePageModel
         {
             try
             {
-                var success = await _userService.RejectContactChangeAsync(requestId, adminId, ct);
+                var success = await _contactManager.RejectAsync(requestId, adminId, ct);
                 StatusMessage = success ? "Contact change request rejected." : "Error: Failed to reject request.";
             }
             catch (Exception ex)

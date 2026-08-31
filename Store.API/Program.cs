@@ -41,9 +41,12 @@ builder.Services.AddFido2(options =>
         foreach (var o in originConfig.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             origins.Add(o);
     }
-    // Always include known UI ports as fallbacks for development
-    origins.Add("https://localhost:7258");
-    origins.Add("http://localhost:5135");
+    // Include known UI ports as fallbacks only in development
+    if (builder.Environment.IsDevelopment())
+    {
+        origins.Add("https://localhost:7258");
+        origins.Add("http://localhost:5135");
+    }
     options.Origins = origins;
     options.TimestampDriftTolerance = 300000;
 });
@@ -120,6 +123,8 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy(PermissionKeys.AdminRoleMatrix, p => p.RequireClaim("perm", PermissionKeys.AdminRoleMatrix));
     options.AddPolicy(PermissionKeys.PaymentsRead, p => p.RequireClaim("perm", PermissionKeys.PaymentsRead));
     options.AddPolicy(PermissionKeys.AdminBranches, p => p.RequireClaim("perm", PermissionKeys.AdminBranches));
+    options.AddPolicy(PermissionKeys.AdminUsers, p => p.RequireClaim("perm", PermissionKeys.AdminUsers));
+    options.AddPolicy(PermissionKeys.AdminSettings, p => p.RequireClaim("perm", PermissionKeys.AdminSettings));
 });
 
 // ─── Rate Limiting ────────────────────────────────────────────────────────────
@@ -234,7 +239,17 @@ var app = builder.Build();
 // ═════════════════════════════════════════════════════════════════════════════
 
 if (app.Environment.IsDevelopment())
-    await app.Services.SeedStoreDatabaseAsync();
+{
+    try
+    {
+        await app.Services.SeedStoreDatabaseAsync();
+    }
+    catch (Exception ex)
+    {
+        var logger = app.Services.GetRequiredService<ILogger<Program>>();
+        logger.LogWarning(ex, "Could not complete database seeding on startup. Verify MySQL server is running at connection string.");
+    }
+}
 
 app.UseMiddleware<CorrelationIdMiddleware>();
 

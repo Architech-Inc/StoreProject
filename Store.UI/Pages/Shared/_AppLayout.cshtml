@@ -50,8 +50,9 @@
     var canPaymentsRead  = perms.Contains(PermissionKeys.PaymentsRead);
     var canAdminBranches = perms.Contains(PermissionKeys.AdminBranches);
     var canAdminRoles    = perms.Contains(PermissionKeys.AdminRoleMatrix);
+    var canAdminUsers    = perms.Contains(PermissionKeys.AdminUsers) || canAdminRoles;
     var hasOpsSection    = canInventoryRead || canPricingRead || canCashRead || canReportsRead || canPaymentsRead;
-    var hasAdminSection  = canAdminBranches || canAdminRoles;
+    var hasAdminSection  = canAdminBranches || canAdminRoles || canAdminUsers;
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -150,9 +151,10 @@
                                 <a class="nav-link" href="/BranchAdmin">Branch Admin</a>
                                 <a class="nav-link" href="/BranchDashboard">Branch Dashboard</a>
                             }
-                            @if (canAdminRoles)
+                            @if (canAdminRoles || canAdminUsers)
                             {
                                 <a class="nav-link" href="/Users">Users</a>
+                                <a class="nav-link" href="/ContactRequests">Contact Requests</a>
                                 <a class="nav-link" href="/Lookup">Lookup Data</a>
                                 <a class="nav-link" href="/RoleMatrix">Role Matrix</a>
                                 <a class="nav-link" href="/CommunicationLogs">Comm Logs</a>

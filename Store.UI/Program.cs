@@ -81,6 +81,7 @@ builder.Services.AddScoped<ILookupManager, LookupManager>();
 builder.Services.AddScoped<ICommunicationManager, CommunicationManager>();
 builder.Services.AddScoped<IBranchManager, BranchManager>();
 builder.Services.AddScoped<IPaymentsManager, PaymentsManager>();
+builder.Services.AddScoped<IContactRequestManager, ContactRequestManager>();
 
 var app = builder.Build();
 

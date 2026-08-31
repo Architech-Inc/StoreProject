@@ -129,6 +129,20 @@ public class BatchService : IBatchService
         return batch is null ? null : MapToDto(batch);
     }
 
+    public async Task<BatchDto?> GetByBatchNumberAsync(string batchNumber, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(batchNumber)) return null;
+        var target = batchNumber.Trim();
+
+        var batch = await _uow.Repository<Batch>().Query()
+            .AsNoTracking()
+            .Include(b => b.Item)
+                .ThenInclude(i => i.Category)
+            .FirstOrDefaultAsync(b => b.BatchNumber == target, ct);
+
+        return batch is null ? null : MapToDto(batch);
+    }
+
     public async Task<BatchDto> CreateAsync(CreateBatchRequest request)
     {
         var batch = new Batch

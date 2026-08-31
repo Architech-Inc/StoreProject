@@ -33,6 +33,7 @@ public class InvoiceService : IInvoiceService
             .Include(i => i.Sales).ThenInclude(s => s.Item).ThenInclude(it => it.Unit)
             .Include(i => i.Tenders)
             .AsNoTracking()
+            .AsSplitQuery()
             .FirstOrDefaultAsync(i => i.InvoiceId == invoiceId, ct);
 
         return invoice is null ? null : MapToDto(invoice);
@@ -128,7 +129,8 @@ public class InvoiceService : IInvoiceService
             .Include(i => i.Branch)
             .Include(i => i.Sales)
             .Include(i => i.Tenders)
-            .AsNoTracking();
+            .AsNoTracking()
+            .AsSplitQuery();
 
         if (!string.IsNullOrWhiteSpace(request.SearchTerm))
         {

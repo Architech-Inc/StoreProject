@@ -2,13 +2,14 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Store.API.Contracts;
 using Store.Models.DTOs.Common;
+using Store.Models.DTOs.Operations;
 using Store.Models.Interfaces.Services;
 
 namespace Store.API.Controllers;
 
 [Route("api/settings")]
 [ApiController]
-[Authorize(Roles = "Admin")]
+[Authorize(Policy = PermissionKeys.AdminSettings)]
 public class SystemSettingsController : ControllerBase
 {
     private readonly ISystemSettingService _systemSettings;

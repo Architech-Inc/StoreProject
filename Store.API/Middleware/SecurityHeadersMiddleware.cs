@@ -16,6 +16,8 @@ public class SecurityHeadersMiddleware
         headers.TryAdd("X-Frame-Options", "DENY");
         headers.TryAdd("Referrer-Policy", "strict-origin-when-cross-origin");
         headers.TryAdd("X-Permitted-Cross-Domain-Policies", "none");
+        headers.TryAdd("Content-Security-Policy", "default-src 'self'; frame-ancestors 'none';");
+        headers.TryAdd("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
 
         if (context.Request.IsHttps)
         {

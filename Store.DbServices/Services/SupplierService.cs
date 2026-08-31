@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Procurement;
 using Store.Models.Entities;
 using Store.Models.Entities.Contacts;
@@ -16,12 +17,7 @@ public class SupplierService : ISupplierService
 
     public async Task<List<SupplierDto>> GetAllAsync(string? search = null, string? city = null, string? country = null, string? sortBy = null)
     {
-        var query = _uow.Repository<Supplier>().Query()
-            .AsNoTracking()
-            .Include(s => s.Emails).ThenInclude(se => se.Email)
-            .Include(s => s.Phones).ThenInclude(sp => sp.Phone)
-            .Include(s => s.Locations).ThenInclude(sl => sl.Location).ThenInclude(l => l.City).ThenInclude(c => c.Region).ThenInclude(r => r.Country)
-            .AsQueryable();
+        var query = BuildBaseSupplierQuery();
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -56,6 +52,69 @@ public class SupplierService : ISupplierService
 
         var suppliers = await query.ToListAsync();
         return suppliers.Select(MapToDto).ToList();
+    }
+
+    public async Task<PagedResult<SupplierDto>> GetPagedAsync(PagedRequest request, CancellationToken ct = default)
+    {
+        var query = BuildBaseSupplierQuery();
+
+        if (!string.IsNullOrWhiteSpace(request.SearchTerm))
+        {
+            var s = request.SearchTerm.Trim().ToLower();
+            query = query.Where(x =>
+                x.Name.ToLower().Contains(s) ||
+                (x.RegistrationNumber != null && x.RegistrationNumber.ToLower().Contains(s)) ||
+                x.Emails.Any(e => e.Email != null && e.Email.Address.ToLower().Contains(s)) ||
+                x.Phones.Any(p => p.Phone != null && p.Phone.Number.ToLower().Contains(s))
+            );
+        }
+
+        var totalCount = await query.CountAsync(ct);
+
+        query = request.SortBy?.ToLowerInvariant() switch
+        {
+            "name_desc" => query.OrderByDescending(s => s.Name),
+            "date_asc" => query.OrderBy(s => s.DateCreated),
+            "date_desc" => query.OrderByDescending(s => s.DateCreated),
+            _ => query.OrderBy(s => s.Name)
+        };
+
+        var items = await query
+            .Skip((request.Page - 1) * request.PageSize)
+            .Take(request.PageSize)
+            .ToListAsync(ct);
+
+        return new PagedResult<SupplierDto>
+        {
+            Items = items.Select(MapToDto).ToList(),
+            TotalCount = totalCount,
+            Page = request.Page,
+            PageSize = request.PageSize
+        };
+    }
+
+    public async Task<SupplierDto?> GetByCodeOrNameAsync(string codeOrName, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(codeOrName)) return null;
+
+        var target = codeOrName.Trim().ToLower();
+        var query = BuildBaseSupplierQuery();
+
+        var supplier = await query.FirstOrDefaultAsync(x =>
+            (x.RegistrationNumber != null && x.RegistrationNumber.ToLower() == target) ||
+            x.Name.ToLower() == target, ct);
+
+        return supplier is null ? null : MapToDto(supplier);
+    }
+
+    private IQueryable<Supplier> BuildBaseSupplierQuery()
+    {
+        return _uow.Repository<Supplier>().Query()
+            .AsNoTracking()
+            .Include(s => s.Emails).ThenInclude(se => se.Email)
+            .Include(s => s.Phones).ThenInclude(sp => sp.Phone)
+            .Include(s => s.Locations).ThenInclude(sl => sl.Location).ThenInclude(l => l.City).ThenInclude(c => c.Region).ThenInclude(r => r.Country)
+            .AsQueryable();
     }
 
     public async Task<SupplierDto?> GetByIdAsync(Guid id)

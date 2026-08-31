@@ -12,6 +12,12 @@ services:
     volumes:
       - store-mysql-data:/var/lib/mysql
       - ./Database/migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u $$MYSQL_USER -p$$MYSQL_PASSWORD || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     networks:
       - store-network
 
@@ -24,6 +30,12 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
     volumes:
       - store-mongodb-data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --eval 'db.adminCommand(\"ping\")' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     networks:
       - store-network
 
@@ -39,21 +51,29 @@ services:
       - MongoDB__ConnectionString=${STORE_MONGO_CONNECTION_STRING}
       - Jwt__Key=${STORE_JWT_SECRET}
       - Payments__MoMoCallbackKey=${STORE_MOMO_CALLBACK_KEY}
-      - Cors__AllowedOrigins__0=http://store.157.173.112.19.nip.io:18080
-      - Cors__AllowedOrigins__1=https://store.157.173.112.19.nip.io:18443
+      - Cors__AllowedOrigins__0=http://${STORE_DOMAIN:-store.157.173.112.19.nip.io}:18080
+      - Cors__AllowedOrigins__1=https://${STORE_DOMAIN:-store.157.173.112.19.nip.io}:18443
     depends_on:
-      - store-mysql
-      - store-mongodb
+      store-mysql:
+        condition: service_healthy
+      store-mongodb:
+        condition: service_healthy
     volumes:
       - store-dataprotection-keys:/root/.aspnet/DataProtection-Keys
       - store-uploads:/app/Uploads
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     networks:
       - store-network
       - proxy-network
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=proxy-network"
-      - "traefik.http.routers.storeproject-storeapi.rule=Host(`api.store.157.173.112.19.nip.io`)"
+      - "traefik.http.routers.storeproject-storeapi.rule=Host(`${API_DOMAIN:-api.store.157.173.112.19.nip.io}`)"
       - "traefik.http.services.storeproject-storeapi.loadbalancer.server.port=8080"
 
   store-ui:
@@ -65,16 +85,25 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ApiSettings__InternalBaseUrl=http://store-api:8080
-      - ApiSettings__ExternalBaseUrl=http://api.store.157.173.112.19.nip.io:18080
+      - ApiSettings__ExternalBaseUrl=http://${API_DOMAIN:-api.store.157.173.112.19.nip.io}:18080
+    depends_on:
+      store-api:
+        condition: service_healthy
     volumes:
       - store-dataprotection-keys:/root/.aspnet/DataProtection-Keys
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     networks:
       - store-network
       - proxy-network
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=proxy-network"
-      - "traefik.http.routers.storeproject-storeui.rule=Host(`store.157.173.112.19.nip.io`)"
+      - "traefik.http.routers.storeproject-storeui.rule=Host(`${STORE_DOMAIN:-store.157.173.112.19.nip.io}`)"
       - "traefik.http.services.storeproject-storeui.loadbalancer.server.port=8080"
 
 volumes:

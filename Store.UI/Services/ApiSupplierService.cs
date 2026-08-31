@@ -1,3 +1,4 @@
+using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Procurement;
 using Store.Models.Interfaces.Services;
 
@@ -19,6 +20,30 @@ public class ApiSupplierService : ISupplierService
 
         var queryString = queryParams.Count > 0 ? "?" + string.Join("&", queryParams) : "";
         return await _client.GetAsync<List<SupplierDto>>($"/api/suppliers{queryString}") ?? new();
+    }
+
+    public async Task<PagedResult<SupplierDto>> GetPagedAsync(PagedRequest request, CancellationToken ct = default)
+    {
+        var queryParams = new List<string>
+        {
+            $"page={request.Page}",
+            $"pageSize={request.PageSize}"
+        };
+        if (!string.IsNullOrWhiteSpace(request.SearchTerm)) queryParams.Add($"searchTerm={Uri.EscapeDataString(request.SearchTerm)}");
+        if (!string.IsNullOrWhiteSpace(request.SortBy)) queryParams.Add($"sortBy={Uri.EscapeDataString(request.SortBy)}");
+
+        var queryString = "?" + string.Join("&", queryParams);
+        return await _client.GetAsync<PagedResult<SupplierDto>>($"/api/suppliers/paged{queryString}", ct) ?? new();
+    }
+
+    public async Task<SupplierDto?> GetByCodeOrNameAsync(string codeOrName, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(codeOrName)) return null;
+        var suppliers = await GetAllAsync(search: codeOrName);
+        var target = codeOrName.Trim().ToLower();
+        return suppliers.FirstOrDefault(s =>
+            (s.RegistrationNumber != null && s.RegistrationNumber.ToLower() == target) ||
+            s.Name.ToLower() == target);
     }
 
     public async Task<SupplierDto?> GetByIdAsync(Guid id)

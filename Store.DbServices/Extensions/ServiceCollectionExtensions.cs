@@ -22,10 +22,20 @@ public static class ServiceCollectionExtensions
         var connectionString = config.GetConnectionString("Default")
             ?? throw new InvalidOperationException("Connection string 'Default' is required.");
 
+        ServerVersion serverVersion;
+        try
+        {
+            serverVersion = ServerVersion.AutoDetect(connectionString);
+        }
+        catch
+        {
+            serverVersion = new MySqlServerVersion(new Version(8, 0, 36));
+        }
+
         services.AddDbContext<StoreDbContext>(options =>
             options.UseMySql(
                 connectionString,
-                ServerVersion.AutoDetect(connectionString),
+                serverVersion,
                 mySql => mySql.EnableRetryOnFailure(3)));
 
         // Repository + Unit of Work

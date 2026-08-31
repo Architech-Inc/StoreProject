@@ -39,7 +39,7 @@ public class CashVarianceService : ICashVarianceService
         };
     }
 
-    public async Task<List<CashVarianceDto>> GetAllAsync(CashVarianceStatus? status = null)
+    public async Task<List<CashVarianceDto>> GetAllAsync(CashVarianceStatus? status = null, DateTime? fromDate = null, DateTime? toDate = null)
     {
         var query = _uow.Repository<CashVarianceRecord>().Query()
             .AsNoTracking()
@@ -50,6 +50,15 @@ public class CashVarianceService : ICashVarianceService
 
         if (status.HasValue)
             query = query.Where(v => v.Status == status.Value);
+
+        if (fromDate.HasValue)
+            query = query.Where(v => v.DateCreated >= fromDate.Value.Date);
+
+        if (toDate.HasValue)
+        {
+            var end = toDate.Value.Date.AddDays(1).AddTicks(-1);
+            query = query.Where(v => v.DateCreated <= end);
+        }
 
         var rows = await query.OrderByDescending(v => v.DateCreated).ToListAsync();
         return rows.Select(MapToDto).ToList();

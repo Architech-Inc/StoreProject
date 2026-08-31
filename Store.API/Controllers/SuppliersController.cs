@@ -30,6 +30,14 @@ public class SuppliersController : ControllerBase
         return Ok(ApiResponse<List<SupplierDto>>.Ok(suppliers));
     }
 
+    [HttpGet("paged")]
+    [Authorize(Policy = PermissionKeys.InventoryRead)]
+    public async Task<IActionResult> GetPaged([FromQuery] PagedRequest request, CancellationToken ct)
+    {
+        var result = await _supplierService.GetPagedAsync(request, ct);
+        return Ok(ApiResponse<PagedResult<SupplierDto>>.Ok(result));
+    }
+
     [HttpGet("metrics")]
     [Authorize(Policy = PermissionKeys.InventoryRead)]
     public async Task<IActionResult> GetMetrics()

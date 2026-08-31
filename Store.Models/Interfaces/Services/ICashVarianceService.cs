@@ -7,7 +7,7 @@ public interface ICashVarianceService
 {
     Task<CashVarianceMetricsDto> GetMetricsAsync();
 
-    Task<List<CashVarianceDto>> GetAllAsync(CashVarianceStatus? status = null);
+    Task<List<CashVarianceDto>> GetAllAsync(CashVarianceStatus? status = null, DateTime? fromDate = null, DateTime? toDate = null);
 
     Task<CashVarianceDto?> GetByIdAsync(int id);
 

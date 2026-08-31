@@ -286,10 +286,7 @@ public class ScannerController : ControllerBase
         }
 
         // 5. Check Suppliers (by RegistrationNumber or Name)
-        var suppliers = await _supplierService.GetAllAsync();
-        var matchedSupplier = suppliers?.FirstOrDefault(s =>
-            string.Equals(s.RegistrationNumber, trimmedCode, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(s.Name, trimmedCode, StringComparison.OrdinalIgnoreCase));
+        var matchedSupplier = await _supplierService.GetByCodeOrNameAsync(trimmedCode, ct);
 
         if (matchedSupplier != null)
         {
@@ -332,9 +329,7 @@ public class ScannerController : ControllerBase
         }
 
         // 6. Check Batches (by BatchNumber)
-        var batches = await _batchService.GetAllAsync();
-        var matchedBatch = batches?.FirstOrDefault(b =>
-            string.Equals(b.BatchNumber, trimmedCode, StringComparison.OrdinalIgnoreCase));
+        var matchedBatch = await _batchService.GetByBatchNumberAsync(trimmedCode, ct);
 
         if (matchedBatch != null)
         {

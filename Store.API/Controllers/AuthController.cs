@@ -125,7 +125,12 @@ public class AuthController : ControllerBase
     [Microsoft.AspNetCore.Authorization.AllowAnonymous]
     public async Task<IActionResult> GetAvatar(string username, CancellationToken ct)
     {
-        var avatarUrl = await _dispatcher.SendAsync(new GetUserAvatarQuery(username), ct);
+        if (string.IsNullOrWhiteSpace(username) || username.Length > 100)
+        {
+            return Ok(ApiResponse<string>.Ok("/images/admin.png"));
+        }
+
+        var avatarUrl = await _dispatcher.SendAsync(new GetUserAvatarQuery(username.Trim()), ct);
         // We return generic admin.png if user has no custom avatar or user doesn't exist
         return Ok(ApiResponse<string>.Ok(avatarUrl ?? "/images/admin.png"));
     }

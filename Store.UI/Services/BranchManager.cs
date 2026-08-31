@@ -48,6 +48,12 @@ public class BranchManager : IBranchManager
         return await _apiClient.DeleteAsync($"/api/admin/branches/assignments/{assignmentId}", ct);
     }
 
+    public async Task<BranchPerformanceDto?> GetPerformanceAsync(int branchId, DateTime fromUtc, DateTime toUtc, CancellationToken ct = default)
+    {
+        var url = $"/api/admin/branches/{branchId}/performance?from={fromUtc:o}&to={toUtc:o}";
+        return await _apiClient.GetAsync<BranchPerformanceDto>(url, ct);
+    }
+
     public async Task<(bool CanDeactivate, string? Reason)> ValidateDeactivationAsync(int branchId, CancellationToken ct = default)
     {
         try

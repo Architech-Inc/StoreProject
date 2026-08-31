@@ -50,6 +50,8 @@ public class SecurityMiddlewareTests
         Assert.Equal("DENY", context.Response.Headers["X-Frame-Options"].ToString());
         Assert.Equal("strict-origin-when-cross-origin", context.Response.Headers["Referrer-Policy"].ToString());
         Assert.Equal("none", context.Response.Headers["X-Permitted-Cross-Domain-Policies"].ToString());
+        Assert.Equal("default-src 'self'; frame-ancestors 'none';", context.Response.Headers["Content-Security-Policy"].ToString());
+        Assert.Equal("camera=(), microphone=(), geolocation=()", context.Response.Headers["Permissions-Policy"].ToString());
         Assert.Equal("max-age=31536000; includeSubDomains", context.Response.Headers["Strict-Transport-Security"].ToString());
     }
 }
