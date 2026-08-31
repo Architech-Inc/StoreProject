@@ -105,4 +105,9 @@ public class ApiInvoiceService : IInvoiceService
         var result = await _client.PostAsync<InvoiceDto>($"/api/invoices/{invoiceId}/refund", request, ct);
         return result ?? throw new InvalidOperationException("Failed to refund invoice.");
     }
+
+    public async Task<PublicReceiptDto?> GetPublicReceiptAsync(Guid invoiceId, CancellationToken ct = default)
+    {
+        return await _client.GetAsync<PublicReceiptDto>($"/api/invoices/public/{invoiceId}", ct);
+    }
 }
