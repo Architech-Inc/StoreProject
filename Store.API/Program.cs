@@ -155,6 +155,15 @@ builder.Services.AddRateLimiter(options =>
         limiter.QueueLimit = 0;
     });
 
+    // Dedicated strict limit on password recovery endpoints
+    options.AddFixedWindowLimiter("password-recovery", limiter =>
+    {
+        limiter.PermitLimit = 5;
+        limiter.Window = TimeSpan.FromMinutes(15);
+        limiter.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        limiter.QueueLimit = 0;
+    });
+
     // General API limit
     options.AddFixedWindowLimiter("general", limiter =>
     {

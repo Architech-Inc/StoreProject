@@ -16,11 +16,13 @@ public class UserService : IUserService
 {
     private readonly IUserAggregateRepository _users;
     private readonly StoreDbContext _db;
+    private readonly INotificationService? _notificationService;
 
-    public UserService(IUserAggregateRepository users, StoreDbContext db)
+    public UserService(IUserAggregateRepository users, StoreDbContext db, INotificationService? notificationService = null)
     {
         _users = users;
         _db = db;
+        _notificationService = notificationService;
     }
 
     public async Task<UserDto?> GetByIdAsync(Guid userId, CancellationToken ct = default)
@@ -342,6 +344,21 @@ public class UserService : IUserService
 
         _db.ContactChangeRequests.Add(changeRequest);
         await _db.SaveChangesAsync(ct);
+
+        // Dispatch verification notification (Email or SMS)
+        if (_notificationService != null)
+        {
+            if (!string.IsNullOrWhiteSpace(request.NewEmail))
+            {
+                var body = $"Please verify your new email address for ClexAn Foods using this verification link: /VerifyContact?token={changeRequest.VerificationToken}\nOr verification code: {changeRequest.VerificationToken}";
+                await _notificationService.SendEmailAsync(request.NewEmail, "ClexAn - Verify Your Contact Information", body, userId, ct);
+            }
+            else if (!string.IsNullOrWhiteSpace(request.NewPhone))
+            {
+                var msg = $"ClexAn Foods verification token for your contact change request: {changeRequest.VerificationToken}";
+                await _notificationService.SendSmsAsync(request.NewPhone, msg, userId, ct);
+            }
+        }
 
         return new ContactChangeRequestDto
         {

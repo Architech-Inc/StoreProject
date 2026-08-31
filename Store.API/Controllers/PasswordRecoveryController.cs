@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Store.Models.DTOs.Auth;
 using Store.Models.Interfaces.Services;
 using Microsoft.Extensions.Configuration;
@@ -9,6 +10,7 @@ namespace Store.API.Controllers;
 [Route("api/auth/recovery")]
 [ApiController]
 [AllowAnonymous]
+[EnableRateLimiting("password-recovery")]
 public class PasswordRecoveryController : ControllerBase
 {
     private readonly IPasswordRecoveryService _passwordRecoveryService;

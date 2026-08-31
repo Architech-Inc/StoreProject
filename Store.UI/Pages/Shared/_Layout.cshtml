@@ -23,7 +23,7 @@
     <link rel="stylesheet" href="~/css/modules/pricing-promotions.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/modules/admin-governance.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/pwa.css" asp-append-version="true" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" integrity="sha512-W6P+S5PCk5YOIwQTSmqwxTHUmysreUpAqNAEDLf5C69oc7W9NExNzKgWcxUk9QLGKsu1307hHj8DC57AUWePCw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body data-authenticated="@(!string.IsNullOrWhiteSpace(Context.Session.GetString("access_token")) ? "true" : "false")">
@@ -57,7 +57,9 @@
         <div class="modal" role="dialog" aria-modal="true" style="max-width: 600px; width: 90%;">
             <div class="modal-head">
                 <h3>Crop Thumbnail</h3>
-                <button type="button" class="btn-close" id="btnCancelCrop" aria-label="Close">×</button>
+                <button type="button" class="btn-close" id="btnCancelCrop" aria-label="Close">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
             </div>
             <div style="max-height: 60vh; overflow: hidden; background: #000; text-align: center; margin-bottom: 15px;">
                 <img id="cropperImage" src="" style="max-width: 100%; display: block;" />
@@ -73,14 +75,16 @@
     <div class="modal-overlay" id="globalImageViewerModal" hidden style="z-index: var(--z-image-viewer, 10000);">
         <div class="modal" role="dialog" aria-modal="true" style="max-width: 90vw; width: max-content; background: transparent; box-shadow: none; padding: 0;">
             <div style="position: relative; display: inline-block;">
-                <button type="button" class="btn-close" onclick="closeImageViewer()" aria-label="Close" style="position: absolute; top: -40px; right: 0; color: white; font-size: 2rem; background: transparent; border: none; cursor: pointer;">×</button>
+                <button type="button" class="btn-close" onclick="closeImageViewer()" aria-label="Close" style="position: absolute; top: -40px; right: 0; color: white; font-size: 2rem; background: transparent; border: none; cursor: pointer;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
                 <img id="globalImageViewerImage" src="" alt="Full view" style="max-width: 90vw; max-height: 90vh; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: block;" />
             </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.1/dist/browser-image-compression.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.1/dist/browser-image-compression.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js" integrity="sha512-6lplKUSl86rUVprDIjiW8DuOniNX8UDoRATqZSxt/7X6zFDRJt3qmObTtA1Yot080bQFnScqQU++qKQE37X95A==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="~/js/pwa-install.js" asp-append-version="true"></script>
     @if (TempData["StatusMessage"] is string successMsg)
