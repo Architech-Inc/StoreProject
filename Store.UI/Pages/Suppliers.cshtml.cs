@@ -86,14 +86,21 @@ public class SuppliersModel : SecurePageModel
     public IEnumerable<EmailType> EmailTypes { get; } = Enum.GetValues<EmailType>();
     public IEnumerable<PhoneType> PhoneTypes { get; } = Enum.GetValues<PhoneType>();
 
+    private readonly ISupplierService _supplierService;
+    private readonly IApiClientService _apiClient;
+    private readonly IFileService _fileService;
+    private readonly ILogger<SuppliersModel> _logger;
+
     public SuppliersModel(
         ISupplierService supplierService,
         IApiClientService apiClient,
-        IFileService fileService)
+        IFileService fileService,
+        ILogger<SuppliersModel> logger)
     {
         _supplierService = supplierService;
         _apiClient = apiClient;
         _fileService = fileService;
+        _logger = logger;
     }
 
     public async Task<IActionResult> OnGetAsync(CancellationToken ct = default)
@@ -238,6 +245,7 @@ public class SuppliersModel : SecurePageModel
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to create supplier with name '{SupplierName}'", CreateName);
             StatusMessage = $"Error: Failed to create supplier ({ex.Message}).";
             return RedirectToPage();
         }

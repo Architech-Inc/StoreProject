@@ -271,12 +271,16 @@ public class SupplierService : ISupplierService
         {
             foreach (var emailReq in request.Emails)
             {
-                var email = await GetOrCreateEmailAsync(emailReq.Email, emailReq.EmailType);
-                supplier.Emails.Add(new SupplierEmail
+                if (!string.IsNullOrWhiteSpace(emailReq.Email))
                 {
-                    EmailId = email.EmailId,
-                    IsPrimary = emailReq.IsPrimary
-                });
+                    var email = await GetOrCreateEmailAsync(emailReq.Email, emailReq.EmailType);
+                    supplier.Emails.Add(new SupplierEmail
+                    {
+                        SupplierId = supplier.SupplierId,
+                        EmailId = email.EmailId,
+                        IsPrimary = emailReq.IsPrimary
+                    });
+                }
             }
         }
 
@@ -285,12 +289,16 @@ public class SupplierService : ISupplierService
         {
             foreach (var phoneReq in request.Phones)
             {
-                var phone = await GetOrCreatePhoneAsync(phoneReq.PhoneNumber, phoneReq.PhoneType);
-                supplier.Phones.Add(new SupplierPhone
+                if (!string.IsNullOrWhiteSpace(phoneReq.PhoneNumber))
                 {
-                    PhoneId = phone.PhoneId,
-                    IsPrimary = phoneReq.IsPrimary
-                });
+                    var phone = await GetOrCreatePhoneAsync(phoneReq.PhoneNumber, phoneReq.PhoneType);
+                    supplier.Phones.Add(new SupplierPhone
+                    {
+                        SupplierId = supplier.SupplierId,
+                        PhoneId = phone.PhoneId,
+                        IsPrimary = phoneReq.IsPrimary
+                    });
+                }
             }
         }
 
@@ -299,18 +307,22 @@ public class SupplierService : ISupplierService
         {
             foreach (var locReq in request.Locations)
             {
-                var location = await GetOrCreateLocationAsync(locReq);
-                supplier.Locations.Add(new SupplierLocation
+                if (!string.IsNullOrWhiteSpace(locReq.AddressLine1) || !string.IsNullOrWhiteSpace(locReq.City))
                 {
-                    LocationId = location.LocationId,
-                    IsPrimary = locReq.IsPrimary
-                });
+                    var location = await GetOrCreateLocationAsync(locReq);
+                    supplier.Locations.Add(new SupplierLocation
+                    {
+                        SupplierId = supplier.SupplierId,
+                        LocationId = location.LocationId,
+                        IsPrimary = locReq.IsPrimary
+                    });
+                }
             }
         }
 
         await _uow.Repository<Supplier>().AddAsync(supplier);
         await _uow.SaveChangesAsync();
-        return MapToDto(supplier);
+        return (await GetByIdAsync(supplier.SupplierId)) ?? MapToDto(supplier);
     }
 
     public async Task<SupplierDto?> UpdateAsync(Guid id, UpdateSupplierRequest request)
@@ -336,12 +348,16 @@ public class SupplierService : ISupplierService
             supplier.Emails.Clear();
             foreach (var emailReq in request.Emails)
             {
-                var email = await GetOrCreateEmailAsync(emailReq.Email, emailReq.EmailType);
-                supplier.Emails.Add(new SupplierEmail
+                if (!string.IsNullOrWhiteSpace(emailReq.Email))
                 {
-                    EmailId = email.EmailId,
-                    IsPrimary = emailReq.IsPrimary
-                });
+                    var email = await GetOrCreateEmailAsync(emailReq.Email, emailReq.EmailType);
+                    supplier.Emails.Add(new SupplierEmail
+                    {
+                        SupplierId = supplier.SupplierId,
+                        EmailId = email.EmailId,
+                        IsPrimary = emailReq.IsPrimary
+                    });
+                }
             }
         }
 
@@ -350,12 +366,16 @@ public class SupplierService : ISupplierService
             supplier.Phones.Clear();
             foreach (var phoneReq in request.Phones)
             {
-                var phone = await GetOrCreatePhoneAsync(phoneReq.PhoneNumber, phoneReq.PhoneType);
-                supplier.Phones.Add(new SupplierPhone
+                if (!string.IsNullOrWhiteSpace(phoneReq.PhoneNumber))
                 {
-                    PhoneId = phone.PhoneId,
-                    IsPrimary = phoneReq.IsPrimary
-                });
+                    var phone = await GetOrCreatePhoneAsync(phoneReq.PhoneNumber, phoneReq.PhoneType);
+                    supplier.Phones.Add(new SupplierPhone
+                    {
+                        SupplierId = supplier.SupplierId,
+                        PhoneId = phone.PhoneId,
+                        IsPrimary = phoneReq.IsPrimary
+                    });
+                }
             }
         }
 
@@ -364,18 +384,22 @@ public class SupplierService : ISupplierService
             supplier.Locations.Clear();
             foreach (var locReq in request.Locations)
             {
-                var location = await GetOrCreateLocationAsync(locReq);
-                supplier.Locations.Add(new SupplierLocation
+                if (!string.IsNullOrWhiteSpace(locReq.AddressLine1) || !string.IsNullOrWhiteSpace(locReq.City))
                 {
-                    LocationId = location.LocationId,
-                    IsPrimary = locReq.IsPrimary
-                });
+                    var location = await GetOrCreateLocationAsync(locReq);
+                    supplier.Locations.Add(new SupplierLocation
+                    {
+                        SupplierId = supplier.SupplierId,
+                        LocationId = location.LocationId,
+                        IsPrimary = locReq.IsPrimary
+                    });
+                }
             }
         }
 
         _uow.Repository<Supplier>().Update(supplier);
         await _uow.SaveChangesAsync();
-        return MapToDto(supplier);
+        return (await GetByIdAsync(supplier.SupplierId)) ?? MapToDto(supplier);
     }
 
     public async Task<bool> DeleteAsync(Guid id)
@@ -433,18 +457,20 @@ public class SupplierService : ISupplierService
 
     private async Task<Email> GetOrCreateEmailAsync(string address, EmailType type)
     {
+        var trimmed = address.Trim();
         var email = await _uow.Repository<Email>().Query()
-            .FirstOrDefaultAsync(e => e.Address == address.Trim());
+            .FirstOrDefaultAsync(e => e.Address == trimmed);
 
         if (email is null)
         {
             email = new Email
             {
-                Address = address.Trim(),
+                Address = trimmed,
                 Type = type,
                 IsVerified = false
             };
             await _uow.Repository<Email>().AddAsync(email);
+            await _uow.SaveChangesAsync();
         }
 
         return email;
@@ -452,17 +478,19 @@ public class SupplierService : ISupplierService
 
     private async Task<Phone> GetOrCreatePhoneAsync(string number, PhoneType type)
     {
+        var trimmed = number.Trim();
         var phone = await _uow.Repository<Phone>().Query()
-            .FirstOrDefaultAsync(p => p.Number == number.Trim());
+            .FirstOrDefaultAsync(p => p.Number == trimmed);
 
         if (phone is null)
         {
             phone = new Phone
             {
-                Number = number.Trim(),
+                Number = trimmed,
                 Type = type
             };
             await _uow.Repository<Phone>().AddAsync(phone);
+            await _uow.SaveChangesAsync();
         }
 
         return phone;
@@ -470,18 +498,18 @@ public class SupplierService : ISupplierService
 
     private async Task<Location> GetOrCreateLocationAsync(CreateSupplierLocationRequest locReq)
     {
-        // Find or create city
+        var cityName = string.IsNullOrWhiteSpace(locReq.City) ? "Default" : locReq.City.Trim();
         var city = await _uow.Repository<City>().Query()
-            .FirstOrDefaultAsync(c => c.Name == locReq.City.Trim());
+            .FirstOrDefaultAsync(c => c.Name == cityName);
 
         if (city is null)
         {
-            // For simplicity, create a default country/region if none exists.
             var country = await _uow.Repository<Country>().Query().FirstOrDefaultAsync(c => c.Name == "Default");
             if (country is null)
             {
                 country = new Country { Name = "Default" };
                 await _uow.Repository<Country>().AddAsync(country);
+                await _uow.SaveChangesAsync();
             }
 
             var region = await _uow.Repository<Region>().Query().FirstOrDefaultAsync(r => r.Name == "Default" && r.CountryId == country.CountryId);
@@ -489,26 +517,30 @@ public class SupplierService : ISupplierService
             {
                 region = new Region { Name = "Default", CountryId = country.CountryId };
                 await _uow.Repository<Region>().AddAsync(region);
+                await _uow.SaveChangesAsync();
             }
 
-            city = new City { Name = locReq.City.Trim(), RegionId = region.RegionId };
+            city = new City { Name = cityName, RegionId = region.RegionId };
             await _uow.Repository<City>().AddAsync(city);
+            await _uow.SaveChangesAsync();
         }
 
+        var street = string.IsNullOrWhiteSpace(locReq.AddressLine1) ? "Default" : locReq.AddressLine1.Trim();
         var location = await _uow.Repository<Location>().Query()
             .FirstOrDefaultAsync(l =>
-                l.StreetAddress == locReq.AddressLine1.Trim() &&
+                l.StreetAddress == street &&
                 l.CityId == city.CityId);
 
         if (location is null)
         {
             location = new Location
             {
-                StreetAddress = locReq.AddressLine1.Trim(),
+                StreetAddress = street,
                 PostalCode = locReq.PostalCode?.Trim(),
                 CityId = city.CityId
             };
             await _uow.Repository<Location>().AddAsync(location);
+            await _uow.SaveChangesAsync();
         }
 
         return location;

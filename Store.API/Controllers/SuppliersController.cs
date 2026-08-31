@@ -72,7 +72,8 @@ public class SuppliersController : ControllerBase
     [Authorize(Policy = PermissionKeys.InventoryWrite)]
     public async Task<IActionResult> Create([FromBody] CreateSupplierRequest request)
     {
-        var userIdClaim = User.FindFirst("uid")?.Value;
+        var userIdClaim = User.FindFirst("uid")?.Value 
+            ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         if (!Guid.TryParse(userIdClaim, out var userId))
             return Unauthorized();
 
