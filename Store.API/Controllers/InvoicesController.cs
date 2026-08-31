@@ -40,6 +40,15 @@ public class InvoicesController : ControllerBase
         return Ok(ApiResponse<InvoiceDto>.Ok(invoice));
     }
 
+    [HttpGet("public/{id:guid}")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetPublicReceipt(Guid id, CancellationToken ct)
+    {
+        var receipt = await _invoiceService.GetPublicReceiptAsync(id, ct);
+        if (receipt is null) return NotFound(ApiResponse<object>.Fail("Receipt not found or invalid reference."));
+        return Ok(ApiResponse<PublicReceiptDto>.Ok(receipt));
+    }
+
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateInvoiceRequest request, CancellationToken ct)
     {

@@ -1,0 +1,173 @@
+@page "/Receipt/{id:guid?}"
+@model StoreUI.Pages.ReceiptModel
+@{
+    Layout = null;
+    var r = Model.Receipt;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#090d16" />
+    <title>@(r != null ? $"{r.ReceiptNumber} - ClexAn Receipt" : "Digital Receipt - ClexAn Foods")</title>
+    <link rel="icon" type="image/png" href="~/images/clarkstore.png" />
+    <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/receipt-portal.css" asp-append-version="true" />
+</head>
+<body class="receipt-portal-body">
+
+    <div class="receipt-portal-nav">
+        <a href="/" class="receipt-nav-brand">
+            <img src="~/images/clarkstore.png" alt="ClexAn Logo" />
+            <span>ClexAn Foods</span>
+        </a>
+        @if (r != null)
+        {
+            <div class="receipt-actions-bar">
+                <button type="button" class="btn-receipt-action" onclick="shareReceipt()" title="Share Receipt">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+                    Share
+                </button>
+                <button type="button" class="btn-receipt-action primary" onclick="window.print()" title="Print or Save as PDF">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                    Print / PDF
+                </button>
+            </div>
+        }
+    </div>
+
+    @if (r != null)
+    {
+        <main class="receipt-paper-card" role="main">
+            <div class="receipt-header-center">
+                <h1 class="receipt-store-title">@r.StoreName</h1>
+                <p class="receipt-store-meta">@r.StoreAddress</p>
+                <p class="receipt-store-meta">Tel: @r.StorePhone | Tax ID: @r.StoreTaxId</p>
+                <p class="receipt-store-meta">Branch: @r.BranchName</p>
+                <div class="receipt-seal-badge">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                    Official Verified E-Receipt
+                </div>
+            </div>
+
+            <div class="receipt-info-grid">
+                <div class="receipt-info-row">
+                    <span class="receipt-info-label">Receipt #</span>
+                    <span class="receipt-info-val">@r.ReceiptNumber</span>
+                </div>
+                <div class="receipt-info-row text-right">
+                    <span class="receipt-info-label">Date & Time</span>
+                    <span class="receipt-info-val">@r.DateCreated.ToString("yyyy-MM-dd HH:mm")</span>
+                </div>
+                <div class="receipt-info-row">
+                    <span class="receipt-info-label">Cashier</span>
+                    <span class="receipt-info-val">@r.CashierName</span>
+                </div>
+                <div class="receipt-info-row text-right">
+                    <span class="receipt-info-label">Customer</span>
+                    <span class="receipt-info-val">@r.CustomerName</span>
+                </div>
+            </div>
+
+            <table class="receipt-items-table" aria-label="Receipt Items">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th class="text-right">Qty</th>
+                        <th class="text-right">Price</th>
+                        <th class="text-right">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var line in r.Lines)
+                    {
+                        <tr>
+                            <td>
+                                <div class="receipt-item-desc">@line.ItemName</div>
+                                @if (line.DiscountAmount > 0)
+                                {
+                                    <div class="receipt-item-discount">-@line.DiscountAmount.ToString("N0") XAF promo</div>
+                                }
+                            </td>
+                            <td class="text-right receipt-item-qty">@line.Quantity</td>
+                            <td class="text-right">@line.UnitPrice.ToString("N0")</td>
+                            <td class="text-right"><strong>@line.LineTotal.ToString("N0")</strong></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <div class="receipt-totals">
+                <div class="receipt-total-row">
+                    <span>Subtotal:</span>
+                    <span>@r.SubtotalAmount.ToString("N0") XAF</span>
+                </div>
+                @if (r.DiscountAmount > 0)
+                {
+                    <div class="receipt-total-row" style="color: #dc2626;">
+                        <span>Total Discounts:</span>
+                        <span>-@r.DiscountAmount.ToString("N0") XAF</span>
+                    </div>
+                }
+                <div class="receipt-total-row grand-total">
+                    <span>TOTAL DUE:</span>
+                    <span>@r.TotalAmount.ToString("N0") XAF</span>
+                </div>
+                <div class="receipt-tender-row">
+                    <span>Payment Method:</span>
+                    <span>@r.PaymentMethod</span>
+                </div>
+                <div class="receipt-tender-row">
+                    <span>Amount Tendered:</span>
+                    <span>@r.AmountTendered.ToString("N0") XAF</span>
+                </div>
+                <div class="receipt-tender-row">
+                    <span>Change Returned:</span>
+                    <span>@r.ChangeGiven.ToString("N0") XAF</span>
+                </div>
+            </div>
+
+            <div class="receipt-footer-center">
+                <p class="receipt-thankyou">Thank you for shopping with ClexAn!</p>
+                <p class="receipt-store-meta">Goods sold in good condition are subject to store return policy.</p>
+
+                <div class="receipt-barcode-wrap">
+                    <div class="receipt-barcode-lines"></div>
+                    <span>*@r.ReceiptNumber*</span>
+                </div>
+
+                <div class="receipt-security-sig">
+                    Auth Sig: <code>@r.VerificationSignature</code>
+                </div>
+            </div>
+        </main>
+    }
+    else
+    {
+        <div class="receipt-not-found">
+            <div class="receipt-not-found-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            </div>
+            <h3>Receipt Not Found</h3>
+            <p>The receipt identifier provided is invalid or has expired from public view. Please check your QR code or contact store customer service.</p>
+            <a href="/" class="btn-receipt-action primary" style="margin-top: 16px;">Back to Home</a>
+        </div>
+    }
+
+    <script>
+    function shareReceipt() {
+        if (navigator.share) {
+            navigator.share({
+                title: 'ClexAn Receipt @r?.ReceiptNumber',
+                text: 'Digital receipt from ClexAn Foods (@r?.TotalAmount.ToString("N0") XAF)',
+                url: window.location.href
+            }).catch(() => {});
+        } else {
+            navigator.clipboard.writeText(window.location.href);
+            alert('Receipt link copied to clipboard!');
+        }
+    }
+    </script>
+</body>
+</html>

@@ -151,3 +151,37 @@ public class RefundLineRequest
     public int Quantity { get; set; }
 }
 
+public class PublicReceiptDto
+{
+    public Guid InvoiceId { get; set; }
+    public string ReceiptNumber => $"REC-{InvoiceId.ToString()[..8].ToUpperInvariant()}";
+    public string StoreName { get; set; } = "ClexAn Supermarket & Retail";
+    public string? StoreAddress { get; set; } = "Boulevard de la Liberté, Akwa, Douala";
+    public string? StorePhone { get; set; } = "+237 670 00 00 00";
+    public string? StoreTaxId { get; set; } = "M052014125896P";
+    public string? BranchName { get; set; }
+    public string? CashierName { get; set; }
+    public string? CustomerName { get; set; }
+    public decimal SubtotalAmount { get; set; }
+    public decimal DiscountAmount { get; set; }
+    public decimal TaxAmount { get; set; }
+    public decimal TotalAmount { get; set; }
+    public decimal AmountTendered { get; set; }
+    public decimal ChangeGiven { get; set; }
+    public string PaymentMethod { get; set; } = "Cash";
+    public string Status { get; set; } = "Completed";
+    public DateTime DateCreated { get; set; }
+    public string VerificationSignature { get; set; } = string.Empty;
+    public List<PublicReceiptLineDto> Lines { get; set; } = new();
+}
+
+public class PublicReceiptLineDto
+{
+    public string ItemName { get; set; } = string.Empty;
+    public int Quantity { get; set; }
+    public decimal UnitPrice { get; set; }
+    public decimal DiscountAmount { get; set; }
+    public decimal LineTotal { get; set; }
+}
+
+

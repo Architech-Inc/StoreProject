@@ -13,5 +13,6 @@ public interface IInvoiceService
     Task<bool> VoidInvoiceAsync(Guid invoiceId, Guid? actingUserId, string? reason, CancellationToken ct = default);
     Task<InvoiceDto?> RefundInvoiceAsync(Guid invoiceId, RefundInvoiceRequest request, Guid? actingUserId, CancellationToken ct = default);
     Task<InvoiceTenderDto> AddTenderAsync(Guid invoiceId, AddTenderRequest request, CancellationToken ct = default);
+    Task<PublicReceiptDto?> GetPublicReceiptAsync(Guid invoiceId, CancellationToken ct = default);
 }
 

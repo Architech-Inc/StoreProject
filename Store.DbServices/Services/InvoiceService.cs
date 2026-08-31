@@ -39,6 +39,56 @@ public class InvoiceService : IInvoiceService
         return invoice is null ? null : MapToDto(invoice);
     }
 
+    public async Task<PublicReceiptDto?> GetPublicReceiptAsync(Guid invoiceId, CancellationToken ct = default)
+    {
+        var invoice = await _uow.Repository<Invoice>().Query()
+            .Include(i => i.Customer)
+            .Include(i => i.User).ThenInclude(u => u!.Employee)
+            .Include(i => i.Branch)
+            .Include(i => i.Sales).ThenInclude(s => s.Item)
+            .Include(i => i.Tenders)
+            .AsNoTracking()
+            .AsSplitQuery()
+            .FirstOrDefaultAsync(i => i.InvoiceId == invoiceId, ct);
+
+        if (invoice == null) return null;
+
+        var cashierName = invoice.User?.Employee?.FirstName ?? invoice.User?.Username ?? "Staff Cashier";
+        var customerName = invoice.Customer?.FullName ?? "Walk-in Customer";
+        var subtotal = invoice.Sales.Sum(s => s.Quantity * s.UnitPrice);
+        var discount = invoice.Sales.Sum(s => (s.DiscountAmount ?? 0) * s.Quantity);
+
+        var rawSignature = $"{invoice.InvoiceId}:{invoice.TotalAmount}:{invoice.DateCreated:O}";
+        var hashBytes = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(rawSignature));
+        var verificationSig = Convert.ToHexString(hashBytes)[..16];
+
+        return new PublicReceiptDto
+        {
+            InvoiceId = invoice.InvoiceId,
+            BranchName = invoice.Branch?.Name ?? "Main Store - Akwa Douala",
+            CashierName = cashierName,
+            CustomerName = customerName,
+            SubtotalAmount = subtotal,
+            DiscountAmount = discount,
+            TaxAmount = 0m,
+            TotalAmount = invoice.TotalAmount,
+            AmountTendered = invoice.AmountTendered,
+            ChangeGiven = invoice.ChangeGiven,
+            PaymentMethod = invoice.PaymentType.ToString(),
+            Status = invoice.IsPaid ? "Completed" : "Pending",
+            DateCreated = invoice.DateCreated,
+            VerificationSignature = verificationSig,
+            Lines = invoice.Sales.Select(s => new PublicReceiptLineDto
+            {
+                ItemName = s.Item?.Name ?? "Item",
+                Quantity = s.Quantity,
+                UnitPrice = s.UnitPrice,
+                DiscountAmount = s.DiscountAmount ?? 0,
+                LineTotal = s.LineTotal
+            }).ToList()
+        };
+    }
+
     public async Task<PagedResult<InvoiceDto>> GetAllAsync(PagedRequest request, CancellationToken ct = default)
     {
         var invReq = request as InvoicePagedRequest ?? new InvoicePagedRequest
