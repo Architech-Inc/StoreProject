@@ -1,0 +1,114 @@
+services:
+  {{SLUG}}-mysql:
+    image: mysql:8.0
+    container_name: {{SLUG}}-mysql
+    restart: always
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: {{MYSQL_ROOT_PASSWORD}}
+      MYSQL_DATABASE: {{MYSQL_DATABASE}}
+      MYSQL_USER: {{MYSQL_USER}}
+      MYSQL_PASSWORD: {{MYSQL_PASSWORD}}
+    volumes:
+      - {{SLUG}}_mysql_data:/var/lib/mysql
+      - ../Database/migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u $$MYSQL_USER -p$$MYSQL_PASSWORD || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - {{SLUG}}_net
+
+  {{SLUG}}-mongodb:
+    image: mongo:latest
+    container_name: {{SLUG}}-mongodb
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: {{MONGO_USER}}
+      MONGO_INITDB_ROOT_PASSWORD: {{MONGO_PASSWORD}}
+    volumes:
+      - {{SLUG}}_mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --eval 'db.adminCommand(\"ping\")' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - {{SLUG}}_net
+
+  {{SLUG}}-api:
+    image: {{STORE_API_IMAGE}}
+    container_name: {{SLUG}}-api
+    restart: always
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__Default=Server={{SLUG}}-mysql;Port=3306;Database={{MYSQL_DATABASE}};User Id={{MYSQL_USER}};Password={{MYSQL_PASSWORD}};
+      - MongoDB__ConnectionString=mongodb://{{MONGO_USER}}:{{MONGO_PASSWORD}}@{{SLUG}}-mongodb:27017/?authSource=admin
+      - Jwt__Key={{JWT_SECRET}}
+      - Payments__MoMoCallbackKey={{MOMO_CALLBACK_KEY}}
+      - Cors__AllowedOrigins__0=http://{{SLUG}}.{{ROOT_DOMAIN}}:18080
+      - Cors__AllowedOrigins__1=https://{{SLUG}}.{{ROOT_DOMAIN}}:18443
+    depends_on:
+      {{SLUG}}-mysql:
+        condition: service_healthy
+      {{SLUG}}-mongodb:
+        condition: service_healthy
+    volumes:
+      - {{SLUG}}_dataprotection_keys:/root/.aspnet/DataProtection-Keys
+      - {{SLUG}}_uploads:/app/Uploads
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - {{SLUG}}_net
+      - proxy-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy-network"
+      - "traefik.http.routers.{{SLUG}}-api.rule=Host(`api.{{SLUG}}.{{ROOT_DOMAIN}}`)"
+      - "traefik.http.services.{{SLUG}}-api.loadbalancer.server.port=8080"
+
+  {{SLUG}}-ui:
+    image: {{STORE_UI_IMAGE}}
+    container_name: {{SLUG}}-ui
+    restart: always
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ApiSettings__InternalBaseUrl=http://{{SLUG}}-api:8080
+      - ApiSettings__ExternalBaseUrl=http://api.{{SLUG}}.{{ROOT_DOMAIN}}:18080
+    depends_on:
+      {{SLUG}}-api:
+        condition: service_healthy
+    volumes:
+      - {{SLUG}}_dataprotection_keys:/root/.aspnet/DataProtection-Keys
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - {{SLUG}}_net
+      - proxy-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy-network"
+      - "traefik.http.routers.{{SLUG}}-ui.rule=Host(`{{SLUG}}.{{ROOT_DOMAIN}}`)"
+      - "traefik.http.services.{{SLUG}}-ui.loadbalancer.server.port=8080"
+
+volumes:
+  {{SLUG}}_mysql_data:
+  {{SLUG}}_mongodb_data:
+  {{SLUG}}_dataprotection_keys:
+  {{SLUG}}_uploads:
+
+networks:
+  {{SLUG}}_net:
+  proxy-network:
+    external: true
