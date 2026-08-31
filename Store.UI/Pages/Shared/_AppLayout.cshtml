@@ -1,47 +1,15 @@
 @using Store.Models.DTOs.Operations
 @using StoreUI.Services
-@inject Store.Models.Interfaces.Services.IUserService UserService
-@inject Store.Models.Interfaces.Services.IEmployeeService EmployeeService
-@inject StoreUI.Services.IApiClientService ApiClient
+@inject StoreUI.Services.ICurrentUserContext CurrentUserContext
 @{
     var token = Context.Session.GetString("access_token") ?? string.Empty;
-    var perms = JwtPermissionReader.GetPermissions(token);
-    var username = JwtPermissionReader.GetClaim(token, "sub") ?? "User";
-    var userRole = JwtPermissionReader.GetClaim(token, "http://schemas.microsoft.com/ws/2008/06/identity/claims/role") ?? "Staff";
+    var profile = await CurrentUserContext.GetCurrentProfileAsync(token);
 
-    string displayName = username;
-    string avatarUrl = "/images/admin.png";
-    string employeeInfo = "";
-
-    if (!string.IsNullOrEmpty(token))
-    {
-        ApiClient.SetToken(token);
-        var userIdStr = JwtPermissionReader.GetClaim(token, "uid");
-        if (Guid.TryParse(userIdStr, out var userId))
-        {
-            try
-            {
-                var currentUser = await UserService.GetByIdAsync(userId, default);
-                if (currentUser != null)
-                {
-                    avatarUrl = currentUser.ThumbnailUrl ?? currentUser.FullImageUrl ?? "/images/admin.png";
-                    if (currentUser.EmployeeId.HasValue)
-                    {
-                        var emp = await EmployeeService.GetByIdAsync(currentUser.EmployeeId.Value, default);
-                        if (emp != null)
-                        {
-                            if (!string.IsNullOrWhiteSpace(emp.FirstName))
-                            {
-                                displayName = emp.FirstName;
-                            }
-                            employeeInfo = $"Emp: {emp.DepartmentName ?? "Unassigned"}";
-                        }
-                    }
-                }
-            }
-            catch { }
-        }
-    }
+    var displayName = profile.DisplayName;
+    var avatarUrl = profile.AvatarUrl;
+    var userRole = profile.RoleName;
+    var employeeInfo = profile.EmployeeInfo;
+    var perms = profile.Permissions;
 
     var canInventoryRead = perms.Contains(PermissionKeys.InventoryRead);
     var canPricingRead   = perms.Contains(PermissionKeys.PricingRead);
@@ -161,11 +129,11 @@
                                 <a class="nav-link" href="/BranchAdmin">Branch Admin</a>
                                 <a class="nav-link" href="/BranchDashboard">Branch Dashboard</a>
                             }
-                            @if (canAdminRoles || canAdminUsers)
+                            @if (canAdminRoles || canAdminUsers || canAdminSettings)
                             {
                                 <a class="nav-link" href="/Users">Users</a>
                                 <a class="nav-link" href="/ContactRequests">Contact Requests</a>
-                                <a class="nav-link" href="/Lookup">Lookup Data</a>
+                                <a class="nav-link" href="/Lookup">Lookup &amp; Settings</a>
                                 <a class="nav-link" href="/RoleMatrix">Role Matrix</a>
                                 <a class="nav-link" href="/CommunicationLogs">Comm Logs</a>
                             }

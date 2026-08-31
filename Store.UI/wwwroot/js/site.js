@@ -1560,6 +1560,18 @@
         }
     };
 
+    // --- Global Form Submit Button Loading State Handler ---
+    document.addEventListener('submit', (e) => {
+        const form = e.target;
+        if (!form || form.hasAttribute('data-no-loading')) return;
+
+        const submitBtn = form.querySelector('button[type="submit"]:not([disabled]), input[type="submit"]:not([disabled]), button.btn_save:not([disabled]), button.button-primary:not([disabled])');
+        if (submitBtn && !submitBtn.classList.contains('no-spin')) {
+            submitBtn.classList.add('is-loading');
+            submitBtn.setAttribute('aria-busy', 'true');
+        }
+    });
+
 })();
 
 
