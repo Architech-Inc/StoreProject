@@ -57,9 +57,14 @@ public class PosModel : PageModel
         {
             if (!string.IsNullOrEmpty(HttpContext.Session.GetString("force_reset_userId")))
             {
-                return RedirectToPage("/ForceResetPassword");
+                return RedirectToPage("/ForceResetPassword", new { returnUrl = "/Pos" });
             }
             return RedirectToPage("/Login");
+        }
+
+        if (HttpContext.Session.GetString("force_password_reset") == "true")
+        {
+            return RedirectToPage("/ForceResetPassword", new { returnUrl = "/Pos" });
         }
 
         _apiClient.SetToken(token);

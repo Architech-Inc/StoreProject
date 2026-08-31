@@ -361,6 +361,14 @@ public class UserService : IUserService
 
         if (request == null) return false;
 
+        // Verify token is not expired (24 hour expiration window)
+        if (request.DateCreated.AddHours(24) < DateTime.UtcNow)
+        {
+            request.Status = ContactChangeStatus.Rejected;
+            await _db.SaveChangesAsync(ct);
+            return false;
+        }
+
         request.Status = ContactChangeStatus.PendingApproval;
         request.VerifiedAt = DateTime.UtcNow;
         request.VerificationToken = null; // Token consumed
