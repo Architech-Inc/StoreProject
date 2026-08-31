@@ -131,6 +131,11 @@ public class AuthController : ControllerBase
         }
 
         var avatarUrl = await _dispatcher.SendAsync(new GetUserAvatarQuery(username.Trim()), ct);
+        if (avatarUrl == null)
+        {
+            // Uniform timing mitigation against user enumeration
+            await Task.Delay(Random.Shared.Next(20, 60), ct);
+        }
         // We return generic admin.png if user has no custom avatar or user doesn't exist
         return Ok(ApiResponse<string>.Ok(avatarUrl ?? "/images/admin.png"));
     }
