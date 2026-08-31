@@ -1,0 +1,18 @@
+FROM alpine:3.19
+
+RUN apk add --no-cache \
+    mysql-client \
+    gzip \
+    aws-cli \
+    tzdata \
+    dcron
+
+WORKDIR /app
+
+COPY mysql-backup.sh /app/mysql-backup.sh
+RUN chmod +x /app/mysql-backup.sh
+
+# Configure default cron (daily at 02:00 UTC)
+ENV CRON_SCHEDULE="0 2 * * *"
+
+ENTRYPOINT ["sh", "-c", "echo \"$CRON_SCHEDULE /app/mysql-backup.sh >> /var/log/cron.log 2>&1\" > /etc/crontabs/root && touch /var/log/cron.log && crond -b -l 8 && tail -f /var/log/cron.log"]

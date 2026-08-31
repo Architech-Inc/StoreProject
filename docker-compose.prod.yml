@@ -106,11 +106,61 @@ services:
       - "traefik.http.routers.storeproject-storeui.rule=Host(`${STORE_DOMAIN:-store.157.173.112.19.nip.io}`)"
       - "traefik.http.services.storeproject-storeui.loadbalancer.server.port=8080"
 
+  store-backup-mysql:
+    build:
+      context: docker/backup
+      dockerfile: Dockerfile.mysql-backup
+    container_name: store-backup-mysql
+    restart: always
+    environment:
+      - MYSQL_HOST=store-mysql
+      - MYSQL_USER=${MYSQL_USER:-root}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-rootpassword}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-store_db_v2}
+      - RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-7}
+      - CRON_SCHEDULE=${MYSQL_BACKUP_CRON:-0 2 * * *}
+      - S3_BUCKET=${BACKUP_S3_BUCKET:-}
+      - S3_ENDPOINT=${BACKUP_S3_ENDPOINT:-}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+    depends_on:
+      store-mysql:
+        condition: service_healthy
+    volumes:
+      - store-backups-data:/backups
+    networks:
+      - store-network
+
+  store-backup-mongodb:
+    build:
+      context: docker/backup
+      dockerfile: Dockerfile.mongo-backup
+    container_name: store-backup-mongodb
+    restart: always
+    environment:
+      - MONGO_HOST=store-mongodb
+      - MONGO_USER=${MONGO_INITDB_ROOT_USERNAME:-admin}
+      - MONGO_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD:-adminpassword}
+      - RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-7}
+      - CRON_SCHEDULE=${MONGO_BACKUP_CRON:-30 2 * * *}
+      - S3_BUCKET=${BACKUP_S3_BUCKET:-}
+      - S3_ENDPOINT=${BACKUP_S3_ENDPOINT:-}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+    depends_on:
+      store-mongodb:
+        condition: service_healthy
+    volumes:
+      - store-backups-data:/backups
+    networks:
+      - store-network
+
 volumes:
   store-mysql-data:
   store-mongodb-data:
   store-dataprotection-keys:
   store-uploads:
+  store-backups-data:
 
 networks:
   store-network:

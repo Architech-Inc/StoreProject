@@ -74,6 +74,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAuditLogService, AuditLogService>();
         
         services.AddHostedService<OfflineLogSyncWorker>();
+        services.AddHostedService<LogRetentionWorker>();
 
         return services;
     }

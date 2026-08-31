@@ -253,6 +253,19 @@ public class AuditLogService : IAuditLogService
         return dto;
     }
 
+    public async Task<int> PruneLogsOlderThanAsync(DateTime threshold, CancellationToken ct = default)
+    {
+        var oldLogs = await _uow.Repository<AuditLog>().Query()
+            .Where(a => a.DateCreated < threshold)
+            .ToListAsync(ct);
+
+        if (oldLogs.Count == 0) return 0;
+
+        _uow.Repository<AuditLog>().RemoveRange(oldLogs);
+        await _uow.SaveChangesAsync(ct);
+        return oldLogs.Count;
+    }
+
     private static string InferDeviceType(string? userAgent)
     {
         if (string.IsNullOrWhiteSpace(userAgent)) return "Server / Service";

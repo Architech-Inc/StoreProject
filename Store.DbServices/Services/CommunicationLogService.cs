@@ -93,6 +93,14 @@ public class CommunicationLogService : ICommunicationLogService
         return await _logsCollection.CountDocumentsAsync(filter, cancellationToken: ct);
     }
 
+    public async Task<int> PruneLogsOlderThanAsync(DateTime threshold, CancellationToken ct = default)
+    {
+        if (_logsCollection == null) return 0;
+        var filter = Builders<CommunicationLog>.Filter.Lt(x => x.DateCreated, threshold);
+        var result = await _logsCollection.DeleteManyAsync(filter, ct);
+        return (int)result.DeletedCount;
+    }
+
     private async Task LogOfflineAsync(CommunicationLog log, CancellationToken ct)
     {
         var logs = new List<CommunicationLog>();

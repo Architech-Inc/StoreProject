@@ -10,4 +10,5 @@ public interface IAuditLogService
     Task<AuditLogDto?> GetByIdAsync(long id, CancellationToken ct = default);
     Task<AuditLogDto> LogAsync(CreateAuditLogEntryRequest request, CancellationToken ct = default);
     Task<IReadOnlyCollection<AuditLogDto>> GetRecentUserActivityAsync(Guid userId, int limit = 10, CancellationToken ct = default);
+    Task<int> PruneLogsOlderThanAsync(DateTime threshold, CancellationToken ct = default);
 }
