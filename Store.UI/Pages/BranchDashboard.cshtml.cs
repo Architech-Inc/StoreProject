@@ -41,13 +41,18 @@ public class BranchDashboardModel : SecurePageModel
         // Load branch list
         Branches = await _branchManager.GetBranchesAsync(ct);
 
-        if (branchId.HasValue)
+        if (!SelectedBranchId.HasValue && Branches.Count > 0)
+        {
+            SelectedBranchId = Branches[0].BranchId;
+        }
+
+        if (SelectedBranchId.HasValue)
         {
             var fromUtc = FromDate.ToUniversalTime();
             var toUtc = ToDate.AddDays(1).AddSeconds(-1).ToUniversalTime();
             try
             {
-                Performance = await _branchManager.GetPerformanceAsync(branchId.Value, fromUtc, toUtc, ct);
+                Performance = await _branchManager.GetPerformanceAsync(SelectedBranchId.Value, fromUtc, toUtc, ct);
             }
             catch
             {

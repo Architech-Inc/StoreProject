@@ -94,9 +94,12 @@ if (!app.Environment.IsDevelopment())
 
 app.Use(async (context, next) =>
 {
-    context.Response.Headers.TryAdd("X-Content-Type-Options", "nosniff");
-    context.Response.Headers.TryAdd("X-Frame-Options", "DENY");
-    context.Response.Headers.TryAdd("Referrer-Policy", "strict-origin-when-cross-origin");
+    var headers = context.Response.Headers;
+    headers.TryAdd("X-Content-Type-Options", "nosniff");
+    headers.TryAdd("X-Frame-Options", "DENY");
+    headers.TryAdd("Referrer-Policy", "strict-origin-when-cross-origin");
+    headers.TryAdd("X-Permitted-Cross-Domain-Policies", "none");
+    headers.TryAdd("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
     await next();
 });
 
