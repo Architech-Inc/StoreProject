@@ -223,7 +223,10 @@ public class PosModel : PageModel
                 {
                     customerId = c.CustomerId,
                     fullName = c.FullName,
-                    primaryPhone = c.PrimaryPhone
+                    primaryPhone = c.PrimaryPhone,
+                    loyaltyTier = c.LoyaltyTier.ToString(),
+                    loyaltyPoints = c.LoyaltyPoints,
+                    segment = c.Segment.ToString()
                 })
                 .ToList();
 

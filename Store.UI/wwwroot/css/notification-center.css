@@ -368,3 +368,16 @@
     color: var(--text-muted, #94a3b8);
     cursor: pointer;
 }
+
+/* Micro-Interaction: Card Fade-Out on Clear/Read */
+.notif-card.fade-out {
+    opacity: 0 !important;
+    transform: translateX(40px) !important;
+    max-height: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    border-width: 0 !important;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}

@@ -144,17 +144,30 @@
     }
 
     function markAllAsRead() {
+        const cards = notifList ? notifList.querySelectorAll('.notif-card.unread') : [];
+        cards.forEach(c => c.classList.remove('unread'));
+
         notifications.forEach(n => n.read = true);
         saveNotifications();
         updateBadge();
-        renderNotifications();
     }
 
     function clearHistory() {
-        notifications = [];
-        saveNotifications();
-        updateBadge();
-        renderNotifications();
+        const cards = notifList ? notifList.querySelectorAll('.notif-card') : [];
+        if (cards.length > 0) {
+            cards.forEach(c => c.classList.add('fade-out'));
+            setTimeout(() => {
+                notifications = [];
+                saveNotifications();
+                updateBadge();
+                renderNotifications();
+            }, 250);
+        } else {
+            notifications = [];
+            saveNotifications();
+            updateBadge();
+            renderNotifications();
+        }
     }
 
     function addNotification(notif) {
