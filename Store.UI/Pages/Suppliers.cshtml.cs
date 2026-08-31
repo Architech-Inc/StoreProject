@@ -86,9 +86,6 @@ public class SuppliersModel : SecurePageModel
     public IEnumerable<EmailType> EmailTypes { get; } = Enum.GetValues<EmailType>();
     public IEnumerable<PhoneType> PhoneTypes { get; } = Enum.GetValues<PhoneType>();
 
-    private readonly ISupplierService _supplierService;
-    private readonly IApiClientService _apiClient;
-    private readonly IFileService _fileService;
     private readonly ILogger<SuppliersModel> _logger;
 
     public SuppliersModel(
