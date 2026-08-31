@@ -57,4 +57,7 @@ public class ApiAuditLogService : IAuditLogService
 
     public async Task<IReadOnlyCollection<AuditLogDto>> GetRecentUserActivityAsync(Guid userId, int limit = 10, CancellationToken ct = default)
         => await _client.GetAsync<List<AuditLogDto>>($"/api/users/profile/activity") ?? new List<AuditLogDto>();
+
+    public Task<int> PruneLogsOlderThanAsync(DateTime threshold, CancellationToken ct = default)
+        => Task.FromResult(0);
 }

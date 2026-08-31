@@ -73,6 +73,7 @@
     <link rel="stylesheet" href="~/css/modules/cash-reconciliation.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/modules/pricing-promotions.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/modules/admin-governance.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/command-palette.css" asp-append-version="true" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" referrerpolicy="no-referrer" />
     @await RenderSectionAsync("Styles", required: false)
 </head>
@@ -207,6 +208,11 @@
                         <p>@ViewData["PageDescription"]</p>
                     }
                 </div>
+                <div class="topbar-search-trigger" id="topbarSearchTrigger" role="button" tabindex="0" title="Quick Search (Ctrl + K)">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <span>Search items, invoices, customers...</span>
+                    <kbd class="kbd-shortcut">Ctrl K</kbd>
+                </div>
             </header>
             <div class="app-content">
                 @{
@@ -235,6 +241,9 @@
     
     <!-- Smart Scanner Hub & Floating FAB -->
     <partial name="_SmartScanHub" />
+
+    <!-- Global OmniSearch & Command Palette (Ctrl + K) -->
+    <partial name="_CommandPalette" />
 
     <!-- Global AppDialog Modal -->
     <div class="dialog-overlay" id="appDialogOverlay" aria-hidden="true" hidden style="display:none;">
@@ -284,6 +293,7 @@
     <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.1/dist/browser-image-compression.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js" referrerpolicy="no-referrer"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/command-palette.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
     <script>
     (() => {

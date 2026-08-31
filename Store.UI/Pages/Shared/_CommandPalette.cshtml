@@ -1,0 +1,89 @@
+@* Global OmniSearch & Command Palette Partial (Ctrl + K) *@
+<div class="command-palette-overlay" id="commandPaletteOverlay" hidden style="display: none;">
+    <div class="command-palette-box" role="dialog" aria-modal="true" aria-labelledby="cmdPaletteInput">
+        <div class="command-palette-search-bar">
+            <svg class="cmd-search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" 
+                   id="cmdPaletteInput" 
+                   class="cmd-input" 
+                   placeholder="Type a command, item name, barcode, customer, or invoice #..." 
+                   autocomplete="off" 
+                   spellcheck="false" />
+            <div class="cmd-spinner" id="cmdSpinner" style="display: none;"></div>
+            <kbd class="cmd-key-badge">ESC</kbd>
+        </div>
+
+        <div class="command-palette-results" id="cmdPaletteResults">
+            <!-- Navigation Shortcuts Section -->
+            <div class="cmd-group" id="cmdNavShortcuts">
+                <div class="cmd-group-title">Quick Navigation</div>
+                <div class="cmd-item" data-type="nav" data-url="/Pos">
+                    <span class="cmd-item-icon">🛒</span>
+                    <div class="cmd-item-info">
+                        <div class="cmd-item-title">POS Terminal</div>
+                        <div class="cmd-item-desc">Point of sale checkout register</div>
+                    </div>
+                    <span class="cmd-badge">G P</span>
+                </div>
+                <div class="cmd-item" data-type="nav" data-url="/Invoices">
+                    <span class="cmd-item-icon">🧾</span>
+                    <div class="cmd-item-info">
+                        <div class="cmd-item-title">Invoices & Sales</div>
+                        <div class="cmd-item-desc">Browse sales records and print receipts</div>
+                    </div>
+                    <span class="cmd-badge">G I</span>
+                </div>
+                <div class="cmd-item" data-type="nav" data-url="/Catalog">
+                    <span class="cmd-item-icon">📦</span>
+                    <div class="cmd-item-info">
+                        <div class="cmd-item-title">Product Catalog</div>
+                        <div class="cmd-item-desc">Manage products, prices, and stock</div>
+                    </div>
+                    <span class="cmd-badge">G C</span>
+                </div>
+                <div class="cmd-item" data-type="nav" data-url="/Customers">
+                    <span class="cmd-item-icon">👥</span>
+                    <div class="cmd-item-info">
+                        <div class="cmd-item-title">Customers CRM</div>
+                        <div class="cmd-item-desc">Customer accounts and loyalty status</div>
+                    </div>
+                    <span class="cmd-badge">G M</span>
+                </div>
+                <div class="cmd-item" data-type="nav" data-url="/PurchaseOrders">
+                    <span class="cmd-item-icon">🚚</span>
+                    <div class="cmd-item-info">
+                        <div class="cmd-item-title">Purchase Orders</div>
+                        <div class="cmd-item-desc">Supplier procurement and receiving</div>
+                    </div>
+                    <span class="cmd-badge">G O</span>
+                </div>
+                <div class="cmd-item" data-type="nav" data-url="/Suppliers">
+                    <span class="cmd-item-icon">🏢</span>
+                    <div class="cmd-item-info">
+                        <div class="cmd-item-title">Suppliers Directory</div>
+                        <div class="cmd-item-desc">Supplier profiles and contact matrix</div>
+                    </div>
+                    <span class="cmd-badge">G S</span>
+                </div>
+            </div>
+
+            <!-- Dynamic Search Hits -->
+            <div class="cmd-group" id="cmdDynamicResults" style="display: none;">
+                <div class="cmd-group-title">Search Results</div>
+                <div id="cmdDynamicList"></div>
+            </div>
+        </div>
+
+        <div class="command-palette-footer">
+            <div class="cmd-footer-hints">
+                <span><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
+                <span><kbd>↵</kbd> Select</span>
+                <span><kbd>ESC</kbd> Close</span>
+            </div>
+            <div class="cmd-footer-tag">ClexAn Omnisearch</div>
+        </div>
+    </div>
+</div>
