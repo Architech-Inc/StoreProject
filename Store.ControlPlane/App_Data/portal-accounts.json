@@ -1,0 +1,20 @@
+[
+  {
+    "AccountId": "b052d912-d644-49b2-aa35-cb1498299beb",
+    "Email": "demo@clexanfoods.com",
+    "FullName": "Demo Store Owner",
+    "PasswordHash": "250000:IsG7lzk\u002Bf8eQ5NZmoJaxIhtKGUOzbo5aHxaftNt76Q0=:4JVoK/sHBqLfzcJ0rCaMioFz9spyB4lMg4\u002BwMo4M15BveuMRn/hDh4sViSAtvafkZz8A/eQhq\u002BRE\u002BqVX6TpbwA==",
+    "TenantId": "27ad1a23-3687-423d-abc0-565d436950d5",
+    "DateCreated": "2026-09-01T14:14:53.2778834Z",
+    "LastLoginAt": "2026-09-01T14:14:53.2779797Z"
+  },
+  {
+    "AccountId": "fe44a8ba-3c65-428c-81b8-02caab6fe789",
+    "Email": "bill.james@bridgemaill.com",
+    "FullName": "Bill James",
+    "PasswordHash": "250000:7sz\u002BrVAV38BNHMx7Le6J9N6Go2ByyKJ8GrMF2wskd2k=:\u002BTVPYrzL9YGyHcpiBO2Pmy2X6U/BleRoUmVOcq22W6REfffmHBGKqe8JnCLndYNiX97SH22rLL9JAbrFFL5hHA==",
+    "TenantId": "500cbf39-f9f2-4bb0-b556-ba20a03d740a",
+    "DateCreated": "2026-09-01T14:18:26.9874142Z",
+    "LastLoginAt": "2026-09-01T14:18:26.9874147Z"
+  }
+]

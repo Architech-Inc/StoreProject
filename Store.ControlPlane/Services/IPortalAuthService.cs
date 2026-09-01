@@ -6,6 +6,7 @@ public interface IPortalAuthService
 {
     Task<PortalAuthResponse> RegisterAsync(RegisterPortalAccountRequest request, CancellationToken ct = default);
     Task<PortalAuthResponse?> LoginAsync(LoginPortalAccountRequest request, CancellationToken ct = default);
+    Task<PortalAuthResponse?> GetAccountAsync(Guid accountId, CancellationToken ct = default);
     Task<SlugCheckResponse> CheckSlugAvailabilityAsync(string slug, CancellationToken ct = default);
     Task LinkAccountToTenantAsync(Guid accountId, Guid tenantId, CancellationToken ct = default);
 }

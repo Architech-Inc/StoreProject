@@ -75,6 +75,14 @@ public class PortalAuthController : ControllerBase
         await _authService.LinkAccountToTenantAsync(request.AccountId, request.TenantId, ct);
         return Ok(ApiResponse<object>.Ok(null!, "Account linked to tenant."));
     }
+
+    [HttpGet("auth/account/{id:guid}")]
+    public async Task<IActionResult> GetAccount(Guid id, CancellationToken ct)
+    {
+        var account = await _authService.GetAccountAsync(id, ct);
+        if (account == null) return NotFound(ApiResponse<object>.Fail("Account not found."));
+        return Ok(ApiResponse<PortalAuthResponse>.Ok(account));
+    }
 }
 
 public record LinkAccountTenantRequest(Guid AccountId, Guid TenantId);

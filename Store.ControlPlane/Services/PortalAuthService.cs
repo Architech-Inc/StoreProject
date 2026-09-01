@@ -187,6 +187,38 @@ public class PortalAuthService : IPortalAuthService
         }
     }
 
+    public async Task<PortalAuthResponse?> GetAccountAsync(Guid accountId, CancellationToken ct = default)
+    {
+        await _lock.WaitAsync(ct);
+        try
+        {
+            var accounts = await LoadAccountsUnsafeAsync(ct);
+            var account = accounts.FirstOrDefault(a => a.AccountId == accountId);
+            if (account == null) return null;
+
+            Tenant? tenant = null;
+            if (account.TenantId.HasValue)
+            {
+                tenant = await _tenantRepository.GetByIdAsync(account.TenantId.Value, ct);
+            }
+
+            return new PortalAuthResponse(
+                account.AccountId,
+                account.Email,
+                account.FullName,
+                account.TenantId,
+                tenant?.Slug,
+                tenant?.Name,
+                "",
+                DateTime.UtcNow.AddHours(8)
+            );
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
     private static string HashPassword(string password)
     {
         var salt = new byte[32];

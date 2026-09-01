@@ -1,0 +1,41 @@
+version: '3.8'
+services:
+  acmefoods-mysql:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: 'kezweX8+AVjmRPXYuVblNGUh7pSPNK6A'
+      MYSQL_DATABASE: 'store_acmefoods'
+      MYSQL_USER: 'store_user'
+      MYSQL_PASSWORD: 'pCvO68bAoXcOIHe/B4CpJxcAxzU7L1zf'
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  acmefoods-mongodb:
+    image: mongo:7.0
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: 'store_admin'
+      MONGO_INITDB_ROOT_PASSWORD: 'pWhNZMwMzvCo2dvjrQfTY/ihzi2aJj4K'
+    volumes:
+      - mongo_data:/data/db
+
+  acmefoods-api:
+    image: clexan/store-api:latest
+    restart: always
+    depends_on:
+      - acmefoods-mysql
+      - acmefoods-mongodb
+    environment:
+      Jwt__Secret: 'pWGLq7dQgBqBDc6BFKCDFkFs5VXw7gYc3Npx6PY3YDnM8Sv1Wp95SgdEip1iUgJR'
+      Store__Currency: 'XAF'
+
+  acmefoods-ui:
+    image: clexan/store-ui:latest
+    restart: always
+    depends_on:
+      - acmefoods-api
+
+volumes:
+  mysql_data:
+  mongo_data:

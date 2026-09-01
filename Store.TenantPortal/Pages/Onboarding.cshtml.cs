@@ -29,13 +29,32 @@ public class OnboardingModel : PageModel
 
     public string? ErrorMessage { get; set; }
 
-    public IActionResult OnGet()
+    public async Task<IActionResult> OnGetAsync(CancellationToken ct)
     {
         var session = _sessionService.GetCurrentSession(User);
-        if (session?.HasTenant == true)
+        if (session == null)
+        {
+            return RedirectToPage("/Login");
+        }
+
+        if (session.HasTenant)
         {
             return RedirectToPage("/Dashboard");
         }
+
+        // Self-heal: check if account was linked to a tenant in Control Plane
+        var accountInfo = await _cpClient.GetAccountAsync(session.AccountId, ct);
+        if (accountInfo?.TenantId.HasValue == true && !string.IsNullOrEmpty(accountInfo.TenantSlug))
+        {
+            await _sessionService.UpdateTenantInfoAsync(
+                HttpContext,
+                accountInfo.TenantId.Value,
+                accountInfo.TenantSlug,
+                accountInfo.TenantName ?? accountInfo.TenantSlug);
+
+            return RedirectToPage("/Dashboard");
+        }
+
         return Page();
     }
 

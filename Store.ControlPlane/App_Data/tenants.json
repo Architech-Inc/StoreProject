@@ -1,0 +1,304 @@
+[
+  {
+    "TenantId": "27ad1a23-3687-423d-abc0-565d436950d5",
+    "Name": "Acme Supermarket",
+    "Slug": "acmefoods",
+    "AdminEmail": "demo@clexanfoods.com",
+    "AdminUsername": "admin",
+    "Currency": "XAF",
+    "Status": 2,
+    "PlanTier": 2,
+    "CustomDomain": "acmefoods.com",
+    "UiUrl": "https://acmefoods.store.157.173.112.19.nip.io",
+    "ApiUrl": "https://api.acmefoods.store.157.173.112.19.nip.io",
+    "Secrets": {
+      "MySqlRootPassword": "kezweX8\u002BAVjmRPXYuVblNGUh7pSPNK6A",
+      "MySqlUserPassword": "pCvO68bAoXcOIHe/B4CpJxcAxzU7L1zf",
+      "MongoDbRootPassword": "pWhNZMwMzvCo2dvjrQfTY/ihzi2aJj4K",
+      "JwtSecret": "pWGLq7dQgBqBDc6BFKCDFkFs5VXw7gYc3Npx6PY3YDnM8Sv1Wp95SgdEip1iUgJR",
+      "MoMoCallbackKey": "XdMEGrAPR3ZKwIS\u002Bk2qf1llqCLvpObokJgpJLbpPVcs="
+    },
+    "DomainConfig": {
+      "CustomDomain": "acmefoods.com",
+      "Status": 1,
+      "VerificationToken": "clxv_76e616af8ace1bba55d3c962139bff84c5f9af5ddf74bb13",
+      "VerificationRecordName": "_clexan-verify.acmefoods.com",
+      "VerifiedAt": null,
+      "LastCheckedAt": "2026-09-01T14:14:54.0400039Z",
+      "LastErrorMessage": null
+    },
+    "Branches": [
+      {
+        "BranchId": "9237746b-e784-4105-a829-5179a83ae9c9",
+        "BranchName": "HQ Flagship",
+        "BranchSlug": "hq",
+        "DomainType": 0,
+        "CustomSubdomain": null,
+        "ResolvedUrl": "https://hq.acmefoods.store.clexan.com",
+        "VerificationStatus": 2,
+        "VerificationRecordName": "",
+        "VerificationRecordValue": "",
+        "DateCreated": "2026-09-01T14:14:54.1114884Z"
+      }
+    ],
+    "BackupProviders": [],
+    "BackupSchedule": {
+      "Frequency": 2,
+      "RetentionCount": 14,
+      "IsEnabled": true,
+      "NextRunAt": null
+    },
+    "BackupHistory": [
+      {
+        "BackupId": "2740d97e-633c-45dc-afdf-f6dbb501efd5",
+        "TenantId": "27ad1a23-3687-423d-abc0-565d436950d5",
+        "Timestamp": "2026-09-01T14:14:54.5263663Z",
+        "TotalSizeBytes": 20424704,
+        "Files": [
+          "acmefoods-mysql-20260901-141454.sql.gz",
+          "acmefoods-mongodb-20260901-141454.archive.gz"
+        ],
+        "DestinationProviders": "Local Silo Storage",
+        "Status": "Completed",
+        "ErrorMessage": null,
+        "RetentionDays": 30
+      }
+    ],
+    "AuditTrail": [
+      {
+        "AuditId": "8ddc864c-4304-42c6-aa8e-372572ef4d35",
+        "TenantId": "27ad1a23-3687-423d-abc0-565d436950d5",
+        "Timestamp": "2026-09-01T14:14:54.588025Z",
+        "ActorEmail": "demo@clexanfoods.com",
+        "ActionType": "BackupCreated",
+        "Details": "Backup snapshot created (19.5 MB) and synced to Local Silo Storage.",
+        "IpAddress": null
+      },
+      {
+        "AuditId": "53b6cbdc-0dbc-4c16-a719-429bd5629a68",
+        "TenantId": "27ad1a23-3687-423d-abc0-565d436950d5",
+        "Timestamp": "2026-09-01T14:14:54.1594629Z",
+        "ActorEmail": "demo@clexanfoods.com",
+        "ActionType": "BranchAdded",
+        "Details": "Added branch \u0027HQ Flagship\u0027 (https://hq.acmefoods.store.clexan.com).",
+        "IpAddress": null
+      },
+      {
+        "AuditId": "340aa4af-6617-4747-9f2d-1d98dd40bf5b",
+        "TenantId": "27ad1a23-3687-423d-abc0-565d436950d5",
+        "Timestamp": "2026-09-01T14:14:54.057522Z",
+        "ActorEmail": "demo@clexanfoods.com",
+        "ActionType": "DomainRegistered",
+        "Details": "Registered pending custom domain \u0027acmefoods.com\u0027.",
+        "IpAddress": null
+      },
+      {
+        "AuditId": "721e62af-ccb6-431b-b04b-6c2c329baf4c",
+        "TenantId": "27ad1a23-3687-423d-abc0-565d436950d5",
+        "Timestamp": "2026-09-01T14:14:53.9983888Z",
+        "ActorEmail": "demo@clexanfoods.com",
+        "ActionType": "ContainerRestarted",
+        "Details": "Restarted container \u0027acmefoods-api\u0027.",
+        "IpAddress": null
+      },
+      {
+        "AuditId": "b5127c77-0088-4d12-9f0a-bc692cfcd2fd",
+        "TenantId": "27ad1a23-3687-423d-abc0-565d436950d5",
+        "Timestamp": "2026-09-01T14:14:53.7771023Z",
+        "ActorEmail": "demo@clexanfoods.com",
+        "ActionType": "TenantProvisioned",
+        "Details": "Tenant \u0027Acme Supermarket\u0027 (acmefoods) provisioned successfully.",
+        "IpAddress": null
+      }
+    ],
+    "ProvisioningLogs": [
+      {
+        "LogId": "7e69051e-36eb-4220-83ec-a9c7c2c91c24",
+        "TenantId": "27ad1a23-3687-423d-abc0-565d436950d5",
+        "StepName": "Validation",
+        "IsSuccess": true,
+        "Message": "Tenant request validated successfully.",
+        "Timestamp": "2026-09-01T14:14:53.5803284Z"
+      },
+      {
+        "LogId": "44a2632d-464f-4ac4-9ad2-8b7282dd362e",
+        "TenantId": "27ad1a23-3687-423d-abc0-565d436950d5",
+        "StepName": "SecretGeneration",
+        "IsSuccess": true,
+        "Message": "Cryptographic database, JWT, and encryption secrets generated.",
+        "Timestamp": "2026-09-01T14:14:53.5803949Z"
+      },
+      {
+        "LogId": "bb3d3f2e-2c3d-40e1-8a52-1b42e3a33167",
+        "TenantId": "27ad1a23-3687-423d-abc0-565d436950d5",
+        "StepName": "ComposeGeneration",
+        "IsSuccess": true,
+        "Message": "Generated isolated stack compose specification at C:\\Users\\Rodern\\source\\repos\\Architech-Inc\\StoreProject\\Store.ControlPlane\\Tenants\\acmefoods\\docker-compose.yml.",
+        "Timestamp": "2026-09-01T14:14:53.590823Z"
+      },
+      {
+        "LogId": "dc143a32-d956-4456-965f-281b9861997a",
+        "TenantId": "27ad1a23-3687-423d-abc0-565d436950d5",
+        "StepName": "TraefikRouting",
+        "IsSuccess": true,
+        "Message": "Dynamic Traefik reverse-proxy configuration written.",
+        "Timestamp": "2026-09-01T14:14:53.6067746Z"
+      },
+      {
+        "LogId": "e20d22e8-6188-4847-924e-23ed2cdfb642",
+        "TenantId": "27ad1a23-3687-423d-abc0-565d436950d5",
+        "StepName": "DockerDeployment",
+        "IsSuccess": true,
+        "Message": "Silo containers and volumes initialized successfully.",
+        "Timestamp": "2026-09-01T14:14:53.6067761Z"
+      },
+      {
+        "LogId": "e3888784-72a7-4fec-a187-b4594ed87037",
+        "TenantId": "27ad1a23-3687-423d-abc0-565d436950d5",
+        "StepName": "HealthCheck",
+        "IsSuccess": true,
+        "Message": "All silo microservices reporting healthy.",
+        "Timestamp": "2026-09-01T14:14:53.6067778Z"
+      },
+      {
+        "LogId": "c9078b82-dbf2-484d-8c39-f06ee988e4fe",
+        "TenantId": "27ad1a23-3687-423d-abc0-565d436950d5",
+        "StepName": "ContainerRestart",
+        "IsSuccess": true,
+        "Message": "Restarted container \u0027acmefoods-api\u0027.",
+        "Timestamp": "2026-09-01T14:14:53.9472892Z"
+      },
+      {
+        "LogId": "67d21ab0-7f6d-4c74-82bc-d0e9f3e5108e",
+        "TenantId": "27ad1a23-3687-423d-abc0-565d436950d5",
+        "StepName": "DomainRegistration",
+        "IsSuccess": true,
+        "Message": "Registered pending custom domain \u0027acmefoods.com\u0027. Challenge TXT record created.",
+        "Timestamp": "2026-09-01T14:14:54.0400089Z"
+      },
+      {
+        "LogId": "2121617e-6cc8-4135-8ad8-97a01fc46857",
+        "TenantId": "27ad1a23-3687-423d-abc0-565d436950d5",
+        "StepName": "BranchAdded",
+        "IsSuccess": true,
+        "Message": "Added branch \u0027HQ Flagship\u0027 (https://hq.acmefoods.store.clexan.com).",
+        "Timestamp": "2026-09-01T14:14:54.1117872Z"
+      },
+      {
+        "LogId": "92c0d8ce-b74e-401d-96e3-4c23505e49f4",
+        "TenantId": "27ad1a23-3687-423d-abc0-565d436950d5",
+        "StepName": "BackupJob",
+        "IsSuccess": true,
+        "Message": "Automated snapshot created (19.5 MB) \u0026 uploaded to [Local Silo Storage].",
+        "Timestamp": "2026-09-01T14:14:54.5263663Z"
+      }
+    ],
+    "DateCreated": "2026-09-01T14:14:53.5791469Z",
+    "LastHealthCheck": "2026-09-01T14:56:10.652078Z",
+    "IsHealthy": true,
+    "LastHealthMessage": "All microservices healthy."
+  },
+  {
+    "TenantId": "500cbf39-f9f2-4bb0-b556-ba20a03d740a",
+    "Name": "Bridge Mall",
+    "Slug": "bridgemall",
+    "AdminEmail": "bill.james@bridgemaill.com",
+    "AdminUsername": "admin",
+    "Currency": "XAF",
+    "Status": 2,
+    "PlanTier": 1,
+    "CustomDomain": "",
+    "UiUrl": "https://bridgemall.store.157.173.112.19.nip.io",
+    "ApiUrl": "https://api.bridgemall.store.157.173.112.19.nip.io",
+    "Secrets": {
+      "MySqlRootPassword": "G889qV7vsv6e3yWuybFzUEa\u002BUGIUDP\u002Bs",
+      "MySqlUserPassword": "TAJ8PUpLx6Ekp\u002BwJD/306dvX6qEii1bM",
+      "MongoDbRootPassword": "NH5eyvySnTYUXL7dJrQPO/v6MAQN89EH",
+      "JwtSecret": "FpGZd4TuRCS70QCbDD1Jakle6wvYfeCzEMx2yiDTzgNWG1XekcspcTRbOwL5ZSPj",
+      "MoMoCallbackKey": "kGB\u002BB1PlE4JEQK4M\u002BP7kMxU0M04DrZJoECv1yJoMSuw="
+    },
+    "DomainConfig": {
+      "CustomDomain": "",
+      "Status": 0,
+      "VerificationToken": "",
+      "VerificationRecordName": "",
+      "VerifiedAt": null,
+      "LastCheckedAt": null,
+      "LastErrorMessage": null
+    },
+    "Branches": [],
+    "BackupProviders": [],
+    "BackupSchedule": {
+      "Frequency": 2,
+      "RetentionCount": 14,
+      "IsEnabled": true,
+      "NextRunAt": null
+    },
+    "BackupHistory": [],
+    "AuditTrail": [
+      {
+        "AuditId": "9851d764-e7cc-44b6-979f-10e2a12e9fa9",
+        "TenantId": "500cbf39-f9f2-4bb0-b556-ba20a03d740a",
+        "Timestamp": "2026-09-01T14:46:35.1991787Z",
+        "ActorEmail": "bill.james@bridgemaill.com",
+        "ActionType": "TenantProvisioned",
+        "Details": "Tenant \u0027Bridge Mall\u0027 (bridgemall) provisioned successfully.",
+        "IpAddress": null
+      }
+    ],
+    "ProvisioningLogs": [
+      {
+        "LogId": "9358c9c0-3264-4be4-a1dd-cdf83e63bce8",
+        "TenantId": "500cbf39-f9f2-4bb0-b556-ba20a03d740a",
+        "StepName": "Validation",
+        "IsSuccess": true,
+        "Message": "Tenant request validated successfully.",
+        "Timestamp": "2026-09-01T14:46:34.9810437Z"
+      },
+      {
+        "LogId": "0441fae7-2725-4fc5-bc6a-da228daa2f9e",
+        "TenantId": "500cbf39-f9f2-4bb0-b556-ba20a03d740a",
+        "StepName": "SecretGeneration",
+        "IsSuccess": true,
+        "Message": "Cryptographic database, JWT, and encryption secrets generated.",
+        "Timestamp": "2026-09-01T14:46:34.9810462Z"
+      },
+      {
+        "LogId": "6df2885a-7bd1-464b-b8d1-0d022948a171",
+        "TenantId": "500cbf39-f9f2-4bb0-b556-ba20a03d740a",
+        "StepName": "ComposeGeneration",
+        "IsSuccess": true,
+        "Message": "Generated isolated stack compose specification at C:\\Users\\Rodern\\source\\repos\\Architech-Inc\\StoreProject\\Store.ControlPlane\\Tenants\\bridgemall\\docker-compose.yml.",
+        "Timestamp": "2026-09-01T14:46:34.9897494Z"
+      },
+      {
+        "LogId": "d9f9f78d-25cc-4093-950f-e06a89f6197e",
+        "TenantId": "500cbf39-f9f2-4bb0-b556-ba20a03d740a",
+        "StepName": "TraefikRouting",
+        "IsSuccess": true,
+        "Message": "Dynamic Traefik reverse-proxy configuration written.",
+        "Timestamp": "2026-09-01T14:46:35.0216323Z"
+      },
+      {
+        "LogId": "61496fda-ae31-44e4-adb2-db12182d3016",
+        "TenantId": "500cbf39-f9f2-4bb0-b556-ba20a03d740a",
+        "StepName": "DockerDeployment",
+        "IsSuccess": true,
+        "Message": "Silo containers and volumes initialized successfully.",
+        "Timestamp": "2026-09-01T14:46:35.0216355Z"
+      },
+      {
+        "LogId": "07c10044-3bda-4daa-aad9-11305d0471e1",
+        "TenantId": "500cbf39-f9f2-4bb0-b556-ba20a03d740a",
+        "StepName": "HealthCheck",
+        "IsSuccess": true,
+        "Message": "All silo microservices reporting healthy.",
+        "Timestamp": "2026-09-01T14:46:35.0216373Z"
+      }
+    ],
+    "DateCreated": "2026-09-01T14:46:34.9810221Z",
+    "LastHealthCheck": "2026-09-01T14:56:10.7228386Z",
+    "IsHealthy": true,
+    "LastHealthMessage": "All microservices healthy."
+  }
+]

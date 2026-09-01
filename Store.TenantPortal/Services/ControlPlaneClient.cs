@@ -66,6 +66,20 @@ public class ControlPlaneClient : IControlPlaneClient
         return result?.Data;
     }
 
+    public async Task<PortalAuthDto?> GetAccountAsync(Guid accountId, CancellationToken ct = default)
+    {
+        try
+        {
+            var response = await _http.GetFromJsonAsync<ApiResponse<PortalAuthDto>>($"api/control/auth/account/{accountId}", ct);
+            return response?.Data;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching portal account {AccountId}", accountId);
+            return null;
+        }
+    }
+
     public async Task<TenantSummaryDto> ProvisionTenantAsync(ProvisionTenantDto request, CancellationToken ct = default)
     {
         var response = await _http.PostAsJsonAsync("api/control/tenants/provision", request, ct);

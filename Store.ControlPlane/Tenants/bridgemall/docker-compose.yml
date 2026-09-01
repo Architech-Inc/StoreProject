@@ -1,0 +1,41 @@
+version: '3.8'
+services:
+  bridgemall-mysql:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: 'G889qV7vsv6e3yWuybFzUEa+UGIUDP+s'
+      MYSQL_DATABASE: 'store_bridgemall'
+      MYSQL_USER: 'store_user'
+      MYSQL_PASSWORD: 'TAJ8PUpLx6Ekp+wJD/306dvX6qEii1bM'
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  bridgemall-mongodb:
+    image: mongo:7.0
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: 'store_admin'
+      MONGO_INITDB_ROOT_PASSWORD: 'NH5eyvySnTYUXL7dJrQPO/v6MAQN89EH'
+    volumes:
+      - mongo_data:/data/db
+
+  bridgemall-api:
+    image: clexan/store-api:latest
+    restart: always
+    depends_on:
+      - bridgemall-mysql
+      - bridgemall-mongodb
+    environment:
+      Jwt__Secret: 'FpGZd4TuRCS70QCbDD1Jakle6wvYfeCzEMx2yiDTzgNWG1XekcspcTRbOwL5ZSPj'
+      Store__Currency: 'XAF'
+
+  bridgemall-ui:
+    image: clexan/store-ui:latest
+    restart: always
+    depends_on:
+      - bridgemall-api
+
+volumes:
+  mysql_data:
+  mongo_data:
