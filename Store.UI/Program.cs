@@ -201,13 +201,13 @@ app.MapGet("/api/scanner/resolve", async (HttpContext httpContext, IApiClientSer
         return Results.Unauthorized();
     }
     apiClient.SetToken(token);
-    var result = await apiClient.GetAsync<Store.Models.DTOs.Common.ApiResponse<Store.Models.DTOs.Scanner.ScanResolutionResultDto>>(
+    var result = await apiClient.GetAsync<Store.Models.DTOs.Scanner.ScanResolutionResultDto>(
         $"/api/scanner/resolve?code={Uri.EscapeDataString(code)}", ct);
     if (result == null)
     {
         return Results.Ok(Store.Models.DTOs.Common.ApiResponse<Store.Models.DTOs.Scanner.ScanResolutionResultDto>.Fail("Resolution failed"));
     }
-    return Results.Ok(result);
+    return Results.Ok(Store.Models.DTOs.Common.ApiResponse<Store.Models.DTOs.Scanner.ScanResolutionResultDto>.Ok(result));
 });
 
 app.MapGet("/api/settings/{*key}", async (HttpContext httpContext, IHttpClientFactory factory, string key, CancellationToken ct) =>
