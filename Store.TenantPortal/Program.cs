@@ -85,4 +85,15 @@ app.UseAuthorization();
 
 app.MapRazorPages();
 
+// Slug Availability Proxy Endpoint for Onboarding Wizard
+app.MapGet("/api/slugs/check", async (string slug, IControlPlaneClient client, CancellationToken ct) =>
+{
+    if (string.IsNullOrWhiteSpace(slug))
+    {
+        return Results.Ok(new { isAvailable = false, reason = "Slug cannot be empty." });
+    }
+    var check = await client.CheckSlugAvailabilityAsync(slug, ct);
+    return Results.Ok(new { isAvailable = check.IsAvailable, reason = check.Reason, slug = check.Slug });
+});
+
 app.Run();

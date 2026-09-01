@@ -1,4 +1,4 @@
-// Onboarding Wizard Management & Debounced Slug Validation
+// Onboarding Wizard Management, URL Indexing & Debounced Slug Validation
 let currentStep = 1;
 let slugDebounceTimer = null;
 let isSlugValid = false;
@@ -7,7 +7,31 @@ document.addEventListener('DOMContentLoaded', () => {
     initSlugChecker();
     initPlanSelectors();
     initDomainSelectors();
+    initUrlStepIndexing();
 });
+
+// URL Step Indexing & Browser Navigation
+function initUrlStepIndexing() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const stepParam = parseInt(urlParams.get('step') || '1', 10);
+
+    if (stepParam >= 1 && stepParam <= 4) {
+        goToStep(stepParam, false);
+    } else {
+        // Initialize state
+        history.replaceState({ step: 1 }, '', '?step=1');
+    }
+
+    window.addEventListener('popstate', (e) => {
+        if (e.state && e.state.step) {
+            goToStep(e.state.step, false);
+        } else {
+            const params = new URLSearchParams(window.location.search);
+            const step = parseInt(params.get('step') || '1', 10);
+            goToStep(step, false);
+        }
+    });
+}
 
 function initSlugChecker() {
     const slugInput = document.getElementById('StoreSlug');
@@ -25,26 +49,29 @@ function initSlugChecker() {
             return;
         }
 
-        slugBadge.innerHTML = '<span style="color: var(--p-warning); font-size: 12px;">Checking availability...</span>';
+        slugBadge.innerHTML = '<span style="color: #fbbf24; font-size: 12px;">Checking availability...</span>';
 
         clearTimeout(slugDebounceTimer);
         slugDebounceTimer = setTimeout(async () => {
             try {
                 const response = await fetch(`/api/slugs/check?slug=${encodeURIComponent(rawSlug)}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error ${response.status}`);
+                }
                 const result = await response.json();
 
                 if (result.isAvailable) {
-                    slugBadge.innerHTML = '<span style="color: var(--p-green); font-size: 12px; font-weight: 600;">✓ Available</span>';
+                    slugBadge.innerHTML = '<span style="color: #4ade80; font-size: 12px; font-weight: 600;">✓ Available</span>';
                     isSlugValid = true;
                 } else {
-                    slugBadge.innerHTML = `<span style="color: var(--p-danger); font-size: 12px; font-weight: 600;">✗ ${result.reason || 'Unavailable'}</span>`;
+                    slugBadge.innerHTML = `<span style="color: #f87171; font-size: 12px; font-weight: 600;">✗ ${result.reason || 'Unavailable'}</span>`;
                     isSlugValid = false;
                 }
             } catch (err) {
-                slugBadge.innerHTML = '<span style="color: var(--p-danger); font-size: 12px;">Error checking</span>';
+                slugBadge.innerHTML = '<span style="color: #f87171; font-size: 12px;">Error checking availability</span>';
                 isSlugValid = false;
             }
-        }, 400);
+        }, 300);
     });
 }
 
@@ -82,16 +109,19 @@ function initDomainSelectors() {
     });
 }
 
-function goToStep(step) {
+function goToStep(step, updateHistory = true) {
     if (step > currentStep) {
         if (!validateStep(currentStep)) return;
     }
 
     document.querySelectorAll('.wizard-step-panel').forEach(panel => panel.style.display = 'none');
-    document.getElementById(`stepPanel${step}`).style.display = 'block';
+    const targetPanel = document.getElementById(`stepPanel${step}`);
+    if (targetPanel) {
+        targetPanel.style.display = 'block';
+    }
 
     document.querySelectorAll('.step-node').forEach(node => {
-        const s = parseInt(node.getAttribute('data-step'));
+        const s = parseInt(node.getAttribute('data-step'), 10);
         node.classList.remove('active', 'completed');
         if (s === step) {
             node.classList.add('active');
@@ -101,6 +131,10 @@ function goToStep(step) {
     });
 
     currentStep = step;
+
+    if (updateHistory) {
+        history.pushState({ step }, '', `?step=${step}`);
+    }
 
     if (step === 4) {
         populateSummary();
@@ -166,7 +200,7 @@ function populateSummary() {
         if (domainChoice === 'Custom' && customDomain) {
             summaryUrl.innerText = `https://${customDomain}`;
         } else {
-            summaryUrl.innerText = `https://${storeSlug}.store.domain`;
+            summaryUrl.innerText = `https://${storeSlug}.store.clexan.com`;
         }
     }
 }
