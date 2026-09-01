@@ -245,8 +245,9 @@
         }
 
         try {
+            var baseUrl = (window.appConfig && window.appConfig.apiBaseUrl) ? window.appConfig.apiBaseUrl : '';
             connection = new signalR.HubConnectionBuilder()
-                .withUrl('/hubs/notifications', {
+                .withUrl(baseUrl + '/hubs/notifications', {
                     accessTokenFactory: () => token || ''
                 })
                 .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
