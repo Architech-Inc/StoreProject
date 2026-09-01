@@ -152,6 +152,56 @@
             </div>
         </div>
     </div>
+
+    <!-- Security & Audit Activity Trail -->
+    <div class="portal-card" style="padding: 0; overflow: hidden; margin-bottom: 32px;">
+        <div style="padding: 20px 24px; border-bottom: 1px solid var(--p-border); display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h3 style="font-size: 1.15rem; margin: 0 0 2px;">Security & Operational Audit Trail</h3>
+                <p style="color: var(--p-text-muted); font-size: 12px; margin: 0;">Immutable audit log of all administrative actions and security events</p>
+            </div>
+            <span class="status-badge" style="background: rgba(255,255,255,0.06); color: var(--p-text-muted);">
+                @(Model.AuditTrail?.Count ?? 0) recorded events
+            </span>
+        </div>
+
+        @if (Model.AuditTrail?.Any() == true)
+        {
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 14px;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid var(--p-border); background: var(--p-surface-alt); color: var(--p-text-muted); font-size: 12px; text-transform: uppercase;">
+                            <th style="padding: 14px 24px;">Timestamp (UTC)</th>
+                            <th style="padding: 14px 16px;">Event Type</th>
+                            <th style="padding: 14px 16px;">Actor</th>
+                            <th style="padding: 14px 24px;">Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var audit in Model.AuditTrail)
+                        {
+                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);">
+                                <td style="padding: 14px 24px; font-family: monospace; font-size: 12px; color: var(--p-text-muted); white-space: nowrap;">
+                                    @audit.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")
+                                </td>
+                                <td style="padding: 14px 16px;">
+                                    <span class="code-font" style="color: #4ade80; font-size: 12px; font-weight: 600;">@audit.ActionType</span>
+                                </td>
+                                <td style="padding: 14px 16px; font-size: 13px;">@audit.ActorEmail</td>
+                                <td style="padding: 14px 24px; font-size: 13px; color: var(--p-text-muted);">@audit.Details</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div style="padding: 32px 24px; text-align: center; color: var(--p-text-muted); font-size: 13px;">
+                Audit records will populate automatically as administrative actions are performed.
+            </div>
+        }
+    </div>
 </div>
 
 @section Scripts {

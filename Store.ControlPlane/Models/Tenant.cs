@@ -19,6 +19,7 @@ public class Tenant
     public List<BackupProviderConfig> BackupProviders { get; set; } = new();
     public BackupScheduleConfig BackupSchedule { get; set; } = new();
     public List<TenantBackupJobRecord> BackupHistory { get; set; } = new();
+    public List<TenantAuditRecord> AuditTrail { get; set; } = new();
     public List<TenantProvisioningLog> ProvisioningLogs { get; set; } = new();
     public DateTime DateCreated { get; set; } = DateTime.UtcNow;
     public DateTime? LastHealthCheck { get; set; }
@@ -123,7 +124,20 @@ public class TenantBackupJobRecord
     public long TotalSizeBytes { get; set; }
     public List<string> Files { get; set; } = new();
     public string DestinationProviders { get; set; } = string.Empty;
-    public string Status { get; set; } = "Completed"; // Completed, Failed
+    public string Status { get; set; } = "Completed";
     public string? ErrorMessage { get; set; }
     public int RetentionDays { get; set; } = 30;
+}
+
+// Audit Models
+
+public class TenantAuditRecord
+{
+    public Guid AuditId { get; set; } = Guid.NewGuid();
+    public Guid TenantId { get; set; }
+    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+    public string ActorEmail { get; set; } = "system";
+    public string ActionType { get; set; } = string.Empty; // ContainerRestart, DomainRegistered, DomainVerified, BranchAdded, BranchRemoved, BackupTriggered, ProviderConnected, SiloSuspended, SiloResumed
+    public string Details { get; set; } = string.Empty;
+    public string? IpAddress { get; set; }
 }

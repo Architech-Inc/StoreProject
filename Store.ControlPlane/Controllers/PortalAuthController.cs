@@ -3,10 +3,13 @@ using Store.ControlPlane.Models.DTOs;
 using Store.ControlPlane.Services;
 using Store.Models.DTOs.Common;
 
+using Microsoft.AspNetCore.RateLimiting;
+
 namespace Store.ControlPlane.Controllers;
 
 [ApiController]
 [Route("api/control")]
+[EnableRateLimiting("PortalAuth")]
 public class PortalAuthController : ControllerBase
 {
     private readonly IPortalAuthService _authService;

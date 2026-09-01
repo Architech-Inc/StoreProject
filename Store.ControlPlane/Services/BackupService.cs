@@ -9,13 +9,15 @@ namespace Store.ControlPlane.Services;
 public class BackupService : IBackupService
 {
     private readonly ITenantRepository _tenantRepo;
+    private readonly IAuditService _auditService;
     private readonly IConfiguration _config;
     private readonly ILogger<BackupService> _logger;
     private readonly byte[] _encryptionKey;
 
-    public BackupService(ITenantRepository tenantRepo, IConfiguration config, ILogger<BackupService> logger)
+    public BackupService(ITenantRepository tenantRepo, IAuditService auditService, IConfiguration config, ILogger<BackupService> logger)
     {
         _tenantRepo = tenantRepo;
+        _auditService = auditService;
         _config = config;
         _logger = logger;
 
@@ -148,6 +150,8 @@ public class BackupService : IBackupService
         await _tenantRepo.SaveAsync(tenant, ct);
         _logger.LogInformation("Backup {BackupId} created successfully for tenant {Slug} to {Destination}", backupRecord.BackupId, tenant.Slug, destination);
 
+        await _auditService.RecordAuditAsync(tenant.TenantId, "BackupCreated", tenant.AdminEmail, $"Backup snapshot created ({FormatBytes(totalBytes)}) and synced to {destination}.", ct: ct);
+
         return new TriggerBackupResponse(
             backupRecord.BackupId,
             backupRecord.Status,
@@ -191,6 +195,8 @@ public class BackupService : IBackupService
         await _tenantRepo.SaveAsync(tenant, ct);
         _logger.LogInformation("Configured S3 storage provider for tenant {Slug}", tenant.Slug);
 
+        await _auditService.RecordAuditAsync(tenant.TenantId, "ProviderConnected", tenant.AdminEmail, $"Connected S3 / MinIO storage bucket '{request.BucketName}'.", ct: ct);
+
         return new BackupProviderDto("S3", "Amazon S3 / MinIO Compatible", true, s3Config.AccountEmail, s3Config.AccountName, s3Config.ConnectedAt, null, null);
     }
 
@@ -227,6 +233,8 @@ public class BackupService : IBackupService
         await _tenantRepo.SaveAsync(tenant, ct);
         _logger.LogInformation("Connected {Provider} OAuth provider for tenant {Slug} ({Email})", providerType, tenant.Slug, request.AccountEmail);
 
+        await _auditService.RecordAuditAsync(tenant.TenantId, "ProviderConnected", tenant.AdminEmail, $"Connected {providerType} storage account ({request.AccountEmail}).", ct: ct);
+
         return new BackupProviderDto(providerType.ToString(), providerType.ToString(), true, oAuth.AccountEmail, oAuth.AccountName, oAuth.ConnectedAt, null, null);
     }
 
@@ -246,6 +254,9 @@ public class BackupService : IBackupService
         tenant.BackupProviders.Remove(match);
         await _tenantRepo.SaveAsync(tenant, ct);
         _logger.LogInformation("Disconnected backup provider {Provider} for tenant {Slug}", providerType, tenant.Slug);
+
+        await _auditService.RecordAuditAsync(tenant.TenantId, "ProviderDisconnected", tenant.AdminEmail, $"Disconnected {providerType} storage provider.", ct: ct);
+
         return true;
     }
 
@@ -269,6 +280,8 @@ public class BackupService : IBackupService
 
         await _tenantRepo.SaveAsync(tenant, ct);
         _logger.LogInformation("Updated backup schedule for tenant {Slug} to {Frequency}, retention {Count}", tenant.Slug, freq, request.RetentionCount);
+
+        await _auditService.RecordAuditAsync(tenant.TenantId, "ScheduleUpdated", tenant.AdminEmail, $"Updated backup schedule to {freq} (retention: {request.RetentionCount} snapshots).", ct: ct);
 
         return new BackupScheduleDto(
             tenant.BackupSchedule.Frequency.ToString(),

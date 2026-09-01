@@ -1,3 +1,5 @@
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
 using Store.ControlPlane.Repositories;
 using Store.ControlPlane.Services;
 using Store.ControlPlane.Workers;
@@ -16,9 +18,38 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+// Configure Enterprise Rate Limiting Policies
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    // Portal Auth Rate Limit: 10 requests per 15 minutes per IP
+    options.AddPolicy("PortalAuth", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown_client",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(15),
+                QueueLimit = 0
+            }));
+
+    // Backup Trigger Rate Limit: 5 requests per 10 minutes per IP
+    options.AddPolicy("BackupTrigger", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown_client",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(10),
+                QueueLimit = 0
+            }));
+});
+
 // Register Control Plane Dependencies
 builder.Services.AddSingleton<ITenantRepository, JsonFileTenantRepository>();
 builder.Services.AddSingleton<IPortalAuthService, PortalAuthService>();
+builder.Services.AddSingleton<IAuditService, AuditService>();
 builder.Services.AddSingleton<IDomainVerificationService, DomainVerificationService>();
 builder.Services.AddSingleton<ITraefikConfigWriter, TraefikConfigWriter>();
 builder.Services.AddSingleton<IBackupService, BackupService>();
@@ -39,6 +70,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowAll");
+app.UseRateLimiter();
 app.UseAuthorization();
 app.MapControllers();
 

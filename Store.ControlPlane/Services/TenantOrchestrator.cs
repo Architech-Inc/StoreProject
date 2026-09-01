@@ -12,6 +12,7 @@ public class TenantOrchestrator : ITenantOrchestrator
     private readonly ITenantRepository _tenantRepo;
     private readonly IDomainVerificationService _domainVerifier;
     private readonly ITraefikConfigWriter _traefikWriter;
+    private readonly IAuditService _auditService;
     private readonly IConfiguration _config;
     private readonly ILogger<TenantOrchestrator> _logger;
     private readonly IWebHostEnvironment _env;
@@ -26,6 +27,7 @@ public class TenantOrchestrator : ITenantOrchestrator
         ITenantRepository tenantRepo,
         IDomainVerificationService domainVerifier,
         ITraefikConfigWriter traefikWriter,
+        IAuditService auditService,
         IConfiguration config,
         ILogger<TenantOrchestrator> logger,
         IWebHostEnvironment env)
@@ -33,6 +35,7 @@ public class TenantOrchestrator : ITenantOrchestrator
         _tenantRepo = tenantRepo;
         _domainVerifier = domainVerifier;
         _traefikWriter = traefikWriter;
+        _auditService = auditService;
         _config = config;
         _logger = logger;
         _env = env;
@@ -116,6 +119,8 @@ public class TenantOrchestrator : ITenantOrchestrator
         await _tenantRepo.SaveAsync(tenant, ct);
         _logger.LogInformation("Tenant {Slug} provisioned successfully.", tenant.Slug);
 
+        await _auditService.RecordAuditAsync(tenant.TenantId, "TenantProvisioned", tenant.AdminEmail, $"Tenant '{tenant.Name}' ({tenant.Slug}) provisioned successfully.", ct: ct);
+
         return MapToDto(tenant);
     }
 
@@ -160,6 +165,9 @@ public class TenantOrchestrator : ITenantOrchestrator
         tenant.Status = TenantStatus.Suspended;
         LogStep(tenant, "Lifecycle", true, "Silo suspended by administrator.");
         await _tenantRepo.SaveAsync(tenant, ct);
+
+        await _auditService.RecordAuditAsync(tenant.TenantId, "SiloSuspended", tenant.AdminEmail, "Silo web and API traffic suspended by administrator.", ct: ct);
+
         return MapToDto(tenant);
     }
 
@@ -171,6 +179,9 @@ public class TenantOrchestrator : ITenantOrchestrator
         tenant.Status = TenantStatus.Active;
         LogStep(tenant, "Lifecycle", true, "Silo resumed by administrator.");
         await _tenantRepo.SaveAsync(tenant, ct);
+
+        await _auditService.RecordAuditAsync(tenant.TenantId, "SiloResumed", tenant.AdminEmail, "Silo web and API traffic resumed by administrator.", ct: ct);
+
         return MapToDto(tenant);
     }
 
@@ -255,6 +266,7 @@ public class TenantOrchestrator : ITenantOrchestrator
         await _tenantRepo.SaveAsync(tenant, ct);
 
         _logger.LogInformation("Triggered restart for container {ContainerName} for tenant {Slug}", containerName, tenant.Slug);
+        await _auditService.RecordAuditAsync(tenant.TenantId, "ContainerRestarted", tenant.AdminEmail, $"Restarted container '{containerName}'.", ct: ct);
         return true;
     }
 
@@ -267,6 +279,7 @@ public class TenantOrchestrator : ITenantOrchestrator
         await _tenantRepo.SaveAsync(tenant, ct);
 
         _logger.LogInformation("Triggered restart of all containers for tenant {Slug}", tenant.Slug);
+        await _auditService.RecordAuditAsync(tenant.TenantId, "AllContainersRestarted", tenant.AdminEmail, "Restarted all silo containers in sequence.", ct: ct);
         return true;
     }
 
@@ -317,6 +330,8 @@ public class TenantOrchestrator : ITenantOrchestrator
         LogStep(tenant, "DomainRegistration", true, $"Registered pending custom domain '{cleanDomain}'. Challenge TXT record created.");
         await _tenantRepo.SaveAsync(tenant, ct);
 
+        await _auditService.RecordAuditAsync(tenant.TenantId, "DomainRegistered", tenant.AdminEmail, $"Registered pending custom domain '{cleanDomain}'.", ct: ct);
+
         return (await GetDomainConfigAsync(tenantId, ct))!;
     }
 
@@ -344,6 +359,7 @@ public class TenantOrchestrator : ITenantOrchestrator
 
             // Update Traefik routing configuration to include custom domain
             await _traefikWriter.WriteTenantRoutingConfigAsync(tenant, ct);
+            await _auditService.RecordAuditAsync(tenant.TenantId, "DomainVerified", tenant.AdminEmail, $"Custom domain '{cfg.CustomDomain}' successfully verified.", ct: ct);
         }
         else
         {
@@ -366,6 +382,8 @@ public class TenantOrchestrator : ITenantOrchestrator
         LogStep(tenant, "DomainRemoved", true, $"Removed custom domain '{oldDomain}'. Silo accessible via platform subdomain.");
         await _traefikWriter.WriteTenantRoutingConfigAsync(tenant, ct);
         await _tenantRepo.SaveAsync(tenant, ct);
+
+        await _auditService.RecordAuditAsync(tenant.TenantId, "DomainRemoved", tenant.AdminEmail, $"Removed custom domain '{oldDomain}'.", ct: ct);
 
         return true;
     }
@@ -437,6 +455,8 @@ public class TenantOrchestrator : ITenantOrchestrator
         await _traefikWriter.WriteTenantRoutingConfigAsync(tenant, ct);
         await _tenantRepo.SaveAsync(tenant, ct);
 
+        await _auditService.RecordAuditAsync(tenant.TenantId, "BranchAdded", tenant.AdminEmail, $"Added branch '{branch.BranchName}' ({branch.ResolvedUrl}).", ct: ct);
+
         return new BranchDto(
             branch.BranchId,
             branch.BranchName,
@@ -473,6 +493,7 @@ public class TenantOrchestrator : ITenantOrchestrator
             LogStep(tenant, "BranchVerified", true, $"Custom branch domain '{customHost}' verified.");
             await _traefikWriter.WriteTenantRoutingConfigAsync(tenant, ct);
             await _tenantRepo.SaveAsync(tenant, ct);
+            await _auditService.RecordAuditAsync(tenant.TenantId, "BranchVerified", tenant.AdminEmail, $"Custom branch domain '{customHost}' verified.", ct: ct);
         }
 
         return result;
@@ -491,6 +512,8 @@ public class TenantOrchestrator : ITenantOrchestrator
 
         await _traefikWriter.WriteTenantRoutingConfigAsync(tenant, ct);
         await _tenantRepo.SaveAsync(tenant, ct);
+
+        await _auditService.RecordAuditAsync(tenant.TenantId, "BranchRemoved", tenant.AdminEmail, $"Removed branch '{branch.BranchName}'.", ct: ct);
 
         return true;
     }

@@ -3,6 +3,8 @@ using Store.ControlPlane.Models.DTOs;
 using Store.ControlPlane.Services;
 using Store.Models.DTOs.Common;
 
+using Microsoft.AspNetCore.RateLimiting;
+
 namespace Store.ControlPlane.Controllers;
 
 [ApiController]
@@ -30,6 +32,7 @@ public class BackupsController : ControllerBase
     }
 
     [HttpPost("trigger")]
+    [EnableRateLimiting("BackupTrigger")]
     public async Task<IActionResult> TriggerBackup(Guid id, CancellationToken ct)
     {
         try

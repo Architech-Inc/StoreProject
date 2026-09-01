@@ -219,3 +219,14 @@ public record TriggerBackupResponse(
     List<string> Files,
     DateTime Timestamp
 );
+
+// Phase 4 DTOs: Audit Trail
+public record TenantAuditDto(
+    Guid AuditId,
+    Guid TenantId,
+    DateTime Timestamp,
+    string ActorEmail,
+    string ActionType,
+    string Details,
+    string? IpAddress
+);

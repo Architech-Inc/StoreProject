@@ -1,5 +1,5 @@
 using System.Security.Cryptography;
-using System.Text.Json;
+using System.Text;
 
 namespace Store.TenantPortal.Services;
 
@@ -7,11 +7,59 @@ public class OAuthService : IOAuthService
 {
     private readonly IConfiguration _config;
     private readonly ILogger<OAuthService> _logger;
+    private readonly byte[] _stateSecretKey;
 
     public OAuthService(IConfiguration config, ILogger<OAuthService> logger)
     {
         _config = config;
         _logger = logger;
+        var masterSecret = _config["OAuth:StateSigningKey"] ?? "ClexAnFoodsOAuthAntiCsrfSecretKey2026";
+        _stateSecretKey = Encoding.UTF8.GetBytes(masterSecret);
+    }
+
+    public string GenerateSignedState(Guid tenantId)
+    {
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var payload = $"{tenantId:D}:{timestamp}";
+        using var hmac = new HMACSHA256(_stateSecretKey);
+        var signatureBytes = hmac.ComputeHash(Encoding.UTF8.GetBytes(payload));
+        var signature = Convert.ToHexString(signatureBytes).ToLowerInvariant();
+        return $"{payload}:{signature}";
+    }
+
+    public bool ValidateSignedState(string state, out Guid tenantId)
+    {
+        tenantId = Guid.Empty;
+        if (string.IsNullOrWhiteSpace(state)) return false;
+
+        var parts = state.Split(':');
+        if (parts.Length != 3) return false;
+
+        if (!Guid.TryParse(parts[0], out tenantId)) return false;
+        if (!long.TryParse(parts[1], out var timestamp)) return false;
+
+        var payload = $"{tenantId:D}:{timestamp}";
+        using var hmac = new HMACSHA256(_stateSecretKey);
+        var expectedSigBytes = hmac.ComputeHash(Encoding.UTF8.GetBytes(payload));
+        var expectedSig = Convert.ToHexString(expectedSigBytes).ToLowerInvariant();
+
+        if (!CryptographicOperations.FixedTimeEquals(
+            Encoding.UTF8.GetBytes(parts[2].ToLowerInvariant()),
+            Encoding.UTF8.GetBytes(expectedSig)))
+        {
+            _logger.LogWarning("OAuth state HMAC signature mismatch for tenant {TenantId}", tenantId);
+            return false;
+        }
+
+        // Validate timestamp expiration (10 minutes)
+        var stateTime = DateTimeOffset.FromUnixTimeSeconds(timestamp);
+        if (DateTimeOffset.UtcNow - stateTime > TimeSpan.FromMinutes(10))
+        {
+            _logger.LogWarning("OAuth state expired for tenant {TenantId} (created at {Time})", tenantId, stateTime);
+            return false;
+        }
+
+        return true;
     }
 
     public string BuildMicrosoftAuthUrl(string state, string redirectUri)
@@ -70,7 +118,7 @@ public class OAuthService : IOAuthService
             mockAccessToken,
             mockRefreshToken,
             "store-backups@gmail.com",
-            "Google Drive (App Data)",
+            "Google Drive (App Space)",
             3600
         ));
     }

@@ -378,4 +378,23 @@ public class ControlPlaneClient : IControlPlaneClient
         var result = await response.Content.ReadFromJsonAsync<ApiResponse<BackupScheduleDto>>(cancellationToken: ct);
         return result!.Data;
     }
+
+    // ==========================================
+    // Phase 4: Audit Trail
+    // ==========================================
+
+    public async Task<IReadOnlyList<TenantAuditDto>> GetAuditTrailAsync(Guid tenantId, int limit = 50, CancellationToken ct = default)
+    {
+        try
+        {
+            var response = await _http.GetFromJsonAsync<ApiResponse<IReadOnlyList<TenantAuditDto>>>(
+                $"api/control/tenants/{tenantId}/audit?limit={limit}", ct);
+            return response?.Data ?? Array.Empty<TenantAuditDto>();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting audit trail for {TenantId}", tenantId);
+            return Array.Empty<TenantAuditDto>();
+        }
+    }
 }

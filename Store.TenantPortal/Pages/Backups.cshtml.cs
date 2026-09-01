@@ -42,8 +42,9 @@ public class BackupsModel : PageModel
         var msRedirect = $"{Request.Scheme}://{Request.Host}/oauth/microsoft/callback";
         var googleRedirect = $"{Request.Scheme}://{Request.Host}/oauth/google/callback";
 
-        MicrosoftAuthUrl = _oauthService.BuildMicrosoftAuthUrl(session.TenantId.Value.ToString(), msRedirect);
-        GoogleAuthUrl = _oauthService.BuildGoogleAuthUrl(session.TenantId.Value.ToString(), googleRedirect);
+        var signedState = _oauthService.GenerateSignedState(session.TenantId.Value);
+        MicrosoftAuthUrl = _oauthService.BuildMicrosoftAuthUrl(signedState, msRedirect);
+        GoogleAuthUrl = _oauthService.BuildGoogleAuthUrl(signedState, googleRedirect);
 
         return Page();
     }

@@ -38,4 +38,7 @@ public interface IControlPlaneClient
     Task<BackupProviderDto> SaveOAuthTokensAsync(Guid tenantId, SaveOAuthTokensRequest request, CancellationToken ct = default);
     Task<bool> DisconnectBackupProviderAsync(Guid tenantId, string providerType, CancellationToken ct = default);
     Task<BackupScheduleDto> UpdateBackupScheduleAsync(Guid tenantId, UpdateScheduleRequest request, CancellationToken ct = default);
+
+    // Audit Trail
+    Task<IReadOnlyList<TenantAuditDto>> GetAuditTrailAsync(Guid tenantId, int limit = 50, CancellationToken ct = default);
 }

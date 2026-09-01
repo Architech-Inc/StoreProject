@@ -26,6 +26,7 @@ public class DashboardModel : PageModel
 
     public TenantDetailDto Tenant { get; set; } = null!;
     public PortalSession Session { get; set; } = null!;
+    public IReadOnlyList<TenantAuditDto> AuditTrail { get; set; } = Array.Empty<TenantAuditDto>();
 
     public async Task<IActionResult> OnGetAsync(CancellationToken ct)
     {
@@ -50,6 +51,8 @@ public class DashboardModel : PageModel
         }
 
         Tenant = tenantDetails;
+        AuditTrail = await _cpClient.GetAuditTrailAsync(session.TenantId.Value, 10, ct);
+
         return Page();
     }
 

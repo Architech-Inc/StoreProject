@@ -51,6 +51,13 @@ public class GoogleCallbackModel : PageModel
             return Page();
         }
 
+        if (string.IsNullOrEmpty(state) || !_oauthService.ValidateSignedState(state, out var stateTenantId) || stateTenantId != session.TenantId!.Value)
+        {
+            IsSuccess = false;
+            Message = "Invalid or expired anti-CSRF state token.";
+            return Page();
+        }
+
         try
         {
             var redirectUri = $"{Request.Scheme}://{Request.Host}/oauth/google/callback";
