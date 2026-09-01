@@ -62,3 +62,9 @@ public class TenantHealthSummaryDto
     public int HealthyCount { get; set; }
     public int UnhealthyCount { get; set; }
 }
+
+public record SlugCheckDto(
+    string Slug,
+    bool IsAvailable,
+    string? Reason = null
+);

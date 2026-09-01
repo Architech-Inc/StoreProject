@@ -23,6 +23,21 @@ public class TenantsController : ControllerBase
         return Ok(ApiResponse<IReadOnlyList<TenantDto>>.Ok(list));
     }
 
+    [HttpGet("check-slug")]
+    public async Task<IActionResult> CheckSlug(string slug, [FromServices] Store.ControlPlane.Repositories.ITenantRepository repo, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(slug) || slug.Length < 3)
+        {
+            return Ok(ApiResponse<SlugCheckDto>.Ok(new SlugCheckDto(slug, false, "Slug too short or empty.")));
+        }
+        var exists = await repo.SlugExistsAsync(slug.ToLowerInvariant(), ct);
+        if (exists)
+        {
+            return Ok(ApiResponse<SlugCheckDto>.Ok(new SlugCheckDto(slug, false, "Slug is already taken.")));
+        }
+        return Ok(ApiResponse<SlugCheckDto>.Ok(new SlugCheckDto(slug, true, null)));
+    }
+
     [HttpGet("summary")]
     public async Task<IActionResult> GetSummary(CancellationToken ct)
     {

@@ -19,7 +19,7 @@ public class ControlPlaneClient : IControlPlaneClient
         try
         {
             var response = await _http.GetFromJsonAsync<ApiResponse<SlugCheckDto>>(
-                $"api/control/slugs/check?slug={Uri.EscapeDataString(slug)}", ct);
+                $"api/control/tenants/check-slug?slug={Uri.EscapeDataString(slug)}", ct);
 
             return response?.Data ?? new SlugCheckDto(slug, false, "Unable to check slug availability.");
         }

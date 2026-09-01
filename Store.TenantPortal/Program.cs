@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Mvc;
 using Polly;
 using Polly.Extensions.Http;
 using Store.TenantPortal.Services;
@@ -95,5 +96,54 @@ app.MapGet("/api/slugs/check", async (string slug, IControlPlaneClient client, C
     var check = await client.CheckSlugAvailabilityAsync(slug, ct);
     return Results.Ok(new { isAvailable = check.IsAvailable, reason = check.Reason, slug = check.Slug });
 });
+
+// Backups Proxy Endpoints
+app.MapPost("/api/backups/trigger", async (HttpContext ctx, IControlPlaneClient client, IPortalSessionService sessionService, CancellationToken ct) =>
+{
+    var session = sessionService.GetCurrentSession(ctx.User);
+    if (session?.TenantId == null) return Results.Unauthorized();
+    try {
+        var res = await client.TriggerBackupAsync(session.TenantId.Value, ct);
+        return Results.Ok(new { success = true, message = res.Message, data = res });
+    } catch (Exception ex) {
+        return Results.Ok(new { success = false, message = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapPost("/api/backups/providers/s3", async (HttpContext ctx, [FromBody] Store.TenantPortal.Models.DTOs.ConfigureS3Request req, IControlPlaneClient client, IPortalSessionService sessionService, CancellationToken ct) =>
+{
+    var session = sessionService.GetCurrentSession(ctx.User);
+    if (session?.TenantId == null) return Results.Unauthorized();
+    try {
+        var res = await client.ConfigureS3ProviderAsync(session.TenantId.Value, req, ct);
+        return Results.Ok(new { success = true, message = "S3 Configured successfully.", data = res });
+    } catch (Exception ex) {
+        return Results.Ok(new { success = false, message = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapDelete("/api/backups/providers/{provider}", async (string provider, HttpContext ctx, IControlPlaneClient client, IPortalSessionService sessionService, CancellationToken ct) =>
+{
+    var session = sessionService.GetCurrentSession(ctx.User);
+    if (session?.TenantId == null) return Results.Unauthorized();
+    try {
+        var success = await client.DisconnectBackupProviderAsync(session.TenantId.Value, provider, ct);
+        return Results.Ok(new { success, message = success ? "Disconnected" : "Failed to disconnect" });
+    } catch (Exception ex) {
+        return Results.Ok(new { success = false, message = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapPut("/api/backups/schedule", async (HttpContext ctx, [FromBody] Store.TenantPortal.Models.DTOs.UpdateScheduleRequest req, IControlPlaneClient client, IPortalSessionService sessionService, CancellationToken ct) =>
+{
+    var session = sessionService.GetCurrentSession(ctx.User);
+    if (session?.TenantId == null) return Results.Unauthorized();
+    try {
+        var res = await client.UpdateBackupScheduleAsync(session.TenantId.Value, req, ct);
+        return Results.Ok(new { success = true, message = "Schedule updated." });
+    } catch (Exception ex) {
+        return Results.Ok(new { success = false, message = ex.Message });
+    }
+}).RequireAuthorization();
 
 app.Run();

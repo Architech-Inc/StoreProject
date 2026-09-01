@@ -1,0 +1,190 @@
+@page
+@model Store.TenantPortal.Pages.Dashboard.BackupsModel
+@{
+    ViewData["Title"] = "Automated Backups";
+    Layout = "_DashboardLayout";
+}
+
+<div class="dashboard-header">
+    <div>
+        <h1 class="dashboard-title">Cloud Backups & Vault</h1>
+        <p class="dashboard-subtitle">Manage automated snapshots and disaster recovery for your store silo.</p>
+    </div>
+    <div class="dashboard-actions">
+        <button id="btnTriggerBackup" class="btn-primary-glow">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            Trigger Backup Now
+        </button>
+    </div>
+</div>
+
+@if (Model.BackupSummary == null)
+{
+    <div class="portal-alert danger">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+        <span>Failed to load backup configuration. Ensure the Control Plane is reachable.</span>
+    </div>
+}
+else
+{
+    <div class="portal-grid">
+        <!-- Storage Providers -->
+        <div class="portal-card" style="grid-column: 1 / -1;">
+            <div class="card-header">
+                <h2 class="card-title">Cloud Storage Destinations</h2>
+                <div class="card-actions">
+                    <button id="btnAddS3" class="btn-glass btn-sm">Configure S3/MinIO</button>
+                </div>
+            </div>
+            
+            <div class="providers-list">
+                @foreach (var provider in Model.BackupSummary.Providers)
+                {
+                    <div class="provider-item @(provider.IsConnected ? "connected" : "")">
+                        <div class="provider-icon">
+                            @if (provider.ProviderType == "S3")
+                            {
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                            }
+                            else if (provider.ProviderType == "GoogleDrive")
+                            {
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2l.5-.5m10.5-12.5c1.5-1.26 2-5 2-5s-3.74.5-5 2l-.5.5M12 12l2.5 2.5m-5 0L12 12m0 0l-2.5-2.5m5 0L12 12"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                            }
+                            else
+                            {
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+                            }
+                        </div>
+                        <div class="provider-info">
+                            <h3>@provider.DisplayName</h3>
+                            @if (provider.IsConnected)
+                            {
+                                <p class="text-success" style="font-size: 0.85rem; margin: 4px 0 0 0;">
+                                    Connected via @provider.AccountEmail
+                                </p>
+                                @if (provider.LastBackupAt.HasValue)
+                                {
+                                    <p style="color: var(--p-text-muted); font-size: 0.8rem; margin: 2px 0 0 0;">
+                                        Last sync: @provider.LastBackupAt.Value.ToString("MMM dd, HH:mm") (@provider.LastBackupStatus)
+                                    </p>
+                                }
+                            }
+                            else
+                            {
+                                <p style="color: var(--p-text-muted); font-size: 0.85rem; margin: 4px 0 0 0;">Not configured</p>
+                            }
+                        </div>
+                        <div class="provider-actions">
+                            @if (provider.IsConnected)
+                            {
+                                <button class="btn-danger-glass btn-sm disconnect-provider" data-type="@provider.ProviderType">Disconnect</button>
+                            }
+                            else
+                            {
+                                @if (provider.ProviderType == "S3")
+                                {
+                                    <button class="btn-glass btn-sm" onclick="document.getElementById('btnAddS3').click()">Configure</button>
+                                }
+                                else
+                                {
+                                    <a href="/Dashboard/OAuth/Connect?provider=@provider.ProviderType" class="btn-glass btn-sm">Connect OAuth</a>
+                                }
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Schedule Config -->
+        <div class="portal-card">
+            <div class="card-header">
+                <h2 class="card-title">Automation Schedule</h2>
+            </div>
+            
+            <form id="scheduleForm" style="margin-top: 16px;">
+                <div class="form-group" style="display: flex; align-items: center; justify-content: space-between;">
+                    <div>
+                        <label style="font-weight: 600; margin-bottom: 2px;">Enable Scheduled Backups</label>
+                        <p style="color: var(--p-text-muted); font-size: 0.8rem; margin: 0;">Automatically run pg_dump routines.</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="scheduleEnabled" @(Model.BackupSummary.Schedule.IsEnabled ? "checked" : "")>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+
+                <div class="form-group" style="margin-top: 20px;">
+                    <label class="form-label">Frequency</label>
+                    <select id="scheduleFrequency" class="portal-input">
+                        <option value="Hourly" selected="@(Model.BackupSummary.Schedule.Frequency == "Hourly")">Hourly</option>
+                        <option value="Daily" selected="@(Model.BackupSummary.Schedule.Frequency == "Daily")">Daily (Midnight)</option>
+                        <option value="Weekly" selected="@(Model.BackupSummary.Schedule.Frequency == "Weekly")">Weekly (Sunday)</option>
+                    </select>
+                </div>
+
+                <div class="form-group" style="margin-top: 20px;">
+                    <label class="form-label">Retention Policy (Rolling)</label>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <input type="number" id="scheduleRetention" class="portal-input" value="@Model.BackupSummary.Schedule.RetentionCount" min="1" max="60" style="width: 80px;" />
+                        <span style="color: var(--p-text-muted); font-size: 0.9rem;">snapshots to keep</span>
+                    </div>
+                </div>
+
+                <div style="margin-top: 24px; display: flex; justify-content: flex-end;">
+                    <button type="button" id="btnSaveSchedule" class="btn-glass">Save Settings</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Recent Jobs -->
+        <div class="portal-card">
+            <div class="card-header">
+                <h2 class="card-title">Recent Snapshots</h2>
+            </div>
+            
+            <div style="margin-top: 16px;">
+                @if (!Model.BackupSummary.RecentBackups.Any())
+                {
+                    <div class="empty-state">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+                        <p>No backups have been created yet.</p>
+                    </div>
+                }
+                else
+                {
+                    <ul class="job-list">
+                        @foreach (var job in Model.BackupSummary.RecentBackups)
+                        {
+                            <li class="job-item">
+                                <div class="job-icon @(job.Status.ToLower() == "completed" ? "success" : "failed")">
+                                    @if (job.Status.ToLower() == "completed")
+                                    {
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    }
+                                    else
+                                    {
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                    }
+                                </div>
+                                <div class="job-details">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                                        <strong>@job.Timestamp.ToString("MMM dd, yyyy HH:mm")</strong>
+                                        <span class="badge @(job.Status.ToLower() == "completed" ? "badge-success" : "badge-danger")">@job.Status</span>
+                                    </div>
+                                    <p style="color: var(--p-text-muted); font-size: 0.8rem; margin: 0;">
+                                        @job.FormattedSize &bull; Dest: @job.DestinationProviders
+                                    </p>
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script src="~/js/backups.js" asp-append-version="true"></script>
+}

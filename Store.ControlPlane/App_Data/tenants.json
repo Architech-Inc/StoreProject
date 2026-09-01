@@ -194,7 +194,7 @@
       }
     ],
     "DateCreated": "2026-09-01T14:14:53.5791469Z",
-    "LastHealthCheck": "2026-09-01T14:56:10.652078Z",
+    "LastHealthCheck": "2026-09-01T15:38:33.8830657Z",
     "IsHealthy": true,
     "LastHealthMessage": "All microservices healthy."
   },
@@ -297,7 +297,7 @@
       }
     ],
     "DateCreated": "2026-09-01T14:46:34.9810221Z",
-    "LastHealthCheck": "2026-09-01T14:56:10.7228386Z",
+    "LastHealthCheck": "2026-09-01T15:38:33.904285Z",
     "IsHealthy": true,
     "LastHealthMessage": "All microservices healthy."
   }
