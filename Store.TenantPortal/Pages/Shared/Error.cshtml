@@ -1,0 +1,22 @@
+@page
+@model Store.TenantPortal.Pages.Shared.ErrorModel
+@{
+    ViewData["Title"] = "Error";
+}
+
+<div class="portal-container" style="text-align: center; max-width: 600px; padding-top: 100px;">
+    <h1 style="color: var(--p-danger); font-size: 3rem;">Oops!</h1>
+    <h2>Something went wrong</h2>
+    <p style="color: var(--p-text-muted); margin-bottom: 30px;">
+        An unexpected error occurred while processing your request.
+    </p>
+
+    @if (Model.ShowRequestId)
+    {
+        <div style="background: var(--p-surface); padding: 12px; border-radius: 8px; font-family: monospace; font-size: 12px; margin-bottom: 30px;">
+            Request ID: @Model.RequestId
+        </div>
+    }
+
+    <a href="/" class="btn-primary-glow">Return Home</a>
+</div>

@@ -1,0 +1,101 @@
+@page
+@model Store.TenantPortal.Pages.IndexModel
+@{
+    ViewData["Title"] = "Autonomous Store Management Platform";
+}
+
+<!-- Hero Section -->
+<section style="min-height: 85vh; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 60px 5% 40px; position: relative;">
+    <div class="hero-pill">Next-Gen Platform</div>
+    
+    <h1 style="font-size: clamp(3rem, 6vw, 5.5rem); font-weight: 800; line-height: 1.1; margin: 0 0 24px; max-width: 900px; background: linear-gradient(135deg, #ffffff 0%, #a1b0a6 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">
+        Elevate Your Store Operations
+    </h1>
+    
+    <p style="font-size: clamp(1.1rem, 2vw, 1.25rem); color: var(--p-text-muted); max-width: 620px; margin: 0 0 44px; line-height: 1.6;">
+        Experience a fluid, real-time store management system. Unify your Point of Sale, Inventory, and Analytics into one premium isolated platform.
+    </p>
+
+    <div style="display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;">
+        @if (Model.IsAuthenticated)
+        {
+            @if (Model.Session?.HasTenant == true)
+            {
+                <a href="/Dashboard" class="btn-primary-glow">
+                    Enter Dashboard &rarr;
+                </a>
+            }
+            else
+            {
+                <a href="/Onboarding" class="btn-primary-glow">
+                    Continue Store Setup &rarr;
+                </a>
+            }
+        }
+        else
+        {
+            <a href="/Register" class="btn-primary-glow">
+                Get Started
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </a>
+        }
+        <a href="#features" class="btn-glass">Discover Features</a>
+    </div>
+</section>
+
+<!-- Features Grid -->
+<section id="features" class="portal-container" style="padding-top: 40px; padding-bottom: 80px;">
+    <div style="text-align: center; margin-bottom: 60px;">
+        <h2 style="font-size: 2.5rem; margin-bottom: 14px;">Built for Scale & Speed</h2>
+        <p style="color: var(--p-text-muted); font-size: 1.1rem; max-width: 600px; margin: 0 auto;">
+            Everything you need to run your retail locations smoothly and efficiently in full isolation.
+        </p>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px;">
+        <!-- Feature 1: Intelligent POS -->
+        <div class="portal-card">
+            <div style="width: 56px; height: 56px; border-radius: 16px; background: var(--chip-green); border: 1px solid rgba(1, 156, 1, 0.3); display: flex; align-items: center; justify-content: center; color: #4ade80; margin-bottom: 20px;">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                    <line x1="8" y1="21" x2="16" y2="21"></line>
+                    <line x1="12" y1="17" x2="12" y2="21"></line>
+                </svg>
+            </div>
+            <h3 style="font-size: 1.35rem; margin-bottom: 12px;">Intelligent POS</h3>
+            <p style="color: var(--p-text-muted); font-size: 0.95rem; margin: 0; line-height: 1.6;">
+                A lightning-fast point of sale system designed for high volume environments. Process transactions, manage discounts, and handle returns with ease.
+            </p>
+        </div>
+
+        <!-- Feature 2: Inventory Control -->
+        <div class="portal-card">
+            <div style="width: 56px; height: 56px; border-radius: 16px; background: var(--chip-teal); border: 1px solid rgba(20, 184, 166, 0.3); display: flex; align-items: center; justify-content: center; color: #2dd4bf; margin-bottom: 20px;">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+            </div>
+            <h3 style="font-size: 1.35rem; margin-bottom: 12px;">Inventory Control</h3>
+            <p style="color: var(--p-text-muted); font-size: 0.95rem; margin: 0; line-height: 1.6;">
+                Real-time stock tracking across multiple branches. Automate purchase orders, manage stock transfers, and minimize wastage.
+            </p>
+        </div>
+
+        <!-- Feature 3: Live Analytics -->
+        <div class="portal-card">
+            <div style="width: 56px; height: 56px; border-radius: 16px; background: var(--chip-purple); border: 1px solid rgba(168, 85, 247, 0.3); display: flex; align-items: center; justify-content: center; color: #c084fc; margin-bottom: 20px;">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                    <line x1="6" y1="20" x2="6" y2="14"></line>
+                </svg>
+            </div>
+            <h3 style="font-size: 1.35rem; margin-bottom: 12px;">Live Analytics</h3>
+            <p style="color: var(--p-text-muted); font-size: 0.95rem; margin: 0; line-height: 1.6;">
+                Make data-driven decisions with real-time dashboards. Track cash variances, promotion effectiveness, and store performance at a glance.
+            </p>
+        </div>
+    </div>
+</section>

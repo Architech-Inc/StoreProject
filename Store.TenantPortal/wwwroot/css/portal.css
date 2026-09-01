@@ -1,0 +1,408 @@
+/* ============================================================
+   ClexAn Portal 1.0 — Design System Stylesheet
+   Canonical Reference: docs/tenant-portal/00b-design-language.md
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+:root {
+    /* Backgrounds */
+    --p-bg: #050906;
+    --p-surface: rgba(255, 255, 255, 0.03);
+    --p-surface-hover: rgba(255, 255, 255, 0.06);
+    --p-surface-alt: rgba(255, 255, 255, 0.02);
+
+    /* Borders */
+    --p-border: rgba(255, 255, 255, 0.08);
+    --p-border-accent: rgba(1, 156, 1, 0.3);
+    --p-border-hover: rgba(255, 255, 255, 0.18);
+
+    /* Brand Accent — ClexAn Green */
+    --p-green: #019c01;
+    --p-green-hover: #02b802;
+    --p-green-glow: rgba(1, 156, 1, 0.4);
+    --p-green-chip: linear-gradient(135deg, rgba(1, 156, 1, 0.2), rgba(1, 156, 1, 0.05));
+
+    /* Status Colors */
+    --p-success: #019c01;
+    --p-warning: #f59e0b;
+    --p-danger: #d13438;
+    --p-info: #3b82f6;
+
+    /* Typography */
+    --p-text: #ffffff;
+    --p-text-muted: #a1b0a6;
+    --p-text-subtle: #475569;
+
+    /* Feature Card Chips */
+    --chip-green: linear-gradient(135deg, rgba(1, 156, 1, 0.2), rgba(1, 156, 1, 0.05));
+    --chip-teal: linear-gradient(135deg, rgba(20, 184, 166, 0.2), rgba(20, 184, 166, 0.05));
+    --chip-purple: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(168, 85, 247, 0.05));
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--p-bg);
+    color: var(--p-text);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    overflow-x: hidden;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6, .brand-logo {
+    font-family: 'Outfit', system-ui, sans-serif;
+    font-weight: 700;
+    color: var(--p-text);
+    margin: 0 0 12px;
+}
+
+.code-font, code, pre, .slug-text {
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* Background Radial Glow */
+.portal-bg-glow {
+    position: absolute;
+    top: -20vh;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 70vw;
+    height: 70vw;
+    background: radial-gradient(circle, var(--p-green-glow) 0%, rgba(1, 156, 1, 0) 60%);
+    z-index: 0;
+    filter: blur(90px);
+    opacity: 0.7;
+    pointer-events: none;
+    animation: pulseGlow 9s ease-in-out infinite alternate;
+}
+
+@keyframes pulseGlow {
+    0% { transform: translateX(-50%) scale(0.95); opacity: 0.5; }
+    100% { transform: translateX(-50%) scale(1.05); opacity: 0.8; }
+}
+
+/* Navbar */
+.portal-header {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 5%;
+    background: rgba(5, 9, 6, 0.6);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--p-border);
+    z-index: 1000;
+    transition: all 0.3s ease;
+}
+
+.brand-logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--p-text);
+    text-decoration: none;
+    letter-spacing: -0.5px;
+}
+
+.brand-logo span {
+    background: linear-gradient(90deg, #fff, #a1b0a6);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.portal-nav {
+    display: flex;
+    gap: 28px;
+    align-items: center;
+}
+
+.portal-nav a {
+    color: var(--p-text-muted);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 15px;
+    transition: color 0.2s ease;
+}
+
+.portal-nav a:hover, .portal-nav a.active {
+    color: #fff;
+}
+
+.portal-nav a.active {
+    color: var(--p-green);
+    font-weight: 600;
+}
+
+/* Buttons */
+.btn-primary-glow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 28px;
+    border-radius: 99px;
+    background: var(--p-green);
+    color: #fff !important;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 20px var(--p-green-glow);
+    transition: all 0.3s ease;
+}
+
+.btn-primary-glow:hover {
+    background: var(--p-green-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px var(--p-green-glow);
+}
+
+.btn-glass {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 24px;
+    border-radius: 99px;
+    background: var(--p-surface);
+    border: 1px solid var(--p-border);
+    color: #fff !important;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    text-decoration: none;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.btn-glass:hover {
+    background: var(--p-surface-hover);
+    transform: translateY(-2px);
+    border-color: rgba(255, 255, 255, 0.25);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.btn-danger-glass {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: 99px;
+    background: rgba(209, 52, 56, 0.1);
+    border: 1px solid rgba(209, 52, 56, 0.3);
+    color: #f87171 !important;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.btn-danger-glass:hover {
+    background: rgba(209, 52, 56, 0.2);
+    border-color: #f87171;
+}
+
+/* Badges & Pills */
+.hero-pill {
+    display: inline-block;
+    padding: 6px 16px;
+    border-radius: 99px;
+    background: rgba(1, 156, 1, 0.1);
+    border: 1px solid rgba(1, 156, 1, 0.2);
+    color: #4ade80;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 99px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.status-badge.healthy {
+    background: rgba(1, 156, 1, 0.12);
+    border: 1px solid rgba(1, 156, 1, 0.3);
+    color: #4ade80;
+}
+
+.status-badge.warning {
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: #fbbf24;
+}
+
+.status-badge.danger {
+    background: rgba(209, 52, 56, 0.12);
+    border: 1px solid rgba(209, 52, 56, 0.3);
+    color: #f87171;
+}
+
+/* Status Indicator Dot */
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.status-dot.healthy {
+    background: var(--p-green);
+    box-shadow: 0 0 8px var(--p-green);
+}
+
+.status-dot.warning {
+    background: var(--p-warning);
+    box-shadow: 0 0 8px var(--p-warning);
+}
+
+.status-dot.danger {
+    background: var(--p-danger);
+    box-shadow: 0 0 8px var(--p-danger);
+}
+
+/* Cards & Surfaces */
+.portal-card {
+    background: var(--p-surface);
+    border: 1px solid var(--p-border);
+    border-radius: 20px;
+    padding: 28px;
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.portal-card:hover {
+    border-color: var(--p-border-hover);
+    background: var(--p-surface-hover);
+}
+
+/* Forms & Inputs */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--p-text-muted);
+    margin-bottom: 8px;
+}
+
+.portal-input {
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--p-surface-alt);
+    border: 1px solid var(--p-border);
+    border-radius: 12px;
+    color: var(--p-text);
+    font-size: 14px;
+    font-family: inherit;
+    transition: all 0.2s ease;
+}
+
+.portal-input:focus {
+    outline: none;
+    border-color: var(--p-green);
+    box-shadow: 0 0 0 3px var(--p-green-glow);
+}
+
+.portal-input::placeholder {
+    color: var(--p-text-subtle);
+}
+
+/* Main Container Layouts */
+.portal-main {
+    flex: 1;
+    padding-top: 80px;
+    position: relative;
+    z-index: 1;
+}
+
+.portal-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 5%;
+}
+
+.portal-auth-container {
+    max-width: 460px;
+    margin: 60px auto;
+    padding: 0 20px;
+}
+
+/* Alerts */
+.portal-alert {
+    padding: 14px 18px;
+    border-radius: 12px;
+    font-size: 14px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.portal-alert.danger {
+    background: rgba(209, 52, 56, 0.15);
+    border: 1px solid rgba(209, 52, 56, 0.3);
+    color: #fca5a5;
+}
+
+.portal-alert.success {
+    background: rgba(1, 156, 1, 0.15);
+    border: 1px solid rgba(1, 156, 1, 0.3);
+    color: #86efac;
+}
+
+/* Footer */
+.portal-footer {
+    border-top: 1px solid var(--p-border);
+    padding: 30px 5%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(5, 9, 6, 0.8);
+    color: var(--p-text-muted);
+    font-size: 13px;
+    margin-top: auto;
+}
+
+.portal-footer a {
+    color: var(--p-text-muted);
+    text-decoration: none;
+    margin-left: 20px;
+    transition: color 0.2s ease;
+}
+
+.portal-footer a:hover {
+    color: #fff;
+}

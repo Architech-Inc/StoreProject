@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Store.API.Tests", "Store.AP
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Store.ControlPlane", "Store.ControlPlane\Store.ControlPlane.csproj", "{8F742766-1E43-4BB2-A770-C75F8818316B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Store.TenantPortal", "Store.TenantPortal\Store.TenantPortal.csproj", "{C17147A9-2A16-4B85-93C0-DA53548ACA7B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -97,6 +99,18 @@ Global
 		{8F742766-1E43-4BB2-A770-C75F8818316B}.Release|x64.Build.0 = Release|Any CPU
 		{8F742766-1E43-4BB2-A770-C75F8818316B}.Release|x86.ActiveCfg = Release|Any CPU
 		{8F742766-1E43-4BB2-A770-C75F8818316B}.Release|x86.Build.0 = Release|Any CPU
+		{C17147A9-2A16-4B85-93C0-DA53548ACA7B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C17147A9-2A16-4B85-93C0-DA53548ACA7B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C17147A9-2A16-4B85-93C0-DA53548ACA7B}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{C17147A9-2A16-4B85-93C0-DA53548ACA7B}.Debug|x64.Build.0 = Debug|Any CPU
+		{C17147A9-2A16-4B85-93C0-DA53548ACA7B}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{C17147A9-2A16-4B85-93C0-DA53548ACA7B}.Debug|x86.Build.0 = Debug|Any CPU
+		{C17147A9-2A16-4B85-93C0-DA53548ACA7B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C17147A9-2A16-4B85-93C0-DA53548ACA7B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C17147A9-2A16-4B85-93C0-DA53548ACA7B}.Release|x64.ActiveCfg = Release|Any CPU
+		{C17147A9-2A16-4B85-93C0-DA53548ACA7B}.Release|x64.Build.0 = Release|Any CPU
+		{C17147A9-2A16-4B85-93C0-DA53548ACA7B}.Release|x86.ActiveCfg = Release|Any CPU
+		{C17147A9-2A16-4B85-93C0-DA53548ACA7B}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -18,6 +18,7 @@ builder.Services.AddSwaggerGen(c =>
 
 // Register Control Plane Dependencies
 builder.Services.AddSingleton<ITenantRepository, JsonFileTenantRepository>();
+builder.Services.AddSingleton<IPortalAuthService, PortalAuthService>();
 builder.Services.AddScoped<ITenantOrchestrator, TenantOrchestrator>();
 builder.Services.AddHostedService<TenantHealthMonitorWorker>();
 

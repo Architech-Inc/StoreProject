@@ -1,0 +1,238 @@
+@page
+@model Store.TenantPortal.Pages.OnboardingModel
+@{
+    ViewData["Title"] = "Store Setup Wizard";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/portal-onboarding.css" asp-append-version="true" />
+}
+
+<div class="wizard-container">
+    <div style="text-align: center; margin-bottom: 32px;">
+        <h1 style="font-size: 2.2rem; margin-bottom: 8px;">Configure Your Store Silo</h1>
+        <p style="color: var(--p-text-muted); font-size: 0.95rem; margin: 0;">
+            Follow the 4 simple steps below to spin up your dedicated, high-performance container stack.
+        </p>
+    </div>
+
+    <!-- Step Progress Indicator -->
+    <div class="wizard-steps">
+        <div class="step-node active" data-step="1">
+            <div class="step-circle">1</div>
+            <div class="step-label">Admin</div>
+        </div>
+        <div class="step-node" data-step="2">
+            <div class="step-circle">2</div>
+            <div class="step-label">Store</div>
+        </div>
+        <div class="step-node" data-step="3">
+            <div class="step-circle">3</div>
+            <div class="step-label">Domain</div>
+        </div>
+        <div class="step-node" data-step="4">
+            <div class="step-circle">4</div>
+            <div class="step-label">Launch</div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="portal-alert danger">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            <span>@Model.ErrorMessage</span>
+        </div>
+    }
+
+    <form method="post" id="onboardingForm">
+        <input type="hidden" asp-for="Input.PlanTier" id="PlanTier" />
+        <input type="hidden" asp-for="Input.DomainChoice" id="DomainChoice" />
+
+        <!-- STEP 1: Admin Credentials -->
+        <div class="wizard-step-panel portal-card" id="stepPanel1">
+            <h2 style="font-size: 1.4rem; margin-bottom: 6px;">1. Store Admin Credentials</h2>
+            <p style="color: var(--p-text-muted); font-size: 0.85rem; margin-bottom: 24px;">
+                These credentials will be used to log into your dedicated store instance (separate from your portal account).
+            </p>
+
+            <div class="form-group">
+                <label asp-for="Input.AdminUsername" class="form-label"></label>
+                <input asp-for="Input.AdminUsername" id="AdminUsername" class="portal-input" placeholder="admin" required />
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Input.AdminPassword" class="form-label"></label>
+                <input asp-for="Input.AdminPassword" id="AdminPassword" type="password" class="portal-input" placeholder="Min. 8 characters" required />
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Input.ConfirmAdminPassword" class="form-label"></label>
+                <input asp-for="Input.ConfirmAdminPassword" id="ConfirmAdminPassword" type="password" class="portal-input" placeholder="Confirm admin password" required />
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; margin-top: 32px;">
+                <button type="button" class="btn-primary-glow" onclick="goToStep(2)">
+                    Next: Store Details &rarr;
+                </button>
+            </div>
+        </div>
+
+        <!-- STEP 2: Store Identity & Tier -->
+        <div class="wizard-step-panel portal-card" id="stepPanel2" style="display: none;">
+            <h2 style="font-size: 1.4rem; margin-bottom: 6px;">2. Store Identity & Plan</h2>
+            <p style="color: var(--p-text-muted); font-size: 0.85rem; margin-bottom: 24px;">
+                Choose your brand name, system URL slug, and server resource tier.
+            </p>
+
+            <div class="form-group">
+                <label asp-for="Input.StoreName" class="form-label"></label>
+                <input asp-for="Input.StoreName" id="StoreName" class="portal-input" placeholder="e.g. Acme Supermarket Ltd" required />
+            </div>
+
+            <div class="form-group">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <label asp-for="Input.StoreSlug" class="form-label" style="margin-bottom: 0;"></label>
+                    <div id="slugCheckBadge">
+                        <span style="color: var(--p-text-subtle); font-size: 12px;">(Min 3 chars)</span>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; background: var(--p-surface-alt); border: 1px solid var(--p-border); border-radius: 12px; padding: 0 16px;">
+                    <input asp-for="Input.StoreSlug" id="StoreSlug" class="portal-input" style="border: none; background: transparent; padding-left: 0;" placeholder="acme-foods" required />
+                    <span style="color: var(--p-text-muted); font-size: 13px; font-family: monospace;">.store.clexan.com</span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Currency Standard</label>
+                <select asp-for="Input.Currency" class="portal-input" style="cursor: pointer;">
+                    <option value="XAF">XAF — Central African CFA Franc (FCFA)</option>
+                    <option value="USD">USD — United States Dollar ($)</option>
+                    <option value="EUR">EUR — Euro (€)</option>
+                    <option value="GBP">GBP — British Pound (£)</option>
+                </select>
+            </div>
+
+            <div class="form-group" style="margin-top: 24px;">
+                <label class="form-label">Choose Deployment Tier</label>
+                <div class="plan-grid">
+                    <div class="plan-card" data-tier="0">
+                        <div class="plan-name">Starter</div>
+                        <div class="plan-price">Free</div>
+                        <div class="plan-desc">Single branch, shared resources. Great for evaluation.</div>
+                    </div>
+                    <div class="plan-card selected" data-tier="1">
+                        <div class="plan-name">Professional</div>
+                        <div class="plan-price">$29/mo</div>
+                        <div class="plan-desc">Dedicated DB container, multi-branch, high throughput.</div>
+                    </div>
+                    <div class="plan-card" data-tier="2">
+                        <div class="plan-name">Enterprise</div>
+                        <div class="plan-price">$99/mo</div>
+                        <div class="plan-desc">Dedicated host silo, unlimited branches, priority backup.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; margin-top: 32px;">
+                <button type="button" class="btn-glass" onclick="goToStep(1)">&larr; Back</button>
+                <button type="button" class="btn-primary-glow" onclick="goToStep(3)">Next: Routing &rarr;</button>
+            </div>
+        </div>
+
+        <!-- STEP 3: Domain Selection -->
+        <div class="wizard-step-panel portal-card" id="stepPanel3" style="display: none;">
+            <h2 style="font-size: 1.4rem; margin-bottom: 6px;">3. Store Domain & Routing</h2>
+            <p style="color: var(--p-text-muted); font-size: 0.85rem; margin-bottom: 24px;">
+                Choose how your customers and staff will access the store application.
+            </p>
+
+            <div class="domain-option selected" id="optPlatform">
+                <div style="display: flex; align-items: flex-start; gap: 12px;">
+                    <input type="radio" name="domainRadio" id="domainPlatform" checked style="margin-top: 4px; accent-color: var(--p-green);" />
+                    <div>
+                        <div style="font-weight: 700; font-size: 15px; margin-bottom: 4px;">Use ClexAn Managed Platform Subdomain</div>
+                        <p style="color: var(--p-text-muted); font-size: 13px; margin: 0; line-height: 1.5;">
+                            Zero configuration required. Automatic SSL certificate issuance via Let's Encrypt.
+                            <br /><span style="color: #4ade80; font-family: monospace;">https://[your-slug].store.clexan.com</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="domain-option" id="optCustom">
+                <div style="display: flex; align-items: flex-start; gap: 12px;">
+                    <input type="radio" name="domainRadio" id="domainCustom" style="margin-top: 4px; accent-color: var(--p-green);" />
+                    <div>
+                        <div style="font-weight: 700; font-size: 15px; margin-bottom: 4px;">Connect Your Custom Domain (BYOD)</div>
+                        <p style="color: var(--p-text-muted); font-size: 13px; margin: 0; line-height: 1.5;">
+                            Use your company's own domain name (e.g. <span style="color: var(--p-text); font-family: monospace;">store.acmefoods.com</span>).
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group" id="customDomainGroup" style="display: none; margin-top: 20px;">
+                <label asp-for="Input.CustomDomain" class="form-label"></label>
+                <input asp-for="Input.CustomDomain" id="CustomDomain" class="portal-input" placeholder="store.yourcompany.com" />
+                <p style="color: var(--p-text-muted); font-size: 12px; margin-top: 6px;">
+                    * You will be provided with a DNS verification TXT record to confirm ownership after setup.
+                </p>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; margin-top: 32px;">
+                <button type="button" class="btn-glass" onclick="goToStep(2)">&larr; Back</button>
+                <button type="button" class="btn-primary-glow" onclick="goToStep(4)">Next: Review &rarr;</button>
+            </div>
+        </div>
+
+        <!-- STEP 4: Review & Launch -->
+        <div class="wizard-step-panel portal-card" id="stepPanel4" style="display: none;">
+            <h2 style="font-size: 1.4rem; margin-bottom: 6px;">4. Review & Deploy Silo</h2>
+            <p style="color: var(--p-text-muted); font-size: 0.85rem; margin-bottom: 24px;">
+                Review your store configuration before triggering automated container orchestration.
+            </p>
+
+            <div style="background: var(--p-surface-alt); border: 1px solid var(--p-border); border-radius: 14px; padding: 20px; margin-bottom: 24px;">
+                <div style="display: grid; grid-template-columns: 140px 1fr; gap: 12px; font-size: 14px;">
+                    <div style="color: var(--p-text-muted);">Store Name:</div>
+                    <div style="font-weight: 600;" id="summaryStoreName">-</div>
+
+                    <div style="color: var(--p-text-muted);">Store Slug:</div>
+                    <div style="font-family: monospace; color: #4ade80;" id="summaryStoreSlug">-</div>
+
+                    <div style="color: var(--p-text-muted);">Store Admin:</div>
+                    <div style="font-weight: 600;" id="summaryAdminUser">-</div>
+
+                    <div style="color: var(--p-text-muted);">Target URL:</div>
+                    <div style="font-family: monospace;" id="summaryStoreUrl">-</div>
+                </div>
+            </div>
+
+            <div class="provision-progress-list">
+                <div class="progress-item done">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    <span>Account credentials validated</span>
+                </div>
+                <div class="progress-item done">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    <span>Isolated database schema & secret keys ready</span>
+                </div>
+                <div class="progress-item active">
+                    <span class="status-dot healthy"></span>
+                    <span>Ready for Docker Compose stack deployment</span>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; margin-top: 32px;">
+                <button type="button" class="btn-glass" onclick="goToStep(3)">&larr; Back</button>
+                <button type="submit" class="btn-primary-glow" id="btnLaunch" style="padding: 14px 36px; font-size: 16px;">
+                    🚀 Launch My Store Silo
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script src="~/js/onboarding.js" asp-append-version="true"></script>
+}

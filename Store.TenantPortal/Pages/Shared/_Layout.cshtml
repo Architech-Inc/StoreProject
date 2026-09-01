@@ -1,0 +1,86 @@
+@inject Store.TenantPortal.Services.IPortalSessionService SessionService
+@{
+    var session = SessionService.GetCurrentSession(User);
+    var isAuthenticated = session != null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] — ClexAn Foods Portal</title>
+    <link rel="stylesheet" href="~/css/portal.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body>
+    <!-- Radial Background Glow -->
+    <div class="portal-bg-glow"></div>
+
+    <!-- Header / Navbar -->
+    <header class="portal-header">
+        <a href="/" class="brand-logo">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--p-green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+            </svg>
+            <span>ClexAn Foods</span>
+        </a>
+
+        <nav class="portal-nav">
+            @if (isAuthenticated)
+            {
+                <a href="/Dashboard" class="@(ViewContext.RouteData.Values["page"]?.ToString() == "/Dashboard" ? "active" : "")">Dashboard</a>
+                @if (session!.HasTenant)
+                {
+                    <a href="/Environment" class="@(ViewContext.RouteData.Values["page"]?.ToString() == "/Environment" ? "active" : "")">Environment</a>
+                    <a href="/Domains" class="@(ViewContext.RouteData.Values["page"]?.ToString() == "/Domains" ? "active" : "")">Domains</a>
+                    <a href="/Backups" class="@(ViewContext.RouteData.Values["page"]?.ToString() == "/Backups" ? "active" : "")">Backups</a>
+                }
+                else
+                {
+                    <a href="/Onboarding" class="@(ViewContext.RouteData.Values["page"]?.ToString() == "/Onboarding" ? "active" : "")">Setup Store</a>
+                }
+            }
+            else
+            {
+                <a href="/#features">Features</a>
+                <a href="/#about">About</a>
+            }
+        </nav>
+
+        <div style="display: flex; align-items: center; gap: 12px;">
+            @if (isAuthenticated)
+            {
+                <div style="display: flex; align-items: center; gap: 8px; margin-right: 8px;">
+                    <span class="status-dot healthy"></span>
+                    <span style="font-size: 13px; color: var(--p-text-muted);">@session!.FullName</span>
+                </div>
+                <a href="/Logout" class="btn-glass" style="padding: 8px 18px; font-size: 13px;">Sign Out</a>
+            }
+            else
+            {
+                <a href="/Login" class="btn-glass">Sign In &rarr;</a>
+                <a href="/Register" class="btn-primary-glow" style="padding: 10px 22px; font-size: 14px;">Get Started</a>
+            }
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="portal-main">
+        @RenderBody()
+    </main>
+
+    <!-- Footer -->
+    <footer class="portal-footer">
+        <div>&copy; 2026 ClexAn Foods SaaS. All rights reserved.</div>
+        <div>
+            <a href="#">Privacy Policy</a>
+            <a href="#">Terms of Service</a>
+            <a href="#">Security Overview</a>
+        </div>
+    </footer>
+
+    <script src="~/js/portal.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
