@@ -24,6 +24,8 @@ public class ProvisionTenantRequest
     public string Currency { get; set; } = "XAF";
 
     public TenantTier PlanTier { get; set; } = TenantTier.Professional;
+
+    public string? CustomDomain { get; set; }
 }
 
 public class TenantDto
@@ -36,6 +38,7 @@ public class TenantDto
     public string Currency { get; set; } = string.Empty;
     public TenantStatus Status { get; set; }
     public TenantTier PlanTier { get; set; }
+    public string? CustomDomain { get; set; }
     public string UiUrl { get; set; } = string.Empty;
     public string ApiUrl { get; set; } = string.Empty;
     public DateTime DateCreated { get; set; }

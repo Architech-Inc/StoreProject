@@ -122,4 +122,175 @@ public class ControlPlaneClient : IControlPlaneClient
             _logger.LogError(ex, "Error linking account {AccountId} to tenant {TenantId}", accountId, tenantId);
         }
     }
+
+    // ==========================================
+    // Phase 2: Environment Control
+    // ==========================================
+
+    public async Task<EnvironmentStatusDto?> GetEnvironmentStatusAsync(Guid tenantId, CancellationToken ct = default)
+    {
+        try
+        {
+            var response = await _http.GetFromJsonAsync<ApiResponse<EnvironmentStatusDto>>(
+                $"api/control/tenants/{tenantId}/environment", ct);
+            return response?.Data;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting environment status for {TenantId}", tenantId);
+            return null;
+        }
+    }
+
+    public async Task<bool> RestartServiceAsync(Guid tenantId, string serviceName, CancellationToken ct = default)
+    {
+        try
+        {
+            var response = await _http.PostAsync(
+                $"api/control/tenants/{tenantId}/environment/restart/{Uri.EscapeDataString(serviceName)}", null, ct);
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error restarting service {ServiceName} for {TenantId}", serviceName, tenantId);
+            return false;
+        }
+    }
+
+    public async Task<bool> SuspendTenantAsync(Guid tenantId, CancellationToken ct = default)
+    {
+        try
+        {
+            var response = await _http.PostAsync($"api/control/tenants/{tenantId}/environment/suspend", null, ct);
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error suspending tenant {TenantId}", tenantId);
+            return false;
+        }
+    }
+
+    public async Task<bool> ResumeTenantAsync(Guid tenantId, CancellationToken ct = default)
+    {
+        try
+        {
+            var response = await _http.PostAsync($"api/control/tenants/{tenantId}/environment/resume", null, ct);
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error resuming tenant {TenantId}", tenantId);
+            return false;
+        }
+    }
+
+    // ==========================================
+    // Phase 2: Custom Domains
+    // ==========================================
+
+    public async Task<TenantDomainDto?> GetDomainConfigAsync(Guid tenantId, CancellationToken ct = default)
+    {
+        try
+        {
+            var response = await _http.GetFromJsonAsync<ApiResponse<TenantDomainDto>>(
+                $"api/control/tenants/{tenantId}/domains", ct);
+            return response?.Data;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting domain config for {TenantId}", tenantId);
+            return null;
+        }
+    }
+
+    public async Task<TenantDomainDto> SetCustomDomainAsync(Guid tenantId, string domain, CancellationToken ct = default)
+    {
+        var response = await _http.PostAsJsonAsync(
+            $"api/control/tenants/{tenantId}/domains/custom", new SetCustomDomainRequest(domain), ct);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var err = await response.Content.ReadFromJsonAsync<ApiResponse<object>>(cancellationToken: ct);
+            throw new InvalidOperationException(err?.Message ?? "Failed to set custom domain.");
+        }
+
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse<TenantDomainDto>>(cancellationToken: ct);
+        return result!.Data;
+    }
+
+    public async Task<VerifyDomainResponse> VerifyCustomDomainAsync(Guid tenantId, CancellationToken ct = default)
+    {
+        var response = await _http.PostAsync($"api/control/tenants/{tenantId}/domains/verify", null, ct);
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse<VerifyDomainResponse>>(cancellationToken: ct);
+        return result?.Data ?? new VerifyDomainResponse("", false, "Failed", null, null, null, "Verification request failed.");
+    }
+
+    public async Task<bool> RemoveCustomDomainAsync(Guid tenantId, CancellationToken ct = default)
+    {
+        try
+        {
+            var response = await _http.DeleteAsync($"api/control/tenants/{tenantId}/domains/custom", ct);
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error removing custom domain for {TenantId}", tenantId);
+            return false;
+        }
+    }
+
+    // ==========================================
+    // Phase 2: Branch Subdomains
+    // ==========================================
+
+    public async Task<IReadOnlyList<BranchDto>> GetBranchesAsync(Guid tenantId, CancellationToken ct = default)
+    {
+        try
+        {
+            var response = await _http.GetFromJsonAsync<ApiResponse<IReadOnlyList<BranchDto>>>(
+                $"api/control/tenants/{tenantId}/branches", ct);
+            return response?.Data ?? Array.Empty<BranchDto>();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting branches for {TenantId}", tenantId);
+            return Array.Empty<BranchDto>();
+        }
+    }
+
+    public async Task<BranchDto> AddBranchAsync(Guid tenantId, CreateBranchRequest request, CancellationToken ct = default)
+    {
+        var response = await _http.PostAsJsonAsync($"api/control/tenants/{tenantId}/branches", request, ct);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var err = await response.Content.ReadFromJsonAsync<ApiResponse<object>>(cancellationToken: ct);
+            throw new InvalidOperationException(err?.Message ?? "Failed to add branch.");
+        }
+
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse<BranchDto>>(cancellationToken: ct);
+        return result!.Data;
+    }
+
+    public async Task<VerifyDomainResponse> VerifyBranchAsync(Guid tenantId, Guid branchId, CancellationToken ct = default)
+    {
+        var response = await _http.PostAsync($"api/control/tenants/{tenantId}/branches/{branchId}/verify", null, ct);
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse<VerifyDomainResponse>>(cancellationToken: ct);
+        return result?.Data ?? new VerifyDomainResponse("", false, "Failed", null, null, null, "Branch verification failed.");
+    }
+
+    public async Task<bool> RemoveBranchAsync(Guid tenantId, Guid branchId, CancellationToken ct = default)
+    {
+        try
+        {
+            var response = await _http.DeleteAsync($"api/control/tenants/{tenantId}/branches/{branchId}", ct);
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error removing branch {BranchId} for {TenantId}", branchId, tenantId);
+            return false;
+        }
+    }
 }

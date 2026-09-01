@@ -4,6 +4,7 @@ namespace Store.TenantPortal.Services;
 
 public interface IControlPlaneClient
 {
+    // Auth & Slugs
     Task<SlugCheckDto> CheckSlugAvailabilityAsync(string slug, CancellationToken ct = default);
     Task<PortalAuthDto> RegisterAccountAsync(string email, string fullName, string password, CancellationToken ct = default);
     Task<PortalAuthDto?> LoginAsync(string email, string password, CancellationToken ct = default);
@@ -11,4 +12,22 @@ public interface IControlPlaneClient
     Task<TenantDetailDto?> GetTenantDetailsAsync(Guid tenantId, CancellationToken ct = default);
     Task<bool> CheckTenantHealthAsync(Guid tenantId, CancellationToken ct = default);
     Task LinkAccountToTenantAsync(Guid accountId, Guid tenantId, CancellationToken ct = default);
+
+    // Environment Control
+    Task<EnvironmentStatusDto?> GetEnvironmentStatusAsync(Guid tenantId, CancellationToken ct = default);
+    Task<bool> RestartServiceAsync(Guid tenantId, string serviceName, CancellationToken ct = default);
+    Task<bool> SuspendTenantAsync(Guid tenantId, CancellationToken ct = default);
+    Task<bool> ResumeTenantAsync(Guid tenantId, CancellationToken ct = default);
+
+    // Domains
+    Task<TenantDomainDto?> GetDomainConfigAsync(Guid tenantId, CancellationToken ct = default);
+    Task<TenantDomainDto> SetCustomDomainAsync(Guid tenantId, string domain, CancellationToken ct = default);
+    Task<VerifyDomainResponse> VerifyCustomDomainAsync(Guid tenantId, CancellationToken ct = default);
+    Task<bool> RemoveCustomDomainAsync(Guid tenantId, CancellationToken ct = default);
+
+    // Branches
+    Task<IReadOnlyList<BranchDto>> GetBranchesAsync(Guid tenantId, CancellationToken ct = default);
+    Task<BranchDto> AddBranchAsync(Guid tenantId, CreateBranchRequest request, CancellationToken ct = default);
+    Task<VerifyDomainResponse> VerifyBranchAsync(Guid tenantId, Guid branchId, CancellationToken ct = default);
+    Task<bool> RemoveBranchAsync(Guid tenantId, Guid branchId, CancellationToken ct = default);
 }

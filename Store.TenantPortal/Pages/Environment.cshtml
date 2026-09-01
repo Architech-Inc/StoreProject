@@ -1,0 +1,118 @@
+@page
+@model Store.TenantPortal.Pages.EnvironmentModel
+@{
+    ViewData["Title"] = "Environment Control Panel";
+    var envStatus = Model.EnvStatus;
+}
+
+<div class="portal-container">
+    <!-- Header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; flex-wrap: wrap; gap: 16px;">
+        <div>
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 4px;">
+                <h1 style="font-size: 2rem; margin: 0;">Silo Environment Control</h1>
+                <span class="status-badge @(envStatus?.IsHealthy == true ? "healthy" : "warning")">
+                    <span class="status-dot @(envStatus?.IsHealthy == true ? "healthy" : "warning")"></span>
+                    @(envStatus?.Status ?? "Active")
+                </span>
+            </div>
+            <p style="color: var(--p-text-muted); font-size: 0.9rem; margin: 0;">
+                Silo: <span class="code-font" style="color: #4ade80;">@envStatus?.Slug</span> &bull; Direct control over isolated container processes
+            </p>
+        </div>
+
+        <div style="display: flex; gap: 12px;">
+            <form method="post" asp-page-handler="RestartService" asp-route-service="all" onsubmit="return confirm('Restart all silo containers? There will be a brief 5-10 second disruption.');">
+                <button type="submit" class="btn-glass" style="padding: 10px 20px; font-size: 13px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                    Restart All Containers
+                </button>
+            </form>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.FeedbackMessage))
+    {
+        <div class="portal-alert @(Model.IsError ? "danger" : "success") auto-dismiss">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            <span>@Model.FeedbackMessage</span>
+        </div>
+    }
+
+    <!-- Container Grid -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-bottom: 32px;">
+        @if (envStatus?.Containers != null)
+        {
+            @foreach (var c in envStatus.Containers)
+            {
+                <div class="portal-card" style="padding: 24px; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px;">
+                            <div>
+                                <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #4ade80;">@c.ServiceType</span>
+                                <h3 style="font-size: 1.15rem; margin: 2px 0 0;">@c.Name</h3>
+                            </div>
+                            <span class="status-dot @(c.IsHealthy ? "healthy" : "warning")"></span>
+                        </div>
+
+                        <div style="background: var(--p-surface-alt); padding: 10px 12px; border-radius: 8px; border: 1px solid var(--p-border); margin-bottom: 16px; font-size: 12px;">
+                            <div style="color: var(--p-text-muted); margin-bottom: 2px;">Container: <span class="code-font" style="color: var(--p-text);">@c.ContainerName</span></div>
+                            <div style="color: var(--p-text-muted);">Image: <span class="code-font" style="color: var(--p-text-subtle);">@c.Image</span></div>
+                        </div>
+                    </div>
+
+                    <form method="post" asp-page-handler="RestartService" asp-route-service="@c.ServiceType.ToLowerInvariant()">
+                        @{
+                            var svcKey = c.Name.Contains("MySQL") ? "mysql" : c.Name.Contains("Mongo") ? "mongodb" : c.Name.Contains("API") ? "api" : "ui";
+                        }
+                        <input type="hidden" name="service" value="@svcKey" />
+                        <button type="submit" class="btn-glass" style="width: 100%; font-size: 12px; padding: 8px 12px;">
+                            Restart Service
+                        </button>
+                    </form>
+                </div>
+            }
+        }
+    </div>
+
+    <!-- Operations & Danger Zone -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+        <!-- Service Endpoints -->
+        <div class="portal-card">
+            <h3 style="font-size: 1.2rem; margin-bottom: 16px;">Silo Routing Summary</h3>
+            <div style="font-size: 13px; color: var(--p-text-muted); line-height: 1.6;">
+                <p>All microservices in this silo communicate over an internal bridge network. Outbound access is reverse-proxied and load-balanced via Traefik with automatic TLS.</p>
+                <div style="background: var(--p-surface-alt); padding: 12px; border-radius: 10px; border: 1px solid var(--p-border); margin-top: 12px;">
+                    <div>Status: <strong style="color: #4ade80;">Active & Isolated</strong></div>
+                    <div>Isolation: <strong>Per-tenant Docker Compose stack</strong></div>
+                    <div>Database: <strong>Dedicated volume-backed MySQL + MongoDB</strong></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="portal-card" style="border-color: rgba(209, 52, 56, 0.3); background: rgba(209, 52, 56, 0.02);">
+            <h3 style="font-size: 1.2rem; margin-bottom: 12px; color: #f87171;">Danger Zone</h3>
+            <p style="color: var(--p-text-muted); font-size: 13px; margin-bottom: 20px;">
+                Suspending your silo will stop web and API traffic immediately. Container state and database volumes remain intact.
+            </p>
+
+            @if (envStatus?.Status == "Suspended")
+            {
+                <form method="post" asp-page-handler="ResumeSilo">
+                    <button type="submit" class="btn-primary-glow" style="font-size: 13px;">
+                        Resume Silo Traffic
+                    </button>
+                </form>
+            }
+            else
+            {
+                <form method="post" asp-page-handler="SuspendSilo" onsubmit="return confirm('Are you sure you want to suspend this store silo?');">
+                    <button type="submit" class="btn-danger-glass" style="font-size: 13px;">
+                        Suspend Silo (Halt Traffic)
+                    </button>
+                </form>
+            }
+        </div>
+    </div>
+</div>

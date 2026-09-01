@@ -78,3 +78,73 @@ public record TenantProvisioningLogDto(
     string Message,
     bool IsError = false
 );
+
+// Phase 2 DTOs: Environment, Domains & Branches
+
+public record EnvironmentStatusDto(
+    Guid TenantId,
+    string TenantName,
+    string Slug,
+    string Status,
+    bool IsHealthy,
+    DateTime? LastHealthCheck,
+    string? LastHealthMessage,
+    List<ContainerStatusDto> Containers
+);
+
+public record ContainerStatusDto(
+    string Name,
+    string ContainerName,
+    string ServiceType,
+    string Image,
+    string Status,
+    bool IsHealthy,
+    DateTime? LastChecked
+);
+
+public record TenantDomainDto(
+    Guid TenantId,
+    string Slug,
+    string PlatformUiUrl,
+    string PlatformApiUrl,
+    string CustomDomain,
+    string CustomDomainStatus,
+    string VerificationRecordName,
+    string VerificationRecordValue,
+    DateTime? CustomDomainVerifiedAt,
+    string? LastErrorMessage
+);
+
+public record SetCustomDomainRequest(
+    string Domain
+);
+
+public record VerifyDomainResponse(
+    string Domain,
+    bool IsVerified,
+    string Status,
+    string? CheckedHost,
+    string? ExpectedValue,
+    List<string>? FoundValues,
+    string? Message
+);
+
+public record BranchDto(
+    Guid BranchId,
+    string BranchName,
+    string BranchSlug,
+    string DomainType,
+    string? CustomSubdomain,
+    string ResolvedUrl,
+    string VerificationStatus,
+    string VerificationRecordName,
+    string VerificationRecordValue,
+    DateTime DateCreated
+);
+
+public record CreateBranchRequest(
+    string BranchName,
+    string BranchSlug,
+    string DomainType = "Platform",
+    string? CustomSubdomain = null
+);
