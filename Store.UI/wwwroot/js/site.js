@@ -1101,6 +1101,7 @@
             if (!modal) return;
 
             modal.hidden = false;
+            modal.classList.add('active');
             if (codeText) codeText.textContent = code;
             if (loading) loading.style.display = 'block';
             if (content) {
@@ -1203,7 +1204,10 @@
             const btnCopy = document.getElementById('btnCopyScanCode');
 
             const closeModal = () => {
-                if (modal) modal.hidden = true;
+                if (modal) {
+                    modal.hidden = true;
+                    modal.classList.remove('active');
+                }
                 this.currentModalResult = null;
             };
 
@@ -1234,7 +1238,14 @@
                     const targetBtn = modal.querySelector(`[data-shortcut="${e.key}"]`);
                     if (targetBtn) {
                         e.preventDefault();
-                        targetBtn.click();
+                        
+                        // Delay execution slightly to ensure this isn't the first character of a rapid hardware scan
+                        setTimeout(() => {
+                            if (this.buffer && this.buffer.length > 1) {
+                                return; // Cancel shortcut, a barcode burst is in progress
+                            }
+                            targetBtn.click();
+                        }, 50);
                     }
                 }
             });
