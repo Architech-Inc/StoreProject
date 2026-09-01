@@ -245,15 +245,15 @@ function validateStep(step, showAlert = true) {
         const cp = document.getElementById('ConfirmAdminPassword')?.value;
 
         if (!u || !p) {
-            if (showAlert) alert('Please fill out admin username and password.');
+            if (showAlert) ClexAn.alert('Please fill out admin username and password.', 'Credentials Required', 'warning');
             return false;
         }
         if (p.length < 8) {
-            if (showAlert) alert('Password must be at least 8 characters.');
+            if (showAlert) ClexAn.alert('Password must be at least 8 characters.', 'Password Too Short', 'warning');
             return false;
         }
         if (p !== cp) {
-            if (showAlert) alert('Admin passwords do not match.');
+            if (showAlert) ClexAn.alert('Admin passwords do not match.', 'Password Mismatch', 'error');
             return false;
         }
         return true;
@@ -264,15 +264,15 @@ function validateStep(step, showAlert = true) {
         const slug = document.getElementById('StoreSlug')?.value.trim();
 
         if (!name || !slug) {
-            if (showAlert) alert('Please enter a store name and slug.');
+            if (showAlert) ClexAn.alert('Please enter a store name and slug.', 'Store Identity Required', 'warning');
             return false;
         }
         if (slug.length < 3) {
-            if (showAlert) alert('Store slug must be at least 3 characters.');
+            if (showAlert) ClexAn.alert('Store slug must be at least 3 characters.', 'Invalid Slug Length', 'warning');
             return false;
         }
         if (!isSlugValid) {
-            if (showAlert) alert('Please choose a valid and available store slug.');
+            if (showAlert) ClexAn.alert('Please choose a valid and available store slug.', 'Slug Unavailable', 'warning');
             return false;
         }
         return true;
