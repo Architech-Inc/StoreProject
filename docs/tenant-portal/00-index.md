@@ -21,13 +21,24 @@
 
 ---
 
+## Implementation Plans (Phases 1 — 4)
+
+| Phase | Implementation Plan | Status |
+|:---|:---|:---:|
+| **Phase 1** | [Phase 1: Foundation, Auth, Onboarding & Dashboard](plans/phase-1-foundation-and-onboarding.md) | Completed & Committed (`1a15387`) |
+| **Phase 2** | [Phase 2: Environment Control, Custom Domains & Branch Routing](plans/phase-2-environment-domains-branches.md) | Completed & Committed (`8ae87a3`) |
+| **Phase 3** | [Phase 3: Automated Cloud Backups & OAuth2 Integration](plans/phase-3-cloud-backups-oauth2.md) | Completed & Committed (`357edfa`) |
+| **Phase 4** | [Phase 4: Security Hardening, Rate Limiting & Audit Logging](plans/phase-4-security-rate-limiting-audit.md) | Completed & Committed (`4598386`) |
+
+---
+
 ## Document Status Tracker
 
 | Document | Status | Reviewed |
 |:---|:---:|:---:|
-| 01-technical-spec.md | Draft | - |
-| 02-ux-design-spec.md | Draft | - |
-| 03-domain-routing-spec.md | Draft | - |
-| 04-backup-spec.md | Draft | - |
-| 05-api-contract.md | Draft | - |
-| 06-security-spec.md | Draft | - |
+| 01-technical-spec.md | Approved | Yes |
+| 02-ux-design-spec.md | Approved | Yes |
+| 03-domain-routing-spec.md | Approved | Yes |
+| 04-backup-spec.md | Approved | Yes |
+| 05-api-contract.md | Approved | Yes |
+| 06-security-spec.md | Approved | Yes |
