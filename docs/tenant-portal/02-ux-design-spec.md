@@ -17,8 +17,8 @@ existing ClexAn Foods landing page design:
 
 | Token | Value | Use |
 |:---|:---|:---|
-| Page background | `#050a05` | Near-black with green tint |
-| Primary accent | `#22c55e` | CTAs, active states, badges — **GREEN, not blue** |
+| Page background | `#050906` | Near-black with green tint |
+| Primary accent | `#019c01` | CTAs, active states, badges — **GREEN, not blue** |
 | Hero glow | `rgba(34,197,94,0.18)` radial gradient | Landing page hero only |
 | Card surface | `rgba(255,255,255,0.04)` | Glass-effect cards |
 | Hero heading weight | **900** | Extra-bold / black weight |
@@ -38,7 +38,7 @@ animation definitions, and cross-document consistency rules.
 **Purpose:** Public marketing page — convert visitors into registered portal users.
 
 **Visual Atmosphere:**
-- Full-height hero with `#050a05` background and a radial emerald glow centred above the headline
+- Full-height hero with `#050906` background and a radial emerald glow centred above the headline
 - Glow fades completely to black before the feature card section
 - The glow is **exclusive to this page** — all other pages are flat black
 
@@ -57,7 +57,7 @@ animation definitions, and cross-document consistency rules.
                     └──────────────────────────┘
 
           Elevate Your Store
-              Operations                         ← font-weight: 900, clamp(3.5rem→6rem)
+              Operations                         ← font-weight: 800, clamp(3.5rem→6rem)
 
    Experience a fluid, real-time store management system.
     Unify your Point of Sale, Inventory, and Analytics
@@ -65,12 +65,12 @@ animation definitions, and cross-document consistency rules.
 
          [Get Started →]    [Discover Features]          ← pill CTAs, centred
          ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔   ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
-         solid green pill     outlined dark pill
+         glow green pill (.btn-primary-glow)     glass pill (.btn-glass)
 ```
 
 **Feature Cards Section (below hero):**
 ```
-                    Built for Scale & Speed                ← h2, font-weight: 700
+                    Built for Scale & Speed                ← h2, font-family: Outfit, font-weight: 800
          Everything you need to run your retail locations
                    smoothly and efficiently.               ← --p-text-muted
 
@@ -80,7 +80,7 @@ animation definitions, and cross-document consistency rules.
   │  └──────┘            │  │  └──────┘            │  │  └──────┘            │
   │                      │  │                      │  │                      │
   │  Intelligent POS      │  │  Inventory Control   │  │  Live Analytics      │
-  │  font-weight: 700     │  │  font-weight: 700    │  │  font-weight: 700    │
+  │  font-family: Outfit, font-weight: 800     │  │  font-family: Outfit, font-weight: 800    │  │  font-family: Outfit, font-weight: 800    │
   │                      │  │                      │  │                      │
   │  A lightning-fast    │  │  Real-time stock     │  │  Make data-driven    │
   │  point of sale...    │  │  tracking across...  │  │  decisions with...   │
@@ -109,7 +109,7 @@ Minimal, single line. `--p-text-subtle`.
 
 ### 2.2 Register Page (`/register`)
 
-**Layout:** Centered card, max-width `480px`, flat `#050a05` background (no glow).
+**Layout:** Centered card, max-width `480px`, flat `#050906` background (no glow).
 
 ```
                     [🏪 ClexAn Foods]               ← minimal header
@@ -511,3 +511,4 @@ popup sends `postMessage` to parent and closes. Parent refreshes card via `fetch
 | Nav scroll | `backdrop-filter: blur(12px)` fades in on first scroll | `IntersectionObserver` |
 | Card hover | `border-color` → `--p-border-accent`, smooth 0.2s | `--p-border-accent` |
 | CTA hover | Lift `translateY(-1px)`, green darkens to `--p-green-hover` | `--p-green-hover` |
+
