@@ -62,7 +62,7 @@ public class OnboardingModel : PageModel
         try
         {
             var provisionReq = new ProvisionTenantDto(
-                Name: Input.StoreName.Trim(),
+                StoreName: Input.StoreName.Trim(),
                 Slug: Input.StoreSlug.Trim().ToLowerInvariant(),
                 AdminEmail: session.Email,
                 AdminUsername: Input.AdminUsername.Trim(),

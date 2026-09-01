@@ -25,7 +25,7 @@ public record SlugCheckDto(
 );
 
 public record ProvisionTenantDto(
-    string Name,
+    string StoreName,
     string Slug,
     string AdminEmail,
     string AdminUsername,
