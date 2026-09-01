@@ -1,8 +1,12 @@
 # 01 — Store.TenantPortal Technical Specification
 
 **Status:** Draft
-**Version:** 1.0
+**Version:** 1.1 — Design tokens updated to match reference screenshot
 **Date:** September 2026
+
+> **Design Language:** Color tokens, component CSS, animations, and layout rules are defined in
+> **[00b-design-language.md](00b-design-language.md)**. This document focuses on technical architecture.
+> Any visual implementation detail defers to `00b`.
 
 ---
 
@@ -107,8 +111,9 @@ Store.TenantPortal/
 │
 ├── wwwroot/
 │   ├── css/
-│   │   ├── portal.css                  # Portal-specific stylesheet
-│   │   └── portal-onboarding.css       # Wizard step animations
+│   │   ├── portal.css                  # Global portal stylesheet (tokens from 00b-design-language.md)
+│   │   │                               # Background: #050a05, accent: #22c55e (emerald green)
+│   │   └── portal-onboarding.css       # Wizard step indicator + progress animations
 │   ├── js/
 │   │   ├── portal.js                   # Global portal JS
 │   │   ├── onboarding.js               # Wizard step navigation
