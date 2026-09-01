@@ -16,6 +16,9 @@ public class Tenant
     public TenantSecrets Secrets { get; set; } = new();
     public TenantDomainConfig DomainConfig { get; set; } = new();
     public List<TenantBranchMapping> Branches { get; set; } = new();
+    public List<BackupProviderConfig> BackupProviders { get; set; } = new();
+    public BackupScheduleConfig BackupSchedule { get; set; } = new();
+    public List<TenantBackupJobRecord> BackupHistory { get; set; } = new();
     public List<TenantProvisioningLog> ProvisioningLogs { get; set; } = new();
     public DateTime DateCreated { get; set; } = DateTime.UtcNow;
     public DateTime? LastHealthCheck { get; set; }
@@ -58,6 +61,69 @@ public class TenantBranchMapping
 
 public enum BranchDomainType
 {
-    Platform = 0, // [branch].[slug].store.domain
-    Custom = 1    // [branch].[customdomain]
+    Platform = 0,
+    Custom = 1
+}
+
+// Backup Models
+
+public class BackupProviderConfig
+{
+    public BackupProviderType ProviderType { get; set; }
+    public string AccountEmail { get; set; } = string.Empty;
+    public string AccountName { get; set; } = string.Empty;
+    public bool IsConnected { get; set; }
+    public string EncryptedAccessToken { get; set; } = string.Empty;
+    public string EncryptedRefreshToken { get; set; } = string.Empty;
+    public DateTime? TokenExpiresAt { get; set; }
+    public S3StorageConfig? S3Config { get; set; }
+    public DateTime? ConnectedAt { get; set; }
+    public DateTime? LastBackupAt { get; set; }
+    public string? LastBackupStatus { get; set; }
+}
+
+public enum BackupProviderType
+{
+    OneDrive = 0,
+    GoogleDrive = 1,
+    S3 = 2,
+    Local = 3
+}
+
+public class S3StorageConfig
+{
+    public string EndpointUrl { get; set; } = "https://s3.amazonaws.com";
+    public string BucketName { get; set; } = string.Empty;
+    public string Region { get; set; } = "us-east-1";
+    public string AccessKeyId { get; set; } = string.Empty;
+    public string EncryptedSecretKey { get; set; } = string.Empty;
+}
+
+public class BackupScheduleConfig
+{
+    public BackupFrequency Frequency { get; set; } = BackupFrequency.Daily;
+    public int RetentionCount { get; set; } = 14;
+    public bool IsEnabled { get; set; } = true;
+    public DateTime? NextRunAt { get; set; }
+}
+
+public enum BackupFrequency
+{
+    Manual = 0,
+    Hourly = 1,
+    Daily = 2,
+    Weekly = 3
+}
+
+public class TenantBackupJobRecord
+{
+    public Guid BackupId { get; set; } = Guid.NewGuid();
+    public Guid TenantId { get; set; }
+    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+    public long TotalSizeBytes { get; set; }
+    public List<string> Files { get; set; } = new();
+    public string DestinationProviders { get; set; } = string.Empty;
+    public string Status { get; set; } = "Completed"; // Completed, Failed
+    public string? ErrorMessage { get; set; }
+    public int RetentionDays { get; set; } = 30;
 }

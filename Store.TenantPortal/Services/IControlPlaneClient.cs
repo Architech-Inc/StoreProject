@@ -30,4 +30,12 @@ public interface IControlPlaneClient
     Task<BranchDto> AddBranchAsync(Guid tenantId, CreateBranchRequest request, CancellationToken ct = default);
     Task<VerifyDomainResponse> VerifyBranchAsync(Guid tenantId, Guid branchId, CancellationToken ct = default);
     Task<bool> RemoveBranchAsync(Guid tenantId, Guid branchId, CancellationToken ct = default);
+
+    // Backups
+    Task<BackupSummaryDto?> GetBackupSummaryAsync(Guid tenantId, CancellationToken ct = default);
+    Task<TriggerBackupResponse> TriggerBackupAsync(Guid tenantId, CancellationToken ct = default);
+    Task<BackupProviderDto> ConfigureS3ProviderAsync(Guid tenantId, ConfigureS3Request request, CancellationToken ct = default);
+    Task<BackupProviderDto> SaveOAuthTokensAsync(Guid tenantId, SaveOAuthTokensRequest request, CancellationToken ct = default);
+    Task<bool> DisconnectBackupProviderAsync(Guid tenantId, string providerType, CancellationToken ct = default);
+    Task<BackupScheduleDto> UpdateBackupScheduleAsync(Guid tenantId, UpdateScheduleRequest request, CancellationToken ct = default);
 }

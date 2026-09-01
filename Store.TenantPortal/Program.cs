@@ -43,6 +43,7 @@ builder.Services.AddHttpClient<IControlPlaneClient, ControlPlaneClient>(client =
 
 // Register Portal Services
 builder.Services.AddScoped<IPortalSessionService, PortalSessionService>();
+builder.Services.AddScoped<IOAuthService, OAuthService>();
 
 var app = builder.Build();
 

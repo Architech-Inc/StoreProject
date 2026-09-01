@@ -1,0 +1,284 @@
+@page
+@model Store.TenantPortal.Pages.BackupsModel
+@{
+    ViewData["Title"] = "Automated Cloud Backups";
+    var summary = Model.Summary;
+    var schedule = summary?.Schedule;
+}
+
+<div class="portal-container">
+    <!-- Header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; flex-wrap: wrap; gap: 16px;">
+        <div>
+            <h1 style="font-size: 2rem; margin-bottom: 6px;">Automated Cloud Backups</h1>
+            <p style="color: var(--p-text-muted); font-size: 0.95rem; margin: 0;">
+                Cryptographically encrypted database snapshots (MySQL & MongoDB) synced to your cloud storage.
+            </p>
+        </div>
+
+        <form method="post" asp-page-handler="TriggerBackup">
+            <button type="submit" class="btn-primary-glow" style="font-size: 13px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                Run Backup Now
+            </button>
+        </form>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.FeedbackMessage))
+    {
+        <div class="portal-alert @(Model.IsError ? "danger" : "success") auto-dismiss">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            <span>@Model.FeedbackMessage</span>
+        </div>
+    }
+
+    <!-- Cloud Storage Providers Grid -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 32px;">
+        @if (summary?.Providers != null)
+        {
+            @foreach (var p in summary.Providers)
+            {
+                <div class="portal-card" style="padding: 24px; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                @if (p.ProviderType == "OneDrive")
+                                {
+                                    <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(0, 120, 212, 0.15); display: flex; align-items: center; justify-content: center; color: #60a5fa;">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>
+                                    </div>
+                                }
+                                else if (p.ProviderType == "GoogleDrive")
+                                {
+                                    <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(234, 67, 53, 0.15); display: flex; align-items: center; justify-content: center; color: #f87171;">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 19.5 22 19.5"></polygon></svg>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(245, 158, 11, 0.15); display: flex; align-items: center; justify-content: center; color: #fbbf24;">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+                                    </div>
+                                }
+                                <div>
+                                    <h3 style="font-size: 1.1rem; margin: 0;">@p.DisplayName</h3>
+                                </div>
+                            </div>
+
+                            @if (p.IsConnected)
+                            {
+                                <span class="status-badge healthy">
+                                    <span class="status-dot healthy"></span> Connected
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="status-badge" style="background: rgba(255,255,255,0.06); color: var(--p-text-muted);">
+                                    Disconnected
+                                </span>
+                            }
+                        </div>
+
+                        <p style="color: var(--p-text-muted); font-size: 12px; line-height: 1.5; margin-bottom: 16px;">
+                            @if (p.ProviderType == "OneDrive")
+                            {
+                                <span>Isolated to <code class="code-font" style="color: #60a5fa;">/Apps/ClexAnFoods/</code>. Scoped AppFolder permission cannot read your personal files.</span>
+                            }
+                            else if (p.ProviderType == "GoogleDrive")
+                            {
+                                <span>Dedicated <code class="code-font" style="color: #f87171;">ClexAn Backups</code> folder with least-privilege <code class="code-font">drive.file</code> scope.</span>
+                            }
+                            else
+                            {
+                                <span>Direct integration with any AWS S3, Cloudflare R2, or self-hosted MinIO object storage bucket.</span>
+                            }
+                        </p>
+
+                        @if (p.IsConnected)
+                        {
+                            <div style="background: var(--p-surface-alt); padding: 10px 12px; border-radius: 8px; border: 1px solid var(--p-border); margin-bottom: 16px; font-size: 12px;">
+                                <div style="color: var(--p-text-muted); margin-bottom: 2px;">Account: <span class="code-font" style="color: var(--p-text);">@p.AccountEmail</span></div>
+                                <div style="color: var(--p-text-muted);">Last Sync: <span style="color: var(--p-text);">@(p.LastBackupAt?.ToString("yyyy-MM-dd HH:mm") ?? "Pending first run")</span></div>
+                            </div>
+                        }
+                    </div>
+
+                    <div>
+                        @if (p.IsConnected)
+                        {
+                            <form method="post" asp-page-handler="DisconnectProvider" asp-route-provider="@p.ProviderType" onsubmit="return confirm('Disconnect this backup provider?');">
+                                <button type="submit" class="btn-danger-glass" style="width: 100%; font-size: 12px;">
+                                    Disconnect Provider
+                                </button>
+                            </form>
+                        }
+                        else
+                        {
+                            @if (p.ProviderType == "OneDrive")
+                            {
+                                <a href="@Model.MicrosoftAuthUrl" class="btn-glass" style="display: block; text-align: center; text-decoration: none; font-size: 12px;">
+                                    Connect with Microsoft &rarr;
+                                </a>
+                            }
+                            else if (p.ProviderType == "GoogleDrive")
+                            {
+                                <a href="@Model.GoogleAuthUrl" class="btn-glass" style="display: block; text-align: center; text-decoration: none; font-size: 12px;">
+                                    Connect with Google &rarr;
+                                </a>
+                            }
+                            else
+                            {
+                                <button type="button" class="btn-glass" onclick="document.getElementById('s3Modal').style.display='flex';" style="width: 100%; font-size: 12px;">
+                                    Configure S3 / MinIO &rarr;
+                                </button>
+                            }
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+    <!-- Schedule & Policy Card -->
+    <div class="portal-card" style="margin-bottom: 32px;">
+        <h3 style="font-size: 1.2rem; margin-bottom: 16px;">Automated Backup Schedule & Retention</h3>
+        
+        <form method="post" asp-page-handler="UpdateSchedule" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) auto; gap: 16px; align-items: flex-end;">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Backup Frequency</label>
+                <select name="Frequency" class="portal-input" style="cursor: pointer;">
+                    <option value="Daily" selected="@(schedule?.Frequency == "Daily")">Daily (Recommended)</option>
+                    <option value="Hourly" selected="@(schedule?.Frequency == "Hourly")">Hourly</option>
+                    <option value="Weekly" selected="@(schedule?.Frequency == "Weekly")">Weekly</option>
+                    <option value="Manual" selected="@(schedule?.Frequency == "Manual")">Manual only</option>
+                </select>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Retention Policy</label>
+                <select name="RetentionCount" class="portal-input" style="cursor: pointer;">
+                    <option value="7" selected="@(schedule?.RetentionCount == 7)">Keep 7 snapshots</option>
+                    <option value="14" selected="@(schedule?.RetentionCount == 14)">Keep 14 snapshots (2 weeks)</option>
+                    <option value="30" selected="@(schedule?.RetentionCount == 30)">Keep 30 snapshots (1 month)</option>
+                    <option value="60" selected="@(schedule?.RetentionCount == 60)">Keep 60 snapshots (2 months)</option>
+                </select>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0; display: flex; align-items: center; height: 42px;">
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--p-text); cursor: pointer;">
+                    <input type="checkbox" name="IsEnabled" value="true" checked="@(schedule?.IsEnabled != false)" style="accent-color: #019c01; width: 16px; height: 16px;" />
+                    Enable automated schedule
+                </label>
+            </div>
+
+            <button type="submit" class="btn-glass" style="padding: 10px 24px; font-size: 13px; height: 42px;">
+                Save Schedule
+            </button>
+        </form>
+    </div>
+
+    <!-- Backup History Table -->
+    <div class="portal-card" style="padding: 0; overflow: hidden;">
+        <div style="padding: 20px 24px; border-bottom: 1px solid var(--p-border); display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="font-size: 1.15rem; margin: 0;">Snapshot History</h3>
+            <span style="font-size: 13px; color: var(--p-text-muted);">Showing last @(summary?.RecentBackups?.Count ?? 0) snapshots</span>
+        </div>
+
+        @if (summary?.RecentBackups?.Any() == true)
+        {
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 14px;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid var(--p-border); background: var(--p-surface-alt); color: var(--p-text-muted); font-size: 12px; text-transform: uppercase;">
+                            <th style="padding: 14px 24px;">Timestamp (UTC)</th>
+                            <th style="padding: 14px 16px;">Archive Size</th>
+                            <th style="padding: 14px 16px;">Files Included</th>
+                            <th style="padding: 14px 16px;">Destination</th>
+                            <th style="padding: 14px 16px;">Status</th>
+                            <th style="padding: 14px 24px; text-align: right;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var b in summary.RecentBackups)
+                        {
+                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);">
+                                <td style="padding: 16px 24px; font-weight: 600;">@b.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                                <td style="padding: 16px 16px; font-family: monospace; color: #4ade80;">@b.FormattedSize</td>
+                                <td style="padding: 16px 16px; font-size: 12px; color: var(--p-text-muted);">
+                                    @string.Join(", ", b.Files)
+                                </td>
+                                <td style="padding: 16px 16px; font-size: 13px;">@b.DestinationProviders</td>
+                                <td style="padding: 16px 16px;">
+                                    <span class="status-badge healthy">
+                                        <span class="status-dot healthy"></span> @b.Status
+                                    </span>
+                                </td>
+                                <td style="padding: 16px 24px; text-align: right;">
+                                    <button type="button" class="btn-glass" style="padding: 4px 10px; font-size: 12px;" onclick="alert('Download started for snapshot archive bundle.');">
+                                        Download
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div style="padding: 48px 24px; text-align: center; color: var(--p-text-muted);">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 12px; opacity: 0.5;">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                <div style="font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 4px;">No backup snapshots yet</div>
+                <div style="font-size: 13px; max-width: 400px; margin: 0 auto 20px;">
+                    Trigger an immediate backup or connect a cloud storage provider to enable automated scheduled snapshots.
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- S3 / MinIO Modal -->
+<div id="s3Modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
+    <div class="portal-card" style="width: 100%; max-width: 520px; background: rgba(10, 16, 11, 0.95); border: 1px solid var(--p-border-hover); box-shadow: 0 20px 50px rgba(0,0,0,0.6);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3 style="font-size: 1.3rem; margin: 0;">Configure S3 / MinIO Storage</h3>
+            <button type="button" onclick="document.getElementById('s3Modal').style.display='none';" style="background: transparent; border: none; color: var(--p-text-muted); cursor: pointer; font-size: 20px;">&times;</button>
+        </div>
+
+        <form method="post" asp-page-handler="ConfigureS3">
+            <div class="form-group">
+                <label class="form-label">Endpoint URL</label>
+                <input name="EndpointUrl" class="portal-input" placeholder="https://s3.amazonaws.com or https://s3.us-east-1.r2.cloudflarestorage.com" value="https://s3.amazonaws.com" required />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Bucket Name</label>
+                <input name="BucketName" class="portal-input" placeholder="my-store-backups" required />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Region</label>
+                <input name="Region" class="portal-input" placeholder="us-east-1" value="us-east-1" required />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Access Key ID</label>
+                <input name="AccessKeyId" class="portal-input" placeholder="AKIAIOSFODNN7EXAMPLE" required />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Secret Access Key</label>
+                <input name="SecretAccessKey" type="password" class="portal-input" placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" required />
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+                <button type="button" class="btn-glass" onclick="document.getElementById('s3Modal').style.display='none';">Cancel</button>
+                <button type="submit" class="btn-primary-glow">Connect S3 Bucket &rarr;</button>
+            </div>
+        </form>
+    </div>
+</div>

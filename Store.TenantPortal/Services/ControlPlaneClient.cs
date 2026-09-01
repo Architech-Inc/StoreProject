@@ -293,4 +293,89 @@ public class ControlPlaneClient : IControlPlaneClient
             return false;
         }
     }
+
+    // ==========================================
+    // Phase 3: Cloud Backups & Storage
+    // ==========================================
+
+    public async Task<BackupSummaryDto?> GetBackupSummaryAsync(Guid tenantId, CancellationToken ct = default)
+    {
+        try
+        {
+            var response = await _http.GetFromJsonAsync<ApiResponse<BackupSummaryDto>>(
+                $"api/control/tenants/{tenantId}/backups", ct);
+            return response?.Data;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting backup summary for {TenantId}", tenantId);
+            return null;
+        }
+    }
+
+    public async Task<TriggerBackupResponse> TriggerBackupAsync(Guid tenantId, CancellationToken ct = default)
+    {
+        var response = await _http.PostAsync($"api/control/tenants/{tenantId}/backups/trigger", null, ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            var err = await response.Content.ReadFromJsonAsync<ApiResponse<object>>(cancellationToken: ct);
+            throw new InvalidOperationException(err?.Message ?? "Failed to trigger backup.");
+        }
+
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse<TriggerBackupResponse>>(cancellationToken: ct);
+        return result!.Data;
+    }
+
+    public async Task<BackupProviderDto> ConfigureS3ProviderAsync(Guid tenantId, ConfigureS3Request request, CancellationToken ct = default)
+    {
+        var response = await _http.PostAsJsonAsync($"api/control/tenants/{tenantId}/backups/providers/s3", request, ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            var err = await response.Content.ReadFromJsonAsync<ApiResponse<object>>(cancellationToken: ct);
+            throw new InvalidOperationException(err?.Message ?? "Failed to configure S3 provider.");
+        }
+
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse<BackupProviderDto>>(cancellationToken: ct);
+        return result!.Data;
+    }
+
+    public async Task<BackupProviderDto> SaveOAuthTokensAsync(Guid tenantId, SaveOAuthTokensRequest request, CancellationToken ct = default)
+    {
+        var response = await _http.PostAsJsonAsync($"api/control/tenants/{tenantId}/backups/providers/oauth", request, ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            var err = await response.Content.ReadFromJsonAsync<ApiResponse<object>>(cancellationToken: ct);
+            throw new InvalidOperationException(err?.Message ?? "Failed to save OAuth tokens.");
+        }
+
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse<BackupProviderDto>>(cancellationToken: ct);
+        return result!.Data;
+    }
+
+    public async Task<bool> DisconnectBackupProviderAsync(Guid tenantId, string providerType, CancellationToken ct = default)
+    {
+        try
+        {
+            var response = await _http.DeleteAsync($"api/control/tenants/{tenantId}/backups/providers/{providerType}", ct);
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error disconnecting backup provider {ProviderType} for {TenantId}", providerType, tenantId);
+            return false;
+        }
+    }
+
+    public async Task<BackupScheduleDto> UpdateBackupScheduleAsync(Guid tenantId, UpdateScheduleRequest request, CancellationToken ct = default)
+    {
+        var response = await _http.PutAsJsonAsync($"api/control/tenants/{tenantId}/backups/schedule", request, ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            var err = await response.Content.ReadFromJsonAsync<ApiResponse<object>>(cancellationToken: ct);
+            throw new InvalidOperationException(err?.Message ?? "Failed to update backup schedule.");
+        }
+
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse<BackupScheduleDto>>(cancellationToken: ct);
+        return result!.Data;
+    }
 }

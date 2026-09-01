@@ -148,3 +148,74 @@ public record CreateBranchRequest(
     string DomainType = "Platform",
     string? CustomSubdomain = null
 );
+
+// Phase 3 DTOs: Backups & Cloud Storage
+
+public record BackupSummaryDto(
+    Guid TenantId,
+    string Slug,
+    BackupScheduleDto Schedule,
+    List<BackupProviderDto> Providers,
+    List<BackupJobDto> RecentBackups
+);
+
+public record BackupProviderDto(
+    string ProviderType,
+    string DisplayName,
+    bool IsConnected,
+    string? AccountEmail,
+    string? AccountName,
+    DateTime? ConnectedAt,
+    DateTime? LastBackupAt,
+    string? LastBackupStatus
+);
+
+public record BackupScheduleDto(
+    string Frequency,
+    int RetentionCount,
+    bool IsEnabled,
+    DateTime? NextRunAt
+);
+
+public record BackupJobDto(
+    Guid BackupId,
+    DateTime Timestamp,
+    long TotalSizeBytes,
+    string FormattedSize,
+    List<string> Files,
+    string DestinationProviders,
+    string Status,
+    string? ErrorMessage
+);
+
+public record ConfigureS3Request(
+    string EndpointUrl,
+    string BucketName,
+    string Region,
+    string AccessKeyId,
+    string SecretAccessKey
+);
+
+public record SaveOAuthTokensRequest(
+    string ProviderType,
+    string AccessToken,
+    string RefreshToken,
+    string AccountEmail,
+    string? AccountName,
+    int ExpiresInSeconds = 3600
+);
+
+public record UpdateScheduleRequest(
+    string Frequency,
+    int RetentionCount,
+    bool IsEnabled
+);
+
+public record TriggerBackupResponse(
+    Guid BackupId,
+    string Status,
+    string Message,
+    long TotalSizeBytes,
+    List<string> Files,
+    DateTime Timestamp
+);
