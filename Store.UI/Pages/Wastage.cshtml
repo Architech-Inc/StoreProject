@@ -256,7 +256,7 @@
             <!-- Product Smart Lookup -->
             <div class="form-field autocomplete-wrapper">
                 <label class="form-label">Search Product Catalog <span style="color: #dc2626;">*</span></label>
-                <input type="text" id="catalogSearchInput" class="form-input" placeholder="Type product name or scan barcode..." autocomplete="off" oninput="handleCatalogSearch(this.value)" />
+                <input type="text" id="catalogSearchInput" class="form-input" placeholder="Type product name or scan barcode..." autocomplete="off" oninput="handleCatalogSearch(this.value)" data-scanner-input />
                 <input type="hidden" name="RecordRequest.ItemId" id="selectedItemId" required />
                 
                 <div class="autocomplete-dropdown" id="catalogDropdown"></div>

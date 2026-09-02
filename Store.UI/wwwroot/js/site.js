@@ -1004,6 +1004,25 @@
             this.savePreferences();
         },
 
+        /**
+         * Returns true if the currently focused element is a text-accepting input,
+         * textarea, select, or contenteditable. Used to suppress global scanner
+         * buffering when the user or scanner is deliberately targeting a page input.
+         */
+        isTextInputFocused: function() {
+            const el = document.activeElement;
+            if (!el || el === document.body) return false;
+            const tag = el.tagName;
+            if (tag === 'TEXTAREA' || tag === 'SELECT') return true;
+            if (tag === 'INPUT') {
+                // Exclude types that don't accept text
+                const nonTextTypes = ['button', 'submit', 'reset', 'checkbox', 'radio', 'file', 'image', 'range', 'color'];
+                return !nonTextTypes.includes((el.type || 'text').toLowerCase());
+            }
+            if (el.isContentEditable) return true;
+            return false;
+        },
+
         setupGlobalKeyListener: function() {
             window.addEventListener('keydown', (e) => {
                 // If scanner disabled or session paused, ignore keystrokes
@@ -1015,6 +1034,19 @@
 
                 // Ignore control keys, function keys, meta keys
                 if (e.ctrlKey || e.altKey || e.metaKey || e.key.length > 1 && e.key !== 'Enter') return;
+
+                // ── KEY FIX ──────────────────────────────────────────────────────────
+                // If any text-accepting element (input, textarea, select, contenteditable)
+                // currently has focus, the browser is already routing keystrokes into it.
+                // Do NOT buffer anything — let the element handle the scan natively.
+                // This prevents double-entry and prevents the smart-scan modal from
+                // hijacking barcode scanners that are aimed at a focused page input.
+                if (this.isTextInputFocused()) {
+                    // Still reset our buffer so we don't accumulate stale data
+                    this.buffer = [];
+                    return;
+                }
+                // ─────────────────────────────────────────────────────────────────────
 
                 const now = Date.now();
                 const interval = now - this.lastKeyTime;
@@ -1056,20 +1088,16 @@
                 return;
             }
 
-            // 1. Check if user is actively focused on an input element
-            const activeEl = document.activeElement;
-            if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
-                // If it's an input on the page, fill it and fire events
-                activeEl.value = code;
-                activeEl.dispatchEvent(new Event('input', { bubbles: true }));
-                activeEl.dispatchEvent(new Event('change', { bubbles: true }));
-                activeEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }));
-                return;
-            }
+            // Note: by the time we reach here, isTextInputFocused() was already false
+            // in setupGlobalKeyListener, so we never double-inject into a focused input.
+            // The only remaining job is to route to a *visible* page barcode input
+            // (if exactly one is available) or fall back to the global modal.
 
-            // 2. Check for in-page barcode target inputs
+            // 1. Check for in-page barcode target inputs that are visible and ready
+            //    Selector covers: explicit data-scanner-input attribute, id/name containing
+            //    "barcode", and the .barcode-input CSS class.
             const pageBarcodeInputs = Array.from(document.querySelectorAll(
-                'input[data-barcode-input], input[id*="barcode" i], input[name*="barcode" i], input.barcode-input'
+                'input[data-scanner-input], input[data-barcode-input], input[id*="barcode" i], input[name*="barcode" i], input.barcode-input'
             )).filter(el => el.offsetParent !== null && !el.disabled && !el.readOnly);
 
             if (pageBarcodeInputs.length === 1) {
@@ -1082,13 +1110,13 @@
                 return;
             }
 
-            // 3. If in-page-only mode, do not open global modal
+            // 2. If in-page-only mode, do not open global modal
             if (this.state.status === 'in_page_only') {
                 if (window.showToast) window.showToast('info', `Scanned: ${code} (In-page mode only)`);
                 return;
             }
 
-            // 4. Global Action Hub Modal Fallback
+            // 3. Global Action Hub Modal Fallback
             this.resolveAndShowModal(code);
         },
 
