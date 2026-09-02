@@ -123,6 +123,13 @@ public class TenantOrchestratorTests
         // Check generated compose file
         var generatedCompose = Path.Combine(_tempTestDir, "Tenants", "bonanjo-foods", "docker-compose.yml");
         Assert.True(File.Exists(generatedCompose));
+
+        // Check generated admin init SQL
+        var generatedAdminSql = Path.Combine(_tempTestDir, "Tenants", "bonanjo-foods", "initdb", "002_init_admin.sql");
+        Assert.True(File.Exists(generatedAdminSql));
+        var sqlContent = await File.ReadAllTextAsync(generatedAdminSql);
+        Assert.Contains("contact@bonanjo.cm", sqlContent);
+        Assert.Contains("$2a$12$", sqlContent);
     }
 
     [Fact]

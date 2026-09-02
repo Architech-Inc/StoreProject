@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
+using MySqlConnector;
 using Store.ControlPlane.Models;
 using Store.ControlPlane.Models.DTOs;
 using Store.ControlPlane.Repositories;
@@ -116,6 +117,34 @@ public class TenantOrchestrator : ITenantOrchestrator
         // Create tenant workspace directory
         var tenantsBaseDir = Path.Combine(_env.ContentRootPath, "Tenants", slug);
         Directory.CreateDirectory(tenantsBaseDir);
+
+        // Hash the admin password with BCrypt (work factor 12) and generate init SQL
+        var rawPassword = string.IsNullOrWhiteSpace(request.AdminPassword) ? "Admin123!" : request.AdminPassword;
+        var adminInitSql = GenerateAdminInitSql(tenant, rawPassword);
+
+        // Write initdb/002_init_admin.sql for Docker container provisioning
+        var initDbDir = Path.Combine(tenantsBaseDir, "initdb");
+        Directory.CreateDirectory(initDbDir);
+        var initAdminPath = Path.Combine(initDbDir, "002_init_admin.sql");
+        await File.WriteAllTextAsync(initAdminPath, adminInitSql, ct);
+        LogStep(tenant, "AdminCredentials", true, "Hashed admin credentials and generated database initialization script.");
+
+        // If Host MySQL is used, initialize the database and execute admin script directly
+        var useHostMySql = _config.GetValue<bool>("ControlPlane:UseHostMySql");
+        if (useHostMySql)
+        {
+            try
+            {
+                await InitializeHostDatabaseAsync(tenant, adminInitSql, ct);
+                LogStep(tenant, "HostDatabaseInit", true, $"Host MySQL database 'store_{tenant.Slug}' initialized with clean production schema and administrator account.");
+            }
+            catch (Exception ex)
+            {
+                LogStep(tenant, "HostDatabaseInit", false, $"Failed to initialize host database: {ex.Message}");
+                _logger.LogError(ex, "Failed to initialize host database for {Slug}", tenant.Slug);
+                throw;
+            }
+        }
 
         // Generate Compose File
         var composeContent = RenderComposeTemplate(tenant, rootDomain);
@@ -775,4 +804,147 @@ volumes:
   mysql_data:
   mongo_data:
 ";
+
+    private async Task InitializeHostDatabaseAsync(Tenant t, string adminInitSql, CancellationToken ct)
+    {
+        var server = _config["ControlPlane:HostMySqlServer"] ?? "127.0.0.1";
+        if (server.Equals("host.docker.internal", StringComparison.OrdinalIgnoreCase))
+        {
+            server = "127.0.0.1";
+        }
+        var port = _config.GetValue<int?>("ControlPlane:HostMySqlPort") ?? 3306;
+        var user = _config["ControlPlane:HostMySqlUser"] ?? "root";
+        var pass = _config["ControlPlane:HostMySqlPassword"] ?? "";
+        var dbName = $"store_{t.Slug}";
+
+        var serverConnStr = $"Server={server};Port={port};User Id={user};Password={pass};AllowPublicKeyRetrieval=True;AllowUserVariables=True;";
+        await using var serverConn = new MySqlConnection(serverConnStr);
+        await serverConn.OpenAsync(ct);
+
+        // Create database if not exists
+        await using (var cmd = serverConn.CreateCommand())
+        {
+            cmd.CommandText = $"CREATE DATABASE IF NOT EXISTS `{dbName}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;";
+            await cmd.ExecuteNonQueryAsync(ct);
+        }
+
+        var dbConnStr = $"Server={server};Port={port};Database={dbName};User Id={user};Password={pass};AllowPublicKeyRetrieval=True;AllowUserVariables=True;";
+        await using var dbConn = new MySqlConnection(dbConnStr);
+        await dbConn.OpenAsync(ct);
+
+        // Check if tables exist
+        bool hasTables;
+        await using (var checkCmd = dbConn.CreateCommand())
+        {
+            checkCmd.CommandText = "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = @dbName;";
+            checkCmd.Parameters.AddWithValue("@dbName", dbName);
+            var count = Convert.ToInt32(await checkCmd.ExecuteScalarAsync(ct));
+            hasTables = count > 0;
+        }
+
+        if (!hasTables)
+        {
+            var templatePath = Path.Combine(_env.ContentRootPath, "..", "Database", "templates", "001_production_base.sql");
+            if (!File.Exists(templatePath))
+            {
+                templatePath = Path.Combine(_env.ContentRootPath, "Database", "templates", "001_production_base.sql");
+            }
+
+            if (File.Exists(templatePath))
+            {
+                _logger.LogInformation("Applying clean base schema template to host database {DbName}...", dbName);
+                var sqlScript = await File.ReadAllTextAsync(templatePath, ct);
+                var statements = sqlScript.Split(new[] { ";\r\n", ";\n" }, StringSplitOptions.RemoveEmptyEntries);
+
+                var batchBuilder = new StringBuilder();
+                foreach (var rawStmt in statements)
+                {
+                    var stmt = rawStmt.Trim();
+                    if (string.IsNullOrWhiteSpace(stmt)) continue;
+
+                    batchBuilder.AppendLine(stmt + ";");
+                    if (batchBuilder.Length >= 250_000)
+                    {
+                        await using var cmd = dbConn.CreateCommand();
+                        cmd.CommandText = batchBuilder.ToString();
+                        cmd.CommandTimeout = 180;
+                        await cmd.ExecuteNonQueryAsync(ct);
+                        batchBuilder.Clear();
+                    }
+                }
+
+                if (batchBuilder.Length > 0)
+                {
+                    await using var cmd = dbConn.CreateCommand();
+                    cmd.CommandText = batchBuilder.ToString();
+                    cmd.CommandTimeout = 180;
+                    await cmd.ExecuteNonQueryAsync(ct);
+                }
+            }
+            else
+            {
+                _logger.LogWarning("Template file {Path} not found for tenant {Slug}", templatePath, t.Slug);
+            }
+        }
+
+        // Execute admin init SQL
+        _logger.LogInformation("Injecting tenant administrator credentials into {DbName}...", dbName);
+        await using var adminCmd = dbConn.CreateCommand();
+        adminCmd.CommandText = adminInitSql;
+        adminCmd.CommandTimeout = 60;
+        await adminCmd.ExecuteNonQueryAsync(ct);
+    }
+
+    private static string GenerateAdminInitSql(Tenant tenant, string adminPassword)
+    {
+        var bcryptHash = BCrypt.Net.BCrypt.EnhancedHashPassword(adminPassword, 12);
+        var adminUserId = Guid.NewGuid().ToString();
+        var adminEmpId = Guid.NewGuid().ToString();
+        var now = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.ffffff");
+
+        var safeUsername = tenant.AdminUsername.Replace("'", "''");
+        var safeEmail = tenant.AdminEmail.Replace("'", "''");
+
+        return $@"-- Auto-generated Admin Initialization for tenant '{tenant.Slug}'
+SET FOREIGN_KEY_CHECKS=0;
+
+-- 1. Ensure email record exists
+INSERT INTO `email` (`address`, `type`, `is_verified`, `date_created`, `last_modified`)
+VALUES ('{safeEmail}', 'Work', 1, '{now}', '{now}')
+ON DUPLICATE KEY UPDATE `is_verified` = 1, `last_modified` = '{now}';
+
+-- 2. Ensure employee record exists
+INSERT INTO `employee` (`employee_id`, `department_id`, `first_name`, `last_name`, `gender`, `date_employed`, `status`, `image_path`, `date_created`, `last_modified`)
+VALUES ('{adminEmpId}', 2, '{safeUsername}', 'Admin', 'NotSpecified', '{now}', 'Active', 'img/user_default.png', '{now}', '{now}')
+ON DUPLICATE KEY UPDATE `first_name` = VALUES(`first_name`), `status` = 'Active';
+
+-- 3. Create or update the administrator user
+INSERT INTO `user` (`user_id`, `employee_id`, `role_id`, `username`, `status`, `image_path`, `date_created`, `last_modified`)
+VALUES ('{adminUserId}', '{adminEmpId}', 1, '{safeUsername}', 'Active', 'img/user_default.png', '{now}', '{now}')
+ON DUPLICATE KEY UPDATE `username` = VALUES(`username`), `status` = 'Active';
+
+-- 4. Set password hash (BCrypt Enhanced work factor 12)
+INSERT INTO `user_password` (`user_id`, `password_hash`, `date_created`, `last_modified`)
+SELECT `user_id`, '{bcryptHash}', '{now}', '{now}' FROM `user` WHERE `username` = '{safeUsername}' LIMIT 1
+ON DUPLICATE KEY UPDATE `password_hash` = '{bcryptHash}';
+
+-- 5. Link user to email
+INSERT INTO `user_email` (`user_id`, `email_id`, `is_primary`, `date_created`, `last_modified`)
+SELECT u.`user_id`, e.`email_id`, 1, '{now}', '{now}' 
+FROM `user` u 
+CROSS JOIN `email` e 
+WHERE u.`username` = '{safeUsername}' AND e.`address` = '{safeEmail}' LIMIT 1
+ON DUPLICATE KEY UPDATE `is_primary` = 1;
+
+-- 6. Assign administrator to Main Branch (HQ)
+INSERT INTO `user_branch_role` (`user_id`, `branch_id`, `role_id`, `date_created`, `last_modified`)
+SELECT u.`user_id`, b.`branch_id`, 1, '{now}', '{now}'
+FROM `user` u
+CROSS JOIN `branch` b
+WHERE u.`username` = '{safeUsername}' AND b.`code` = 'HQ' LIMIT 1
+ON DUPLICATE KEY UPDATE `role_id` = 1;
+
+SET FOREIGN_KEY_CHECKS=1;
+";
+    }
 }

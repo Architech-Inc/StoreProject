@@ -11,7 +11,8 @@ services:
       MYSQL_PASSWORD: {{MYSQL_PASSWORD}}
     volumes:
       - {{SLUG}}_mysql_data:/var/lib/mysql
-      - ../../../Database/migrations:/docker-entrypoint-initdb.d
+      - ../../../Database/templates/001_production_base.sql:/docker-entrypoint-initdb.d/001_production_base.sql:ro
+      - ./initdb/002_init_admin.sql:/docker-entrypoint-initdb.d/002_init_admin.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost -u $$MYSQL_USER -p$$MYSQL_PASSWORD || exit 1"]
       interval: 10s
