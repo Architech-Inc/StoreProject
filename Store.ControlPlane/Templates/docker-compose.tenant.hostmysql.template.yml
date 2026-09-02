@@ -1,28 +1,6 @@
 services:
-  {{SLUG}}-mysql:
-    image: mysql:8.0
-    container_name: {{SLUG}}-mysql
-    restart: always
-    command: --default-authentication-plugin=mysql_native_password
-    environment:
-      MYSQL_ROOT_PASSWORD: {{MYSQL_ROOT_PASSWORD}}
-      MYSQL_DATABASE: {{MYSQL_DATABASE}}
-      MYSQL_USER: {{MYSQL_USER}}
-      MYSQL_PASSWORD: {{MYSQL_PASSWORD}}
-    volumes:
-      - {{SLUG}}_mysql_data:/var/lib/mysql
-      - ../../../Database/migrations:/docker-entrypoint-initdb.d
-    healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u $$MYSQL_USER -p$$MYSQL_PASSWORD || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
-    networks:
-      - {{SLUG}}_net
-
   {{SLUG}}-mongodb:
-    image: mongo:latest
+    image: mongo:7
     container_name: {{SLUG}}-mongodb
     restart: always
     environment:
@@ -43,17 +21,17 @@ services:
     image: {{STORE_API_IMAGE}}
     container_name: {{SLUG}}-api
     restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
-      - ConnectionStrings__Default=Server={{SLUG}}-mysql;Port=3306;Database={{MYSQL_DATABASE}};User Id={{MYSQL_USER}};Password={{MYSQL_PASSWORD}};
+      - ConnectionStrings__Default=Server={{MYSQL_SERVER}};Port={{MYSQL_PORT}};Database={{MYSQL_DATABASE}};User Id={{MYSQL_USER}};Password={{MYSQL_PASSWORD}};AllowPublicKeyRetrieval=True;
       - MongoDB__ConnectionString=mongodb://{{MONGO_USER}}:{{MONGO_PASSWORD}}@{{SLUG}}-mongodb:27017/?authSource=admin
       - Jwt__Key={{JWT_SECRET}}
       - Payments__MoMoCallbackKey={{MOMO_CALLBACK_KEY}}
       - Cors__AllowedOrigins__0=http://{{SLUG}}.{{ROOT_DOMAIN}}:18080
       - Cors__AllowedOrigins__1=https://{{SLUG}}.{{ROOT_DOMAIN}}:18443
     depends_on:
-      {{SLUG}}-mysql:
-        condition: service_healthy
       {{SLUG}}-mongodb:
         condition: service_healthy
     volumes:
@@ -103,7 +81,6 @@ services:
       - "traefik.http.services.{{SLUG}}-ui.loadbalancer.server.port=8080"
 
 volumes:
-  {{SLUG}}_mysql_data:
   {{SLUG}}_mongodb_data:
   {{SLUG}}_dataprotection_keys:
   {{SLUG}}_uploads:

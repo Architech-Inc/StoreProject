@@ -97,6 +97,42 @@ jobs:
           tags: ${{ steps.meta-ui.outputs.tags }}
           labels: ${{ steps.meta-ui.outputs.labels }}
 
+      - name: Extract Metadata for Store.ControlPlane
+        id: meta-controlplane
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_PREFIX }}/store-controlplane
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=
+
+      - name: Build and Push Store.ControlPlane Container
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Store.ControlPlane/Dockerfile
+          push: true
+          tags: ${{ steps.meta-controlplane.outputs.tags }}
+          labels: ${{ steps.meta-controlplane.outputs.labels }}
+
+      - name: Extract Metadata for Store.TenantPortal
+        id: meta-tenantportal
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_PREFIX }}/store-tenantportal
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=
+
+      - name: Build and Push Store.TenantPortal Container
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Store.TenantPortal/Dockerfile
+          push: true
+          tags: ${{ steps.meta-tenantportal.outputs.tags }}
+          labels: ${{ steps.meta-tenantportal.outputs.labels }}
+
   # ═══════════════════════════════════════════════════════════════════════════
   # Stage 3: Zero-Downtime Deployment
   # ═══════════════════════════════════════════════════════════════════════════
@@ -106,7 +142,48 @@ jobs:
     if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy Trigger
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Check VPS Secrets Configuration
+        id: check-secrets
         run: |
-          echo "Deployment trigger acknowledged for commit ${{ github.sha }}."
-          echo "Containers built and pushed to GHCR."
+          if [ -n "${{ secrets.VPS_HOST }}" ] && [ -n "${{ secrets.VPS_SSH_KEY }}" ]; then
+            echo "has_secrets=true" >> $GITHUB_OUTPUT
+            echo "VPS deployment credentials detected."
+          else
+            echo "has_secrets=false" >> $GITHUB_OUTPUT
+            echo "::warning::VPS_HOST or VPS_SSH_KEY secret not found. Skipping automated SSH deployment."
+          fi
+
+      - name: Deploy Platform Services to VPS via SSH
+        if: steps.check-secrets.outputs.has_secrets == 'true'
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER || 'deploy' }}
+          VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          IMAGE_PREFIX: ${{ env.IMAGE_PREFIX }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$VPS_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p $VPS_PORT -H $VPS_HOST >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          echo "==> Ensuring target directories exist on VPS..."
+          ssh -i ~/.ssh/deploy_key -p $VPS_PORT -o StrictHostKeyChecking=accept-new $VPS_USER@$VPS_HOST "sudo mkdir -p /opt/projects/platform/tenants /opt/projects/proxy/dynamic && sudo chown -R \$USER:\$USER /opt/projects/platform"
+
+          echo "==> Copying docker-compose.platform.yml to VPS..."
+          scp -i ~/.ssh/deploy_key -P $VPS_PORT -o StrictHostKeyChecking=accept-new docker-compose.platform.yml $VPS_USER@$VPS_HOST:/opt/projects/platform/docker-compose.platform.yml
+
+          echo "==> Deploying Control Plane and Tenant Portal..."
+          ssh -i ~/.ssh/deploy_key -p $VPS_PORT -o StrictHostKeyChecking=accept-new $VPS_USER@$VPS_HOST "bash -s" << 'EOF'
+            set -e
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            cd /opt/projects/platform
+            export IMAGE_PREFIX="${{ env.IMAGE_PREFIX }}"
+            docker compose -f docker-compose.platform.yml pull
+            docker compose -f docker-compose.platform.yml up -d --remove-orphans
+            docker compose -f docker-compose.platform.yml ps
+          EOF
+

@@ -1,0 +1,11 @@
+**/.git
+**/.vs
+**/.vscode
+**/bin
+**/obj
+**/TestResults
+**/*.user
+Database/migrations/*.sql
+Store.ControlPlane/Tenants
+traefik
+docker-compose*.yml

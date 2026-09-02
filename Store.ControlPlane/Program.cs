@@ -1,5 +1,7 @@
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
+using Store.ControlPlane.Data;
 using Store.ControlPlane.Repositories;
 using Store.ControlPlane.Services;
 using Store.ControlPlane.Workers;
@@ -49,8 +51,24 @@ builder.Services.AddRateLimiter(options =>
             }));
 });
 
+// Database & Security
+var connectionString = builder.Configuration.GetConnectionString("ControlPlane") 
+    ?? "Server=localhost;Port=3306;Database=store_controlplane;User Id=root;Password=;AllowPublicKeyRetrieval=True;";
+
+builder.Services.AddSingleton<ISecretEncryptionService, SecretEncryptionService>();
+
+builder.Services.AddDbContextFactory<ControlPlaneDbContext>((sp, options) =>
+{
+    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString), mySqlOptions =>
+    {
+        mySqlOptions.EnableRetryOnFailure(3, TimeSpan.FromSeconds(5), null);
+    });
+});
+
+builder.Services.AddScoped(sp => sp.GetRequiredService<IDbContextFactory<ControlPlaneDbContext>>().CreateDbContext());
+
 // Register Control Plane Dependencies
-builder.Services.AddSingleton<ITenantRepository, JsonFileTenantRepository>();
+builder.Services.AddSingleton<ITenantRepository, MySqlTenantRepository>();
 builder.Services.AddSingleton<IPortalAuthService, PortalAuthService>();
 builder.Services.AddSingleton<IAuditService, AuditService>();
 builder.Services.AddSingleton<IDomainVerificationService, DomainVerificationService>();
@@ -65,6 +83,9 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+// Run database migration and ensure schema exists
+await ControlPlaneDataMigrator.MigrateAsync(app.Services, app.Logger);
 
 if (app.Environment.IsDevelopment())
 {

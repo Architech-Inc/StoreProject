@@ -1,0 +1,65 @@
+services:
+  store-controlplane:
+    image: ${IMAGE_PREFIX:-ghcr.io/architech-inc/storeproject}/store-controlplane:${IMAGE_TAG:-latest}
+    container_name: store-controlplane
+    restart: always
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__ControlPlane=${CONTROLPLANE_DB_CONNECTION_STRING:-Server=host.docker.internal;Port=3306;Database=store_controlplane;User Id=root;Password=;AllowPublicKeyRetrieval=True;}
+      - ControlPlane__RootDomain=${ROOT_DOMAIN:-store.157.173.112.19.nip.io}
+      - ControlPlane__HttpPort=18080
+      - ControlPlane__HttpsPort=18443
+      - ControlPlane__AutoDeployDocker=true
+      - ControlPlane__StoreApiImage=${IMAGE_PREFIX:-ghcr.io/architech-inc/storeproject}/store-api:latest
+      - ControlPlane__StoreUiImage=${IMAGE_PREFIX:-ghcr.io/architech-inc/storeproject}/store-ui:latest
+      - ControlPlane__MasterEncryptionKey=${CONTROLPLANE_MASTER_KEY:-StoreProjectControlPlaneMasterSecretKey2026!Secured}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /opt/projects/proxy/dynamic:/app/traefik/dynamic
+      - /opt/projects/platform/tenants:/app/Tenants
+      - controlplane_data:/app/App_Data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:19999/swagger/index.html"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - proxy-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy-network"
+      - "traefik.http.routers.controlplane.rule=Host(`cp.${ROOT_DOMAIN:-store.157.173.112.19.nip.io}`)"
+      - "traefik.http.routers.controlplane.entrypoints=web,websecure"
+      - "traefik.http.services.controlplane.loadbalancer.server.port=19999"
+
+  store-tenantportal:
+    image: ${IMAGE_PREFIX:-ghcr.io/architech-inc/storeproject}/store-tenantportal:${IMAGE_TAG:-latest}
+    container_name: store-tenantportal
+    restart: always
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ControlPlane__BaseUrl=http://store-controlplane:19999
+    depends_on:
+      - store-controlplane
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:19090/"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - proxy-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy-network"
+      - "traefik.http.routers.tenantportal.rule=Host(`portal.${ROOT_DOMAIN:-store.157.173.112.19.nip.io}`)"
+      - "traefik.http.routers.tenantportal.entrypoints=web,websecure"
+      - "traefik.http.services.tenantportal.loadbalancer.server.port=19090"
+
+volumes:
+  controlplane_data:
+
+networks:
+  proxy-network:
+    external: true

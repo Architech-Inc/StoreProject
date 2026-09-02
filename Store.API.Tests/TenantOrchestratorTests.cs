@@ -13,6 +13,9 @@ namespace Store.API.Tests;
 public class TenantOrchestratorTests
 {
     private readonly Mock<ITenantRepository> _tenantRepo = new();
+    private readonly Mock<IDomainVerificationService> _domainVerifier = new();
+    private readonly Mock<ITraefikConfigWriter> _traefikWriter = new();
+    private readonly Mock<IAuditService> _auditService = new();
     private readonly Mock<IWebHostEnvironment> _env = new();
     private readonly IConfiguration _config;
     private readonly string _tempTestDir;
@@ -31,12 +34,16 @@ public class TenantOrchestratorTests
         var inMemorySettings = new Dictionary<string, string?>
         {
             ["ControlPlane:RootDomain"] = "store.test.local",
+            ["ControlPlane:HttpPort"] = "18080",
             ["ControlPlane:AutoDeployDocker"] = "false",
             ["ControlPlane:StoreApiImage"] = "store-api:test",
             ["ControlPlane:StoreUiImage"] = "store-ui:test"
         };
         _config = new ConfigurationBuilder().AddInMemoryCollection(inMemorySettings).Build();
     }
+
+    private TenantOrchestrator CreateOrchestrator() =>
+        new(_tenantRepo.Object, _domainVerifier.Object, _traefikWriter.Object, _auditService.Object, _config, NullLogger<TenantOrchestrator>.Instance, _env.Object);
 
     [Theory]
     [InlineData("admin")]
@@ -45,8 +52,7 @@ public class TenantOrchestratorTests
     [InlineData("root")]
     public async Task ProvisionTenant_ThrowsException_WhenSlugIsReserved(string reservedSlug)
     {
-        var orchestrator = new TenantOrchestrator(
-            _tenantRepo.Object, _config, NullLogger<TenantOrchestrator>.Instance, _env.Object);
+        var orchestrator = CreateOrchestrator();
 
         var req = new ProvisionTenantRequest
         {
@@ -66,8 +72,7 @@ public class TenantOrchestratorTests
         _tenantRepo.Setup(r => r.SlugExistsAsync("bastos-market", It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
-        var orchestrator = new TenantOrchestrator(
-            _tenantRepo.Object, _config, NullLogger<TenantOrchestrator>.Instance, _env.Object);
+        var orchestrator = CreateOrchestrator();
 
         var req = new ProvisionTenantRequest
         {
@@ -92,8 +97,7 @@ public class TenantOrchestratorTests
             .Callback<Tenant, CancellationToken>((t, _) => savedTenant = t)
             .Returns(Task.CompletedTask);
 
-        var orchestrator = new TenantOrchestrator(
-            _tenantRepo.Object, _config, NullLogger<TenantOrchestrator>.Instance, _env.Object);
+        var orchestrator = CreateOrchestrator();
 
         var req = new ProvisionTenantRequest
         {
@@ -134,8 +138,7 @@ public class TenantOrchestratorTests
         _tenantRepo.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(tenants);
 
-        var orchestrator = new TenantOrchestrator(
-            _tenantRepo.Object, _config, NullLogger<TenantOrchestrator>.Instance, _env.Object);
+        var orchestrator = CreateOrchestrator();
 
         var summary = await orchestrator.GetHealthSummaryAsync();
 

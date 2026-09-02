@@ -1,41 +1,91 @@
-version: '3.8'
 services:
-  bridgemall-mysql:
-    image: mysql:8.0
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: 'G889qV7vsv6e3yWuybFzUEa+UGIUDP+s'
-      MYSQL_DATABASE: 'store_bridgemall'
-      MYSQL_USER: 'store_user'
-      MYSQL_PASSWORD: 'TAJ8PUpLx6Ekp+wJD/306dvX6qEii1bM'
-    volumes:
-      - mysql_data:/var/lib/mysql
-
   bridgemall-mongodb:
-    image: mongo:7.0
+    image: mongo:7
+    container_name: bridgemall-mongodb
     restart: always
     environment:
-      MONGO_INITDB_ROOT_USERNAME: 'store_admin'
-      MONGO_INITDB_ROOT_PASSWORD: 'NH5eyvySnTYUXL7dJrQPO/v6MAQN89EH'
+      MONGO_INITDB_ROOT_USERNAME: store_admin
+      MONGO_INITDB_ROOT_PASSWORD: NH5eyvySnTYUXL7dJrQPO/v6MAQN89EH
     volumes:
-      - mongo_data:/data/db
+      - bridgemall_mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --eval 'db.adminCommand(\"ping\")' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - bridgemall_net
 
   bridgemall-api:
-    image: clexan/store-api:latest
+    image: store-api:latest
+    container_name: bridgemall-api
     restart: always
-    depends_on:
-      - bridgemall-mysql
-      - bridgemall-mongodb
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
-      Jwt__Secret: 'FpGZd4TuRCS70QCbDD1Jakle6wvYfeCzEMx2yiDTzgNWG1XekcspcTRbOwL5ZSPj'
-      Store__Currency: 'XAF'
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__Default=Server=host.docker.internal;Port=3306;Database=store_db_v2;User Id=root;Password=;AllowPublicKeyRetrieval=True;
+      - MongoDB__ConnectionString=mongodb://store_admin:NH5eyvySnTYUXL7dJrQPO/v6MAQN89EH@bridgemall-mongodb:27017/?authSource=admin
+      - Jwt__Key=FpGZd4TuRCS70QCbDD1Jakle6wvYfeCzEMx2yiDTzgNWG1XekcspcTRbOwL5ZSPj
+      - Payments__MoMoCallbackKey=eF1/G5r1496iNqI8n0e6K2Z7J8N9I0P1Q2R3S4T5U6V=
+      - Cors__AllowedOrigins__0=http://bridgemall.store.127.0.0.1.nip.io:18080
+      - Cors__AllowedOrigins__1=https://bridgemall.store.127.0.0.1.nip.io:18443
+    depends_on:
+      bridgemall-mongodb:
+        condition: service_healthy
+    volumes:
+      - bridgemall_dataprotection_keys:/root/.aspnet/DataProtection-Keys
+      - bridgemall_uploads:/app/Uploads
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - bridgemall_net
+      - proxy-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy-network"
+      - "traefik.http.routers.bridgemall-api.rule=Host(`api.bridgemall.store.127.0.0.1.nip.io`)"
+      - "traefik.http.services.bridgemall-api.loadbalancer.server.port=8080"
 
   bridgemall-ui:
-    image: clexan/store-ui:latest
+    image: store-ui:latest
+    container_name: bridgemall-ui
     restart: always
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ApiSettings__InternalBaseUrl=http://bridgemall-api:8080
+      - ApiSettings__ExternalBaseUrl=http://api.bridgemall.store.127.0.0.1.nip.io:18080
     depends_on:
-      - bridgemall-api
+      bridgemall-api:
+        condition: service_healthy
+    volumes:
+      - bridgemall_dataprotection_keys:/root/.aspnet/DataProtection-Keys
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - bridgemall_net
+      - proxy-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy-network"
+      - "traefik.http.routers.bridgemall-ui.rule=Host(`bridgemall.store.127.0.0.1.nip.io`)"
+      - "traefik.http.services.bridgemall-ui.loadbalancer.server.port=8080"
 
 volumes:
-  mysql_data:
-  mongo_data:
+  bridgemall_mongodb_data:
+  bridgemall_dataprotection_keys:
+  bridgemall_uploads:
+
+networks:
+  bridgemall_net:
+  proxy-network:
+    external: true

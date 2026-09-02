@@ -9,8 +9,8 @@
     "Status": 2,
     "PlanTier": 2,
     "CustomDomain": "acmefoods.com",
-    "UiUrl": "https://acmefoods.store.157.173.112.19.nip.io",
-    "ApiUrl": "https://api.acmefoods.store.157.173.112.19.nip.io",
+    "UiUrl": "https://acmefoods.store.157.173.112.19.nip.io:18443",
+    "ApiUrl": "https://api.acmefoods.store.157.173.112.19.nip.io:18443",
     "Secrets": {
       "MySqlRootPassword": "kezweX8\u002BAVjmRPXYuVblNGUh7pSPNK6A",
       "MySqlUserPassword": "pCvO68bAoXcOIHe/B4CpJxcAxzU7L1zf",
@@ -194,7 +194,7 @@
       }
     ],
     "DateCreated": "2026-09-01T14:14:53.5791469Z",
-    "LastHealthCheck": "2026-09-01T15:38:33.8830657Z",
+    "LastHealthCheck": "2026-09-02T14:24:56.8889583Z",
     "IsHealthy": true,
     "LastHealthMessage": "All microservices healthy."
   },
@@ -208,8 +208,8 @@
     "Status": 2,
     "PlanTier": 1,
     "CustomDomain": "",
-    "UiUrl": "https://bridgemall.store.157.173.112.19.nip.io",
-    "ApiUrl": "https://api.bridgemall.store.157.173.112.19.nip.io",
+    "UiUrl": "http://bridgemall.store.127.0.0.1.nip.io:18080",
+    "ApiUrl": "http://api.bridgemall.store.127.0.0.1.nip.io:18080",
     "Secrets": {
       "MySqlRootPassword": "G889qV7vsv6e3yWuybFzUEa\u002BUGIUDP\u002Bs",
       "MySqlUserPassword": "TAJ8PUpLx6Ekp\u002BwJD/306dvX6qEii1bM",
@@ -297,7 +297,110 @@
       }
     ],
     "DateCreated": "2026-09-01T14:46:34.9810221Z",
-    "LastHealthCheck": "2026-09-01T15:38:33.904285Z",
+    "LastHealthCheck": "2026-09-02T14:24:56.9100727Z",
+    "IsHealthy": true,
+    "LastHealthMessage": "All microservices healthy."
+  },
+  {
+    "TenantId": "fac41925-f7c4-4ee6-9656-1caea7946dff",
+    "Name": "Kim Supermarket",
+    "Slug": "kim-sm",
+    "AdminEmail": "kim.sung@kingdomofkorea.com",
+    "AdminUsername": "k_admin",
+    "Currency": "USD",
+    "Status": 2,
+    "PlanTier": 2,
+    "CustomDomain": "",
+    "UiUrl": "http://kim-sm.store.127.0.0.1.nip.io:18080",
+    "ApiUrl": "http://api.kim-sm.store.127.0.0.1.nip.io:18080",
+    "Secrets": {
+      "MySqlRootPassword": "U2BUg2Jd4szfvSPUBy1fB9hNpgclkxXa",
+      "MySqlUserPassword": "qjas8reYee7gdwk\u002B8jk6HBjTRdb6NADQ",
+      "MongoDbRootPassword": "2laJn5IeYwn3itKGP9cRi\u002BHicg7Ra16c",
+      "JwtSecret": "/p962q5sBN6hCmYmEXOzCckQJFjgYMSllHqpomKaO/HtLPvhB3yCcokrF4KM\u002BptH",
+      "MoMoCallbackKey": "kA9egzb1hK\u002BVLXlddwWsObFV66hbyNF2soEFFO6hrok="
+    },
+    "DomainConfig": {
+      "CustomDomain": "",
+      "Status": 0,
+      "VerificationToken": "",
+      "VerificationRecordName": "",
+      "VerifiedAt": null,
+      "LastCheckedAt": null,
+      "LastErrorMessage": null
+    },
+    "Branches": [],
+    "BackupProviders": [],
+    "BackupSchedule": {
+      "Frequency": 2,
+      "RetentionCount": 14,
+      "IsEnabled": true,
+      "NextRunAt": null
+    },
+    "BackupHistory": [],
+    "AuditTrail": [
+      {
+        "AuditId": "421fff4b-5784-4a99-ba8b-597d899e0fb9",
+        "TenantId": "fac41925-f7c4-4ee6-9656-1caea7946dff",
+        "Timestamp": "2026-09-02T12:23:23.8291298Z",
+        "ActorEmail": "kim.sung@kingdomofkorea.com",
+        "ActionType": "TenantProvisioned",
+        "Details": "Tenant \u0027Kim Supermarket\u0027 (kim-sm) provisioned successfully.",
+        "IpAddress": null
+      }
+    ],
+    "ProvisioningLogs": [
+      {
+        "LogId": "02abf3ff-23fe-4234-911d-1e0f03a10a53",
+        "TenantId": "fac41925-f7c4-4ee6-9656-1caea7946dff",
+        "StepName": "Validation",
+        "IsSuccess": true,
+        "Message": "Tenant request validated successfully.",
+        "Timestamp": "2026-09-02T12:22:54.5379887Z"
+      },
+      {
+        "LogId": "ea160186-18db-4a43-a69f-d8a1a42672e9",
+        "TenantId": "fac41925-f7c4-4ee6-9656-1caea7946dff",
+        "StepName": "SecretGeneration",
+        "IsSuccess": true,
+        "Message": "Cryptographic database, JWT, and encryption secrets generated.",
+        "Timestamp": "2026-09-02T12:22:54.5379901Z"
+      },
+      {
+        "LogId": "fc67bfae-d8e8-4915-ac4b-80011d5fdc60",
+        "TenantId": "fac41925-f7c4-4ee6-9656-1caea7946dff",
+        "StepName": "ComposeGeneration",
+        "IsSuccess": true,
+        "Message": "Generated isolated stack compose specification at C:\\Users\\Rodern\\source\\repos\\Architech-Inc\\StoreProject\\Store.ControlPlane\\Tenants\\kim-sm\\docker-compose.yml.",
+        "Timestamp": "2026-09-02T12:22:54.5701507Z"
+      },
+      {
+        "LogId": "eb30c4a4-fc26-43c8-a34d-92ce497a68ee",
+        "TenantId": "fac41925-f7c4-4ee6-9656-1caea7946dff",
+        "StepName": "TraefikRouting",
+        "IsSuccess": true,
+        "Message": "Dynamic Traefik reverse-proxy configuration written.",
+        "Timestamp": "2026-09-02T12:22:54.598413Z"
+      },
+      {
+        "LogId": "7b2e6792-d385-45e5-9500-4f47ca8179e7",
+        "TenantId": "fac41925-f7c4-4ee6-9656-1caea7946dff",
+        "StepName": "DockerDeployment",
+        "IsSuccess": true,
+        "Message": "Silo containers and volumes initialized successfully via Docker Compose.",
+        "Timestamp": "2026-09-02T12:23:23.5584001Z"
+      },
+      {
+        "LogId": "cba220f4-c360-47a5-be88-882dde9cd973",
+        "TenantId": "fac41925-f7c4-4ee6-9656-1caea7946dff",
+        "StepName": "HealthCheck",
+        "IsSuccess": true,
+        "Message": "All silo microservices reporting healthy.",
+        "Timestamp": "2026-09-02T12:23:23.5592302Z"
+      }
+    ],
+    "DateCreated": "2026-09-02T12:22:54.5375728Z",
+    "LastHealthCheck": "2026-09-02T14:24:56.9296859Z",
     "IsHealthy": true,
     "LastHealthMessage": "All microservices healthy."
   }

@@ -56,8 +56,22 @@ public class TenantOrchestrator : ITenantOrchestrator
         }
 
         var rootDomain = _config["ControlPlane:RootDomain"] ?? "store.clexan.com";
-        var uiUrl = $"https://{slug}.{rootDomain}";
-        var apiUrl = $"https://api.{slug}.{rootDomain}";
+        var httpPort = _config.GetValue<int?>("ControlPlane:HttpPort");
+        var httpsPort = _config.GetValue<int?>("ControlPlane:HttpsPort");
+
+        string uiUrl, apiUrl;
+        if (httpPort.HasValue)
+        {
+            var portSuffix = httpPort.Value != 80 ? $":{httpPort.Value}" : "";
+            uiUrl = $"http://{slug}.{rootDomain}{portSuffix}";
+            apiUrl = $"http://api.{slug}.{rootDomain}{portSuffix}";
+        }
+        else
+        {
+            var portSuffix = httpsPort.HasValue && httpsPort.Value != 443 ? $":{httpsPort.Value}" : "";
+            uiUrl = $"https://{slug}.{rootDomain}{portSuffix}";
+            apiUrl = $"https://api.{slug}.{rootDomain}{portSuffix}";
+        }
 
         var tenant = new Tenant
         {
@@ -113,7 +127,26 @@ public class TenantOrchestrator : ITenantOrchestrator
         await _traefikWriter.WriteTenantRoutingConfigAsync(tenant, ct);
         LogStep(tenant, "TraefikRouting", true, "Dynamic Traefik reverse-proxy configuration written.");
 
-        LogStep(tenant, "DockerDeployment", true, "Silo containers and volumes initialized successfully.");
+        var autoDeploy = _config.GetValue<bool>("ControlPlane:AutoDeployDocker");
+        if (autoDeploy)
+        {
+            var (deploySuccess, deployOutput) = await RunDockerCommandAsync(tenantsBaseDir, "compose up -d", ct);
+            if (deploySuccess)
+            {
+                LogStep(tenant, "DockerDeployment", true, "Silo containers and volumes initialized successfully via Docker Compose.");
+                _logger.LogInformation("Docker deployment succeeded for {Slug}: {Output}", tenant.Slug, deployOutput);
+            }
+            else
+            {
+                LogStep(tenant, "DockerDeployment", false, $"Docker Compose deployment encountered an issue: {deployOutput}");
+                _logger.LogWarning("Docker deployment warning for {Slug}: {Output}", tenant.Slug, deployOutput);
+            }
+        }
+        else
+        {
+            LogStep(tenant, "DockerDeployment", true, "Silo containers and volumes initialized successfully.");
+        }
+
         LogStep(tenant, "HealthCheck", true, "All silo microservices reporting healthy.");
 
         await _tenantRepo.SaveAsync(tenant, ct);
@@ -164,6 +197,17 @@ public class TenantOrchestrator : ITenantOrchestrator
 
         tenant.Status = TenantStatus.Suspended;
         LogStep(tenant, "Lifecycle", true, "Silo suspended by administrator.");
+
+        var autoDeploy = _config.GetValue<bool>("ControlPlane:AutoDeployDocker");
+        if (autoDeploy)
+        {
+            var tenantsBaseDir = Path.Combine(_env.ContentRootPath, "Tenants", tenant.Slug);
+            if (Directory.Exists(tenantsBaseDir))
+            {
+                await RunDockerCommandAsync(tenantsBaseDir, $"compose stop {tenant.Slug}-ui {tenant.Slug}-api", ct);
+            }
+        }
+
         await _tenantRepo.SaveAsync(tenant, ct);
 
         await _auditService.RecordAuditAsync(tenant.TenantId, "SiloSuspended", tenant.AdminEmail, "Silo web and API traffic suspended by administrator.", ct: ct);
@@ -178,6 +222,17 @@ public class TenantOrchestrator : ITenantOrchestrator
 
         tenant.Status = TenantStatus.Active;
         LogStep(tenant, "Lifecycle", true, "Silo resumed by administrator.");
+
+        var autoDeploy = _config.GetValue<bool>("ControlPlane:AutoDeployDocker");
+        if (autoDeploy)
+        {
+            var tenantsBaseDir = Path.Combine(_env.ContentRootPath, "Tenants", tenant.Slug);
+            if (Directory.Exists(tenantsBaseDir))
+            {
+                await RunDockerCommandAsync(tenantsBaseDir, "compose up -d", ct);
+            }
+        }
+
         await _tenantRepo.SaveAsync(tenant, ct);
 
         await _auditService.RecordAuditAsync(tenant.TenantId, "SiloResumed", tenant.AdminEmail, "Silo web and API traffic resumed by administrator.", ct: ct);
@@ -191,6 +246,18 @@ public class TenantOrchestrator : ITenantOrchestrator
         if (tenant == null) return false;
 
         await _traefikWriter.RemoveTenantRoutingConfigAsync(tenant.Slug, ct);
+
+        var autoDeploy = _config.GetValue<bool>("ControlPlane:AutoDeployDocker");
+        if (autoDeploy)
+        {
+            var tenantsBaseDir = Path.Combine(_env.ContentRootPath, "Tenants", tenant.Slug);
+            if (Directory.Exists(tenantsBaseDir))
+            {
+                await RunDockerCommandAsync(tenantsBaseDir, "compose down -v", ct);
+                try { Directory.Delete(tenantsBaseDir, true); } catch { }
+            }
+        }
+
         await _tenantRepo.DeleteAsync(tenantId, ct);
         return true;
     }
@@ -262,6 +329,17 @@ public class TenantOrchestrator : ITenantOrchestrator
         }
 
         var containerName = $"{tenant.Slug}-{cleanService}";
+
+        var autoDeploy = _config.GetValue<bool>("ControlPlane:AutoDeployDocker");
+        if (autoDeploy)
+        {
+            var tenantsBaseDir = Path.Combine(_env.ContentRootPath, "Tenants", tenant.Slug);
+            if (Directory.Exists(tenantsBaseDir))
+            {
+                await RunDockerCommandAsync(tenantsBaseDir, $"compose restart {containerName}", ct);
+            }
+        }
+
         LogStep(tenant, "ContainerRestart", true, $"Restarted container '{containerName}'.");
         await _tenantRepo.SaveAsync(tenant, ct);
 
@@ -559,62 +637,139 @@ public class TenantOrchestrator : ITenantOrchestrator
 
     private string RenderComposeTemplate(Tenant t, string rootDomain)
     {
-        var templatePath = Path.Combine(_env.ContentRootPath, "Templates", "docker-compose.template.yml");
+        var useHostMySql = _config.GetValue<bool>("ControlPlane:UseHostMySql");
+        var templateName = useHostMySql 
+            ? "docker-compose.tenant.hostmysql.template.yml" 
+            : "docker-compose.tenant.template.yml";
+
+        var templatePath = Path.Combine(_env.ContentRootPath, "Templates", templateName);
+        if (!File.Exists(templatePath))
+        {
+            templatePath = Path.Combine(_env.ContentRootPath, "Templates", "docker-compose.tenant.template.yml");
+        }
+        if (!File.Exists(templatePath))
+        {
+            templatePath = Path.Combine(_env.ContentRootPath, "Templates", "docker-compose.template.yml");
+        }
+
         var template = File.Exists(templatePath) 
             ? File.ReadAllText(templatePath)
             : GetDefaultComposeTemplate();
 
+        var storeApiImage = _config["ControlPlane:StoreApiImage"] ?? "store-api:latest";
+        var storeUiImage = _config["ControlPlane:StoreUiImage"] ?? "store-ui:latest";
+
+        var mysqlServer = useHostMySql 
+            ? (_config["ControlPlane:HostMySqlServer"] ?? "host.docker.internal") 
+            : $"{t.Slug}-mysql";
+        var mysqlPort = useHostMySql 
+            ? (_config["ControlPlane:HostMySqlPort"] ?? "3306") 
+            : "3306";
+        var mysqlUser = useHostMySql 
+            ? (_config["ControlPlane:HostMySqlUser"] ?? "root") 
+            : "store_user";
+        var mysqlPassword = useHostMySql 
+            ? (_config["ControlPlane:HostMySqlPassword"] ?? "") 
+            : t.Secrets.MySqlUserPassword;
+
         return template
+            .Replace("{{SLUG}}", t.Slug)
             .Replace("{{TENANT_SLUG}}", t.Slug)
             .Replace("{{ROOT_DOMAIN}}", rootDomain)
+            .Replace("{{MYSQL_SERVER}}", mysqlServer)
+            .Replace("{{MYSQL_PORT}}", mysqlPort)
+            .Replace("{{MYSQL_ROOT_PASSWORD}}", t.Secrets.MySqlRootPassword)
             .Replace("{{MYSQL_ROOT_PASS}}", t.Secrets.MySqlRootPassword)
-            .Replace("{{MYSQL_USER_PASS}}", t.Secrets.MySqlUserPassword)
+            .Replace("{{MYSQL_DATABASE}}", $"store_{t.Slug}")
+            .Replace("{{MYSQL_USER}}", mysqlUser)
+            .Replace("{{MYSQL_PASSWORD}}", mysqlPassword)
+            .Replace("{{MYSQL_USER_PASS}}", mysqlPassword)
+            .Replace("{{MONGO_USER}}", "store_admin")
+            .Replace("{{MONGO_PASSWORD}}", t.Secrets.MongoDbRootPassword)
             .Replace("{{MONGO_ROOT_PASS}}", t.Secrets.MongoDbRootPassword)
             .Replace("{{JWT_SECRET}}", t.Secrets.JwtSecret)
+            .Replace("{{MOMO_CALLBACK_KEY}}", t.Secrets.MoMoCallbackKey)
             .Replace("{{MOMO_KEY}}", t.Secrets.MoMoCallbackKey)
             .Replace("{{ADMIN_USER}}", t.AdminUsername)
             .Replace("{{ADMIN_EMAIL}}", t.AdminEmail)
-            .Replace("{{CURRENCY}}", t.Currency);
+            .Replace("{{CURRENCY}}", t.Currency)
+            .Replace("{{STORE_API_IMAGE}}", storeApiImage)
+            .Replace("{{STORE_UI_IMAGE}}", storeUiImage);
+    }
+
+    private async Task<(bool success, string output)> RunDockerCommandAsync(string workingDir, string arguments, CancellationToken ct = default)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = "docker",
+                Arguments = arguments,
+                WorkingDirectory = workingDir,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            using var process = Process.Start(psi);
+            if (process == null) return (false, "Failed to start docker process.");
+
+            var stdoutTask = process.StandardOutput.ReadToEndAsync();
+            var stderrTask = process.StandardError.ReadToEndAsync();
+
+            await process.WaitForExitAsync(ct);
+            var stdout = await stdoutTask;
+            var stderr = await stderrTask;
+
+            var combined = $"{stdout}\n{stderr}".Trim();
+            return (process.ExitCode == 0, combined);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error executing docker command '{Arguments}' in {Dir}", arguments, workingDir);
+            return (false, ex.Message);
+        }
     }
 
     private static string GetDefaultComposeTemplate() =>
 @"version: '3.8'
 services:
-  {{TENANT_SLUG}}-mysql:
+  {{SLUG}}-mysql:
     image: mysql:8.0
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: '{{MYSQL_ROOT_PASS}}'
-      MYSQL_DATABASE: 'store_{{TENANT_SLUG}}'
+      MYSQL_ROOT_PASSWORD: '{{MYSQL_ROOT_PASSWORD}}'
+      MYSQL_DATABASE: 'store_{{SLUG}}'
       MYSQL_USER: 'store_user'
-      MYSQL_PASSWORD: '{{MYSQL_USER_PASS}}'
+      MYSQL_PASSWORD: '{{MYSQL_PASSWORD}}'
     volumes:
       - mysql_data:/var/lib/mysql
 
-  {{TENANT_SLUG}}-mongodb:
+  {{SLUG}}-mongodb:
     image: mongo:7.0
     restart: always
     environment:
       MONGO_INITDB_ROOT_USERNAME: 'store_admin'
-      MONGO_INITDB_ROOT_PASSWORD: '{{MONGO_ROOT_PASS}}'
+      MONGO_INITDB_ROOT_PASSWORD: '{{MONGO_PASSWORD}}'
     volumes:
       - mongo_data:/data/db
 
-  {{TENANT_SLUG}}-api:
-    image: clexan/store-api:latest
+  {{SLUG}}-api:
+    image: {{STORE_API_IMAGE}}
     restart: always
     depends_on:
-      - {{TENANT_SLUG}}-mysql
-      - {{TENANT_SLUG}}-mongodb
+      - {{SLUG}}-mysql
+      - {{SLUG}}-mongodb
     environment:
       Jwt__Secret: '{{JWT_SECRET}}'
       Store__Currency: '{{CURRENCY}}'
 
-  {{TENANT_SLUG}}-ui:
-    image: clexan/store-ui:latest
+  {{SLUG}}-ui:
+    image: {{STORE_UI_IMAGE}}
     restart: always
     depends_on:
-      - {{TENANT_SLUG}}-api
+      - {{SLUG}}-api
 
 volumes:
   mysql_data:

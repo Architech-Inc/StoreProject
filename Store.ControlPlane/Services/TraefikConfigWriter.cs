@@ -6,12 +6,14 @@ namespace Store.ControlPlane.Services;
 public class TraefikConfigWriter : ITraefikConfigWriter
 {
     private readonly IWebHostEnvironment _env;
+    private readonly IConfiguration _config;
     private readonly ILogger<TraefikConfigWriter> _logger;
     private readonly string _dynamicConfigDir;
 
-    public TraefikConfigWriter(IWebHostEnvironment env, ILogger<TraefikConfigWriter> logger)
+    public TraefikConfigWriter(IWebHostEnvironment env, IConfiguration config, ILogger<TraefikConfigWriter> logger)
     {
         _env = env;
+        _config = config;
         _logger = logger;
         _dynamicConfigDir = Path.Combine(_env.ContentRootPath, "traefik", "dynamic");
         Directory.CreateDirectory(_dynamicConfigDir);
@@ -20,15 +22,17 @@ public class TraefikConfigWriter : ITraefikConfigWriter
     public async Task WriteTenantRoutingConfigAsync(Tenant tenant, CancellationToken ct = default)
     {
         var filePath = Path.Combine(_dynamicConfigDir, $"{tenant.Slug}.yml");
+        var rootDomain = _config["ControlPlane:RootDomain"] ?? "store.clexan.com";
+        var isLocal = rootDomain.Contains("127.0.0.1") || rootDomain.Contains("localhost");
 
         var uiHostRules = new List<string>
         {
-            $"`{tenant.Slug}.store.clexan.com`"
+            $"`{tenant.Slug}.{rootDomain}`"
         };
 
         var apiHostRules = new List<string>
         {
-            $"`api.{tenant.Slug}.store.clexan.com`"
+            $"`api.{tenant.Slug}.{rootDomain}`"
         };
 
         // Add verified custom domain
@@ -45,7 +49,7 @@ public class TraefikConfigWriter : ITraefikConfigWriter
             {
                 if (branch.DomainType == BranchDomainType.Platform)
                 {
-                    uiHostRules.Add($"`{branch.BranchSlug}.{tenant.Slug}.store.clexan.com`");
+                    uiHostRules.Add($"`{branch.BranchSlug}.{tenant.Slug}.{rootDomain}`");
                 }
                 else if (branch.DomainType == BranchDomainType.Custom && 
                          branch.VerificationStatus == DomainStatus.Verified && 
@@ -72,9 +76,13 @@ public class TraefikConfigWriter : ITraefikConfigWriter
         yaml.AppendLine($"      rule: \"{uiRuleString}\"");
         yaml.AppendLine($"      service: \"{tenant.Slug}-ui\"");
         yaml.AppendLine("      entryPoints:");
+        yaml.AppendLine("        - \"web\"");
         yaml.AppendLine("        - \"websecure\"");
-        yaml.AppendLine("      tls:");
-        yaml.AppendLine("        certResolver: \"letsencrypt\"");
+        if (!isLocal)
+        {
+            yaml.AppendLine("      tls:");
+            yaml.AppendLine("        certResolver: \"letsencrypt\"");
+        }
         yaml.AppendLine();
 
         // API Router
@@ -82,9 +90,13 @@ public class TraefikConfigWriter : ITraefikConfigWriter
         yaml.AppendLine($"      rule: \"{apiRuleString}\"");
         yaml.AppendLine($"      service: \"{tenant.Slug}-api\"");
         yaml.AppendLine("      entryPoints:");
+        yaml.AppendLine("        - \"web\"");
         yaml.AppendLine("        - \"websecure\"");
-        yaml.AppendLine("      tls:");
-        yaml.AppendLine("        certResolver: \"letsencrypt\"");
+        if (!isLocal)
+        {
+            yaml.AppendLine("      tls:");
+            yaml.AppendLine("        certResolver: \"letsencrypt\"");
+        }
         yaml.AppendLine();
 
         // Services
@@ -99,22 +111,46 @@ public class TraefikConfigWriter : ITraefikConfigWriter
         yaml.AppendLine("        servers:");
         yaml.AppendLine($"          - url: \"http://{tenant.Slug}-api:8080\"");
 
-        // Atomic file write via temp file
-        var tempFile = Path.GetTempFileName();
-        await File.WriteAllTextAsync(tempFile, yaml.ToString(), Encoding.UTF8, ct);
-        File.Move(tempFile, filePath, overwrite: true);
-
+        // Write dynamic Traefik file
+        await File.WriteAllTextAsync(filePath, yaml.ToString(), Encoding.UTF8, ct);
         _logger.LogInformation("Wrote Traefik dynamic routing configuration for {Slug} to {Path}", tenant.Slug, filePath);
+
+        await ReloadTraefikIfLocalAsync(ct);
     }
 
-    public Task RemoveTenantRoutingConfigAsync(string slug, CancellationToken ct = default)
+    public async Task RemoveTenantRoutingConfigAsync(string slug, CancellationToken ct = default)
     {
         var filePath = Path.Combine(_dynamicConfigDir, $"{slug}.yml");
         if (File.Exists(filePath))
         {
             File.Delete(filePath);
             _logger.LogInformation("Removed Traefik dynamic routing configuration for {Slug}", slug);
+            await ReloadTraefikIfLocalAsync(ct);
         }
-        return Task.CompletedTask;
+    }
+
+    private async Task ReloadTraefikIfLocalAsync(CancellationToken ct)
+    {
+        try
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "docker",
+                Arguments = "restart traefik-local",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            using var proc = System.Diagnostics.Process.Start(psi);
+            if (proc != null)
+            {
+                await proc.WaitForExitAsync(ct);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Failed to reload local traefik container (may not be running or on VPS)");
+        }
     }
 }

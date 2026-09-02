@@ -1,0 +1,91 @@
+services:
+  kim-sm-mongodb:
+    image: mongo:7
+    container_name: kim-sm-mongodb
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: store_admin
+      MONGO_INITDB_ROOT_PASSWORD: 2laJn5IeYwn3itKGP9cRi+Hicg7Ra16c
+    volumes:
+      - kim-sm_mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --eval 'db.adminCommand(\"ping\")' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - kim-sm_net
+
+  kim-sm-api:
+    image: store-api:latest
+    container_name: kim-sm-api
+    restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__Default=Server=host.docker.internal;Port=3306;Database=store_kim-sm;User Id=root;Password=;AllowPublicKeyRetrieval=True;
+      - MongoDB__ConnectionString=mongodb://store_admin:2laJn5IeYwn3itKGP9cRi+Hicg7Ra16c@kim-sm-mongodb:27017/?authSource=admin
+      - Jwt__Key=/p962q5sBN6hCmYmEXOzCckQJFjgYMSllHqpomKaO/HtLPvhB3yCcokrF4KM+ptH
+      - Payments__MoMoCallbackKey=kA9egzb1hK+VLXlddwWsObFV66hbyNF2soEFFO6hrok=
+      - Cors__AllowedOrigins__0=http://kim-sm.store.127.0.0.1.nip.io:18080
+      - Cors__AllowedOrigins__1=https://kim-sm.store.127.0.0.1.nip.io:18443
+    depends_on:
+      kim-sm-mongodb:
+        condition: service_healthy
+    volumes:
+      - kim-sm_dataprotection_keys:/root/.aspnet/DataProtection-Keys
+      - kim-sm_uploads:/app/Uploads
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - kim-sm_net
+      - proxy-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy-network"
+      - "traefik.http.routers.kim-sm-api.rule=Host(`api.kim-sm.store.127.0.0.1.nip.io`)"
+      - "traefik.http.services.kim-sm-api.loadbalancer.server.port=8080"
+
+  kim-sm-ui:
+    image: store-ui:latest
+    container_name: kim-sm-ui
+    restart: always
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ApiSettings__InternalBaseUrl=http://kim-sm-api:8080
+      - ApiSettings__ExternalBaseUrl=http://api.kim-sm.store.127.0.0.1.nip.io:18080
+    depends_on:
+      kim-sm-api:
+        condition: service_healthy
+    volumes:
+      - kim-sm_dataprotection_keys:/root/.aspnet/DataProtection-Keys
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - kim-sm_net
+      - proxy-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy-network"
+      - "traefik.http.routers.kim-sm-ui.rule=Host(`kim-sm.store.127.0.0.1.nip.io`)"
+      - "traefik.http.services.kim-sm-ui.loadbalancer.server.port=8080"
+
+volumes:
+  kim-sm_mongodb_data:
+  kim-sm_dataprotection_keys:
+  kim-sm_uploads:
+
+networks:
+  kim-sm_net:
+  proxy-network:
+    external: true
