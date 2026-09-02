@@ -914,18 +914,18 @@ VALUES ('{safeEmail}', 'Work', 1, '{now}', '{now}')
 ON DUPLICATE KEY UPDATE `is_verified` = 1, `last_modified` = '{now}';
 
 -- 2. Ensure employee record exists
-INSERT INTO `employee` (`employee_id`, `department_id`, `first_name`, `last_name`, `gender`, `date_employed`, `status`, `image_path`, `date_created`, `last_modified`)
+INSERT INTO `employee` (`employee_id`, `department_id`, `first_name`, `last_name`, `gender`, `date_employed`, `status`, `thumbnail_url`, `date_created`, `last_modified`)
 VALUES ('{adminEmpId}', 2, '{safeUsername}', 'Admin', 'NotSpecified', '{now}', 'Active', 'img/user_default.png', '{now}', '{now}')
 ON DUPLICATE KEY UPDATE `first_name` = VALUES(`first_name`), `status` = 'Active';
 
 -- 3. Create or update the administrator user
-INSERT INTO `user` (`user_id`, `employee_id`, `role_id`, `username`, `status`, `image_path`, `date_created`, `last_modified`)
-VALUES ('{adminUserId}', '{adminEmpId}', 1, '{safeUsername}', 'Active', 'img/user_default.png', '{now}', '{now}')
+INSERT INTO `user` (`user_id`, `employee_id`, `role_id`, `username`, `status`, `thumbnail_url`, `failed_login_attempts`, `two_factor_enabled`, `security_stamp`, `date_created`, `last_modified`)
+VALUES ('{adminUserId}', '{adminEmpId}', 1, '{safeUsername}', 'Active', 'img/user_default.png', 0, 0, UUID(), '{now}', '{now}')
 ON DUPLICATE KEY UPDATE `username` = VALUES(`username`), `status` = 'Active';
 
 -- 4. Set password hash (BCrypt Enhanced work factor 12)
-INSERT INTO `user_password` (`user_id`, `password_hash`, `date_created`, `last_modified`)
-SELECT `user_id`, '{bcryptHash}', '{now}', '{now}' FROM `user` WHERE `username` = '{safeUsername}' LIMIT 1
+INSERT INTO `user_password` (`user_id`, `password_hash`, `force_password_change`, `date_created`, `last_modified`)
+SELECT `user_id`, '{bcryptHash}', 0, '{now}', '{now}' FROM `user` WHERE `username` = '{safeUsername}' LIMIT 1
 ON DUPLICATE KEY UPDATE `password_hash` = '{bcryptHash}';
 
 -- 5. Link user to email
