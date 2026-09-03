@@ -98,18 +98,20 @@
         </form>
 
         <div class="transfer-toolbar-actions">
-            <a href="?handler=ExportCsv&Status=@Model.Status&BranchId=@Model.BranchId&Search=@Uri.EscapeDataString(Model.Search ?? "")" class="button-secondary" style="display: inline-flex; align-items: center; gap: 6px;">
+            <a href="?handler=ExportCsv&Status=@Model.Status&BranchId=@Model.BranchId&Search=@Uri.EscapeDataString(Model.Search ?? "")" class="btn-brand-secondary" title="Export Stock Transfers to CSV">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg> Export CSV
+                </svg>
+                Export CSV
             </a>
 
             @if (Model.CanWrite)
             {
-                <button type="button" class="button-primary" onclick="openCreateTransferModal()" style="display: inline-flex; align-items: center; gap: 6px;">
+                <button type="button" class="btn-brand-primary" onclick="openCreateTransferModal()">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                         <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"/>
-                    </svg> + New Transfer
+                    </svg>
+                    + New Transfer
                 </button>
             }
         </div>

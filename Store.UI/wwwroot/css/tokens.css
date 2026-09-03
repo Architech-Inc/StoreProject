@@ -59,6 +59,13 @@
     /* Interactive border states */
     --border-hover: #c2c0be;
 
+    /* Common Theme & Semantic Aliases */
+    --bg-surface:       var(--surface, #ffffff);
+    --bg-secondary:     var(--canvas, #f8fafc);
+    --border-color:     var(--border, #cbd5e1);
+    --color-primary:    var(--brand, #019c01);
+    --text-main:        var(--text-primary, #0f172a);
+
     /* Subdued / muted text (between secondary and invisible) */
     --text-muted:   #8a8886;
 

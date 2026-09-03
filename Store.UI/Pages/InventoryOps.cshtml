@@ -89,30 +89,34 @@
         </form>
 
         <div class="inv-toolbar-actions">
-            <a href="?handler=ExportCsv&MovementType=@Model.MovementType&Search=@Uri.EscapeDataString(Model.Search ?? "")" class="button-secondary" style="display: inline-flex; align-items: center; gap: 6px;">
+            <a href="?handler=ExportCsv&MovementType=@Model.MovementType&Search=@Uri.EscapeDataString(Model.Search ?? "")" class="btn-brand-secondary" title="Export Movements to CSV">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg> Export CSV
+                </svg>
+                Export CSV
             </a>
 
             @if (Model.CanWrite)
             {
-                <button type="button" class="button-secondary" onclick="openReturnModal()" style="display: inline-flex; align-items: center; gap: 6px;">
+                <button type="button" class="btn-brand-secondary" onclick="openReturnModal()">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                    </svg> Return Stock
+                    </svg>
+                    Return Stock
                 </button>
 
-                <button type="button" class="button-secondary" onclick="openAdjustModal()" style="display: inline-flex; align-items: center; gap: 6px;">
+                <button type="button" class="btn-brand-secondary" onclick="openAdjustModal()">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg> Quick Adjust
+                    </svg>
+                    Quick Adjust
                 </button>
 
-                <button type="button" class="button-primary" onclick="openGrnModal()" style="display: inline-flex; align-items: center; gap: 6px;">
+                <button type="button" class="btn-brand-primary" onclick="openGrnModal()">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                         <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"/>
-                    </svg> Receive Goods (GRN)
+                    </svg>
+                    Receive Goods (GRN)
                 </button>
             }
         </div>
