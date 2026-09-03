@@ -1016,7 +1016,7 @@
         // Clean up 360 query parameters from URL so drawer does not re-open on page refresh
         const url = new URL(window.location);
         let changed = false;
-        ['id', 'supplierId', 'action'].forEach(p => {
+        ['id', 'Id', 'supplierId', 'SupplierId', 'action', 'Action'].forEach(p => {
             if (url.searchParams.has(p)) {
                 url.searchParams.delete(p);
                 changed = true;
