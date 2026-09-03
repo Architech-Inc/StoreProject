@@ -1,3 +1,4 @@
+using Store.ControlPlane.Models;
 using Store.ControlPlane.Models.DTOs;
 
 namespace Store.ControlPlane.Services;
@@ -29,4 +30,9 @@ public interface ITenantOrchestrator
     Task<BranchDto> AddBranchAsync(Guid tenantId, CreateBranchRequest request, CancellationToken ct = default);
     Task<VerifyDomainResponse> VerifyBranchAsync(Guid tenantId, Guid branchId, CancellationToken ct = default);
     Task<bool> RemoveBranchAsync(Guid tenantId, Guid branchId, CancellationToken ct = default);
+
+    // SDLC & Sandboxing
+    Task<TenantSnapshotDto> CreateSnapshotAsync(Guid tenantId, SnapshotType type, CancellationToken ct = default);
+    Task<bool> RestoreSnapshotAsync(Guid tenantId, Guid snapshotId, CancellationToken ct = default);
+    Task<TenantDto> ProvisionSandboxAsync(Guid parentTenantId, Guid targetReleaseId, bool maskData, CancellationToken ct = default);
 }

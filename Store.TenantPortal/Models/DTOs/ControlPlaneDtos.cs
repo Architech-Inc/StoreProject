@@ -230,3 +230,48 @@ public record TenantAuditDto(
     string Details,
     string? IpAddress
 );
+
+// Phase 5 DTOs: SDLC & Sandboxing
+public record SystemReleaseDto(
+    Guid ReleaseId,
+    string VersionName,
+    DateTime ReleaseDate,
+    bool IsPublic,
+    string ReleaseNotes
+);
+
+public record TenantSnapshotDto(
+    Guid SnapshotId,
+    Guid TenantId,
+    Guid? ReleaseId,
+    string Type,
+    DateTime CreatedAt,
+    long SizeBytes
+);
+
+public record SandboxSummaryDto(
+    Guid TenantId,
+    string Name,
+    string Slug,
+    string UiUrl,
+    string ApiUrl,
+    Guid? ReleaseId,
+    string? ReleaseVersion,
+    DateTime DateCreated,
+    bool IsHealthy
+);
+
+public record TenantSdlcStatusDto(
+    Guid TenantId,
+    string Slug,
+    Guid? CurrentReleaseId,
+    SystemReleaseDto? CurrentRelease,
+    string EnvironmentType,
+    Guid? ParentTenantId,
+    string? ParentSlug,
+    DateTime? LastAccessedAt,
+    List<SystemReleaseDto> AvailableReleases,
+    List<TenantSnapshotDto> Snapshots,
+    List<SandboxSummaryDto> Sandboxes
+);
+

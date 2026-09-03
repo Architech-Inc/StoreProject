@@ -411,4 +411,75 @@ public class ControlPlaneClient : IControlPlaneClient
             return Array.Empty<TenantAuditDto>();
         }
     }
+
+    // ==========================================
+    // Phase 5: SDLC & Sandboxing
+    // ==========================================
+
+    public async Task<TenantSdlcStatusDto?> GetSdlcStatusAsync(string slug, CancellationToken ct = default)
+    {
+        try
+        {
+            return await _http.GetFromJsonAsync<TenantSdlcStatusDto>($"api/control/sdlc/tenants/{slug}/status", ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting SDLC status for tenant {Slug}", slug);
+            return null;
+        }
+    }
+
+    public async Task<IReadOnlyList<SystemReleaseDto>> GetReleasesAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var res = await _http.GetFromJsonAsync<List<SystemReleaseDto>>("api/control/sdlc/releases", ct);
+            return res ?? new List<SystemReleaseDto>();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting system releases");
+            return Array.Empty<SystemReleaseDto>();
+        }
+    }
+
+    public async Task<IReadOnlyList<TenantSnapshotDto>> GetSnapshotsAsync(string slug, CancellationToken ct = default)
+    {
+        try
+        {
+            var res = await _http.GetFromJsonAsync<List<TenantSnapshotDto>>($"api/control/sdlc/tenants/{slug}/snapshots", ct);
+            return res ?? new List<TenantSnapshotDto>();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting snapshots for tenant {Slug}", slug);
+            return Array.Empty<TenantSnapshotDto>();
+        }
+    }
+
+    public async Task<bool> UpgradeTenantAsync(string slug, Guid releaseId, CancellationToken ct = default)
+    {
+        var response = await _http.PostAsync($"api/control/sdlc/tenants/{slug}/upgrade/{releaseId}", null, ct);
+        return response.IsSuccessStatusCode;
+    }
+
+    public async Task<bool> RollbackTenantAsync(string slug, Guid snapshotId, CancellationToken ct = default)
+    {
+        var response = await _http.PostAsync($"api/control/sdlc/tenants/{slug}/rollback/{snapshotId}", null, ct);
+        return response.IsSuccessStatusCode;
+    }
+
+    public async Task<TenantSummaryDto?> CreateSandboxAsync(string slug, Guid releaseId, bool maskData = true, CancellationToken ct = default)
+    {
+        var response = await _http.PostAsync($"api/control/sdlc/tenants/{slug}/sandbox/{releaseId}?maskData={maskData}", null, ct);
+        if (!response.IsSuccessStatusCode) return null;
+        return await response.Content.ReadFromJsonAsync<TenantSummaryDto>(cancellationToken: ct);
+    }
+
+    public async Task<bool> DeleteSandboxAsync(string slug, string sandboxSlug, CancellationToken ct = default)
+    {
+        var response = await _http.DeleteAsync($"api/control/sdlc/tenants/{slug}/sandbox/{sandboxSlug}", ct);
+        return response.IsSuccessStatusCode;
+    }
 }
+

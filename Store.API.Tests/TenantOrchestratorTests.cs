@@ -43,7 +43,7 @@ public class TenantOrchestratorTests
     }
 
     private TenantOrchestrator CreateOrchestrator() =>
-        new(_tenantRepo.Object, _domainVerifier.Object, _traefikWriter.Object, _auditService.Object, _config, NullLogger<TenantOrchestrator>.Instance, _env.Object);
+        new(_tenantRepo.Object, _domainVerifier.Object, _traefikWriter.Object, _auditService.Object, _config, NullLogger<TenantOrchestrator>.Instance, _env.Object, null);
 
     [Theory]
     [InlineData("admin")]

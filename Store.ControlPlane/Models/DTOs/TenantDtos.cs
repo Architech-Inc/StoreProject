@@ -23,7 +23,10 @@ public class ProvisionTenantRequest
     [StringLength(10)]
     public string Currency { get; set; } = "XAF";
 
+    [Required]
     public TenantTier PlanTier { get; set; } = TenantTier.Professional;
+
+    public Guid? ReleaseId { get; set; }
 
     public string? CustomDomain { get; set; }
 }
@@ -68,3 +71,51 @@ public record SlugCheckDto(
     bool IsAvailable,
     string? Reason = null
 );
+
+public class SystemReleaseDto
+{
+    public Guid ReleaseId { get; set; }
+    public string VersionName { get; set; } = string.Empty;
+    public DateTime ReleaseDate { get; set; }
+    public bool IsPublic { get; set; }
+    public string ReleaseNotes { get; set; } = string.Empty;
+}
+
+public class TenantSnapshotDto
+{
+    public Guid SnapshotId { get; set; }
+    public Guid TenantId { get; set; }
+    public Guid? ReleaseId { get; set; }
+    public string Type { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+    public long SizeBytes { get; set; }
+}
+
+public class TenantSdlcStatusDto
+{
+    public Guid TenantId { get; set; }
+    public string Slug { get; set; } = string.Empty;
+    public Guid? CurrentReleaseId { get; set; }
+    public SystemReleaseDto? CurrentRelease { get; set; }
+    public string EnvironmentType { get; set; } = "Production";
+    public Guid? ParentTenantId { get; set; }
+    public string? ParentSlug { get; set; }
+    public DateTime? LastAccessedAt { get; set; }
+    public List<SystemReleaseDto> AvailableReleases { get; set; } = new();
+    public List<TenantSnapshotDto> Snapshots { get; set; } = new();
+    public List<SandboxSummaryDto> Sandboxes { get; set; } = new();
+}
+
+public class SandboxSummaryDto
+{
+    public Guid TenantId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Slug { get; set; } = string.Empty;
+    public string UiUrl { get; set; } = string.Empty;
+    public string ApiUrl { get; set; } = string.Empty;
+    public Guid? ReleaseId { get; set; }
+    public string? ReleaseVersion { get; set; }
+    public DateTime DateCreated { get; set; }
+    public bool IsHealthy { get; set; }
+}
+

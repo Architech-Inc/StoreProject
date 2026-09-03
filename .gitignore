@@ -544,4 +544,7 @@ MigrationBackup/
 FodyWeavers.xsd
 
 Store.API/Uploads/
+Store.ControlPlane/Snapshots/
 *.bak
+fix_db.sql
+schema_update.sql

@@ -42,4 +42,14 @@ public interface IControlPlaneClient
 
     // Audit Trail
     Task<IReadOnlyList<TenantAuditDto>> GetAuditTrailAsync(Guid tenantId, int limit = 50, CancellationToken ct = default);
+
+    // SDLC & Sandboxing
+    Task<TenantSdlcStatusDto?> GetSdlcStatusAsync(string slug, CancellationToken ct = default);
+    Task<IReadOnlyList<SystemReleaseDto>> GetReleasesAsync(CancellationToken ct = default);
+    Task<IReadOnlyList<TenantSnapshotDto>> GetSnapshotsAsync(string slug, CancellationToken ct = default);
+    Task<bool> UpgradeTenantAsync(string slug, Guid releaseId, CancellationToken ct = default);
+    Task<bool> RollbackTenantAsync(string slug, Guid snapshotId, CancellationToken ct = default);
+    Task<TenantSummaryDto?> CreateSandboxAsync(string slug, Guid releaseId, bool maskData = true, CancellationToken ct = default);
+    Task<bool> DeleteSandboxAsync(string slug, string sandboxSlug, CancellationToken ct = default);
 }
+

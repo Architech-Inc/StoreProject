@@ -25,6 +25,18 @@ public class Tenant
     public DateTime? LastHealthCheck { get; set; }
     public bool IsHealthy { get; set; }
     public string? LastHealthMessage { get; set; }
+
+    // SDLC & Sandbox Fields
+    public Guid? CurrentReleaseId { get; set; }
+    public TenantEnvironmentType EnvironmentType { get; set; } = TenantEnvironmentType.Production;
+    public Guid? ParentTenantId { get; set; }
+    public DateTime? LastAccessedAt { get; set; }
+}
+
+public enum TenantEnvironmentType
+{
+    Production = 0,
+    Sandbox = 1
 }
 
 public class TenantDomainConfig

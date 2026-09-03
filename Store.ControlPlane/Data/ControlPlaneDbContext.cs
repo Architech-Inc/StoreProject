@@ -20,6 +20,8 @@ public class ControlPlaneDbContext : DbContext
 
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<PortalAccount> PortalAccounts => Set<PortalAccount>();
+    public DbSet<SystemRelease> SystemReleases => Set<SystemRelease>();
+    public DbSet<TenantSnapshot> TenantSnapshots => Set<TenantSnapshot>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -104,6 +106,27 @@ public class ControlPlaneDbContext : DbContext
             entity.Property(a => a.Email).HasMaxLength(255).IsRequired();
             entity.Property(a => a.FullName).HasMaxLength(200).IsRequired();
             entity.Property(a => a.PasswordHash).HasMaxLength(500).IsRequired();
+        });
+
+        // SystemRelease Configuration
+        modelBuilder.Entity<SystemRelease>(entity =>
+        {
+            entity.ToTable("system_releases");
+            entity.HasKey(r => r.ReleaseId);
+            entity.HasIndex(r => r.VersionName).IsUnique();
+            entity.Property(r => r.VersionName).HasMaxLength(100).IsRequired();
+            entity.Property(r => r.ApiImageTag).HasMaxLength(255).IsRequired();
+            entity.Property(r => r.UiImageTag).HasMaxLength(255).IsRequired();
+            entity.Property(r => r.DatabaseMigrationTag).HasMaxLength(255);
+        });
+
+        // TenantSnapshot Configuration
+        modelBuilder.Entity<TenantSnapshot>(entity =>
+        {
+            entity.ToTable("tenant_snapshots");
+            entity.HasKey(s => s.SnapshotId);
+            entity.HasIndex(s => s.TenantId);
+            entity.Property(s => s.SqlDumpPath).HasMaxLength(1000).IsRequired();
         });
     }
 

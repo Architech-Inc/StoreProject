@@ -1,0 +1,335 @@
+@page
+@model Store.TenantPortal.Pages.UpdatesModel
+@{
+    ViewData["Title"] = "Update Center & SDLC";
+    var status = Model.SdlcStatus;
+    var currentRelease = status?.CurrentRelease;
+    var availableReleases = status?.AvailableReleases ?? new();
+    var snapshots = status?.Snapshots ?? new();
+    var sandboxes = status?.Sandboxes ?? new();
+}
+
+<div class="portal-container">
+    <!-- Header -->
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; flex-wrap: wrap; gap: 16px;">
+        <div>
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 6px;">
+                <span class="hero-pill" style="margin-bottom: 0;">Lifecycle & Versioning</span>
+                <span class="status-badge @(status?.EnvironmentType == "Sandbox" ? "warning" : "healthy")">
+                    <span class="status-dot @(status?.EnvironmentType == "Sandbox" ? "warning" : "healthy")"></span>
+                    @(status?.EnvironmentType ?? "Production") Silo
+                </span>
+            </div>
+            <h1 style="font-size: 2.2rem; margin: 4px 0 8px;">Update Center</h1>
+            <p style="color: var(--p-text-muted); font-size: 0.95rem; margin: 0; max-width: 700px;">
+                Manage your store's release train, perform zero-downtime version upgrades with automatic pre-flight snapshots, and spin up isolated preview sandboxes using your live store data.
+            </p>
+        </div>
+
+        <div style="display: flex; gap: 12px; align-items: center;">
+            <a href="#snapshots-section" class="btn-glass" style="font-size: 13px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px;"><path d="M3 12h18M3 6h18M3 18h18"></path></svg>
+                Snapshots History (@snapshots.Count)
+            </a>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.FeedbackMessage))
+    {
+        <div class="portal-alert @(Model.IsError ? "danger" : "success") auto-dismiss">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            <span>@Model.FeedbackMessage</span>
+        </div>
+    }
+
+    <!-- Current Release Hero Banner -->
+    <div class="portal-card" style="margin-bottom: 32px; padding: 28px 32px; background: linear-gradient(135deg, rgba(1, 156, 1, 0.08) 0%, rgba(5, 9, 6, 0.7) 100%); border-color: rgba(1, 156, 1, 0.3);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <div style="width: 56px; height: 56px; border-radius: 16px; background: rgba(1, 156, 1, 0.15); border: 1px solid rgba(1, 156, 1, 0.4); display: flex; align-items: center; justify-content: center; color: #4ade80;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                </div>
+                <div>
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+                        <span style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #4ade80;">Active Version</span>
+                        <span class="status-badge healthy" style="font-size: 11px; padding: 2px 10px;">Running</span>
+                    </div>
+                    <h2 style="font-size: 1.6rem; margin: 0;">@(currentRelease?.VersionName ?? "StoreOS 2.0-LTS")</h2>
+                    <p style="color: var(--p-text-muted); font-size: 13px; margin: 4px 0 0;">
+                        Tenant Silo: <span class="code-font" style="color: #fff;">@status?.Slug</span> &bull; Released @(currentRelease?.ReleaseDate.ToString("MMMM dd, yyyy") ?? "August 2026")
+                    </p>
+                </div>
+            </div>
+
+            <div style="text-align: right;">
+                <div style="font-size: 12px; color: var(--p-text-muted); margin-bottom: 6px;">Zero Data Loss Protection</div>
+                <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #4ade80; justify-content: flex-end;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    <span>Pre-Flight Snapshots Active</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Sandboxes Section -->
+    @if (sandboxes.Count > 0)
+    {
+        <div style="margin-bottom: 40px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <div>
+                    <h3 style="font-size: 1.3rem; margin: 0;">Active Preview Sandboxes</h3>
+                    <p style="color: var(--p-text-muted); font-size: 13px; margin: 2px 0 0;">
+                        Isolated parallel instances running live data clones for testing and staging. Unused sandboxes expire in 7 days.
+                    </p>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+                @foreach (var sb in sandboxes)
+                {
+                    <div class="portal-card" style="padding: 24px; border-color: rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.02); display: flex; flex-direction: column; justify-content: space-between;">
+                        <div>
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                                <div>
+                                    <span class="status-badge warning" style="font-size: 11px; margin-bottom: 6px;">Sandbox Environment</span>
+                                    <h4 style="font-size: 1.15rem; margin: 0;">@sb.Name</h4>
+                                    <div class="code-font" style="font-size: 12px; color: var(--p-text-muted); margin-top: 2px;">@sb.Slug</div>
+                                </div>
+                                <span class="status-dot @(sb.IsHealthy ? "healthy" : "warning")"></span>
+                            </div>
+
+                            <div style="background: var(--p-surface-alt); padding: 12px; border-radius: 8px; border: 1px solid var(--p-border); font-size: 12px; margin-bottom: 18px;">
+                                <div style="color: var(--p-text-muted); margin-bottom: 4px;">Target Release: <strong style="color: #fff;">@sb.ReleaseVersion</strong></div>
+                                <div style="color: var(--p-text-muted); margin-bottom: 4px;">Created: <span style="color: var(--p-text);">@sb.DateCreated.ToString("g")</span></div>
+                                <div style="color: var(--p-text-muted);">Access URL: <a href="@sb.UiUrl" target="_blank" style="color: #4ade80; text-decoration: none;">@sb.UiUrl &rarr;</a></div>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 10px;">
+                            <a href="@sb.UiUrl" target="_blank" class="btn-primary-glow" style="flex: 1; font-size: 12px; padding: 8px 14px; text-align: center;">
+                                Open Sandbox
+                            </a>
+                            <form method="post" asp-page-handler="DeleteSandbox" onsubmit="return confirm('Decommission and delete sandbox \'@sb.Slug\'? All test transactions inside this sandbox will be removed.');">
+                                <input type="hidden" name="sandboxSlug" value="@sb.Slug" />
+                                <button type="submit" class="btn-danger-glass" style="font-size: 12px; padding: 8px 14px;">
+                                    Tear Down
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- Release Train / Available Updates Section -->
+    <div style="margin-bottom: 40px;">
+        <div style="margin-bottom: 20px;">
+            <h3 style="font-size: 1.3rem; margin: 0 0 4px;">The Release Train (Available Versions)</h3>
+            <p style="color: var(--p-text-muted); font-size: 13px; margin: 0;">
+                All upgrades bundle frontend, backend API, and database migrations into verified release trains.
+            </p>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 18px;">
+            @foreach (var rel in availableReleases)
+            {
+                var isCurrent = currentRelease?.ReleaseId == rel.ReleaseId;
+                <div class="portal-card" style="padding: 24px 28px; @(isCurrent ? "border-color: rgba(1, 156, 1, 0.4); background: rgba(1, 156, 1, 0.02);" : "")">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 20px;">
+                        <div style="flex: 1; min-width: 280px;">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                                <h4 style="font-size: 1.25rem; margin: 0;">@rel.VersionName</h4>
+                                @if (isCurrent)
+                                {
+                                    <span class="status-badge healthy" style="font-size: 11px;">Current Version</span>
+                                }
+                                else if (rel.VersionName.Contains("Preview", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    <span class="status-badge warning" style="font-size: 11px;">Preview / Beta</span>
+                                }
+                                else
+                                {
+                                    <span class="status-badge" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; font-size: 11px;">Available Update</span>
+                                }
+                            </div>
+
+                            <div style="font-size: 12px; color: var(--p-text-muted); margin-bottom: 12px;">
+                                Released: @rel.ReleaseDate.ToString("MMMM dd, yyyy") &bull; API Image: <span class="code-font" style="color: var(--p-text-subtle);">@rel.VersionName.ToLower().Replace(" ", "-")</span>
+                            </div>
+
+                            <p style="color: var(--p-text-muted); font-size: 13px; line-height: 1.5; margin: 0; max-width: 800px;">
+                                @rel.ReleaseNotes
+                            </p>
+                        </div>
+
+                        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                            @if (isCurrent)
+                            {
+                                <button type="button" class="btn-glass" disabled style="opacity: 0.6; cursor: default; font-size: 13px; padding: 8px 18px;">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    Installed
+                                </button>
+                            }
+                            else
+                            {
+                                <!-- Preview in Sandbox button (triggers modal or form) -->
+                                <button type="button" onclick="openSandboxModal('@rel.ReleaseId', '@rel.VersionName')" class="btn-glass" style="font-size: 13px; padding: 8px 18px;">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+                                    Preview in Sandbox
+                                </button>
+
+                                <!-- Direct Upgrade form -->
+                                <form method="post" asp-page-handler="Upgrade" onsubmit="return confirm('Upgrade this silo to @rel.VersionName? An automatic pre-flight snapshot will be created before containers restart.');">
+                                    <input type="hidden" name="releaseId" value="@rel.ReleaseId" />
+                                    <button type="submit" class="btn-primary-glow" style="font-size: 13px; padding: 8px 20px;">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px;"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                                        Upgrade Silo
+                                    </button>
+                                </form>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Snapshots & Safe Rollback Section -->
+    <div id="snapshots-section" style="margin-bottom: 40px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <div>
+                <h3 style="font-size: 1.3rem; margin: 0 0 4px;">Pre-Flight Snapshots & Safe Rollback</h3>
+                <p style="color: var(--p-text-muted); font-size: 13px; margin: 0;">
+                    Automatic point-in-time SQL dumps taken before every upgrade or sandbox clone. Rollback with zero data loss.
+                </p>
+            </div>
+        </div>
+
+        @if (snapshots.Count == 0)
+        {
+            <div class="portal-card" style="padding: 32px; text-align: center; color: var(--p-text-muted);">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 12px; opacity: 0.5;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                <div style="font-size: 14px; font-weight: 500; margin-bottom: 4px;">No Snapshots Recorded Yet</div>
+                <div style="font-size: 12px; color: var(--p-text-subtle);">Pre-flight snapshots will automatically appear here when an upgrade or sandbox clone is initiated.</div>
+            </div>
+        }
+        else
+        {
+            <div class="portal-card" style="padding: 0; overflow: hidden;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid var(--p-border); background: var(--p-surface-alt);">
+                            <th style="padding: 14px 20px; font-weight: 600; color: var(--p-text-muted);">Snapshot Type</th>
+                            <th style="padding: 14px 20px; font-weight: 600; color: var(--p-text-muted);">Timestamp</th>
+                            <th style="padding: 14px 20px; font-weight: 600; color: var(--p-text-muted);">Size</th>
+                            <th style="padding: 14px 20px; font-weight: 600; color: var(--p-text-muted);">Release Tag</th>
+                            <th style="padding: 14px 20px; font-weight: 600; color: var(--p-text-muted); text-align: right;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var snap in snapshots)
+                        {
+                            <tr style="border-bottom: 1px solid var(--p-border);">
+                                <td style="padding: 14px 20px;">
+                                    @if (snap.Type == "PreUpgrade")
+                                    {
+                                        <span class="status-badge warning" style="font-size: 11px;">Pre-Upgrade Safety</span>
+                                    }
+                                    else if (snap.Type == "SandboxClone")
+                                    {
+                                        <span class="status-badge" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; font-size: 11px;">Sandbox Clone</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="status-badge healthy" style="font-size: 11px;">@snap.Type</span>
+                                    }
+                                </td>
+                                <td style="padding: 14px 20px; color: var(--p-text);">
+                                    @snap.CreatedAt.ToString("g")
+                                </td>
+                                <td style="padding: 14px 20px; color: var(--p-text-muted); font-family: monospace;">
+                                    @((snap.SizeBytes / 1024.0).ToString("N1")) KB
+                                </td>
+                                <td style="padding: 14px 20px; color: var(--p-text-muted);">
+                                    @(snap.ReleaseId.HasValue ? "Tagged Release" : "Baseline")
+                                </td>
+                                <td style="padding: 14px 20px; text-align: right;">
+                                    <form method="post" asp-page-handler="Rollback" onsubmit="return confirm('WARNING: Are you sure you want to rollback to snapshot taken on @snap.CreatedAt.ToString("g")? Current database will be restored and containers reverted.');" style="display: inline;">
+                                        <input type="hidden" name="snapshotId" value="@snap.SnapshotId" />
+                                        <button type="submit" class="btn-danger-glass" style="font-size: 11px; padding: 6px 14px;">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline></svg>
+                                            Rollback
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Modal: Launch Sandbox Preview -->
+<div id="sandboxModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); z-index: 2000; align-items: center; justify-content: center;">
+    <div class="portal-card" style="width: 100%; max-width: 480px; padding: 32px; border-color: rgba(1, 156, 1, 0.4); background: #0a0f0c; box-shadow: 0 20px 50px rgba(0,0,0,0.6);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h3 style="font-size: 1.3rem; margin: 0;">Launch Preview Sandbox</h3>
+            <button type="button" onclick="closeSandboxModal()" style="background: none; border: none; color: var(--p-text-muted); cursor: pointer; font-size: 20px;">&times;</button>
+        </div>
+
+        <p style="color: var(--p-text-muted); font-size: 13px; line-height: 1.5; margin-bottom: 20px;">
+            Spin up a parallel, isolated sandbox instance of your store running <strong id="modalReleaseName" style="color: #4ade80;"></strong> with a copy of your live store database.
+        </p>
+
+        <form method="post" asp-page-handler="CreateSandbox">
+            <input type="hidden" id="modalReleaseId" name="releaseId" value="" />
+
+            <div style="background: var(--p-surface-alt); padding: 16px; border-radius: 10px; border: 1px solid var(--p-border); margin-bottom: 24px;">
+                <label style="display: flex; align-items: flex-start; gap: 12px; cursor: pointer;">
+                    <input type="checkbox" name="maskData" value="true" checked style="margin-top: 3px; accent-color: var(--p-green); width: 16px; height: 16px;" />
+                    <div>
+                        <strong style="font-size: 13px; color: #fff;">Mask Sensitive Customer Data</strong>
+                        <div style="font-size: 12px; color: var(--p-text-muted); margin-top: 2px;">
+                            Replaces customer email addresses with <code class="code-font">masked_*@@sandbox.local</code> to ensure production privacy in staging.
+                        </div>
+                    </div>
+                </label>
+            </div>
+
+            <div style="font-size: 12px; color: var(--p-text-subtle); margin-bottom: 24px; line-height: 1.4;">
+                &bull; Unused sandboxes are automatically decommissioned after 7 days.<br />
+                &bull; You can tear down the sandbox at any time with one click.
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                <button type="button" onclick="closeSandboxModal()" class="btn-glass" style="font-size: 13px; padding: 8px 18px;">Cancel</button>
+                <button type="submit" class="btn-primary-glow" style="font-size: 13px; padding: 8px 22px;">Launch Sandbox</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function openSandboxModal(releaseId, releaseName) {
+            document.getElementById('modalReleaseId').value = releaseId;
+            document.getElementById('modalReleaseName').innerText = releaseName;
+            document.getElementById('sandboxModal').style.display = 'flex';
+        }
+
+        function closeSandboxModal() {
+            document.getElementById('sandboxModal').style.display = 'none';
+        }
+
+        // Close on backdrop click
+        window.addEventListener('click', function(e) {
+            var modal = document.getElementById('sandboxModal');
+            if (e.target === modal) {
+                closeSandboxModal();
+            }
+        });
+    </script>
+}
