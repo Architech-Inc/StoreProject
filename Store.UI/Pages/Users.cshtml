@@ -311,7 +311,7 @@
 
             <div class="form-group">
                 <label class="form-label">Profile Avatar Image</label>
-                <input type="file" asp-for="ImageUpload" id="modalImageUpload" class="form-control" accept="image/*" />
+                <input type="file" asp-for="ImageUpload" id="modalImageUpload" class="form-control" accept="image/*" data-crop="true" data-crop-aspect-ratio="1" />
             </div>
         </div>
         <div class="custom-modal-footer">
@@ -351,6 +351,11 @@
             document.getElementById('modalEmail').value = '';
             document.getElementById('modalPassword').value = '';
             document.getElementById('modalRoleId').value = '3';
+            document.getElementById('modalImageUpload').value = '';
+            document.getElementById('modalCropX').value = '';
+            document.getElementById('modalCropY').value = '';
+            document.getElementById('modalCropW').value = '';
+            document.getElementById('modalCropH').value = '';
             document.getElementById('emailGroup').style.display = 'block';
             document.getElementById('passwordGroup').style.display = 'block';
             document.getElementById('statusGroup').style.display = 'none';
@@ -367,6 +372,11 @@
             document.getElementById('modalEmail').value = email;
             document.getElementById('modalRoleId').value = roleId;
             document.getElementById('modalStatus').value = status;
+            document.getElementById('modalImageUpload').value = '';
+            document.getElementById('modalCropX').value = '';
+            document.getElementById('modalCropY').value = '';
+            document.getElementById('modalCropW').value = '';
+            document.getElementById('modalCropH').value = '';
             document.getElementById('emailGroup').style.display = 'none';
             document.getElementById('passwordGroup').style.display = 'none';
             document.getElementById('statusGroup').style.display = 'block';
@@ -401,46 +411,85 @@
             try {
                 const res = await fetch(`/Users?handler=UserDrawer&id=${userId}`);
                 if (!res.ok) throw new Error('Could not load user profile.');
-                const u = await res.json();
+                const data = await res.json();
 
-                title.textContent = u.username;
+                const u = data.profile || data;
+                const emp = data.linkedEmployee;
+                const sessions = data.activeSessions || [];
+                const antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+
+                title.textContent = u.username || 'Operator Profile';
+                const avatarLetter = (u.username && u.username.length > 0) ? u.username[0].toUpperCase() : 'U';
+                const email = u.primaryEmail || u.email || '—';
+                const phone = u.primaryPhone || u.phoneNumber || '—';
+                const createdDate = u.dateCreated ? new Date(u.dateCreated).toLocaleDateString() : '—';
+                const is2fa = u.twoFactorEnabled ?? u.isTwoFactorEnabled ?? false;
+                const role = u.roleName || (u.roleId === 1 ? 'Admin' : u.roleId === 2 ? 'Manager' : 'Standard User');
+                const statusText = (u.status === 0 || u.status === 'Active') ? 'Active' : (u.status === 1 || u.status === 'Suspended') ? 'Suspended' : u.status;
+                const statusBadgeClass = (statusText === 'Active') ? 'status-reviewed' : 'status-danger';
+
+                let employeeHtml = '';
+                if (emp) {
+                    employeeHtml = `
+                        <div style="background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0; margin-top:4px;">
+                            <span style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase;">Linked Personnel</span>
+                            <p style="margin:2px 0 0 0; font-weight:600; color:#0f172a; font-size:0.9rem;">${emp.firstName ?? ''} ${emp.lastName ?? ''}</p>
+                            <span style="font-size:0.75rem; color:#64748b;">${emp.status ?? 'Active Employee'}</span>
+                        </div>
+                    `;
+                }
+
+                let sessionsHtml = `
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:10px 12px; border-radius:8px; border:1px solid #e2e8f0; font-size:0.85rem;">
+                        <span style="color:#64748b;">Active Web Sessions</span>
+                        <strong style="color:#0f172a;">${sessions.length} Session${sessions.length === 1 ? '' : 's'}</strong>
+                    </div>
+                `;
+
                 content.innerHTML = `
                     <div style="display:flex; flex-direction:column; gap:16px;">
                         <div style="display:flex; align-items:center; gap:16px; padding-bottom:16px; border-bottom:1px solid #e2e8f0;">
-                            ${u.thumbnailUrl ? `<img src="${u.thumbnailUrl}" style="width:64px;height:64px;border-radius:50%;object-fit:cover;" />` : `<div class="user-avatar-placeholder" style="width:64px;height:64px;font-size:1.5rem;">${u.username[0].toUpperCase()}</div>`}
+                            ${u.thumbnailUrl ? `<img src="${u.thumbnailUrl}" style="width:64px;height:64px;border-radius:50%;object-fit:cover;" />` : `<div class="user-avatar-placeholder" style="width:64px;height:64px;font-size:1.5rem;">${avatarLetter}</div>`}
                             <div>
                                 <h4 style="margin:0; font-size:1.15rem; color:#0f172a;">${u.username}</h4>
-                                <span class="role-pill" style="margin-top:4px; display:inline-block;">${u.roleName ?? 'Standard User'}</span>
+                                <span class="role-pill" style="margin-top:4px; display:inline-block;">${role}</span>
                             </div>
                         </div>
+
+                        ${employeeHtml}
+
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
                             <div>
                                 <span style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase;">User ID</span>
-                                <p style="margin:2px 0 0 0; font-family:'JetBrains Mono', monospace; font-size:0.80rem; color:#0f172a;">${u.userId.substring(0,8)}…</p>
+                                <p style="margin:2px 0 0 0; font-family:'JetBrains Mono', monospace; font-size:0.80rem; color:#0f172a;">${u.userId ? u.userId.substring(0,8) : '—'}…</p>
                             </div>
                             <div>
                                 <span style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase;">Account Status</span>
-                                <p style="margin:2px 0 0 0;"><span class="status-badge ${u.status === 0 || u.status === 'Active' ? 'status-reviewed' : 'status-danger'}">${u.status}</span></p>
+                                <p style="margin:2px 0 0 0;"><span class="status-badge ${statusBadgeClass}">${statusText}</span></p>
                             </div>
                             <div style="grid-column: span 2;">
                                 <span style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase;">Email</span>
-                                <p style="margin:2px 0 0 0; font-size:0.85rem; color:#0f172a;">${u.email ?? '—'}</p>
+                                <p style="margin:2px 0 0 0; font-size:0.85rem; color:#0f172a;">${email}</p>
                             </div>
                             <div style="grid-column: span 2;">
                                 <span style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase;">Phone</span>
-                                <p style="margin:2px 0 0 0; font-size:0.85rem; color:#0f172a;">${u.phoneNumber ?? '—'}</p>
+                                <p style="margin:2px 0 0 0; font-size:0.85rem; color:#0f172a;">${phone}</p>
                             </div>
                             <div>
                                 <span style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase;">Created Date</span>
-                                <p style="margin:2px 0 0 0; font-size:0.85rem; color:#0f172a;">${new Date(u.dateCreated).toLocaleDateString()}</p>
+                                <p style="margin:2px 0 0 0; font-size:0.85rem; color:#0f172a;">${createdDate}</p>
                             </div>
                             <div>
                                 <span style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase;">Two-Factor Auth</span>
-                                <p style="margin:2px 0 0 0; font-size:0.85rem; color:#0f172a;">${u.isTwoFactorEnabled ? 'Enabled' : 'Disabled'}</p>
+                                <p style="margin:2px 0 0 0; font-size:0.85rem; color:#0f172a;">${is2fa ? 'Enabled' : 'Disabled'}</p>
                             </div>
                         </div>
+
+                        ${sessionsHtml}
+
                         <div style="margin-top:16px; padding-top:16px; border-top:1px solid #e2e8f0; display:flex; flex-direction:column; gap:8px;">
                             <form method="post" asp-page-handler="RevokeSessions" style="margin:0;">
+                                <input type="hidden" name="__RequestVerificationToken" value="${antiForgeryToken}" />
                                 <input type="hidden" name="userId" value="${u.userId}" />
                                 <button type="submit" class="btn-ctrl-danger" style="width:100%; text-align:center; padding:8px;" data-confirm="Revoke all active sessions for ${u.username}?" data-confirm-type="danger">
                                     Revoke All Active Sessions
@@ -450,7 +499,8 @@
                     </div>
                 `;
             } catch (err) {
-                content.innerHTML = `<div class="users-alert error" style="margin-top:20px;"><span>Failed to load profile.</span></div>`;
+                console.error('Error loading user profile:', err);
+                content.innerHTML = `<div class="users-alert error" style="margin-top:20px;"><span>Failed to load profile: ${err.message || 'Unknown error'}</span></div>`;
             }
         }
 

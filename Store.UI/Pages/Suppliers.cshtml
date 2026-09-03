@@ -460,6 +460,11 @@
 <div class="modal-custom" id="createModal">
     <div class="modal-custom-dialog">
         <form method="post" asp-page-handler="Create" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="CropX" id="createSupplierCropX" />
+            <input type="hidden" asp-for="CropY" id="createSupplierCropY" />
+            <input type="hidden" asp-for="CropW" id="createSupplierCropW" />
+            <input type="hidden" asp-for="CropH" id="createSupplierCropH" />
             <div class="modal-custom-header">
                 <h4 style="margin:0; font-size:1.15rem;">Register New Supplier</h4>
                 <button type="button" class="supplier-drawer-close" onclick="closeCreateModal()" aria-label="Close create supplier modal">&times;</button>
@@ -472,7 +477,7 @@
                         <label for="createImageInput" class="image-preview-container" id="createPreviewBox">
                             <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--text-secondary);"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                         </label>
-                        <input type="file" id="createImageInput" name="CreateImageUpload" accept="image/*" style="display:none;" onchange="previewImage(this, 'createPreviewBox')" />
+                        <input type="file" id="createImageInput" name="CreateImageUpload" accept="image/*" style="display:none;" data-crop="true" data-crop-aspect-ratio="1" onchange="previewImage(this, 'createPreviewBox')" />
                     </div>
                     <div style="flex-grow:1;">
                         <div class="form-group" style="margin-bottom:12px;">
@@ -574,7 +579,12 @@
 <div class="modal-custom" id="editModal">
     <div class="modal-custom-dialog">
         <form method="post" asp-page-handler="Edit" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
             <input type="hidden" asp-for="EditSupplierId" id="editSupplierId" />
+            <input type="hidden" asp-for="EditCropX" id="editSupplierCropX" />
+            <input type="hidden" asp-for="EditCropY" id="editSupplierCropY" />
+            <input type="hidden" asp-for="EditCropW" id="editSupplierCropW" />
+            <input type="hidden" asp-for="EditCropH" id="editSupplierCropH" />
             <div class="modal-custom-header">
                 <h4 style="margin:0; font-size:1.15rem;">Edit Supplier Profile</h4>
                 <button type="button" class="supplier-drawer-close" onclick="closeEditModal()" aria-label="Close edit supplier modal">&times;</button>
@@ -587,7 +597,7 @@
                         <label for="editImageInput" class="image-preview-container" id="editPreviewBox">
                             <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--text-secondary);"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                         </label>
-                        <input type="file" id="editImageInput" name="EditImageUpload" accept="image/*" style="display:none;" onchange="previewImage(this, 'editPreviewBox')" />
+                        <input type="file" id="editImageInput" name="EditImageUpload" accept="image/*" style="display:none;" data-crop="true" data-crop-aspect-ratio="1" onchange="previewImage(this, 'editPreviewBox')" />
                     </div>
                     <div style="flex-grow:1;">
                         <div class="form-group" style="margin-bottom:12px;">

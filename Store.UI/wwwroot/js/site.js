@@ -376,51 +376,62 @@
     let currentCropper = null;
     let currentCropInput = null;
 
-    document.addEventListener('change', (e) => {
-        if (e.target.matches('input[type="file"][data-crop="true"]')) {
-            const input = e.target;
-            if (input.files && input.files.length > 0) {
-                const file = input.files[0];
-                if (file.type.startsWith('image/')) {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        const modal = document.getElementById('globalCropModal');
-                        const img = document.getElementById('cropperImage');
-                        
-                        if (currentCropper) {
-                            currentCropper.destroy();
-                            currentCropper = null;
-                        }
-                        
-                        modal.hidden = false;
-                        currentCropInput = input;
+    // Dynamically calculate highest z-index relative to triggering element & all active modals/drawers/blades
+    const getHighestZIndex = (triggerEl) => {
+        let highest = 10000;
 
-                        img.onload = () => {
-                            const aspectRatio = input.dataset.cropAspectRatio ? parseFloat(input.dataset.cropAspectRatio) : 1;
-                            currentCropper = new Cropper(img, {
-                                aspectRatio: aspectRatio,
-                                viewMode: 1,
-                                autoCropArea: 0.8,
-                                background: false
-                            });
-                        };
-                        
-                        img.src = event.target.result;
-                    };
-                    reader.readAsDataURL(file);
+        // 1. Inspect ancestor tree of the triggering element
+        let current = triggerEl;
+        while (current && current !== document.body && current !== document.documentElement) {
+            const z = parseInt(window.getComputedStyle(current).zIndex, 10);
+            if (!isNaN(z) && z > highest) {
+                highest = z;
+            }
+            current = current.parentElement;
+        }
+
+        // 2. Scan all currently active/visible modals, overlays, blades, dialogs
+        const potentialOverlays = document.querySelectorAll(
+            '.custom-modal-overlay, .custom-modal, .drawer-overlay, .drawer, .blade-overlay, .blade, .modal-overlay, .modalView, .modal-custom, [role="dialog"], [aria-modal="true"]'
+        );
+        potentialOverlays.forEach(el => {
+            if (el.id !== 'globalCropModal' && el.id !== 'globalImageViewerModal') {
+                const style = window.getComputedStyle(el);
+                if (style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0') {
+                    const z = parseInt(style.zIndex, 10);
+                    if (!isNaN(z) && z > highest) {
+                        highest = z;
+                    }
                 }
             }
-        }
-    });
+        });
+
+        // Always place crop modal strictly above the highest active layer
+        return highest + 50;
+    };
 
     const closeCropModal = () => {
         const modal = document.getElementById('globalCropModal');
-        if (modal) modal.hidden = true;
+        if (modal) {
+            modal.hidden = true;
+            modal.classList.remove('active');
+            modal.style.display = 'none';
+            modal.style.opacity = '';
+            modal.style.visibility = '';
+            modal.style.zIndex = '';
+        }
         if (currentCropper) {
-            currentCropper.destroy();
+            try { currentCropper.destroy(); } catch (e) { }
             currentCropper = null;
         }
         currentCropInput = null;
+    };
+
+    const cancelCrop = () => {
+        if (currentCropInput) {
+            currentCropInput.value = ''; // Reset file input so uncropped image isn't inadvertently kept
+        }
+        closeCropModal();
     };
 
     const applyCrop = () => {
@@ -436,13 +447,42 @@
                         hidden.name = name;
                         form.appendChild(hidden);
                     }
-                    hidden.value = value;
+                    hidden.value = Math.round(value);
                 };
 
-                setHiddenInput('CropX', data.x);
-                setHiddenInput('CropY', data.y);
-                setHiddenInput('CropW', data.width);
-                setHiddenInput('CropH', data.height);
+                const inputName = (currentCropInput.name || '').toLowerCase();
+                const isEdit = inputName.includes('edit');
+                const hasEditCrop = !!form.querySelector('input[name^="EditCrop"]');
+                const prefix = (isEdit && hasEditCrop) ? 'EditCrop' : 'Crop';
+
+                setHiddenInput(prefix + 'X', data.x);
+                setHiddenInput(prefix + 'Y', data.y);
+                setHiddenInput(prefix + 'W', data.width);
+                setHiddenInput(prefix + 'H', data.height);
+
+                if (prefix !== 'Crop') {
+                    setHiddenInput('CropX', data.x);
+                    setHiddenInput('CropY', data.y);
+                    setHiddenInput('CropW', data.width);
+                    setHiddenInput('CropH', data.height);
+                }
+
+                // Update visual preview in the form if present
+                try {
+                    const canvas = currentCropper.getCroppedCanvas({ maxWidth: 400, maxHeight: 400 });
+                    if (canvas) {
+                        const croppedDataUrl = canvas.toDataURL('image/webp', 0.9);
+                        const preview = form.querySelector('#empImagePreview, #previewBox img, #createPreviewBox img, #editPreviewBox img, #catPreview, #imageToCrop, .image-preview, [data-crop-preview]');
+                        if (preview) {
+                            preview.src = croppedDataUrl;
+                            preview.style.display = 'block';
+                            const prompt = form.querySelector('#empUploadPrompt, .upload-prompt');
+                            if (prompt) prompt.style.display = 'none';
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Could not generate canvas preview:', e);
+                }
 
                 if (currentCropInput.dataset.cropAutoSubmit === 'true') {
                     form.submit();
@@ -452,24 +492,92 @@
         }
     };
 
-    document.getElementById('btnCancelCrop')?.addEventListener('click', () => {
-        if (currentCropInput) {
-            currentCropInput.value = ''; // Reset file input
+    document.addEventListener('change', (e) => {
+        if (e.target.matches('input[type="file"][data-crop="true"]')) {
+            const input = e.target;
+            if (input.files && input.files.length > 0) {
+                const file = input.files[0];
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const modal = document.getElementById('globalCropModal');
+                        const img = document.getElementById('cropperImage');
+                        if (!modal || !img) return;
+
+                        if (currentCropper) {
+                            try { currentCropper.destroy(); } catch (err) { }
+                            currentCropper = null;
+                        }
+
+                        currentCropInput = input;
+
+                        // Calculate z-index dynamically relative to whatever modal/drawer opened it
+                        const dynamicZ = getHighestZIndex(input);
+                        modal.style.zIndex = dynamicZ.toString();
+                        modal.style.display = 'flex';
+                        modal.style.opacity = '1';
+                        modal.style.visibility = 'visible';
+                        modal.classList.add('active');
+                        modal.hidden = false;
+
+                        const initCropper = () => {
+                            if (typeof Cropper === 'undefined') {
+                                console.error('Cropper.js library not available.');
+                                return;
+                            }
+                            if (currentCropper) {
+                                try { currentCropper.destroy(); } catch (err) { }
+                                currentCropper = null;
+                            }
+
+                            const aspectRatio = input.dataset.cropAspectRatio ? parseFloat(input.dataset.cropAspectRatio) : 1;
+                            
+                            // Brief tick to ensure the modal container has completed layout & has dimensions
+                            setTimeout(() => {
+                                try {
+                                    currentCropper = new Cropper(img, {
+                                        aspectRatio: aspectRatio,
+                                        viewMode: 1,
+                                        autoCropArea: 0.85,
+                                        background: false,
+                                        responsive: true,
+                                        restore: true,
+                                        checkCrossOrigin: false,
+                                        zoomable: true
+                                    });
+                                } catch (err) {
+                                    console.error('Failed to instantiate Cropper:', err);
+                                }
+                            }, 50);
+                        };
+
+                        img.onload = initCropper;
+                        img.src = event.target.result;
+                        if (img.complete && img.naturalWidth > 0) {
+                            initCropper();
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
         }
-        closeCropModal();
     });
-    document.getElementById('btnCancelCrop2')?.addEventListener('click', () => {
-        if (currentCropInput) {
-            currentCropInput.value = ''; // Reset file input
-        }
-        closeCropModal();
-    });
+
+    document.getElementById('btnCancelCrop')?.addEventListener('click', cancelCrop);
+    document.getElementById('btnCancelCrop2')?.addEventListener('click', cancelCrop);
     document.getElementById('btnApplyCrop')?.addEventListener('click', applyCrop);
 
     // --- Global Form Image Interceptor ---
     document.addEventListener('submit', async (e) => {
         const form = e.target;
         if (form.dataset.compressed === "true") return; // already processed
+
+        // If this form has crop coordinates, do NOT downscale via browser-image-compression,
+        // because resizing the source image would invalidate the natural pixel crop coordinates!
+        const cropXInput = form.querySelector('input[name="CropX"], input[name="EditCropX"], input[name="modalCropX"], input[name="catCropX"], input[name="cropX"]');
+        if (cropXInput && cropXInput.value !== '') {
+            return;
+        }
 
         const fileInputs = form.querySelectorAll('input[type="file"][accept*="image"]');
         let hasFilesToCompress = false;

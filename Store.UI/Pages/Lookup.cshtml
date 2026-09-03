@@ -356,6 +356,10 @@
     <form method="post" asp-page-handler="SaveCategory" enctype="multipart/form-data">
         @Html.AntiForgeryToken()
         <input type="hidden" name="id" id="catId" value="0" />
+        <input type="hidden" asp-for="CropX" id="catCropX" />
+        <input type="hidden" asp-for="CropY" id="catCropY" />
+        <input type="hidden" asp-for="CropW" id="catCropW" />
+        <input type="hidden" asp-for="CropH" id="catCropH" />
         <div class="custom-modal-body">
             <div class="form-group">
                 <label class="form-label">Category Name <span class="text-danger">*</span></label>
@@ -367,7 +371,7 @@
             </div>
             <div class="form-group">
                 <label class="form-label">Category Photo / Icon</label>
-                <input type="file" asp-for="CategoryImageUpload" class="form-control" accept="image/*" />
+                <input type="file" asp-for="CategoryImageUpload" id="catImageInput" class="form-control" accept="image/*" data-crop="true" data-crop-aspect-ratio="1" />
             </div>
         </div>
         <div class="custom-modal-footer">
@@ -455,6 +459,11 @@
             document.getElementById('catId').value = '0';
             document.getElementById('catName').value = '';
             document.getElementById('catDesc').value = '';
+            document.getElementById('catImageInput').value = '';
+            document.getElementById('catCropX').value = '';
+            document.getElementById('catCropY').value = '';
+            document.getElementById('catCropW').value = '';
+            document.getElementById('catCropH').value = '';
             document.getElementById('catModalOverlay').style.display = 'block';
             document.getElementById('catModal').style.display = 'block';
         }
@@ -463,6 +472,11 @@
             document.getElementById('catId').value = id;
             document.getElementById('catName').value = name;
             document.getElementById('catDesc').value = desc;
+            document.getElementById('catImageInput').value = '';
+            document.getElementById('catCropX').value = '';
+            document.getElementById('catCropY').value = '';
+            document.getElementById('catCropW').value = '';
+            document.getElementById('catCropH').value = '';
             document.getElementById('catModalOverlay').style.display = 'block';
             document.getElementById('catModal').style.display = 'block';
         }

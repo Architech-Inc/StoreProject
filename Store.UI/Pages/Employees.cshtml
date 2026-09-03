@@ -677,7 +677,7 @@
                     <div style="font-size:0.86rem; font-weight:600; color:var(--text-primary);">Upload Employee Photo</div>
                     <div style="font-size:0.75rem; color:var(--text-muted);">PNG, JPG or WebP up to 5MB</div>
                 </div>
-                <input type="file" asp-for="ImageUpload" id="empImage" accept="image/*" data-crop="true" style="display:none;" onchange="previewSelectedPhoto(this)" />
+                <input type="file" asp-for="ImageUpload" id="empImage" accept="image/*" data-crop="true" data-crop-aspect-ratio="1" style="display:none;" onchange="previewSelectedPhoto(this)" />
             </label>
 
             <div class="form-actions" style="margin-top:24px; display:flex; justify-content:flex-end; gap:10px; border-top:1px solid var(--border); padding-top:16px;">
@@ -911,6 +911,11 @@
         function openCreate() {
             document.getElementById('empBladeTitle').textContent = 'New Employee';
             document.getElementById('editEmpId').value = '';
+            document.getElementById('cropX').value = '';
+            document.getElementById('cropY').value = '';
+            document.getElementById('cropW').value = '';
+            document.getElementById('cropH').value = '';
+            document.getElementById('empImage').value = '';
             document.getElementById('firstNameF').value = '';
             document.getElementById('middleNameF').value = '';
             document.getElementById('lastNameF').value = '';
@@ -938,6 +943,11 @@
         function openEdit(data) {
             document.getElementById('empBladeTitle').textContent = 'Edit Employee Profile';
             document.getElementById('editEmpId').value = data.employeeId;
+            document.getElementById('cropX').value = '';
+            document.getElementById('cropY').value = '';
+            document.getElementById('cropW').value = '';
+            document.getElementById('cropH').value = '';
+            document.getElementById('empImage').value = '';
             document.getElementById('firstNameF').value = data.firstName || '';
             document.getElementById('middleNameF').value = data.middleName || '';
             document.getElementById('lastNameF').value = data.lastName || '';

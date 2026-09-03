@@ -53,7 +53,7 @@
     <link rel="stylesheet" href="~/css/command-palette.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/notification-center.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/pwa.css" asp-append-version="true" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" integrity="sha512-cyzxRvewl+FOKTtpBzYjW6x6IAYUCZy3sGP40hn+DQkqeluGRCax7qztK2ImL64SA+C7kVWdLI6wvdlStawhyw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="~/css/cropper.min.css" asp-append-version="true" />
     @await RenderSectionAsync("Styles", required: false)
     <script>
         window.appConfig = {
@@ -264,20 +264,23 @@
     </div>
 
     <!-- Global Crop Modal -->
-    <div class="modal-overlay" id="globalCropModal" hidden>
-        <div class="modal" role="dialog" aria-modal="true" style="max-width: 600px; width: 90%;">
-            <div class="modal-head">
-                <h3>Crop Thumbnail</h3>
-                <button type="button" class="btn-close" id="btnCancelCrop" aria-label="Close">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+    <div class="modal-overlay" id="globalCropModal" hidden style="display:none; align-items:center; justify-content:center; background:rgba(15,23,42,0.75); -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); position:fixed; inset:0;">
+        <div class="modal crop-modal-card" role="dialog" aria-modal="true" style="max-width:620px; width:92%; background:#ffffff !important; color:#0f172a !important; border-radius:14px; padding:22px; box-shadow:0 25px 60px -12px rgba(0,0,0,0.6); border:1px solid #e2e8f0; display:flex; flex-direction:column; position:relative;">
+            <div class="modal-head" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid #e2e8f0; padding-bottom:12px;">
+                <div>
+                    <h3 style="margin:0; font-size:1.15rem; font-weight:700; color:#0f172a;">Crop Image</h3>
+                    <span style="font-size:0.75rem; color:#64748b;">Drag the box corners to reposition or resize your selection</span>
+                </div>
+                <button type="button" class="btn-close" id="btnCancelCrop" aria-label="Close" style="background:none; border:none; cursor:pointer; color:#64748b; padding:4px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
             </div>
-            <div style="max-height: 60vh; overflow: hidden; background: #000; text-align: center; margin-bottom: 15px;">
-                <img id="cropperImage" src="" style="max-width: 100%; display: block;" />
+            <div style="height:380px; max-height:55vh; width:100%; overflow:hidden; background:#0f172a; border-radius:8px; position:relative; display:flex; align-items:center; justify-content:center; margin-bottom:16px;">
+                <img id="cropperImage" src="" style="max-width:100%; display:block;" />
             </div>
-            <div style="display:flex;justify-content:flex-end;gap:8px;">
-                <button type="button" class="button-command" id="btnCancelCrop2">Cancel</button>
-                <button type="button" class="button-primary" id="btnApplyCrop">Apply Crop</button>
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button type="button" id="btnCancelCrop2" style="cursor:pointer; padding:9px 18px; border-radius:8px; border:1px solid #cbd5e1; background:#f8fafc; color:#475569; font-weight:600; font-size:0.875rem;">Cancel</button>
+                <button type="button" id="btnApplyCrop" style="cursor:pointer; padding:9px 22px; border-radius:8px; border:none; background:#2563eb; color:#ffffff; font-weight:600; font-size:0.875rem; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 8px rgba(37,99,235,0.35);">Apply Crop</button>
             </div>
         </div>
     </div>
@@ -295,7 +298,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.1/dist/browser-image-compression.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js" integrity="sha512-6lplKUSl86rUVprDIjiW8DuOniNX8UDoRATqZSds/7t6zCQZfaCe3e5zcGaQwxa8Kpn5RTM9Fvl3X2lLV4grPQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="~/js/cropper.min.js" asp-append-version="true"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js" integrity="sha512-7rhBJh1om/W5Ztx7WiYOR9h2wlSaTmPyQMoHFtbT/FVNIA12y6S6I8HY9mrBS1uJ3dSU/R3qaSAXsGYuRjMDxg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="~/js/command-palette.js" asp-append-version="true"></script>

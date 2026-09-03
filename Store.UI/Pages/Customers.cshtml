@@ -540,6 +540,10 @@
 
         <form method="post" asp-page-handler="Create" enctype="multipart/form-data">
             @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="CropX" id="createCustCropX" />
+            <input type="hidden" asp-for="CropY" id="createCustCropY" />
+            <input type="hidden" asp-for="CropW" id="createCustCropW" />
+            <input type="hidden" asp-for="CropH" id="createCustCropH" />
 
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                 <div>
@@ -594,7 +598,7 @@
 
             <div style="margin-top:8px;">
                 <label for="createImageUpload">Profile Photo</label>
-                <input type="file" asp-for="ImageUpload" id="createImageUpload" accept="image/*" data-crop="true" />
+                <input type="file" asp-for="ImageUpload" id="createImageUpload" accept="image/*" data-crop="true" data-crop-aspect-ratio="1" />
             </div>
 
             <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
@@ -618,6 +622,10 @@
         <form method="post" asp-page-handler="Edit" enctype="multipart/form-data">
             @Html.AntiForgeryToken()
             <input type="hidden" asp-for="EditCustomerId" id="editCustomerId" />
+            <input type="hidden" asp-for="CropX" id="editCustCropX" />
+            <input type="hidden" asp-for="CropY" id="editCustCropY" />
+            <input type="hidden" asp-for="CropW" id="editCustCropW" />
+            <input type="hidden" asp-for="CropH" id="editCustCropH" />
 
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                 <div>
@@ -672,7 +680,7 @@
 
             <div style="margin-top:8px;">
                 <label for="editImageUpload">Update Photo</label>
-                <input type="file" asp-for="ImageUpload" id="editImageUpload" accept="image/*" data-crop="true" />
+                <input type="file" asp-for="ImageUpload" id="editImageUpload" accept="image/*" data-crop="true" data-crop-aspect-ratio="1" />
             </div>
 
             <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">

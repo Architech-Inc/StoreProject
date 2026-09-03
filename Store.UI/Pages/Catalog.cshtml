@@ -693,10 +693,10 @@
 
                 <div>
                     <label style="font-size:0.85rem;font-weight:600;display:block;margin-bottom:4px;">Product Photo</label>
-                    <input type="file" name="ImageUpload" id="imageInput" accept="image/*" 
+                    <input type="file" name="ImageUpload" id="imageInput" accept="image/*" data-crop="true" data-crop-aspect-ratio="1"
                            style="width:100%;padding:6px;border-radius:8px;border:1px solid var(--ops-border);font-size:0.85rem;" />
                     <div id="cropPreviewContainer" style="display:none;margin-top:10px;max-height:220px;overflow:hidden;border-radius:8px;">
-                        <img id="imageToCrop" src="" alt="Crop Preview" style="max-width:100%;" />
+                        <img id="imageToCrop" src="" alt="Crop Preview" style="max-width:100%;border-radius:6px;" />
                     </div>
                 </div>
 
@@ -1070,43 +1070,21 @@ function closeModal() {
 }
 
 /* ── Image Cropping & Zoom Lightbox ───────────────────────── */
-const imageInput = document.getElementById('imageInput');
 const cropContainer = document.getElementById('cropPreviewContainer');
 const imageToCrop = document.getElementById('imageToCrop');
 
-if (imageInput) {
-    imageInput.addEventListener('change', function (e) {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function (evt) {
-                destroyCropper();
-                imageToCrop.src = evt.target.result;
-                cropContainer.style.display = 'block';
-                if (typeof Cropper !== 'undefined') {
-                    cropperInstance = new Cropper(imageToCrop, {
-                        aspectRatio: 1,
-                        viewMode: 1,
-                        crop(event) {
-                            document.getElementById('cropX').value = Math.round(event.detail.x);
-                            document.getElementById('cropY').value = Math.round(event.detail.y);
-                            document.getElementById('cropW').value = Math.round(event.detail.width);
-                            document.getElementById('cropH').value = Math.round(event.detail.height);
-                        }
-                    });
-                }
-            };
-            reader.readAsDataURL(file);
-        }
-    });
-}
-
 function destroyCropper() {
-    if (cropperInstance) {
-        cropperInstance.destroy();
-        cropperInstance = null;
-    }
     if (cropContainer) cropContainer.style.display = 'none';
+    const cropX = document.getElementById('cropX');
+    if (cropX) cropX.value = '';
+    const cropY = document.getElementById('cropY');
+    if (cropY) cropY.value = '';
+    const cropW = document.getElementById('cropW');
+    if (cropW) cropW.value = '';
+    const cropH = document.getElementById('cropH');
+    if (cropH) cropH.value = '';
+    const imgInput = document.getElementById('imageInput');
+    if (imgInput) imgInput.value = '';
 }
 
 function viewImage(src) {
