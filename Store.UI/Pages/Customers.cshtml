@@ -837,6 +837,11 @@ async function openDrawer(customerId) {
     drawer.classList.add('active');
     backdrop.classList.add('active');
 
+    // Reflect selected customer in URL without reloading
+    const url = new URL(window.location);
+    url.searchParams.set('customerId', customerId);
+    window.history.replaceState({}, '', url);
+
     document.getElementById('drawerCustomerName').textContent = 'Loading Profile...';
     document.getElementById('drawerInvoicesList').innerHTML = '<p style="color:var(--text-secondary);font-size:0.85rem;">Loading invoices...</p>';
     document.getElementById('drawerLoyaltyList').innerHTML = '<p style="color:var(--text-secondary);font-size:0.85rem;">Loading transactions...</p>';
@@ -985,6 +990,21 @@ async function openDrawer(customerId) {
 function closeDrawer() {
     drawer.classList.remove('active');
     backdrop.classList.remove('active');
+
+    // Clean up 360 query parameters so drawer does not re-open on page refresh
+    const url = new URL(window.location);
+    let changed = false;
+    ['id', 'customerId', 'action'].forEach(p => {
+        if (url.searchParams.has(p)) {
+            url.searchParams.delete(p);
+            changed = true;
+        }
+    });
+    if (changed) {
+        const newSearch = url.searchParams.toString();
+        const newUrl = url.pathname + (newSearch ? '?' + newSearch : '') + url.hash;
+        window.history.replaceState({}, '', newUrl);
+    }
 }
 
 function printLoyaltyCard() {

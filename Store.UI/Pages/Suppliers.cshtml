@@ -886,6 +886,11 @@
         backdrop.classList.add('active');
         drawer.classList.add('active');
 
+        // Reflect selected supplier in URL without reloading
+        const url = new URL(window.location);
+        url.searchParams.set('supplierId', id);
+        window.history.replaceState({}, '', url);
+
         try {
             const resp = await fetch(`/Suppliers?handler=Profile&id=${id}`);
             const data = await resp.json();
@@ -1007,6 +1012,21 @@
     function closeSupplierDrawer() {
         document.getElementById('supplierDrawerBackdrop').classList.remove('active');
         document.getElementById('supplierDrawer').classList.remove('active');
+
+        // Clean up 360 query parameters from URL so drawer does not re-open on page refresh
+        const url = new URL(window.location);
+        let changed = false;
+        ['id', 'supplierId', 'action'].forEach(p => {
+            if (url.searchParams.has(p)) {
+                url.searchParams.delete(p);
+                changed = true;
+            }
+        });
+        if (changed) {
+            const newSearch = url.searchParams.toString();
+            const newUrl = url.pathname + (newSearch ? '?' + newSearch : '') + url.hash;
+            window.history.replaceState({}, '', newUrl);
+        }
     }
 
     function switchDrawerTab(tabId, btn) {

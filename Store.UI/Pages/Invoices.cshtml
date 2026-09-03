@@ -611,6 +611,12 @@
             drawer.classList.add('open');
             backdrop.classList.add('open');
             footer.style.display = 'none';
+
+            // Reflect selected invoice in URL without reloading
+            const url = new URL(window.location);
+            url.searchParams.set('id', invoiceId);
+            window.history.replaceState({}, '', url);
+
             body.innerHTML = `
                 <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
                     <p>Loading invoice data…</p>
@@ -633,6 +639,21 @@
         function closeInvoiceDrawer() {
             document.getElementById('invoiceDrawer').classList.remove('open');
             document.getElementById('drawerBackdrop').classList.remove('open');
+
+            // Clean up invoice query parameter so URL stays clean
+            const url = new URL(window.location);
+            let changed = false;
+            ['id', 'Id', 'action', 'Action'].forEach(p => {
+                if (url.searchParams.has(p)) {
+                    url.searchParams.delete(p);
+                    changed = true;
+                }
+            });
+            if (changed) {
+                const newSearch = url.searchParams.toString();
+                const newUrl = url.pathname + (newSearch ? '?' + newSearch : '') + url.hash;
+                window.history.replaceState({}, '', newUrl);
+            }
         }
 
         function renderDrawerDetails(inv) {
