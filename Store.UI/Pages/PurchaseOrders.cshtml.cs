@@ -26,6 +26,12 @@ public class PurchaseOrdersModel : SecurePageModel
     [BindProperty(SupportsGet = true)]
     public int PageNumber { get; set; } = 1;
 
+    [BindProperty(SupportsGet = true)]
+    public Guid? CreateItemId { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public int? Qty { get; set; }
+
     [BindProperty]
     public CreatePurchaseOrderRequest CreateRequest { get; set; } = new();
 

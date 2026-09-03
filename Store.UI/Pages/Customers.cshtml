@@ -711,29 +711,43 @@ const backdrop = document.getElementById('drawerBackdrop');
 
 function openCreateModal() {
     createModal.removeAttribute('hidden');
+    createModal.classList.add('active', 'open');
     document.getElementById('firstName').focus();
 }
 
 function closeCreateModal() {
     createModal.setAttribute('hidden', '');
+    createModal.classList.remove('active', 'open');
 }
 
 function openEditModal(c) {
-    document.getElementById('editCustomerId').value = c.customerId;
+    if (!c) return;
+    document.getElementById('editCustomerId').value = c.customerId || c.id || '';
     document.getElementById('editFirstName').value = c.firstName || '';
     document.getElementById('editMiddleName').value = c.middleName || '';
     document.getElementById('editLastName').value = c.lastName || '';
-    document.getElementById('editGender').value = c.gender || 'NotSpecified';
-    document.getElementById('editSegment').value = c.segment || 'Standard';
+
+    let genderVal = 'NotSpecified';
+    if (c.gender === 1 || c.gender === '1' || c.gender === 'Male') genderVal = 'Male';
+    else if (c.gender === 2 || c.gender === '2' || c.gender === 'Female') genderVal = 'Female';
+    document.getElementById('editGender').value = genderVal;
+
+    let segmentVal = 'Standard';
+    if (c.segment === 1 || c.segment === '1' || c.segment === 'Wholesale') segmentVal = 'Wholesale';
+    else if (c.segment === 2 || c.segment === '2' || c.segment === 'Vip') segmentVal = 'Vip';
+    document.getElementById('editSegment').value = segmentVal;
+
     if (window.PhoneInput) window.PhoneInput.setValue('#editPhone', c.primaryPhone || ''); else document.getElementById('editPhone').value = c.primaryPhone || '';
     document.getElementById('editEmail').value = c.primaryEmail || '';
     document.getElementById('editNotes').value = c.notes || '';
     editModal.removeAttribute('hidden');
+    editModal.classList.add('active', 'open');
     document.getElementById('editFirstName').focus();
 }
 
 function closeEditModal() {
     editModal.setAttribute('hidden', '');
+    editModal.classList.remove('active', 'open');
 }
 
 function editFromDrawer() {
@@ -749,11 +763,13 @@ function openLoyaltyModal() {
     document.getElementById('loyaltyPointsDelta').value = '';
     document.getElementById('loyaltyReason').value = '';
     loyaltyModal.removeAttribute('hidden');
+    loyaltyModal.classList.add('active', 'open');
     document.getElementById('loyaltyPointsDelta').focus();
 }
 
 function closeLoyaltyModal() {
     loyaltyModal.setAttribute('hidden', '');
+    loyaltyModal.classList.remove('active', 'open');
 }
 
 async function submitLoyaltyAdjust() {

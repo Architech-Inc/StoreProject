@@ -608,7 +608,7 @@
     background: rgba(15, 23, 42, 0.6);
     -webkit-backdrop-filter: blur(4px);
     backdrop-filter: blur(4px);
-    z-index: var(--z-overlay, 9990);
+    z-index: var(--z-modal, 9992);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -618,7 +618,9 @@
     transition: opacity 0.2s ease;
 }
 
-.inv-modal-overlay.open {
+.inv-modal-overlay.open,
+.inv-modal-overlay.active,
+.inv-modal-overlay:not([hidden]) {
     opacity: 1;
     pointer-events: auto;
 }
@@ -2244,12 +2246,22 @@
     transition: opacity 0.2s ease, visibility 0.2s ease;
 }
 
-.modal-overlay.active {
+.modal-overlay.active,
+.modal-overlay.open,
+.modal-overlay:not([hidden]) {
     opacity: 1;
     visibility: visible;
 }
 
-.modal-card {
+.modal-overlay[hidden] {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+.modal-card,
+.modal {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 16px;
@@ -2261,7 +2273,12 @@
     transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.modal-overlay.active .modal-card {
+.modal-overlay.active .modal-card,
+.modal-overlay.open .modal-card,
+.modal-overlay:not([hidden]) .modal-card,
+.modal-overlay.active .modal,
+.modal-overlay.open .modal,
+.modal-overlay:not([hidden]) .modal {
     transform: scale(1);
 }
 

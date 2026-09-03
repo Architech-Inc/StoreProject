@@ -487,6 +487,32 @@
                 if (itmRes.ok) {
                     catalogItemsCache = await itmRes.json();
                 }
+
+                // Check for Quick PO URL parameters (e.g. ?createItemId=...&qty=10)
+                const urlParams = new URLSearchParams(window.location.search);
+                const createItemId = urlParams.get('createItemId') || '@(Model.CreateItemId.HasValue ? Model.CreateItemId.Value.ToString() : "")';
+                const qtyParam = urlParams.get('qty') || '@(Model.Qty.HasValue ? Model.Qty.Value.ToString() : "")';
+                if (createItemId && createItemId !== '' && createItemId !== '00000000-0000-0000-0000-000000000000') {
+                    openCreatePoModal();
+                    const row = document.getElementById('poItemsBody')?.firstElementChild;
+                    if (row) {
+                        const sel = row.querySelector('select');
+                        const qtyInput = row.querySelector('.po-qty');
+                        if (sel) {
+                            sel.value = createItemId;
+                            const rowIdParts = row.id.split('_');
+                            const idx = rowIdParts.length > 1 ? rowIdParts[1] : 0;
+                            handleItemSelect(sel, idx);
+                        }
+                        if (qtyInput && qtyParam) {
+                            const parsedQty = parseInt(qtyParam, 10);
+                            if (parsedQty > 0) {
+                                qtyInput.value = parsedQty;
+                            }
+                        }
+                        recalcPoSummary();
+                    }
+                }
             } catch (e) {
                 console.error("Init catalog failed", e);
             }

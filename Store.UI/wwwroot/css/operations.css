@@ -238,11 +238,11 @@ tbody tr:hover {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: var(--z-overlay, 9990);
+    z-index: var(--z-modal, 9992);
 }
 
 .modal-overlay[hidden] {
-    display: none;
+    display: none !important;
 }
 
 .modal {
