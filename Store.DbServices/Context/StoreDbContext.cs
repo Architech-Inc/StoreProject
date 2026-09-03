@@ -100,6 +100,10 @@ public class StoreDbContext : DbContext
     public DbSet<UserBranchRole> UserBranchRoles => Set<UserBranchRole>();
     public DbSet<StockTransfer> StockTransfers => Set<StockTransfer>();
     public DbSet<StockTransferItem> StockTransferItems => Set<StockTransferItem>();
+    public DbSet<BranchItemStock> BranchItemStocks => Set<BranchItemStock>();
+    public DbSet<PersonnelTransferHistory> PersonnelTransferHistories => Set<PersonnelTransferHistory>();
+    public DbSet<DiscountBranch> DiscountBranches => Set<DiscountBranch>();
+    public DbSet<LoyaltyCampaignBranch> LoyaltyCampaignBranches => Set<LoyaltyCampaignBranch>();
 
     // ---- Wastage & Override ----
     public DbSet<WastageEntry> WastageEntries => Set<WastageEntry>();
@@ -341,6 +345,93 @@ public class StoreDbContext : DbContext
 
         modelBuilder.Entity<CashVarianceRecord>()
             .HasIndex(v => new { v.Status, v.DateCreated });
+
+        // BranchItemStock composite key & relationships
+        modelBuilder.Entity<BranchItemStock>()
+            .HasKey(x => new { x.BranchId, x.ItemId });
+
+        modelBuilder.Entity<BranchItemStock>()
+            .HasOne(x => x.Branch)
+            .WithMany(b => b.ItemStocks)
+            .HasForeignKey(x => x.BranchId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<BranchItemStock>()
+            .HasOne(x => x.Item)
+            .WithMany(i => i.BranchStocks)
+            .HasForeignKey(x => x.ItemId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // DiscountBranch composite key & relationships
+        modelBuilder.Entity<DiscountBranch>()
+            .HasKey(x => new { x.DiscountId, x.BranchId });
+
+        modelBuilder.Entity<DiscountBranch>()
+            .HasOne(x => x.Discount)
+            .WithMany(d => d.DiscountBranches)
+            .HasForeignKey(x => x.DiscountId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<DiscountBranch>()
+            .HasOne(x => x.Branch)
+            .WithMany(b => b.DiscountBranches)
+            .HasForeignKey(x => x.BranchId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // LoyaltyCampaignBranch composite key & relationships
+        modelBuilder.Entity<LoyaltyCampaignBranch>()
+            .HasKey(x => new { x.LoyaltyCampaignId, x.BranchId });
+
+        modelBuilder.Entity<LoyaltyCampaignBranch>()
+            .HasOne(x => x.LoyaltyCampaign)
+            .WithMany(c => c.CampaignBranches)
+            .HasForeignKey(x => x.LoyaltyCampaignId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<LoyaltyCampaignBranch>()
+            .HasOne(x => x.Branch)
+            .WithMany(b => b.CampaignBranches)
+            .HasForeignKey(x => x.BranchId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // PersonnelTransferHistory relationships
+        modelBuilder.Entity<PersonnelTransferHistory>()
+            .HasOne(x => x.Employee)
+            .WithMany(e => e.TransferHistories)
+            .HasForeignKey(x => x.EmployeeId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<PersonnelTransferHistory>()
+            .HasOne(x => x.FromBranch)
+            .WithMany(b => b.OutgoingTransfers)
+            .HasForeignKey(x => x.FromBranchId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<PersonnelTransferHistory>()
+            .HasOne(x => x.ToBranch)
+            .WithMany(b => b.IncomingTransfers)
+            .HasForeignKey(x => x.ToBranchId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<PersonnelTransferHistory>()
+            .HasOne(x => x.ApprovedByUser)
+            .WithMany()
+            .HasForeignKey(x => x.ApprovedByUserId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        // Employee HomeBranch relationship
+        modelBuilder.Entity<Employee>()
+            .HasOne(x => x.HomeBranch)
+            .WithMany(b => b.Employees)
+            .HasForeignKey(x => x.HomeBranchId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        // StockMovement Branch relationship
+        modelBuilder.Entity<StockMovement>()
+            .HasOne(x => x.Branch)
+            .WithMany()
+            .HasForeignKey(x => x.BranchId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 
     private static void ApplySnakeCaseNaming(ModelBuilder modelBuilder)

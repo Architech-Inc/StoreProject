@@ -87,4 +87,32 @@ public class BranchManager : IBranchManager
 
         return (true, null);
     }
+
+    public async Task<PersonnelTransferDto?> TransferPersonnelAsync(TransferEmployeeRequest request, CancellationToken ct = default)
+    {
+        return await _apiClient.PostAsync<PersonnelTransferDto>("/api/admin/branches/transfers", request, ct);
+    }
+
+    public async Task<List<PersonnelTransferDto>> GetTransfersAsync(Guid? employeeId = null, int? branchId = null, CancellationToken ct = default)
+    {
+        var query = string.Empty;
+        if (employeeId.HasValue && branchId.HasValue)
+            query = $"?employeeId={employeeId.Value}&branchId={branchId.Value}";
+        else if (employeeId.HasValue)
+            query = $"?employeeId={employeeId.Value}";
+        else if (branchId.HasValue)
+            query = $"?branchId={branchId.Value}";
+
+        return await _apiClient.GetAsync<List<PersonnelTransferDto>>($"/api/admin/branches/transfers{query}", ct) ?? new List<PersonnelTransferDto>();
+    }
+
+    public async Task<List<BranchItemStockDto>> GetBranchStockAsync(int branchId, CancellationToken ct = default)
+    {
+        return await _apiClient.GetAsync<List<BranchItemStockDto>>($"/api/admin/branches/{branchId}/stock", ct) ?? new List<BranchItemStockDto>();
+    }
+
+    public async Task<BranchItemStockDto?> UpdateBranchStockAsync(int branchId, UpdateBranchStockRequest request, CancellationToken ct = default)
+    {
+        return await _apiClient.PostAsync<BranchItemStockDto>($"/api/admin/branches/{branchId}/stock", request, ct);
+    }
 }

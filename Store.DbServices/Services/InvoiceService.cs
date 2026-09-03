@@ -325,6 +325,17 @@ public class InvoiceService : IInvoiceService
                     item.InStock -= line.Quantity;
                     _uow.Repository<Item>().Update(item);
 
+                    if (invoice.BranchId.HasValue)
+                    {
+                        var branchStock = await _uow.Repository<BranchItemStock>().Query()
+                            .FirstOrDefaultAsync(s => s.BranchId == invoice.BranchId.Value && s.ItemId == line.ItemId, ct);
+                        if (branchStock != null)
+                        {
+                            branchStock.InStock = Math.Max(0, branchStock.InStock - line.Quantity);
+                            _uow.Repository<BranchItemStock>().Update(branchStock);
+                        }
+                    }
+
                     sales.Add(sale);
                     total += lineTotal;
                 }
@@ -353,7 +364,7 @@ public class InvoiceService : IInvoiceService
                 // If coupon code provided, record usage
                 if (!string.IsNullOrWhiteSpace(request.CouponCode))
                 {
-                    var discount = await _discountService.ValidateCouponAsync(request.CouponCode.Trim());
+                    var discount = await _discountService.ValidateCouponAsync(request.CouponCode.Trim(), invoice.BranchId);
                     if (discount != null)
                     {
                         decimal discountAmount = 0;

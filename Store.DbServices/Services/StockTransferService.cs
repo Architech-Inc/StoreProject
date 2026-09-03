@@ -230,6 +230,15 @@ public class StockTransferService : IStockTransferService
             {
                 item.DispatchedQuantity = line.DispatchedQuantity;
 
+                // Branch-level inventory deduction
+                var fromStock = await _uow.Repository<BranchItemStock>().Query()
+                    .FirstOrDefaultAsync(s => s.BranchId == transfer.FromBranchId && s.ItemId == item.ItemId);
+                if (fromStock is not null)
+                {
+                    fromStock.InStock = Math.Max(0, fromStock.InStock - line.DispatchedQuantity);
+                    _uow.Repository<BranchItemStock>().Update(fromStock);
+                }
+
                 // Immutable Stock Movement Audit (Dispatch Outflow)
                 var catalogItem = item.Item ?? await _uow.Repository<Item>().GetByIdAsync(item.ItemId);
                 if (catalogItem is not null)
@@ -239,6 +248,7 @@ public class StockTransferService : IStockTransferService
 
                     var movement = new StockMovement
                     {
+                        BranchId = transfer.FromBranchId,
                         ItemId = catalogItem.ItemId,
                         MovementType = StockMovementType.Transfer,
                         QuantityDelta = -line.DispatchedQuantity,
@@ -291,8 +301,29 @@ public class StockTransferService : IStockTransferService
             {
                 item.ReceivedQuantity = line.ReceivedQuantity;
 
-                // Immutable Stock Movement Audit (Receive Inflow)
                 var catalogItem = item.Item ?? await _uow.Repository<Item>().GetByIdAsync(item.ItemId);
+
+                // Branch-level inventory increment
+                var toStock = await _uow.Repository<BranchItemStock>().Query()
+                    .FirstOrDefaultAsync(s => s.BranchId == transfer.ToBranchId && s.ItemId == item.ItemId);
+                if (toStock is not null)
+                {
+                    toStock.InStock += line.ReceivedQuantity;
+                    _uow.Repository<BranchItemStock>().Update(toStock);
+                }
+                else
+                {
+                    toStock = new BranchItemStock
+                    {
+                        BranchId = transfer.ToBranchId,
+                        ItemId = item.ItemId,
+                        InStock = line.ReceivedQuantity,
+                        ReorderLevel = catalogItem?.ReorderLevel
+                    };
+                    await _uow.Repository<BranchItemStock>().AddAsync(toStock);
+                }
+
+                // Immutable Stock Movement Audit (Receive Inflow)
                 if (catalogItem is not null)
                 {
                     var stockBefore = catalogItem.InStock;
@@ -300,6 +331,7 @@ public class StockTransferService : IStockTransferService
 
                     var movement = new StockMovement
                     {
+                        BranchId = transfer.ToBranchId,
                         ItemId = catalogItem.ItemId,
                         MovementType = StockMovementType.Transfer,
                         QuantityDelta = line.ReceivedQuantity,

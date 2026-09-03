@@ -9,6 +9,7 @@ public class Employee : BaseEntity
     public Guid EmployeeId { get; set; }
     public int? DepartmentId { get; set; }
     public int? SalaryId { get; set; }
+    public int? HomeBranchId { get; set; }
     public string FirstName { get; set; } = string.Empty;
     public string? MiddleName { get; set; }
     public string LastName { get; set; } = string.Empty;
@@ -24,10 +25,12 @@ public class Employee : BaseEntity
     // Navigation
     public Department? Department { get; set; }
     public Salary? Salary { get; set; }
+    public Branch? HomeBranch { get; set; }
 
     public ICollection<User> Users { get; set; } = new List<User>();
     public ICollection<EmployeeEmail> Emails { get; set; } = new List<EmployeeEmail>();
     public ICollection<EmployeePhone> Phones { get; set; } = new List<EmployeePhone>();
     public ICollection<EmployeeLocation> Locations { get; set; } = new List<EmployeeLocation>();
     public ICollection<EmployeePrivilege> Privileges { get; set; } = new List<EmployeePrivilege>();
+    public ICollection<PersonnelTransferHistory> TransferHistories { get; set; } = new List<PersonnelTransferHistory>();
 }

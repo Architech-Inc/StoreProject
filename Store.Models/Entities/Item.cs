@@ -37,4 +37,5 @@ public class Item : BaseEntity
     public ICollection<Batch> Batches { get; set; } = new List<Batch>();
     public ICollection<Sale> Sales { get; set; } = new List<Sale>();
     public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
+    public ICollection<BranchItemStock> BranchStocks { get; set; } = new List<BranchItemStock>();
 }

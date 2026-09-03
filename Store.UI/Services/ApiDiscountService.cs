@@ -68,8 +68,12 @@ public class ApiDiscountService : IDiscountService
     public async Task<bool> DeleteAsync(int id)
         => await _client.DeleteAsync($"/api/discounts/{id}");
 
-    public async Task<DiscountDto?> ValidateCouponAsync(string couponCode)
-        => await _client.GetAsync<DiscountDto>($"/api/discounts/validate-coupon?code={Uri.EscapeDataString(couponCode)}");
+    public async Task<DiscountDto?> ValidateCouponAsync(string couponCode, int? branchId = null)
+    {
+        var url = $"/api/discounts/validate-coupon?code={Uri.EscapeDataString(couponCode)}";
+        if (branchId.HasValue) url += $"&branchId={branchId.Value}";
+        return await _client.GetAsync<DiscountDto>(url);
+    }
 
     public async Task IncrementUsageAsync(int discountId)
         => await _client.PostAsync($"/api/discounts/{discountId}/increment-usage", null);

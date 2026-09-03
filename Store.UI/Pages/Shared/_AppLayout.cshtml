@@ -1,6 +1,7 @@
 @using Store.Models.DTOs.Operations
 @using StoreUI.Services
 @inject StoreUI.Services.ICurrentUserContext CurrentUserContext
+@inject StoreUI.Services.IBranchManager BranchManager
 @inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 @{
     var token = Context.Session.GetString("access_token") ?? string.Empty;
@@ -23,6 +24,24 @@
     var canAdminSettings = perms.Contains(PermissionKeys.AdminSettings) || canAdminRoles;
     var hasOpsSection    = canInventoryRead || canPricingRead || canCashRead || canReportsRead || canPaymentsRead;
     var hasAdminSection  = canAdminBranches || canAdminRoles || canAdminUsers || canAdminSettings;
+
+    var userBranches = new List<BranchDto>();
+    int? activeBranchId = Context.Session.GetInt32("active_branch_id");
+    if (!string.IsNullOrWhiteSpace(token))
+    {
+        try
+        {
+            var branches = await BranchManager.GetBranchesAsync();
+            userBranches = branches.Where(b => b.IsActive).ToList();
+            if (!activeBranchId.HasValue && userBranches.Count > 0)
+            {
+                activeBranchId = userBranches[0].BranchId;
+                Context.Session.SetInt32("active_branch_id", activeBranchId.Value);
+                Context.Session.SetString("active_branch_name", userBranches[0].Name);
+            }
+        }
+        catch { }
+    }
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -197,6 +216,21 @@
                     }
                 </div>
                 <div class="topbar-actions">
+                    @if (userBranches != null && userBranches.Count > 0)
+                    {
+                        <div class="topbar-branch-switcher" id="topbarBranchSwitcher" style="display:flex; align-items:center; gap:6px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:4px 10px; font-size:0.82rem;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#059669" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                            <span style="color:#64748b; font-weight:600; font-size:0.78rem;">Branch:</span>
+                            <select id="branchContextSelect" style="border:none; background:transparent; font-weight:700; color:#0f172a; font-size:0.80rem; cursor:pointer; outline:none;" onchange="switchGlobalBranchContext(this.value, this.options[this.selectedIndex].text)">
+                                @foreach (var b in userBranches)
+                                {
+                                    <!option value="@b.BranchId" @(b.BranchId == activeBranchId ? "selected" : "")>@b.Name (@b.Code)</!option>
+                                }
+                            </select>
+                        </div>
+                    }
                     <div class="topbar-search-trigger" id="topbarSearchTrigger" role="button" tabindex="0" title="Quick Search (Ctrl + K)">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                         <span>Search items, invoices, customers...</span>
@@ -390,6 +424,19 @@
                 }
             }
         });
+
+        // Branch context switching
+        window.switchGlobalBranchContext = (branchId, branchName) => {
+            fetch('/api/session/switch-branch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ branchId: parseInt(branchId), branchName: branchName })
+            }).then(res => {
+                if (res.ok) {
+                    window.location.reload();
+                }
+            }).catch(err => console.error('Failed to switch branch context:', err));
+        };
     })();
     </script>
 </body>

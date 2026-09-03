@@ -1135,7 +1135,9 @@ public class StoreOperationsService : IStoreOperationsService
             Name = b.Name,
             Code = b.Code,
             Address = b.Address,
-            IsActive = b.IsActive
+            IsActive = b.IsActive,
+            PriceMultiplier = b.PriceMultiplier,
+            TaxRateOverride = b.TaxRateOverride
         }).ToList();
     }
 
@@ -1151,6 +1153,8 @@ public class StoreOperationsService : IStoreOperationsService
             branch.Code = request.Code;
             branch.Address = request.Address;
             branch.IsActive = request.IsActive;
+            branch.PriceMultiplier = request.PriceMultiplier ?? 1.0m;
+            branch.TaxRateOverride = request.TaxRateOverride;
             _uow.Repository<Branch>().Update(branch);
         }
         else
@@ -1160,7 +1164,9 @@ public class StoreOperationsService : IStoreOperationsService
                 Name = request.Name,
                 Code = request.Code,
                 Address = request.Address,
-                IsActive = request.IsActive
+                IsActive = request.IsActive,
+                PriceMultiplier = request.PriceMultiplier ?? 1.0m,
+                TaxRateOverride = request.TaxRateOverride
             };
             await _uow.Repository<Branch>().AddAsync(branch, ct);
         }
@@ -1171,7 +1177,9 @@ public class StoreOperationsService : IStoreOperationsService
             Name = branch.Name,
             Code = branch.Code,
             Address = branch.Address,
-            IsActive = branch.IsActive
+            IsActive = branch.IsActive,
+            PriceMultiplier = branch.PriceMultiplier,
+            TaxRateOverride = branch.TaxRateOverride
         };
     }
 
@@ -1196,7 +1204,11 @@ public class StoreOperationsService : IStoreOperationsService
             BranchId = x.BranchId,
             BranchName = x.Branch.Name,
             RoleId = x.RoleId,
-            RoleName = x.Role.Name
+            RoleName = x.Role.Name,
+            ValidFrom = x.ValidFrom,
+            ValidTo = x.ValidTo,
+            GrantReason = x.GrantReason,
+            IsActive = x.IsActive
         }).ToList();
     }
 
@@ -1207,6 +1219,13 @@ public class StoreOperationsService : IStoreOperationsService
 
         if (existing is not null)
         {
+            existing.ValidFrom = request.ValidFrom?.ToUniversalTime();
+            existing.ValidTo = request.ValidTo?.ToUniversalTime();
+            existing.GrantReason = request.GrantReason;
+            existing.IsActive = true;
+            _uow.Repository<UserBranchRole>().Update(existing);
+            await _uow.SaveChangesAsync(ct);
+
             var existingBranch = await _uow.Repository<Branch>().Query().AsNoTracking().FirstAsync(b => b.BranchId == existing.BranchId, ct);
             var existingUser = await _uow.Repository<User>().Query().AsNoTracking().FirstAsync(u => u.UserId == existing.UserId, ct);
             var existingRole = await _uow.Repository<Role>().Query().AsNoTracking().FirstAsync(r => r.RoleId == existing.RoleId, ct);
@@ -1218,7 +1237,11 @@ public class StoreOperationsService : IStoreOperationsService
                 BranchId = existing.BranchId,
                 BranchName = existingBranch.Name,
                 RoleId = existing.RoleId,
-                RoleName = existingRole.Name
+                RoleName = existingRole.Name,
+                ValidFrom = existing.ValidFrom,
+                ValidTo = existing.ValidTo,
+                GrantReason = existing.GrantReason,
+                IsActive = existing.IsActive
             };
         }
 
@@ -1226,7 +1249,11 @@ public class StoreOperationsService : IStoreOperationsService
         {
             UserId = request.UserId,
             BranchId = request.BranchId,
-            RoleId = request.RoleId
+            RoleId = request.RoleId,
+            ValidFrom = request.ValidFrom?.ToUniversalTime(),
+            ValidTo = request.ValidTo?.ToUniversalTime(),
+            GrantReason = request.GrantReason,
+            IsActive = true
         };
         await _uow.Repository<UserBranchRole>().AddAsync(ubr, ct);
         await _uow.SaveChangesAsync(ct);
@@ -1243,7 +1270,11 @@ public class StoreOperationsService : IStoreOperationsService
             BranchId = ubr.BranchId,
             BranchName = branch.Name,
             RoleId = ubr.RoleId,
-            RoleName = role.Name
+            RoleName = role.Name,
+            ValidFrom = ubr.ValidFrom,
+            ValidTo = ubr.ValidTo,
+            GrantReason = ubr.GrantReason,
+            IsActive = ubr.IsActive
         };
     }
 
@@ -1255,6 +1286,240 @@ public class StoreOperationsService : IStoreOperationsService
         _uow.Repository<UserBranchRole>().Remove(ubr);
         await _uow.SaveChangesAsync(ct);
         return true;
+    }
+
+    public async Task<PersonnelTransferDto> TransferPersonnelAsync(TransferEmployeeRequest request, Guid actingUserId, CancellationToken ct = default)
+    {
+        var employee = await _uow.Repository<Employee>().Query()
+            .Include(e => e.Users)
+            .FirstOrDefaultAsync(e => e.EmployeeId == request.EmployeeId, ct);
+        if (employee is null) throw new KeyNotFoundException($"Employee {request.EmployeeId} not found.");
+
+        var fromBranchId = employee.HomeBranchId ?? request.ToBranchId;
+        employee.HomeBranchId = request.ToBranchId;
+        _uow.Repository<Employee>().Update(employee);
+
+        var transfer = new PersonnelTransferHistory
+        {
+            EmployeeId = employee.EmployeeId,
+            FromBranchId = fromBranchId,
+            ToBranchId = request.ToBranchId,
+            TransferType = (PersonnelTransferType)request.TransferType,
+            EffectiveDate = request.EffectiveDate.ToUniversalTime(),
+            ExpectedEndDate = request.ExpectedEndDate?.ToUniversalTime(),
+            Reason = request.Reason,
+            ApprovedByUserId = actingUserId != Guid.Empty ? actingUserId : null
+        };
+        await _uow.Repository<PersonnelTransferHistory>().AddAsync(transfer, ct);
+
+        foreach (var user in employee.Users)
+        {
+            var roleId = request.DestinationRoleId ?? user.RoleId;
+            if (request.TransferType == 0) // Permanent
+            {
+                var oldAssignments = await _uow.Repository<UserBranchRole>().Query()
+                    .Where(x => x.UserId == user.UserId && x.BranchId == fromBranchId)
+                    .ToListAsync(ct);
+                foreach (var old in oldAssignments)
+                {
+                    old.IsActive = false;
+                    old.ValidTo = DateTime.UtcNow;
+                    _uow.Repository<UserBranchRole>().Update(old);
+                }
+            }
+
+            var newAssignment = await _uow.Repository<UserBranchRole>().Query()
+                .FirstOrDefaultAsync(x => x.UserId == user.UserId && x.BranchId == request.ToBranchId && x.RoleId == roleId, ct);
+            if (newAssignment is null)
+            {
+                newAssignment = new UserBranchRole
+                {
+                    UserId = user.UserId,
+                    BranchId = request.ToBranchId,
+                    RoleId = roleId,
+                    ValidFrom = request.EffectiveDate.ToUniversalTime(),
+                    ValidTo = request.ExpectedEndDate?.ToUniversalTime(),
+                    GrantReason = request.Reason ?? (request.TransferType == 1 ? "Temporary Rotation" : "Employee Transfer"),
+                    IsActive = true
+                };
+                await _uow.Repository<UserBranchRole>().AddAsync(newAssignment, ct);
+            }
+            else
+            {
+                newAssignment.IsActive = true;
+                newAssignment.ValidFrom = request.EffectiveDate.ToUniversalTime();
+                newAssignment.ValidTo = request.ExpectedEndDate?.ToUniversalTime();
+                newAssignment.GrantReason = request.Reason;
+                _uow.Repository<UserBranchRole>().Update(newAssignment);
+            }
+        }
+
+        await _uow.SaveChangesAsync(ct);
+
+        var fromBranch = await _uow.Repository<Branch>().Query().AsNoTracking().FirstOrDefaultAsync(b => b.BranchId == fromBranchId, ct);
+        var toBranch = await _uow.Repository<Branch>().Query().AsNoTracking().FirstAsync(b => b.BranchId == request.ToBranchId, ct);
+        var approver = actingUserId != Guid.Empty
+            ? await _uow.Repository<User>().Query().AsNoTracking().FirstOrDefaultAsync(u => u.UserId == actingUserId, ct)
+            : null;
+
+        return new PersonnelTransferDto
+        {
+            PersonnelTransferId = transfer.PersonnelTransferId,
+            EmployeeId = employee.EmployeeId,
+            EmployeeName = $"{employee.FirstName} {employee.LastName}".Trim(),
+            FromBranchId = fromBranchId,
+            FromBranchName = fromBranch?.Name ?? "HQ",
+            ToBranchId = request.ToBranchId,
+            ToBranchName = toBranch.Name,
+            TransferType = transfer.TransferType.ToString(),
+            EffectiveDate = transfer.EffectiveDate,
+            ExpectedEndDate = transfer.ExpectedEndDate,
+            Reason = transfer.Reason,
+            ApprovedByUserName = approver?.Username,
+            DateCreated = transfer.DateCreated
+        };
+    }
+
+    public async Task<IReadOnlyList<PersonnelTransferDto>> GetPersonnelTransfersAsync(Guid? employeeId = null, int? branchId = null, CancellationToken ct = default)
+    {
+        var query = _uow.Repository<PersonnelTransferHistory>().Query()
+            .Include(t => t.Employee)
+            .Include(t => t.FromBranch)
+            .Include(t => t.ToBranch)
+            .Include(t => t.ApprovedByUser)
+            .AsNoTracking();
+
+        if (employeeId.HasValue) query = query.Where(t => t.EmployeeId == employeeId.Value);
+        if (branchId.HasValue) query = query.Where(t => t.FromBranchId == branchId.Value || t.ToBranchId == branchId.Value);
+
+        var list = await query.OrderByDescending(t => t.EffectiveDate).ToListAsync(ct);
+        return list.Select(t => new PersonnelTransferDto
+        {
+            PersonnelTransferId = t.PersonnelTransferId,
+            EmployeeId = t.EmployeeId,
+            EmployeeName = $"{t.Employee.FirstName} {t.Employee.LastName}".Trim(),
+            FromBranchId = t.FromBranchId,
+            FromBranchName = t.FromBranch.Name,
+            ToBranchId = t.ToBranchId,
+            ToBranchName = t.ToBranch.Name,
+            TransferType = t.TransferType.ToString(),
+            EffectiveDate = t.EffectiveDate,
+            ExpectedEndDate = t.ExpectedEndDate,
+            Reason = t.Reason,
+            ApprovedByUserName = t.ApprovedByUser?.Username,
+            DateCreated = t.DateCreated
+        }).ToList();
+    }
+
+    public async Task<IReadOnlyList<BranchItemStockDto>> GetBranchStocksAsync(int branchId, CancellationToken ct = default)
+    {
+        var branch = await _uow.Repository<Branch>().Query().AsNoTracking().FirstOrDefaultAsync(b => b.BranchId == branchId, ct);
+        if (branch is null) throw new KeyNotFoundException($"Branch {branchId} not found.");
+
+        var stocks = await _uow.Repository<BranchItemStock>().Query()
+            .Include(s => s.Item)
+            .Include(s => s.Branch)
+            .Where(s => s.BranchId == branchId)
+            .AsNoTracking()
+            .ToListAsync(ct);
+
+        return stocks.Select(s =>
+        {
+            var effective = s.CustomUnitPrice ?? Math.Round(s.Item.UnitPrice * branch.PriceMultiplier, 2);
+            return new BranchItemStockDto
+            {
+                BranchId = s.BranchId,
+                BranchName = s.Branch.Name,
+                ItemId = s.ItemId,
+                ItemName = s.Item.Name,
+                InStock = s.InStock,
+                ReorderLevel = s.ReorderLevel ?? s.Item.ReorderLevel,
+                BaseUnitPrice = s.Item.UnitPrice,
+                CustomUnitPrice = s.CustomUnitPrice,
+                EffectiveUnitPrice = effective,
+                CustomCostPrice = s.CustomCostPrice
+            };
+        }).ToList();
+    }
+
+    public async Task<BranchItemStockDto> UpdateBranchStockAsync(UpdateBranchStockRequest request, Guid? actingUserId = null, CancellationToken ct = default)
+    {
+        var branch = await _uow.Repository<Branch>().Query().AsNoTracking().FirstOrDefaultAsync(b => b.BranchId == request.BranchId, ct);
+        if (branch is null) throw new KeyNotFoundException($"Branch {request.BranchId} not found.");
+
+        var item = await _uow.Repository<Item>().Query().AsNoTracking().FirstOrDefaultAsync(i => i.ItemId == request.ItemId, ct);
+        if (item is null) throw new KeyNotFoundException($"Item {request.ItemId} not found.");
+
+        var stock = await _uow.Repository<BranchItemStock>().Query()
+            .FirstOrDefaultAsync(s => s.BranchId == request.BranchId && s.ItemId == request.ItemId, ct);
+
+        if (stock is null)
+        {
+            stock = new BranchItemStock
+            {
+                BranchId = request.BranchId,
+                ItemId = request.ItemId,
+                InStock = request.AbsoluteInStock ?? Math.Max(0, request.InStockDelta ?? 0),
+                ReorderLevel = request.ReorderLevel,
+                CustomUnitPrice = request.CustomUnitPrice,
+                CustomCostPrice = request.CustomCostPrice
+            };
+            await _uow.Repository<BranchItemStock>().AddAsync(stock, ct);
+        }
+        else
+        {
+            var stockBefore = stock.InStock;
+            if (request.AbsoluteInStock.HasValue)
+            {
+                stock.InStock = Math.Max(0, request.AbsoluteInStock.Value);
+            }
+            else if (request.InStockDelta.HasValue)
+            {
+                stock.InStock = Math.Max(0, stock.InStock + request.InStockDelta.Value);
+            }
+
+            if (request.ReorderLevel.HasValue) stock.ReorderLevel = request.ReorderLevel.Value;
+            if (request.CustomUnitPrice.HasValue) stock.CustomUnitPrice = request.CustomUnitPrice.Value;
+            if (request.CustomCostPrice.HasValue) stock.CustomCostPrice = request.CustomCostPrice.Value;
+
+            var delta = stock.InStock - stockBefore;
+            if (delta != 0)
+            {
+                var movement = new StockMovement
+                {
+                    BranchId = request.BranchId,
+                    ItemId = request.ItemId,
+                    MovementType = StockMovementType.Adjustment,
+                    QuantityDelta = delta,
+                    StockBefore = stockBefore,
+                    StockAfter = stock.InStock,
+                    UnitCost = stock.CustomCostPrice ?? item.CostPrice,
+                    UnitPrice = stock.CustomUnitPrice ?? item.UnitPrice,
+                    Reason = $"Manual branch stock adjustment at {branch.Name}",
+                    PerformedByUserId = actingUserId
+                };
+                await _uow.Repository<StockMovement>().AddAsync(movement, ct);
+            }
+
+            _uow.Repository<BranchItemStock>().Update(stock);
+        }
+
+        await _uow.SaveChangesAsync(ct);
+
+        var effectivePrice = stock.CustomUnitPrice ?? Math.Round(item.UnitPrice * branch.PriceMultiplier, 2);
+        return new BranchItemStockDto
+        {
+            BranchId = stock.BranchId,
+            BranchName = branch.Name,
+            ItemId = stock.ItemId,
+            ItemName = item.Name,
+            InStock = stock.InStock,
+            ReorderLevel = stock.ReorderLevel ?? item.ReorderLevel,
+            BaseUnitPrice = item.UnitPrice,
+            CustomUnitPrice = stock.CustomUnitPrice,
+            EffectiveUnitPrice = effectivePrice,
+            CustomCostPrice = stock.CustomCostPrice
+        };
     }
 
     public async Task<BranchPerformanceDto> GetBranchPerformanceAsync(int branchId, DateTime fromDate, DateTime toDate, CancellationToken ct = default)

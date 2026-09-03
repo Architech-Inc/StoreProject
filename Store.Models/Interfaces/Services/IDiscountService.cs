@@ -12,7 +12,7 @@ public interface IDiscountService
     Task<DiscountDto> CreateAsync(CreateDiscountRequest request, Guid managedByUserId);
     Task<DiscountDto?> UpdateAsync(int id, UpdateDiscountRequest request);
     Task<bool> DeleteAsync(int id);
-    Task<DiscountDto?> ValidateCouponAsync(string couponCode);
+    Task<DiscountDto?> ValidateCouponAsync(string couponCode, int? branchId = null);
     Task IncrementUsageAsync(int discountId);
     Task<DiscountSimulationResult> SimulateDiscountAsync(DiscountSimulationRequest request, CancellationToken ct = default);
 }

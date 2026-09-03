@@ -45,7 +45,10 @@ public class Discount : BaseEntity
     public DateTime? ValidTo { get; set; }
     public bool IsActive { get; set; } = true;
 
+    public BranchScope Scope { get; set; } = BranchScope.AllBranches;
+
     public Item? Item { get; set; }
     public Category? Category { get; set; }
     public User? ManagedByUser { get; set; }
+    public ICollection<DiscountBranch> DiscountBranches { get; set; } = new List<DiscountBranch>();
 }

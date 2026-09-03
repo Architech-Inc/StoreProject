@@ -6,6 +6,7 @@ namespace Store.Models.Entities;
 public class StockMovement : BaseEntity
 {
     public long StockMovementId { get; set; }
+    public int? BranchId { get; set; }
     public Guid ItemId { get; set; }
     public Guid? InvoiceId { get; set; }
     public Guid? ItemsOrderId { get; set; }
@@ -19,6 +20,7 @@ public class StockMovement : BaseEntity
     public string Reason { get; set; } = string.Empty;
     public string? ReferenceCode { get; set; }
 
+    public Branch? Branch { get; set; }
     public Item Item { get; set; } = null!;
     public Invoice? Invoice { get; set; }
     public ItemsOrder? ItemsOrder { get; set; }

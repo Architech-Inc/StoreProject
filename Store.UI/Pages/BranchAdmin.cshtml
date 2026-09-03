@@ -3,7 +3,7 @@
 @{
     ViewData["Title"] = "Branch Administration";
     ViewData["ActivePage"] = "BranchAdmin";
-    ViewData["PageDescription"] = "Manage store branch locations and configure user-to-branch role assignments.";
+    ViewData["PageDescription"] = "Manage store branch locations, regional pricing, temporal access grants, and personnel transfers.";
     Layout = "~/Pages/Shared/_AppLayout.cshtml";
 }
 
@@ -12,7 +12,7 @@
     <div class="ba-action-bar">
         <div class="ba-status-pill">
             <span class="status-indicator-dot"></span>
-            <span>Store Multi-Branch Governance &amp; User Scoping</span>
+            <span>Multi-Branch Isolation, Regional Pricing &amp; Personnel Transfer Governance</span>
         </div>
         <div class="ba-header-actions">
             <a href="/BranchDashboard" class="btn-ba-action btn-ba-secondary">
@@ -40,8 +40,8 @@
         </div>
     }
 
-    @* ── 4-CARD FLUENT 2.0 KPI GRID ── *@
-    <div class="ba-kpi-grid">
+    @* ── 5-CARD FLUENT 2.0 KPI GRID ── *@
+    <div class="ba-kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
         @* KPI 1: Total Branches *@
         <div class="ba-kpi-card">
             <div class="kpi-icon-wrap kpi-emerald">
@@ -66,7 +66,7 @@
             <div class="kpi-data">
                 <span class="kpi-label">Active Outlets</span>
                 <span class="kpi-value" style="color:#059669;">@Model.ActiveBranchesCount <small>Live</small></span>
-                <span class="kpi-subtext">@(Model.InactiveBranchesCount > 0 ? $"{Model.InactiveBranchesCount} decommissioned/inactive" : "100% operational footprint")</span>
+                <span class="kpi-subtext">@(Model.InactiveBranchesCount > 0 ? $"{Model.InactiveBranchesCount} decommissioned" : "100% operational footprint")</span>
             </div>
         </div>
 
@@ -94,29 +94,55 @@
             <div class="kpi-data">
                 <span class="kpi-label">Multi-Branch Users</span>
                 <span class="kpi-value" style="color:#7c3aed;">@Model.MultiBranchUsersCount <small>Roving</small></span>
-                <span class="kpi-subtext">Personnel assigned to >1 branch</span>
+                <span class="kpi-subtext">Personnel assigned to &gt;1 branch</span>
+            </div>
+        </div>
+
+        @* KPI 5: Personnel Transfers *@
+        <div class="ba-kpi-card">
+            <div class="kpi-icon-wrap" style="background:#e0f2fe; color:#0284c7;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                </svg>
+            </div>
+            <div class="kpi-data">
+                <span class="kpi-label">Recorded Transfers</span>
+                <span class="kpi-value" style="color:#0284c7;">@Model.TotalTransfersCount <small>Rotations</small></span>
+                <span class="kpi-subtext">Permanent &amp; temporal transfers</span>
             </div>
         </div>
     </div>
 
-    @* ── 2-TAB DOCK SWITCHER ── *@
+    @* ── 4-TAB DOCK SWITCHER ── *@
     <div class="ba-tabs-dock">
         <button type="button" class="ba-tab-btn active" onclick="switchBaTab('branches')">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
             </svg>
-            Branch Locations (@Model.Branches.Count)
+            Branch Locations &amp; Pricing (@Model.Branches.Count)
         </button>
         <button type="button" class="ba-tab-btn" onclick="switchBaTab('assignments')">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
             </svg>
-            User Branch Assignments (@Model.Assignments.Count)
+            User Branch Assignments &amp; Temporal Grants (@Model.Assignments.Count)
+        </button>
+        <button type="button" class="ba-tab-btn" onclick="switchBaTab('transfers')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+            </svg>
+            Personnel Transfers (@Model.Transfers.Count)
+        </button>
+        <button type="button" class="ba-tab-btn" onclick="switchBaTab('inventory')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+            Branch Stock &amp; Smart Pricing
         </button>
     </div>
 
     @* ═════════════════════════════════════════════════════════════ *@
-    @* ── TAB 1: BRANCH LOCATIONS ────────────────────────────────── *@
+    @* ── TAB 1: BRANCH LOCATIONS & REGIONAL PRICING ──────────────── *@
     @* ═════════════════════════════════════════════════════════════ *@
     <div id="tab-branches" class="ba-tab-content active">
         <div style="display:grid; grid-template-columns: 1fr 1.6fr; gap:1.25rem;">
@@ -125,7 +151,7 @@
                 <div class="panel-header-dock">
                     <div class="panel-title-wrap">
                         <h3 id="formTitle">Add / Edit Branch</h3>
-                        <p>Configure store physical location and branch code.</p>
+                        <p>Configure store location, regional inflation multiplier &amp; municipal taxes.</p>
                     </div>
                 </div>
                 <form method="post" asp-page-handler="UpsertBranch" style="padding:1.25rem; display:flex; flex-direction:column; gap:12px;">
@@ -142,6 +168,20 @@
                         <label asp-for="BranchAddress" class="form-label">Physical Address</label>
                         <input asp-for="BranchAddress" class="form-control" placeholder="e.g. Boulevard de la Liberté, Akwa" maxlength="300" />
                     </div>
+
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                        <div class="form-group">
+                            <label asp-for="BranchPriceMultiplier" class="form-label">Regional Price Multiplier</label>
+                            <input asp-for="BranchPriceMultiplier" type="number" step="0.01" min="0.1" max="5.0" class="form-control" placeholder="1.00" />
+                            <small style="color:#64748b; font-size:0.75rem;">e.g. 1.05 = +5% regional markup</small>
+                        </div>
+                        <div class="form-group">
+                            <label asp-for="BranchTaxRateOverride" class="form-label">Tax Rate Override (%)</label>
+                            <input asp-for="BranchTaxRateOverride" type="number" step="0.001" min="0" max="100" class="form-control" placeholder="Optional" />
+                            <small style="color:#64748b; font-size:0.75rem;">Leave empty for standard tax</small>
+                        </div>
+                    </div>
+
                     <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
                         <input asp-for="BranchIsActive" type="checkbox" id="isActiveCheck" style="width:16px; height:16px;" checked />
                         <label for="isActiveCheck" style="font-size:0.84rem; font-weight:600; color:#0f172a; cursor:pointer;">Active Store Location</label>
@@ -158,7 +198,7 @@
                 <div class="panel-header-dock">
                     <div class="panel-title-wrap">
                         <h3>Registered Store Branches</h3>
-                        <p>All active and legacy retail locations.</p>
+                        <p>All active and legacy retail locations with smart pricing tiers.</p>
                     </div>
                 </div>
                 @if (Model.Branches.Count == 0)
@@ -175,7 +215,8 @@
                                 <tr>
                                     <th>Code</th>
                                     <th>Branch Name</th>
-                                    <th>Address</th>
+                                    <th>Price Multiplier</th>
+                                    <th>Tax Override</th>
                                     <th style="text-align:center;">Status</th>
                                     <th style="text-align:right;">Actions</th>
                                 </tr>
@@ -189,9 +230,19 @@
                                         </td>
                                         <td>
                                             <strong style="color:#0f172a;">@b.Name</strong>
+                                            <div style="color:#64748b; font-size:0.75rem;">@(b.Address ?? "No address recorded")</div>
+                                        </td>
+                                        <td>
+                                            <span style="font-weight:700; color:@(b.PriceMultiplier > 1.0m ? "#b45309" : "#334155");">
+                                                @(b.PriceMultiplier.ToString("0.00"))x
+                                                @if (b.PriceMultiplier > 1.0m)
+                                                {
+                                                    <small style="color:#059669; font-weight:600;">(+@(((b.PriceMultiplier - 1.0m) * 100).ToString("0.#"))%)</small>
+                                                }
+                                            </span>
                                         </td>
                                         <td style="color:#64748b; font-size:0.80rem;">
-                                            @(b.Address ?? "—")
+                                            @(b.TaxRateOverride.HasValue ? $"{b.TaxRateOverride.Value}%" : "Standard")
                                         </td>
                                         <td style="text-align:center;">
                                             <span class="status-badge @(b.IsActive ? "status-reviewed" : "status-pending")">
@@ -200,7 +251,7 @@
                                         </td>
                                         <td style="text-align:right;">
                                             <button type="button" class="btn-table-action"
-                                                    onclick="fillBranchForm(@b.BranchId, '@Html.Raw(Html.Encode(b.Code))', '@Html.Raw(Html.Encode(b.Name))', '@Html.Raw(Html.Encode(b.Address ?? ""))', @(b.IsActive ? "true" : "false"))">
+                                                    onclick="fillBranchForm(@b.BranchId, '@Html.Raw(Html.Encode(b.Code))', '@Html.Raw(Html.Encode(b.Name))', '@Html.Raw(Html.Encode(b.Address ?? ""))', @(b.IsActive ? "true" : "false"), @b.PriceMultiplier, '@(b.TaxRateOverride?.ToString() ?? "")')">
                                                 Edit
                                             </button>
                                         </td>
@@ -215,7 +266,7 @@
     </div>
 
     @* ═════════════════════════════════════════════════════════════ *@
-    @* ── TAB 2: USER BRANCH ASSIGNMENTS ─────────────────────────── *@
+    @* ── TAB 2: USER BRANCH ASSIGNMENTS & TEMPORAL GRANTS ────────── *@
     @* ═════════════════════════════════════════════════════════════ *@
     <div id="tab-assignments" class="ba-tab-content">
         <div style="display:grid; grid-template-columns: 1fr 1.6fr; gap:1.25rem;">
@@ -224,7 +275,7 @@
                 <div class="panel-header-dock">
                     <div class="panel-title-wrap">
                         <h3>Assign User to Branch</h3>
-                        <p>Map personnel to specific branch locations with assigned roles.</p>
+                        <p>Map personnel to specific store locations with optional temporal access grants.</p>
                     </div>
                 </div>
                 <form method="post" asp-page-handler="Assign" style="padding:1.25rem; display:flex; flex-direction:column; gap:12px;">
@@ -250,6 +301,27 @@
                             }
                         </select>
                     </div>
+
+                    <div style="border-top:1px solid #f1f5f9; padding-top:10px; margin-top:4px;">
+                        <div style="font-size:0.80rem; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px;">
+                            Temporal Access Grant (Optional)
+                        </div>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                            <div class="form-group">
+                                <label asp-for="AssignValidFrom" class="form-label">Valid From</label>
+                                <input asp-for="AssignValidFrom" type="date" class="form-control" />
+                            </div>
+                            <div class="form-group">
+                                <label asp-for="AssignValidTo" class="form-label">Valid To (Expiry)</label>
+                                <input asp-for="AssignValidTo" type="date" class="form-control" />
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-top:8px;">
+                            <label asp-for="AssignGrantReason" class="form-label">Grant Reason / Notes</label>
+                            <input asp-for="AssignGrantReason" class="form-control" placeholder="e.g. Covering maternity leave, special training rotation" maxlength="255" />
+                        </div>
+                    </div>
+
                     <div style="display:flex; justify-content:flex-end; margin-top:8px;">
                         <button type="submit" class="btn-ba-action btn-ba-primary">Confirm Assignment</button>
                     </div>
@@ -261,7 +333,7 @@
                 <div class="panel-header-dock">
                     <div class="panel-title-wrap">
                         <h3>Active User-Branch Mappings</h3>
-                        <p>Personnel access authorizations per store location.</p>
+                        <p>Personnel access authorizations per store location with temporal indicators.</p>
                     </div>
                 </div>
                 @if (Model.Assignments.Count == 0)
@@ -279,6 +351,7 @@
                                     <th>User Account</th>
                                     <th>Branch Location</th>
                                     <th>Assigned Role</th>
+                                    <th>Access Validity</th>
                                     <th style="text-align:right;">Revoke</th>
                                 </tr>
                             </thead>
@@ -294,6 +367,26 @@
                                         </td>
                                         <td>
                                             <span class="role-pill">@a.RoleName</span>
+                                        </td>
+                                        <td>
+                                            @if (a.IsExpired)
+                                            {
+                                                <span class="status-badge status-pending" style="background:#fee2e2; color:#b91c1c;">Expired</span>
+                                                <div style="color:#ef4444; font-size:0.75rem;">Ended @a.ValidTo?.ToString("dd MMM yyyy")</div>
+                                            }
+                                            else if (a.ValidTo.HasValue)
+                                            {
+                                                <span class="status-badge" style="background:#fef3c7; color:#b45309;">Temporary</span>
+                                                <div style="color:#64748b; font-size:0.75rem;">Until @a.ValidTo.Value.ToString("dd MMM yyyy")</div>
+                                            }
+                                            else
+                                            {
+                                                <span class="status-badge status-reviewed">Permanent</span>
+                                            }
+                                            @if (!string.IsNullOrEmpty(a.GrantReason))
+                                            {
+                                                <div style="color:#94a3b8; font-size:0.73rem; font-style:italic;">"@a.GrantReason"</div>
+                                            }
                                         </td>
                                         <td style="text-align:right;">
                                             <form method="post" asp-page-handler="Revoke" style="display:inline; margin:0;">
@@ -312,6 +405,273 @@
             </div>
         </div>
     </div>
+
+    @* ═════════════════════════════════════════════════════════════ *@
+    @* ── TAB 3: PERSONNEL TRANSFERS ──────────────────────────────── *@
+    @* ═════════════════════════════════════════════════════════════ *@
+    <div id="tab-transfers" class="ba-tab-content">
+        <div style="display:grid; grid-template-columns: 1fr 1.6fr; gap:1.25rem;">
+            @* Transfer Form *@
+            <div class="ba-panel">
+                <div class="panel-header-dock">
+                    <div class="panel-title-wrap">
+                        <h3>Initiate Personnel Transfer</h3>
+                        <p>Reassign an employee's home branch, shift rotation, or temporary training post.</p>
+                    </div>
+                </div>
+                <form method="post" asp-page-handler="Transfer" style="padding:1.25rem; display:flex; flex-direction:column; gap:12px;">
+                    <div class="form-group">
+                        <label asp-for="TransferEmployeeId" class="form-label">Employee <span class="text-danger">*</span></label>
+                        <select asp-for="TransferEmployeeId" class="form-control" required>
+                            <option value="">— Select employee to transfer —</option>
+                            @foreach (var emp in Model.AllEmployees)
+                            {
+                                <option value="@emp.EmployeeId">@emp.FirstName @emp.LastName (@emp.DepartmentName ?? "General")</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label asp-for="TransferToBranchId" class="form-label">Destination Branch <span class="text-danger">*</span></label>
+                        <select asp-for="TransferToBranchId" class="form-control" required>
+                            <option value="">— Select destination branch —</option>
+                            @foreach (var b in Model.Branches.Where(x => x.IsActive))
+                            {
+                                <option value="@b.BranchId">@b.Name (@b.Code)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label asp-for="TransferType" class="form-label">Transfer Nature <span class="text-danger">*</span></label>
+                        <select asp-for="TransferType" class="form-control" required>
+                            <option value="0">Permanent Relocation (Reconciles Home Branch)</option>
+                            <option value="1">Temporary Rotation / Shift Coverage</option>
+                            <option value="2">Training / Induction Program</option>
+                            <option value="3">Emergency Operational Coverage</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label asp-for="TransferDestinationRoleId" class="form-label">Assigned Role at Destination (Optional)</label>
+                        <select asp-for="TransferDestinationRoleId" class="form-control">
+                            <option value="">— Keep existing role —</option>
+                            @foreach (var r in Model.RoleMatrix)
+                            {
+                                <option value="@r.RoleId">@r.RoleName</option>
+                            }
+                        </select>
+                    </div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                        <div class="form-group">
+                            <label asp-for="TransferEffectiveDate" class="form-label">Effective Date <span class="text-danger">*</span></label>
+                            <input asp-for="TransferEffectiveDate" type="date" class="form-control" required />
+                        </div>
+                        <div class="form-group">
+                            <label asp-for="TransferExpectedEndDate" class="form-label">Expected Return Date</label>
+                            <input asp-for="TransferExpectedEndDate" type="date" class="form-control" />
+                            <small style="color:#64748b; font-size:0.75rem;">Required for temporary rotations</small>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label asp-for="TransferReason" class="form-label">Justification / Reason</label>
+                        <textarea asp-for="TransferReason" class="form-control" rows="2" placeholder="State operational reason for transfer..." maxlength="500"></textarea>
+                    </div>
+                    <div style="display:flex; justify-content:flex-end; margin-top:8px;">
+                        <button type="submit" class="btn-ba-action btn-ba-primary">Execute Transfer</button>
+                    </div>
+                </form>
+            </div>
+
+            @* Transfer Ledger Table *@
+            <div class="ba-panel">
+                <div class="panel-header-dock">
+                    <div class="panel-title-wrap">
+                        <h3>Personnel Transfer Audit History</h3>
+                        <p>Historical log of employee movements across store locations.</p>
+                    </div>
+                </div>
+                @if (Model.Transfers.Count == 0)
+                {
+                    <div class="ba-empty-state">
+                        <p>No personnel transfers recorded yet.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="ba-table">
+                            <thead>
+                                <tr>
+                                    <th>Employee</th>
+                                    <th>Movement Path</th>
+                                    <th>Type</th>
+                                    <th>Effective Date</th>
+                                    <th>Approved By</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var t in Model.Transfers)
+                                {
+                                    <tr>
+                                        <td>
+                                            <strong style="color:#0f172a;">@t.EmployeeName</strong>
+                                            @if (!string.IsNullOrEmpty(t.Reason))
+                                            {
+                                                <div style="color:#64748b; font-size:0.75rem;">"@t.Reason"</div>
+                                            }
+                                        </td>
+                                        <td>
+                                            <div style="display:flex; align-items:center; gap:6px; font-size:0.84rem;">
+                                                <span style="color:#64748b;">@t.FromBranchName</span>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#059669">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                                </svg>
+                                                <strong style="color:#0f172a;">@t.ToBranchName</strong>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="role-pill" style="font-size:0.75rem;">@t.TransferType</span>
+                                        </td>
+                                        <td>
+                                            <div style="font-weight:600; font-size:0.82rem;">@t.EffectiveDate.ToString("dd MMM yyyy")</div>
+                                            @if (t.ExpectedEndDate.HasValue)
+                                            {
+                                                <div style="color:#94a3b8; font-size:0.73rem;">Return: @t.ExpectedEndDate.Value.ToString("dd MMM yyyy")</div>
+                                            }
+                                        </td>
+                                        <td style="color:#64748b; font-size:0.80rem;">
+                                            @(t.ApprovedByUserName ?? "System Admin")
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    @* ═════════════════════════════════════════════════════════════ *@
+    @* ── TAB 4: BRANCH INVENTORY & SMART PRICING ─────────────────── *@
+    @* ═════════════════════════════════════════════════════════════ *@
+    <div id="tab-inventory" class="ba-tab-content">
+        <div class="ba-panel" style="padding:1.25rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:1rem;">
+                <div>
+                    <h3 style="margin:0; font-size:1.15rem; font-weight:700; color:#0f172a;">Branch Inventory &amp; Smart Price Resolution</h3>
+                    <p style="margin:4px 0 0; font-size:0.84rem; color:#64748b;">
+                        Manage on-hand quantities, regional inflation multipliers, and custom price overrides per store.
+                    </p>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <label style="font-size:0.84rem; font-weight:600; color:#334155;">Active Branch:</label>
+                    <select id="stockBranchSelect" class="form-control" style="width:240px;" onchange="loadBranchStock(this.value)">
+                        @foreach (var b in Model.Branches)
+                        {
+                            <option value="@b.BranchId">@b.Name (@b.Code)</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            @if (Model.BranchStocks.Count == 0)
+            {
+                <div class="ba-empty-state">
+                    <p>No inventory records allocated to this branch yet. Seed goods receipts or execute stock transfers.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="ba-table">
+                        <thead>
+                            <tr>
+                                <th>Item Catalog Name</th>
+                                <th style="text-align:center;">Branch In-Stock</th>
+                                <th style="text-align:center;">Reorder Level</th>
+                                <th style="text-align:right;">Base Price</th>
+                                <th style="text-align:right;">Custom Override</th>
+                                <th style="text-align:right;">Effective POS Price</th>
+                                <th style="text-align:right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="branchStockTableBody">
+                            @foreach (var s in Model.BranchStocks)
+                            {
+                                <tr>
+                                    <td>
+                                        <strong style="color:#0f172a;">@s.ItemName</strong>
+                                    </td>
+                                    <td style="text-align:center;">
+                                        <span style="font-weight:700; color:@(s.InStock <= (s.ReorderLevel ?? 5) ? "#dc2626" : "#059669");">
+                                            @s.InStock
+                                        </span>
+                                    </td>
+                                    <td style="text-align:center; color:#64748b;">
+                                        @(s.ReorderLevel?.ToString() ?? "—")
+                                    </td>
+                                    <td style="text-align:right; color:#64748b;">
+                                        @s.BaseUnitPrice.ToString("N2") XAF
+                                    </td>
+                                    <td style="text-align:right;">
+                                        @if (s.CustomUnitPrice.HasValue)
+                                        {
+                                            <span style="font-weight:700; color:#0284c7;">@s.CustomUnitPrice.Value.ToString("N2") XAF</span>
+                                        }
+                                        else
+                                        {
+                                            <span style="color:#94a3b8; font-size:0.80rem;">Standard</span>
+                                        }
+                                    </td>
+                                    <td style="text-align:right;">
+                                        <strong style="color:#0f172a; font-size:0.92rem;">@s.EffectiveUnitPrice.ToString("N2") XAF</strong>
+                                    </td>
+                                    <td style="text-align:right;">
+                                        <button type="button" class="btn-table-action"
+                                                onclick="openStockAdjustModal(@s.BranchId, '@s.ItemId', '@Html.Raw(Html.Encode(s.ItemName))', @s.InStock, @(s.ReorderLevel?.ToString() ?? "null"), @(s.CustomUnitPrice?.ToString() ?? "null"))">
+                                            Adjust / Override
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@* ── STOCK ADJUSTMENT MODAL ── *@
+<div id="stockAdjustModal" class="custom-modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.6); z-index:10000; align-items:center; justify-content:center;">
+    <div class="custom-modal" style="background:#fff; border-radius:12px; width:480px; max-width:95vw; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); overflow:hidden;">
+        <div style="padding:1.25rem 1.5rem; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
+            <h4 id="adjustModalItemName" style="margin:0; font-size:1.05rem; font-weight:700; color:#0f172a;">Branch Stock &amp; Price Adjustment</h4>
+            <button type="button" onclick="closeStockAdjustModal()" style="background:none; border:none; font-size:1.25rem; cursor:pointer; color:#64748b;">&times;</button>
+        </div>
+        <form method="post" asp-page-handler="UpdateStock" style="padding:1.25rem 1.5rem; display:flex; flex-direction:column; gap:12px;">
+            <input type="hidden" asp-for="StockBranchId" id="modalStockBranchId" />
+            <input type="hidden" asp-for="StockItemId" id="modalStockItemId" />
+            
+            <div class="form-group">
+                <label class="form-label">Current Stock: <strong id="modalCurrentStock" style="color:#059669;"></strong></label>
+                <input asp-for="StockDelta" type="number" class="form-control" placeholder="Adjustment (+/- quantity, e.g. 5 or -2)" />
+                <small style="color:#64748b; font-size:0.75rem;">Enter quantity to add (+) or subtract (-)</small>
+            </div>
+            <div class="form-group">
+                <label asp-for="StockReorderLevel" class="form-label">Branch Reorder Alert Threshold</label>
+                <input asp-for="StockReorderLevel" id="modalReorderLevel" type="number" class="form-control" placeholder="Alert when stock falls below" />
+            </div>
+            <div class="form-group">
+                <label asp-for="StockCustomPrice" class="form-label">Custom Branch Unit Price (Override)</label>
+                <input asp-for="StockCustomPrice" id="modalCustomPrice" type="number" step="0.01" class="form-control" placeholder="Leave blank to use regional multiplier" />
+                <small style="color:#64748b; font-size:0.75rem;">Overrides regional multiplier specifically for this store</small>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;">
+                <button type="button" class="btn-ba-action btn-ba-secondary" onclick="closeStockAdjustModal()">Cancel</button>
+                <button type="submit" class="btn-ba-action btn-ba-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
 </div>
 
 @* ── JAVASCRIPT INTERACTIONS ── *@
@@ -328,12 +688,14 @@
             if (content) content.classList.add('active');
         }
 
-        function fillBranchForm(id, code, name, address, isActive) {
+        function fillBranchForm(id, code, name, address, isActive, priceMultiplier, taxOverride) {
             document.querySelector('[name="EditBranchId"]').value = id;
             document.querySelector('[name="BranchName"]').value = name;
             document.querySelector('[name="BranchCode"]').value = code;
             document.querySelector('[name="BranchAddress"]').value = address;
             document.querySelector('[name="BranchIsActive"]').checked = isActive;
+            document.querySelector('[name="BranchPriceMultiplier"]').value = priceMultiplier || 1.0;
+            document.querySelector('[name="BranchTaxRateOverride"]').value = taxOverride || '';
             document.getElementById('formTitle').textContent = 'Edit Branch: ' + name;
             switchBaTab('branches');
         }
@@ -344,7 +706,24 @@
             document.querySelector('[name="BranchCode"]').value = '';
             document.querySelector('[name="BranchAddress"]').value = '';
             document.querySelector('[name="BranchIsActive"]').checked = true;
+            document.querySelector('[name="BranchPriceMultiplier"]').value = '1.0';
+            document.querySelector('[name="BranchTaxRateOverride"]').value = '';
             document.getElementById('formTitle').textContent = 'Add New Branch';
+        }
+
+        function openStockAdjustModal(branchId, itemId, itemName, currentStock, reorderLevel, customPrice) {
+            document.getElementById('modalStockBranchId').value = branchId;
+            document.getElementById('modalStockItemId').value = itemId;
+            document.getElementById('adjustModalItemName').textContent = 'Adjust: ' + itemName;
+            document.getElementById('modalCurrentStock').textContent = currentStock + ' units';
+            document.getElementById('modalReorderLevel').value = reorderLevel || '';
+            document.getElementById('modalCustomPrice').value = customPrice || '';
+            const modal = document.getElementById('stockAdjustModal');
+            modal.style.display = 'flex';
+        }
+
+        function closeStockAdjustModal() {
+            document.getElementById('stockAdjustModal').style.display = 'none';
         }
     </script>
 }

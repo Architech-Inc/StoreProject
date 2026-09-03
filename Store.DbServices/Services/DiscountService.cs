@@ -211,7 +211,7 @@ public class DiscountService : IDiscountService
         return true;
     }
 
-    public async Task<DiscountDto?> ValidateCouponAsync(string couponCode)
+    public async Task<DiscountDto?> ValidateCouponAsync(string couponCode, int? branchId = null)
     {
         var code = couponCode.Trim().ToUpperInvariant();
         var now = DateTime.UtcNow;
@@ -220,6 +220,7 @@ public class DiscountService : IDiscountService
             .AsNoTracking()
             .Include(d => d.Item)
             .Include(d => d.Category)
+            .Include(d => d.DiscountBranches)
             .FirstOrDefaultAsync(d =>
                 d.CouponCode == code &&
                 d.IsActive &&
@@ -227,7 +228,16 @@ public class DiscountService : IDiscountService
                 (d.ValidTo == null || d.ValidTo >= now) &&
                 (d.MaxUses == null || d.UsedCount < d.MaxUses));
 
-        return discount is null ? null : MapToDto(discount);
+        if (discount is null) return null;
+
+        // Branch-lock check: if scoped to selected branches, the current branch must be authorized
+        if (branchId.HasValue && discount.Scope == BranchScope.SelectedBranches)
+        {
+            var isAuthorized = discount.DiscountBranches.Any(db => db.BranchId == branchId.Value);
+            if (!isAuthorized) return null;
+        }
+
+        return MapToDto(discount);
     }
 
     public async Task IncrementUsageAsync(int discountId)

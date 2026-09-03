@@ -61,4 +61,59 @@ public class BranchController : ControllerBase
             return NotFound();
         }
     }
+
+    [HttpPost("transfers")]
+    public async Task<IActionResult> TransferPersonnel([FromBody] TransferEmployeeRequest request, CancellationToken ct)
+    {
+        if (!ModelState.IsValid) return BadRequest(ModelState);
+        var userIdStr = User.FindFirst("uid")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        _ = Guid.TryParse(userIdStr, out var actingUserId);
+
+        try
+        {
+            var result = await _ops.TransferPersonnelAsync(request, actingUserId, ct);
+            return Ok(result);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
+    }
+
+    [HttpGet("transfers")]
+    public async Task<IActionResult> GetTransfers([FromQuery] Guid? employeeId, [FromQuery] int? branchId, CancellationToken ct)
+        => Ok(await _ops.GetPersonnelTransfersAsync(employeeId, branchId, ct));
+
+    [HttpGet("{id:int}/stock")]
+    public async Task<IActionResult> GetBranchStock(int id, CancellationToken ct)
+    {
+        try
+        {
+            var stocks = await _ops.GetBranchStocksAsync(id, ct);
+            return Ok(stocks);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+    }
+
+    [HttpPost("{id:int}/stock")]
+    public async Task<IActionResult> UpdateBranchStock(int id, [FromBody] UpdateBranchStockRequest request, CancellationToken ct)
+    {
+        if (!ModelState.IsValid) return BadRequest(ModelState);
+        request.BranchId = id;
+        var userIdStr = User.FindFirst("uid")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        _ = Guid.TryParse(userIdStr, out var actingUserId);
+
+        try
+        {
+            var result = await _ops.UpdateBranchStockAsync(request, actingUserId, ct);
+            return Ok(result);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
+    }
 }

@@ -14,6 +14,7 @@ public static class PermissionKeys
     public const string AdminBranches = "admin.branches";
     public const string AdminUsers = "admin.users";
     public const string AdminSettings = "admin.settings";
+    public const string ViewCrossBranchStock = "inventory.cross_branch_stock";
 
     public static readonly string[] All =
     [
@@ -28,6 +29,7 @@ public static class PermissionKeys
         PaymentsRead,
         AdminBranches,
         AdminUsers,
-        AdminSettings
+        AdminSettings,
+        ViewCrossBranchStock
     ];
 }

@@ -8,6 +8,10 @@ public class UserBranchRole : BaseEntity
     public Guid UserId { get; set; }
     public int BranchId { get; set; }
     public int RoleId { get; set; }
+    public DateTime? ValidFrom { get; set; }
+    public DateTime? ValidTo { get; set; }
+    public string? GrantReason { get; set; }
+    public bool IsActive { get; set; } = true;
 
     public User User { get; set; } = null!;
     public Branch Branch { get; set; } = null!;

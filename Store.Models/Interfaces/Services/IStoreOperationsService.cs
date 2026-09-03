@@ -40,4 +40,9 @@ public interface IStoreOperationsService
     Task<UserBranchRoleDto> AssignUserBranchRoleAsync(AssignUserBranchRoleRequest request, CancellationToken ct = default);
     Task<bool> RemoveUserBranchRoleAsync(long userBranchRoleId, CancellationToken ct = default);
     Task<BranchPerformanceDto> GetBranchPerformanceAsync(int branchId, DateTime fromDate, DateTime toDate, CancellationToken ct = default);
+
+    Task<PersonnelTransferDto> TransferPersonnelAsync(TransferEmployeeRequest request, Guid actingUserId, CancellationToken ct = default);
+    Task<IReadOnlyList<PersonnelTransferDto>> GetPersonnelTransfersAsync(Guid? employeeId = null, int? branchId = null, CancellationToken ct = default);
+    Task<IReadOnlyList<BranchItemStockDto>> GetBranchStocksAsync(int branchId, CancellationToken ct = default);
+    Task<BranchItemStockDto> UpdateBranchStockAsync(UpdateBranchStockRequest request, Guid? actingUserId = null, CancellationToken ct = default);
 }

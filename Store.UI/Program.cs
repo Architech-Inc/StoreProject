@@ -236,4 +236,18 @@ app.MapPut("/api/settings/{*key}", async (HttpContext httpContext, IHttpClientFa
     return Results.Content(content, "application/json", System.Text.Encoding.UTF8, (int)response.StatusCode);
 });
 
+app.MapPost("/api/session/switch-branch", (HttpContext httpContext, System.Text.Json.JsonElement body) =>
+{
+    if (body.TryGetProperty("branchId", out var bIdProp) && bIdProp.TryGetInt32(out var branchId) && branchId > 0)
+    {
+        httpContext.Session.SetInt32("active_branch_id", branchId);
+        if (body.TryGetProperty("branchName", out var nameProp))
+        {
+            httpContext.Session.SetString("active_branch_name", nameProp.GetString() ?? "");
+        }
+        return Results.Ok(new { success = true, branchId });
+    }
+    return Results.BadRequest(new { success = false, message = "Invalid branch ID" });
+});
+
 app.Run();

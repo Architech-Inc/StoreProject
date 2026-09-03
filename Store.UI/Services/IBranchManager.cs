@@ -11,4 +11,8 @@ public interface IBranchManager
     Task<bool> RevokeAssignmentAsync(long assignmentId, CancellationToken ct = default);
     Task<BranchPerformanceDto?> GetPerformanceAsync(int branchId, DateTime fromUtc, DateTime toUtc, CancellationToken ct = default);
     Task<(bool CanDeactivate, string? Reason)> ValidateDeactivationAsync(int branchId, CancellationToken ct = default);
+    Task<PersonnelTransferDto?> TransferPersonnelAsync(TransferEmployeeRequest request, CancellationToken ct = default);
+    Task<List<PersonnelTransferDto>> GetTransfersAsync(Guid? employeeId = null, int? branchId = null, CancellationToken ct = default);
+    Task<List<BranchItemStockDto>> GetBranchStockAsync(int branchId, CancellationToken ct = default);
+    Task<BranchItemStockDto?> UpdateBranchStockAsync(int branchId, UpdateBranchStockRequest request, CancellationToken ct = default);
 }

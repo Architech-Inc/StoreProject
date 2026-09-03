@@ -34,4 +34,7 @@ public class LoyaltyCampaign : BaseEntity
     public DateTime EndDate { get; set; }
 
     public bool IsActive { get; set; } = true;
+
+    public BranchScope Scope { get; set; } = BranchScope.AllBranches;
+    public ICollection<LoyaltyCampaignBranch> CampaignBranches { get; set; } = new List<LoyaltyCampaignBranch>();
 }

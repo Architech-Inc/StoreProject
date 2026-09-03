@@ -212,3 +212,17 @@ public enum InfoType
     VerifiedEmail,
     VerifiedPhone
 }
+
+public enum BranchScope
+{
+    AllBranches = 0,
+    SelectedBranches = 1
+}
+
+public enum PersonnelTransferType
+{
+    Permanent = 0,
+    TemporaryRotation = 1,
+    Training = 2,
+    EmergencyCoverage = 3
+}

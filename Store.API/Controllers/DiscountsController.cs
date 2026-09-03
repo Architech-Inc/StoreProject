@@ -61,14 +61,14 @@ public class DiscountsController : ControllerBase
     }
 
     [HttpGet("validate-coupon")]
-    public async Task<IActionResult> ValidateCoupon([FromQuery] string code)
+    public async Task<IActionResult> ValidateCoupon([FromQuery] string code, [FromQuery] int? branchId)
     {
         if (string.IsNullOrWhiteSpace(code))
             return BadRequest(ApiErrorResponse.From("bad_request", "Coupon code is required", traceId: HttpContext.TraceIdentifier));
 
-        var dto = await _discountService.ValidateCouponAsync(code);
+        var dto = await _discountService.ValidateCouponAsync(code, branchId);
         if (dto is null)
-            return NotFound(ApiErrorResponse.From("not_found", "Coupon is invalid, expired, or exhausted", traceId: HttpContext.TraceIdentifier));
+            return NotFound(ApiErrorResponse.From("not_found", "Coupon is invalid, expired, or not authorized for this branch", traceId: HttpContext.TraceIdentifier));
 
         return Ok(ApiResponse<DiscountDto>.Ok(dto));
     }

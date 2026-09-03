@@ -51,4 +51,5 @@ public class User : BaseEntity
     
     public ICollection<ContactChangeRequest> ContactChangeRequests { get; set; } = new List<ContactChangeRequest>();
     public ICollection<ContactChangeRequest> ApprovedContactChanges { get; set; } = new List<ContactChangeRequest>();
+    public ICollection<UserBranchRole> UserBranchRoles { get; set; } = new List<UserBranchRole>();
 }
