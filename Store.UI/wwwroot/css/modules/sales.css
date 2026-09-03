@@ -619,8 +619,7 @@
 }
 
 .inv-modal-overlay.open,
-.inv-modal-overlay.active,
-.inv-modal-overlay:not([hidden]) {
+.inv-modal-overlay.active {
     opacity: 1;
     pointer-events: auto;
 }
@@ -2247,8 +2246,7 @@
 }
 
 .modal-overlay.active,
-.modal-overlay.open,
-.modal-overlay:not([hidden]) {
+.modal-overlay.open {
     opacity: 1;
     visibility: visible;
 }
@@ -2275,10 +2273,8 @@
 
 .modal-overlay.active .modal-card,
 .modal-overlay.open .modal-card,
-.modal-overlay:not([hidden]) .modal-card,
 .modal-overlay.active .modal,
-.modal-overlay.open .modal,
-.modal-overlay:not([hidden]) .modal {
+.modal-overlay.open .modal {
     transform: scale(1);
 }
 

@@ -2214,7 +2214,9 @@
     transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
-.inv-modal.open {
+.inv-modal.open,
+.inv-modal-overlay.open .inv-modal,
+.inv-modal-overlay.active .inv-modal {
     transform: translate(-50%, -50%) scale(1);
     opacity: 1;
     pointer-events: auto;
