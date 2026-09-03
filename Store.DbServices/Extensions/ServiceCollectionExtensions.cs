@@ -59,6 +59,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IOtpService, OtpService>();
         services.AddScoped<IStoreOperationsService, StoreOperationsService>();
         services.AddScoped<IBranchPricingService, BranchPricingService>();
+        services.AddScoped<ICountryService, CountryService>();
         services.AddScoped<IMobileMoneyService, MobileMoneyService>();
         services.AddScoped<ILoyaltyService, LoyaltyService>();
         services.AddScoped<ILoyaltyCampaignService, LoyaltyCampaignService>();

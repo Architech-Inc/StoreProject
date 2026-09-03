@@ -25,6 +25,7 @@ public class PhoneConfiguration : IEntityTypeConfiguration<Phone>
         builder.Property(p => p.Number).IsRequired().HasMaxLength(30);
         builder.Property(p => p.Type).HasConversion<string>().HasMaxLength(20);
         builder.HasIndex(b => new { b.CountryId, b.Number }).IsUnique();
+        builder.HasOne(p => p.Country).WithMany().HasForeignKey(p => p.CountryId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 

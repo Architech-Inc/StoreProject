@@ -32,6 +32,10 @@ public class SupplierPhoneDto
     public int SupplierPhoneId { get; set; }
     public Guid SupplierId { get; set; }
     public string PhoneNumber { get; set; } = string.Empty;
+    public string? DialCode { get; set; }
+    public string? CountryCode { get; set; }
+    public string? FormattedPhoneNumber { get; set; }
+    public string? FlagEmoji { get; set; }
     public PhoneType PhoneType { get; set; }
     public bool IsPrimary { get; set; }
 }
@@ -79,8 +83,11 @@ public class CreateSupplierEmailRequest
 
 public class CreateSupplierPhoneRequest
 {
-    [Required, MaxLength(20)]
+    [Required, MaxLength(30)]
     public string PhoneNumber { get; set; } = string.Empty;
+
+    public string? DialCode { get; set; }
+    public string? CountryIso { get; set; }
 
     public PhoneType PhoneType { get; set; } = PhoneType.Work;
     public bool IsPrimary { get; set; }

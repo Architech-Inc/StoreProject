@@ -11,6 +11,8 @@ public class Phone : BaseEntity
     public PhoneType Type { get; set; } = PhoneType.Mobile;
     public bool IsVerified { get; set; }
 
+    public Country? Country { get; set; }
+
     public ICollection<UserPhone> UserPhones { get; set; } = new List<UserPhone>();
     public ICollection<EmployeePhone> EmployeePhones { get; set; } = new List<EmployeePhone>();
     public ICollection<CustomerPhone> CustomerPhones { get; set; } = new List<CustomerPhone>();

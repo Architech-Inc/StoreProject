@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Http;
+using Store.Models.DTOs.Common;
 using Store.Models.Entities;
 using Store.Models.Interfaces.Services;
 
@@ -28,6 +29,11 @@ public class LookupManager : ILookupManager
     public async Task<List<Department>> GetDepartmentsAsync(CancellationToken ct = default)
     {
         return (await _apiClient.GetAsync<List<Department>>("/api/departments", ct)) ?? new();
+    }
+
+    public async Task<List<Store.Models.DTOs.Common.CountryDto>> GetCountriesAsync(CancellationToken ct = default)
+    {
+        return (await _apiClient.GetAsync<List<Store.Models.DTOs.Common.CountryDto>>("/api/countries", ct)) ?? new();
     }
 
     public async Task SaveCategoryAsync(int id, string name, string? description, IFormFile? image, int? cropX, int? cropY, int? cropW, int? cropH, CancellationToken ct = default)

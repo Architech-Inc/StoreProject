@@ -6,14 +6,20 @@ using Store.Models.Entities.Contacts;
 using Store.Models.Enums;
 using Store.Models.Interfaces;
 using Store.Models.Interfaces.Services;
+using Store.Models.Utils;
 
 namespace Store.DbServices.Services;
 
 public class SupplierService : ISupplierService
 {
     private readonly IUnitOfWork _uow;
+    private readonly ICountryService _countryService;
 
-    public SupplierService(IUnitOfWork uow) => _uow = uow;
+    public SupplierService(IUnitOfWork uow, ICountryService countryService)
+    {
+        _uow = uow;
+        _countryService = countryService;
+    }
 
     public async Task<List<SupplierDto>> GetAllAsync(string? search = null, string? city = null, string? country = null, string? sortBy = null)
     {
@@ -112,7 +118,7 @@ public class SupplierService : ISupplierService
         return _uow.Repository<Supplier>().Query()
             .AsNoTracking()
             .Include(s => s.Emails).ThenInclude(se => se.Email)
-            .Include(s => s.Phones).ThenInclude(sp => sp.Phone)
+            .Include(s => s.Phones).ThenInclude(sp => sp.Phone).ThenInclude(p => p.Country)
             .Include(s => s.Locations).ThenInclude(sl => sl.Location).ThenInclude(l => l.City).ThenInclude(c => c.Region).ThenInclude(r => r.Country)
             .AsQueryable();
     }
@@ -122,7 +128,7 @@ public class SupplierService : ISupplierService
         var supplier = await _uow.Repository<Supplier>().Query()
             .AsNoTracking()
             .Include(s => s.Emails).ThenInclude(se => se.Email)
-            .Include(s => s.Phones).ThenInclude(sp => sp.Phone)
+            .Include(s => s.Phones).ThenInclude(sp => sp.Phone).ThenInclude(p => p.Country)
             .Include(s => s.Locations).ThenInclude(sl => sl.Location).ThenInclude(l => l.City).ThenInclude(c => c.Region).ThenInclude(r => r.Country)
             .FirstOrDefaultAsync(s => s.SupplierId == id);
 
@@ -134,7 +140,7 @@ public class SupplierService : ISupplierService
         var supplier = await _uow.Repository<Supplier>().Query()
             .AsNoTracking()
             .Include(s => s.Emails).ThenInclude(se => se.Email)
-            .Include(s => s.Phones).ThenInclude(sp => sp.Phone)
+            .Include(s => s.Phones).ThenInclude(sp => sp.Phone).ThenInclude(p => p.Country)
             .Include(s => s.Locations).ThenInclude(sl => sl.Location).ThenInclude(l => l.City).ThenInclude(c => c.Region).ThenInclude(r => r.Country)
             .FirstOrDefaultAsync(s => s.SupplierId == id);
 
@@ -291,7 +297,7 @@ public class SupplierService : ISupplierService
             {
                 if (!string.IsNullOrWhiteSpace(phoneReq.PhoneNumber))
                 {
-                    var phone = await GetOrCreatePhoneAsync(phoneReq.PhoneNumber, phoneReq.PhoneType);
+                    var phone = await GetOrCreatePhoneAsync(phoneReq.PhoneNumber, phoneReq.PhoneType, phoneReq.DialCode);
                     supplier.Phones.Add(new SupplierPhone
                     {
                         SupplierId = supplier.SupplierId,
@@ -368,7 +374,7 @@ public class SupplierService : ISupplierService
             {
                 if (!string.IsNullOrWhiteSpace(phoneReq.PhoneNumber))
                 {
-                    var phone = await GetOrCreatePhoneAsync(phoneReq.PhoneNumber, phoneReq.PhoneType);
+                    var phone = await GetOrCreatePhoneAsync(phoneReq.PhoneNumber, phoneReq.PhoneType, phoneReq.DialCode);
                     supplier.Phones.Add(new SupplierPhone
                     {
                         SupplierId = supplier.SupplierId,
@@ -436,11 +442,22 @@ public class SupplierService : ISupplierService
                 EmailType = se.Email?.Type ?? default,
                 IsPrimary = se.IsPrimary
             }).ToList(),
-            Phones = supplier.Phones.Select(sp => new SupplierPhoneDto
+            Phones = supplier.Phones.Select(sp =>
             {
-                PhoneNumber = sp.Phone?.Number ?? string.Empty,
-                PhoneType = sp.Phone?.Type ?? default,
-                IsPrimary = sp.IsPrimary
+                var dial = sp.Phone?.Country?.PhoneCode ?? "+237";
+                var parsed = sp.Phone != null ? PhoneNumberHelper.Parse(sp.Phone.Number, dial) : null;
+                return new SupplierPhoneDto
+                {
+                    SupplierPhoneId = sp.SupplierPhoneId,
+                    SupplierId = sp.SupplierId,
+                    PhoneNumber = parsed?.E164Number ?? sp.Phone?.Number ?? string.Empty,
+                    DialCode = parsed?.DialCode ?? sp.Phone?.Country?.PhoneCode,
+                    CountryCode = parsed?.IsoCode ?? sp.Phone?.Country?.IsoCode,
+                    FormattedPhoneNumber = parsed?.FormattedNumber ?? sp.Phone?.Number ?? string.Empty,
+                    FlagEmoji = parsed?.FlagEmoji,
+                    PhoneType = sp.Phone?.Type ?? default,
+                    IsPrimary = sp.IsPrimary
+                };
             }).ToList(),
             Locations = supplier.Locations.Select(sl => new SupplierLocationDto
             {
@@ -476,18 +493,26 @@ public class SupplierService : ISupplierService
         return email;
     }
 
-    private async Task<Phone> GetOrCreatePhoneAsync(string number, PhoneType type)
+    private async Task<Phone> GetOrCreatePhoneAsync(string number, PhoneType type, string? dialCode = null)
     {
-        var trimmed = number.Trim();
+        var parsed = PhoneNumberHelper.Parse(number, dialCode ?? "+237");
+        var country = await _countryService.GetCountryByPhoneCodeAsync(parsed.DialCode)
+                      ?? await _countryService.GetCountryByIsoCodeAsync(parsed.IsoCode)
+                      ?? await _countryService.GetDefaultCountryAsync();
+
         var phone = await _uow.Repository<Phone>().Query()
-            .FirstOrDefaultAsync(p => p.Number == trimmed);
+            .Include(p => p.Country)
+            .FirstOrDefaultAsync(p => (p.Number == parsed.NationalNumber || p.Number == parsed.E164Number) && p.CountryId == country.CountryId);
 
         if (phone is null)
         {
             phone = new Phone
             {
-                Number = trimmed,
-                Type = type
+                CountryId = country.CountryId,
+                Country = country,
+                Number = parsed.NationalNumber,
+                Type = type,
+                IsVerified = false
             };
             await _uow.Repository<Phone>().AddAsync(phone);
             await _uow.SaveChangesAsync();

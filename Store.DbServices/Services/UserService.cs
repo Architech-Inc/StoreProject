@@ -186,21 +186,33 @@ public class UserService : IUserService
         return true;
     }
 
-    private static UserDto MapToDto(User u) => new()
+    private static UserDto MapToDto(User u)
     {
-        UserId = u.UserId,
-        Username = u.Username,
-        RoleId = u.RoleId,
-        RoleName = u.Role?.Name,
-        EmployeeId = u.EmployeeId,
-        Status = u.Status,
-        TwoFactorEnabled = u.TwoFactorEnabled,
-        ThumbnailUrl = u.ThumbnailUrl,
-        FullImageUrl = u.FullImageUrl,
-        DateCreated = u.DateCreated,
-        PrimaryEmail = u.Emails?.FirstOrDefault(e => e.IsPrimary)?.Email?.Address,
-        PrimaryPhone = u.Phones?.FirstOrDefault(p => p.IsPrimary)?.Phone?.Number
-    };
+        var primaryPhoneRel = u.Phones?.FirstOrDefault(p => p.IsPrimary) ?? u.Phones?.FirstOrDefault();
+        var primaryPhone = primaryPhoneRel?.Phone;
+        var dialCode = primaryPhone?.Country?.PhoneCode ?? "+237";
+        var parsed = primaryPhone != null ? Store.Models.Utils.PhoneNumberHelper.Parse(primaryPhone.Number, dialCode) : null;
+
+        return new()
+        {
+            UserId = u.UserId,
+            Username = u.Username,
+            RoleId = u.RoleId,
+            RoleName = u.Role?.Name,
+            EmployeeId = u.EmployeeId,
+            Status = u.Status,
+            TwoFactorEnabled = u.TwoFactorEnabled,
+            ThumbnailUrl = u.ThumbnailUrl,
+            FullImageUrl = u.FullImageUrl,
+            DateCreated = u.DateCreated,
+            PrimaryEmail = u.Emails?.FirstOrDefault(e => e.IsPrimary)?.Email?.Address,
+            PrimaryPhone = parsed?.E164Number ?? primaryPhone?.Number,
+            PhoneDialCode = parsed?.DialCode ?? primaryPhone?.Country?.PhoneCode,
+            PhoneCountryCode = parsed?.IsoCode ?? primaryPhone?.Country?.IsoCode,
+            FormattedPhone = parsed?.FormattedNumber ?? primaryPhone?.Number,
+            PhoneFlagEmoji = parsed?.FlagEmoji
+        };
+    }
 
     public Task<string?> IssueTempPasswordAsync(Guid userId, CancellationToken ct = default)
     {

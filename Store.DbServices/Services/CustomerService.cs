@@ -6,20 +6,26 @@ using Store.Models.Entities.Contacts;
 using Store.Models.Enums;
 using Store.Models.Interfaces;
 using Store.Models.Interfaces.Services;
+using Store.Models.Utils;
 
 namespace Store.DbServices.Services;
 
 public class CustomerService : ICustomerService
 {
     private readonly IUnitOfWork _uow;
+    private readonly ICountryService _countryService;
 
-    public CustomerService(IUnitOfWork uow) => _uow = uow;
+    public CustomerService(IUnitOfWork uow, ICountryService countryService)
+    {
+        _uow = uow;
+        _countryService = countryService;
+    }
 
     public async Task<CustomerDto?> GetByIdAsync(Guid customerId, CancellationToken ct = default)
     {
         var customer = await _uow.Repository<Customer>().Query()
             .AsNoTracking()
-            .Include(c => c.Phones).ThenInclude(cp => cp.Phone)
+            .Include(c => c.Phones).ThenInclude(cp => cp.Phone).ThenInclude(p => p.Country)
             .Include(c => c.Emails).ThenInclude(ce => ce.Email)
             .Include(c => c.LoyaltyAccount)
             .Include(c => c.Invoices)
@@ -31,7 +37,7 @@ public class CustomerService : ICustomerService
     public async Task<PagedResult<CustomerDto>> GetAllAsync(PagedRequest request, CancellationToken ct = default)
     {
         var query = _uow.Repository<Customer>().Query().AsNoTracking()
-            .Include(c => c.Phones).ThenInclude(cp => cp.Phone)
+            .Include(c => c.Phones).ThenInclude(cp => cp.Phone).ThenInclude(p => p.Country)
             .Include(c => c.Emails).ThenInclude(ce => ce.Email)
             .Include(c => c.LoyaltyAccount)
             .Include(c => c.Invoices)
@@ -81,7 +87,7 @@ public class CustomerService : ICustomerService
 
         if (!string.IsNullOrWhiteSpace(request.Phone))
         {
-            var phone = await GetOrCreatePhoneAsync(request.Phone.Trim(), PhoneType.Mobile, ct);
+            var phone = await GetOrCreatePhoneAsync(request.Phone.Trim(), PhoneType.Mobile, ct, request.PhoneDialCode);
             customer.Phones.Add(new CustomerPhone
             {
                 CustomerId = customer.CustomerId,
@@ -146,7 +152,7 @@ public class CustomerService : ICustomerService
             }
             else
             {
-                var phone = await GetOrCreatePhoneAsync(trimmedPhone, PhoneType.Mobile, ct);
+                var phone = await GetOrCreatePhoneAsync(trimmedPhone, PhoneType.Mobile, ct, request.PhoneDialCode);
                 var primaryPhone = customer.Phones.FirstOrDefault(p => p.IsPrimary) ?? customer.Phones.FirstOrDefault();
                 if (primaryPhone != null)
                 {
@@ -222,17 +228,26 @@ public class CustomerService : ICustomerService
         return true;
     }
 
-    private async Task<Phone> GetOrCreatePhoneAsync(string number, PhoneType type, CancellationToken ct)
+    private async Task<Phone> GetOrCreatePhoneAsync(string number, PhoneType type, CancellationToken ct, string? dialCode = null)
     {
+        var parsed = PhoneNumberHelper.Parse(number, dialCode ?? "+237");
+        var country = await _countryService.GetCountryByPhoneCodeAsync(parsed.DialCode, ct)
+                      ?? await _countryService.GetCountryByIsoCodeAsync(parsed.IsoCode, ct)
+                      ?? await _countryService.GetDefaultCountryAsync(ct);
+
         var phone = await _uow.Repository<Phone>().Query()
-            .FirstOrDefaultAsync(p => p.Number == number.Trim(), ct);
+            .Include(p => p.Country)
+            .FirstOrDefaultAsync(p => (p.Number == parsed.NationalNumber || p.Number == parsed.E164Number) && p.CountryId == country.CountryId, ct);
 
         if (phone is null)
         {
             phone = new Phone
             {
-                Number = number.Trim(),
-                Type = type
+                CountryId = country.CountryId,
+                Country = country,
+                Number = parsed.NationalNumber,
+                Type = type,
+                IsVerified = false
             };
             await _uow.Repository<Phone>().AddAsync(phone, ct);
             await _uow.SaveChangesAsync(ct);
@@ -263,8 +278,15 @@ public class CustomerService : ICustomerService
 
     private static CustomerDto MapToDto(Customer c)
     {
-        var primaryPhone = c.Phones?.FirstOrDefault(p => p.IsPrimary)?.Phone?.Number
-                           ?? c.Phones?.FirstOrDefault()?.Phone?.Number;
+        var primaryPhoneRel = c.Phones?.FirstOrDefault(p => p.IsPrimary) ?? c.Phones?.FirstOrDefault();
+        var primaryPhone = primaryPhoneRel?.Phone;
+
+        ParsedPhoneNumber? parsedPhone = null;
+        if (primaryPhone != null)
+        {
+            var dialCode = primaryPhone.Country?.PhoneCode ?? "+237";
+            parsedPhone = PhoneNumberHelper.Parse(primaryPhone.Number, dialCode);
+        }
 
         var primaryEmail = c.Emails?.FirstOrDefault(e => e.IsPrimary)?.Email?.Address
                            ?? c.Emails?.FirstOrDefault()?.Email?.Address;
@@ -285,7 +307,11 @@ public class CustomerService : ICustomerService
             LastName = c.LastName,
             Gender = c.Gender,
             DateOfBirth = c.DateOfBirth,
-            PrimaryPhone = primaryPhone,
+            PrimaryPhone = parsedPhone?.E164Number ?? primaryPhone?.Number,
+            PhoneDialCode = parsedPhone?.DialCode ?? primaryPhone?.Country?.PhoneCode,
+            PhoneCountryCode = parsedPhone?.IsoCode ?? primaryPhone?.Country?.IsoCode,
+            FormattedPhone = parsedPhone?.FormattedNumber ?? primaryPhone?.Number,
+            PhoneFlagEmoji = parsedPhone?.FlagEmoji,
             PrimaryEmail = primaryEmail,
             Notes = c.Notes,
             ThumbnailUrl = c.ThumbnailUrl,

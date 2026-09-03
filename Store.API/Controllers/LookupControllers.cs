@@ -138,3 +138,19 @@ public class DepartmentsController : ControllerBase
 public record CreateLookupRequest(string Name, string? Description);
 public record CreateCategoryRequest(string Name, string? Description, string? ThumbnailUrl, string? FullImageUrl);
 public record CreateUnitRequest(string Name, string Abbreviation, string? Description);
+
+[ApiController]
+[Route("api/[controller]")]
+[Route("api/lookup/[controller]")]
+[AllowAnonymous]
+public class CountriesController : ControllerBase
+{
+    private readonly ICountryService _countryService;
+
+    public CountriesController(ICountryService countryService) => _countryService = countryService;
+
+    [HttpGet]
+    public async Task<IActionResult> GetAll(CancellationToken ct) =>
+        Ok(ApiResponse<IReadOnlyList<CountryDto>>.Ok(await _countryService.GetCountriesAsync(ct)));
+}
+

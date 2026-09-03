@@ -16,6 +16,10 @@ public class UserDto
     public DateTime DateCreated { get; set; }
     public string? PrimaryEmail { get; set; }
     public string? PrimaryPhone { get; set; }
+    public string? PhoneDialCode { get; set; }
+    public string? PhoneCountryCode { get; set; }
+    public string? FormattedPhone { get; set; }
+    public string? PhoneFlagEmoji { get; set; }
     public bool TwoFactorEnabled { get; set; }
 }
 

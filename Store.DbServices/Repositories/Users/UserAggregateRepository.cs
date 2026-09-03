@@ -125,20 +125,29 @@ public class UserAggregateRepository : IUserAggregateRepository
         var currentPrimaryPhone = user.Phones.FirstOrDefault(p => p.IsPrimary);
         if (phone != null)
         {
+            var parsed = Store.Models.Utils.PhoneNumberHelper.Parse(phone.Trim());
+            var matchedCountry = await _context.Countries
+                .FirstOrDefaultAsync(c => c.PhoneCode == parsed.DialCode || c.IsoCode == parsed.IsoCode, ct)
+                ?? await _context.Countries.FirstOrDefaultAsync(c => c.CountryId == 1, ct);
+            var countryId = matchedCountry?.CountryId ?? 1;
+
             if (currentPrimaryPhone == null)
             {
-                var defaultCountry = await _context.Countries.FirstOrDefaultAsync(ct);
-                var countryId = defaultCountry?.CountryId ?? 1; // Fallback
-                
                 user.Phones.Add(new Store.Models.Entities.Contacts.UserPhone
                 {
                     IsPrimary = true,
-                    Phone = new Store.Models.Entities.Contacts.Phone { Number = phone.Trim(), CountryId = countryId, Type = Store.Models.Enums.PhoneType.Mobile }
+                    Phone = new Store.Models.Entities.Contacts.Phone
+                    {
+                        Number = parsed.NationalNumber,
+                        CountryId = countryId,
+                        Type = Store.Models.Enums.PhoneType.Mobile
+                    }
                 });
             }
-            else if (currentPrimaryPhone.Phone.Number != phone.Trim())
+            else
             {
-                currentPrimaryPhone.Phone.Number = phone.Trim();
+                currentPrimaryPhone.Phone.Number = parsed.NationalNumber;
+                currentPrimaryPhone.Phone.CountryId = countryId;
             }
         }
         else if (currentPrimaryPhone != null)

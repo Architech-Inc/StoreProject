@@ -14,6 +14,10 @@ public class CustomerDto
     public DateTime? DateOfBirth { get; set; }
     public string? PrimaryEmail { get; set; }
     public string? PrimaryPhone { get; set; }
+    public string? PhoneDialCode { get; set; }
+    public string? PhoneCountryCode { get; set; }
+    public string? FormattedPhone { get; set; }
+    public string? PhoneFlagEmoji { get; set; }
     public string? Notes { get; set; }
     public string? ThumbnailUrl { get; set; }
     public string? FullImageUrl { get; set; }
@@ -44,8 +48,10 @@ public class CreateCustomerRequest
     [EmailAddress, StringLength(254)]
     public string? Email { get; set; }
 
-    [StringLength(20)]
+    [StringLength(30)]
     public string? Phone { get; set; }
+    public string? PhoneDialCode { get; set; }
+    public string? PhoneCountryIso { get; set; }
 
     [StringLength(500)]
     public string? Notes { get; set; }
@@ -72,8 +78,10 @@ public class UpdateCustomerRequest
     [EmailAddress, StringLength(254)]
     public string? Email { get; set; }
 
-    [StringLength(20)]
+    [StringLength(30)]
     public string? Phone { get; set; }
+    public string? PhoneDialCode { get; set; }
+    public string? PhoneCountryIso { get; set; }
 
     public CustomerSegment? Segment { get; set; }
 
