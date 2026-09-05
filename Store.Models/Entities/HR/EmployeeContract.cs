@@ -15,6 +15,10 @@ public class EmployeeContract : BaseEntity
     
     public PayrollType PayrollType { get; set; } = PayrollType.Taxed;
     public bool CalculateTaxOnGross { get; set; } = true;
+    
+    // Commissions
+    public decimal CommissionRate { get; set; } = 0.00m; // 0.05m for 5%
+    public CommissionBasis CommissionBasis { get; set; } = CommissionBasis.None;
 
     // Navigation
     public Employee? Employee { get; set; }

@@ -415,14 +415,31 @@ public class InvoiceService : IInvoiceService
                             CreatedByUserId = actingUserId
                         };
 
-                        // Revenue
-                        var debitAccount = invoice.IsPaid ? cashAccount.Value : arAccount.Value;
-                        journalEntry.Lines.Add(new Store.Models.Entities.Finance.JournalEntryLine
+                        // Revenue & Receivables/Cash
+                        var cashAmount = invoice.AmountTendered;
+                        if (cashAmount > invoice.TotalAmount) cashAmount = invoice.TotalAmount; // Don't post change to cash/AR as revenue
+                        var arAmount = invoice.TotalAmount - cashAmount;
+
+                        if (cashAmount > 0)
                         {
-                            AccountId = debitAccount,
-                            DebitAmount = invoice.TotalAmount,
-                            CreditAmount = 0
-                        });
+                            journalEntry.Lines.Add(new Store.Models.Entities.Finance.JournalEntryLine
+                            {
+                                AccountId = cashAccount.Value,
+                                DebitAmount = cashAmount,
+                                CreditAmount = 0
+                            });
+                        }
+
+                        if (arAmount > 0)
+                        {
+                            journalEntry.Lines.Add(new Store.Models.Entities.Finance.JournalEntryLine
+                            {
+                                AccountId = arAccount.Value,
+                                DebitAmount = arAmount,
+                                CreditAmount = 0
+                            });
+                        }
+
                         journalEntry.Lines.Add(new Store.Models.Entities.Finance.JournalEntryLine
                         {
                             AccountId = revenueAccount.Value,
@@ -619,6 +636,8 @@ public class InvoiceService : IInvoiceService
 
         await _uow.Repository<InvoiceTender>().AddAsync(tender, ct);
 
+        var amountToApply = Math.Min(request.Amount, Math.Max(0, invoice.TotalAmount - invoice.AmountTendered));
+
         invoice.AmountTendered += request.Amount;
         if (invoice.AmountTendered >= invoice.TotalAmount)
         {
@@ -626,6 +645,44 @@ public class InvoiceService : IInvoiceService
             invoice.ChangeGiven = Math.Max(0, invoice.AmountTendered - invoice.TotalAmount);
         }
         _uow.Repository<Invoice>().Update(invoice);
+
+        if (amountToApply > 0)
+        {
+            var accounts = await _financeService.GetChartOfAccountsAsync(ct);
+            if (accounts.Any())
+            {
+                var cashAccount = accounts.FirstOrDefault(a => a.AccountCode == "1000")?.AccountId;
+                var arAccount = accounts.FirstOrDefault(a => a.AccountCode == "1200")?.AccountId;
+
+                if (cashAccount.HasValue && arAccount.HasValue)
+                {
+                    var journalEntry = new Store.Models.Entities.Finance.JournalEntry
+                    {
+                        Date = DateTime.UtcNow,
+                        ReferenceId = invoice.InvoiceId.ToString(),
+                        ReferenceType = Store.Models.Entities.Finance.ReferenceType.Sale, // Or Payment
+                        Description = $"Invoice Payment {invoice.InvoiceId}",
+                        CreatedByUserId = null // We might need actingUserId here but it's not passed, let's leave it null
+                    };
+
+                    journalEntry.Lines.Add(new Store.Models.Entities.Finance.JournalEntryLine
+                    {
+                        AccountId = cashAccount.Value,
+                        DebitAmount = amountToApply,
+                        CreditAmount = 0
+                    });
+
+                    journalEntry.Lines.Add(new Store.Models.Entities.Finance.JournalEntryLine
+                    {
+                        AccountId = arAccount.Value,
+                        DebitAmount = 0,
+                        CreditAmount = amountToApply
+                    });
+
+                    await _financeService.PostJournalEntryAsync(journalEntry, ct);
+                }
+            }
+        }
 
         await _uow.SaveChangesAsync(ct);
 

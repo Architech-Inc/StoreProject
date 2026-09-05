@@ -74,6 +74,9 @@ public class ApiPurchaseOrderService : IPurchaseOrderService
     public async Task<PurchaseOrderDto?> CancelAsync(int id, Guid userId)
         => await _client.PostAsync<PurchaseOrderDto>($"/api/purchase-orders/{id}/cancel", null);
 
+    public async Task<PurchaseOrderDto?> PayAsync(int id, Guid paidByUserId)
+        => await _client.PostAsync<PurchaseOrderDto>($"/api/purchase-orders/{id}/pay", null);
+
     public async Task<AutomatedReorderResultDto> ExecuteAutomatedReorderAsync(Guid? actingUserId = null, CancellationToken ct = default)
     {
         var result = await _client.PostAsync<AutomatedReorderResultDto>("/api/purchase-orders/auto-reorder/trigger", null, ct);

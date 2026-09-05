@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using Store.Models.Entities.HR;
-using Store.Models.Entities.HR;
 using StoreUI.Pages;
 using Store.Models.Interfaces.Services;
 using StoreUI.Services;

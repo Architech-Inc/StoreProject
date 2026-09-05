@@ -21,6 +21,8 @@ public class PurchaseOrder : BaseEntity
     public PurchaseOrderStatus Status { get; set; } = PurchaseOrderStatus.Draft;
 
     public DateTime? ExpectedDeliveryDate { get; set; }
+    public DateTime? DueDate { get; set; }
+    public bool IsPaid { get; set; }
 
     [MaxLength(2000)]
     public string? Notes { get; set; }

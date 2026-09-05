@@ -142,6 +142,23 @@ public class PurchaseOrdersController : ControllerBase
         return Ok(ApiResponse<PurchaseOrderDto>.Ok(dto));
     }
 
+    [HttpPost("{id:int}/pay")]
+    [Authorize(Policy = PermissionKeys.CashWrite)] 
+    public async Task<IActionResult> Pay(int id)
+    {
+        var userIdClaim = User.FindFirst("uid")?.Value;
+        if (!Guid.TryParse(userIdClaim, out var userId))
+            return Unauthorized();
+
+        var dto = await _poService.PayAsync(id, userId);
+        if (dto is null)
+            return BadRequest(ApiErrorResponse.From("bad_request",
+                "Purchase order must be received to be paid, or it is already paid.",
+                traceId: HttpContext.TraceIdentifier));
+
+        return Ok(ApiResponse<PurchaseOrderDto>.Ok(dto));
+    }
+
     [HttpPost("auto-reorder/trigger")]
     [Authorize(Policy = PermissionKeys.InventoryWrite)]
     public async Task<IActionResult> TriggerAutoReorder(CancellationToken ct)

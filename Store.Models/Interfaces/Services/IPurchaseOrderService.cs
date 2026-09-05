@@ -14,6 +14,7 @@ public interface IPurchaseOrderService
     Task<PurchaseOrderDto?> SubmitAsync(int id, Guid userId);
     Task<PurchaseOrderDto?> ApproveAsync(int id, Guid approvedByUserId);
     Task<PurchaseOrderDto?> ReceiveAsync(int id, ReceivePurchaseOrderRequest request, Guid receivedByUserId);
+    Task<PurchaseOrderDto?> PayAsync(int id, Guid paidByUserId);
     Task<PurchaseOrderDto?> CancelAsync(int id, Guid userId);
     Task<AutomatedReorderResultDto> ExecuteAutomatedReorderAsync(Guid? actingUserId = null, CancellationToken ct = default);
 }

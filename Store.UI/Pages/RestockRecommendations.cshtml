@@ -9,7 +9,7 @@
 <div class="ops-page">
     @if (TempData["StatusMessage"] != null)
     {
-        var msg = TempData["StatusMessage"].ToString() ?? "";
+        var msg = TempData["StatusMessage"]?.ToString() ?? "";
         <div class="status @(msg.StartsWith("Error") ? "error" : "ok")" style="margin-bottom: 20px;">
             @msg
         </div>

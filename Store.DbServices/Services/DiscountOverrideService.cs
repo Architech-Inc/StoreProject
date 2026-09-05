@@ -54,8 +54,8 @@ public class DiscountOverrideService : IDiscountOverrideService
     {
         var query = _uow.Repository<DiscountOverrideRequest>().Query()
             .AsNoTracking()
-            .Include(r => r.RequestedByUser).ThenInclude(u => u.Employee)
-            .Include(r => r.ReviewedByUser).ThenInclude(u => u.Employee)
+            .Include(r => r.RequestedByUser).ThenInclude(u => u!.Employee)
+            .Include(r => r.ReviewedByUser).ThenInclude(u => u!.Employee)
             .Include(r => r.Item)
             .Include(r => r.Invoice)
             .AsQueryable();
@@ -105,8 +105,8 @@ public class DiscountOverrideService : IDiscountOverrideService
     {
         var query = _uow.Repository<DiscountOverrideRequest>().Query()
             .AsNoTracking()
-            .Include(r => r.RequestedByUser).ThenInclude(u => u.Employee)
-            .Include(r => r.ReviewedByUser).ThenInclude(u => u.Employee)
+            .Include(r => r.RequestedByUser).ThenInclude(u => u!.Employee)
+            .Include(r => r.ReviewedByUser).ThenInclude(u => u!.Employee)
             .Include(r => r.Item)
             .Include(r => r.Invoice)
             .AsQueryable();
@@ -123,8 +123,8 @@ public class DiscountOverrideService : IDiscountOverrideService
     {
         var row = await _uow.Repository<DiscountOverrideRequest>().Query()
             .AsNoTracking()
-            .Include(r => r.RequestedByUser).ThenInclude(u => u.Employee)
-            .Include(r => r.ReviewedByUser).ThenInclude(u => u.Employee)
+            .Include(r => r.RequestedByUser).ThenInclude(u => u!.Employee)
+            .Include(r => r.ReviewedByUser).ThenInclude(u => u!.Employee)
             .Include(r => r.Item)
             .Include(r => r.Invoice)
             .FirstOrDefaultAsync(r => r.DiscountOverrideRequestId == id);
@@ -150,7 +150,7 @@ public class DiscountOverrideService : IDiscountOverrideService
 
         var loaded = await _uow.Repository<DiscountOverrideRequest>().Query()
             .AsNoTracking()
-            .Include(r => r.RequestedByUser).ThenInclude(u => u.Employee)
+            .Include(r => r.RequestedByUser).ThenInclude(u => u!.Employee)
             .Include(r => r.Item)
             .Include(r => r.Invoice)
             .FirstAsync(r => r.DiscountOverrideRequestId == row.DiscountOverrideRequestId);
@@ -161,8 +161,8 @@ public class DiscountOverrideService : IDiscountOverrideService
     public async Task<DiscountOverrideDto?> ReviewAsync(int id, Guid reviewedByUserId, ReviewDiscountOverrideRequest request)
     {
         var row = await _uow.Repository<DiscountOverrideRequest>().Query()
-            .Include(r => r.RequestedByUser).ThenInclude(u => u.Employee)
-            .Include(r => r.ReviewedByUser).ThenInclude(u => u.Employee)
+            .Include(r => r.RequestedByUser).ThenInclude(u => u!.Employee)
+            .Include(r => r.ReviewedByUser).ThenInclude(u => u!.Employee)
             .Include(r => r.Item)
             .Include(r => r.Invoice)
             .FirstOrDefaultAsync(r => r.DiscountOverrideRequestId == id);

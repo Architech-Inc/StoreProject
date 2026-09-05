@@ -21,4 +21,7 @@ public class Account : BaseEntity
     public bool IsActive { get; set; } = true;
     
     public string? Description { get; set; }
+    
+    // Navigation properties
+    public ICollection<JournalEntryLine> JournalEntryLines { get; set; } = new List<JournalEntryLine>();
 }

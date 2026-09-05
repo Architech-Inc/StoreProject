@@ -14,6 +14,7 @@ public class Invoice : BaseEntity
     public decimal ChangeGiven { get; set; }
     public PaymentType PaymentType { get; set; } = PaymentType.Cash;
     public bool IsPaid { get; set; }
+    public DateTime? DueDate { get; set; }
     public string? Notes { get; set; }
 
     // Navigation

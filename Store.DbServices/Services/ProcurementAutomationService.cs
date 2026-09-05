@@ -36,7 +36,7 @@ public class ProcurementAutomationService : IProcurementAutomationService
         // Group by PreferredSupplierId
         var supplierGroups = lowStocks
             .Where(s => s.Item.PreferredSupplierId.HasValue)
-            .GroupBy(s => s.Item.PreferredSupplierId.Value)
+            .GroupBy(s => s.Item.PreferredSupplierId!.Value)
             .ToList();
 
         int poCount = 0;

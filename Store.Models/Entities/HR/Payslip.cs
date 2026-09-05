@@ -10,6 +10,7 @@ public class Payslip : BaseEntity
     
     public decimal BasicPay { get; set; }
     public decimal Allowances { get; set; }
+    public decimal Commissions { get; set; }
     public decimal GrossPay { get; set; }
     public decimal TaxDeducted { get; set; }
     public decimal NetPay { get; set; }

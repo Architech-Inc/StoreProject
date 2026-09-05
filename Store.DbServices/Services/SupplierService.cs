@@ -119,7 +119,7 @@ public class SupplierService : ISupplierService
             .AsNoTracking()
             .Include(s => s.Emails).ThenInclude(se => se.Email)
             .Include(s => s.Phones).ThenInclude(sp => sp.Phone).ThenInclude(p => p.Country)
-            .Include(s => s.Locations).ThenInclude(sl => sl.Location).ThenInclude(l => l.City).ThenInclude(c => c.Region).ThenInclude(r => r.Country)
+            .Include(s => s.Locations).ThenInclude(sl => sl.Location).ThenInclude(l => l!.City).ThenInclude(c => c!.Region).ThenInclude(r => r!.Country)
             .AsQueryable();
     }
 
@@ -129,7 +129,7 @@ public class SupplierService : ISupplierService
             .AsNoTracking()
             .Include(s => s.Emails).ThenInclude(se => se.Email)
             .Include(s => s.Phones).ThenInclude(sp => sp.Phone).ThenInclude(p => p.Country)
-            .Include(s => s.Locations).ThenInclude(sl => sl.Location).ThenInclude(l => l.City).ThenInclude(c => c.Region).ThenInclude(r => r.Country)
+            .Include(s => s.Locations).ThenInclude(sl => sl.Location).ThenInclude(l => l!.City).ThenInclude(c => c!.Region).ThenInclude(r => r!.Country)
             .FirstOrDefaultAsync(s => s.SupplierId == id);
 
         return supplier is null ? null : MapToDto(supplier);
@@ -141,7 +141,7 @@ public class SupplierService : ISupplierService
             .AsNoTracking()
             .Include(s => s.Emails).ThenInclude(se => se.Email)
             .Include(s => s.Phones).ThenInclude(sp => sp.Phone).ThenInclude(p => p.Country)
-            .Include(s => s.Locations).ThenInclude(sl => sl.Location).ThenInclude(l => l.City).ThenInclude(c => c.Region).ThenInclude(r => r.Country)
+            .Include(s => s.Locations).ThenInclude(sl => sl.Location).ThenInclude(l => l!.City).ThenInclude(c => c!.Region).ThenInclude(r => r!.Country)
             .FirstOrDefaultAsync(s => s.SupplierId == id);
 
         if (supplier is null) return null;
@@ -268,6 +268,7 @@ public class SupplierService : ISupplierService
             Name = request.Name.Trim(),
             RegistrationNumber = request.RegistrationNumber?.Trim(),
             Notes = request.Notes?.Trim(),
+            AutoSendPurchaseOrders = request.AutoSendPurchaseOrders,
             ThumbnailUrl = request.ThumbnailUrl?.Trim(),
             FullImageUrl = request.FullImageUrl?.Trim()
         };
@@ -346,6 +347,7 @@ public class SupplierService : ISupplierService
         supplier.Name = request.Name.Trim();
         supplier.RegistrationNumber = request.RegistrationNumber?.Trim();
         supplier.Notes = request.Notes?.Trim();
+        supplier.AutoSendPurchaseOrders = request.AutoSendPurchaseOrders;
         if (request.ThumbnailUrl != null) supplier.ThumbnailUrl = request.ThumbnailUrl;
         if (request.FullImageUrl != null) supplier.FullImageUrl = request.FullImageUrl;
 
@@ -433,6 +435,7 @@ public class SupplierService : ISupplierService
             Name = supplier.Name,
             RegistrationNumber = supplier.RegistrationNumber,
             Notes = supplier.Notes,
+            AutoSendPurchaseOrders = supplier.AutoSendPurchaseOrders,
             ThumbnailUrl = supplier.ThumbnailUrl,
             FullImageUrl = supplier.FullImageUrl,
             DateCreated = supplier.DateCreated,

@@ -12,6 +12,7 @@ public class SupplierDto
     public string? Notes { get; set; }
     public string? ThumbnailUrl { get; set; }
     public string? FullImageUrl { get; set; }
+    public bool AutoSendPurchaseOrders { get; set; }
     public DateTime DateCreated { get; set; }
     public List<SupplierEmailDto> Emails { get; set; } = new();
     public List<SupplierPhoneDto> Phones { get; set; } = new();
@@ -66,6 +67,7 @@ public class CreateSupplierRequest
 
     public string? ThumbnailUrl { get; set; }
     public string? FullImageUrl { get; set; }
+    public bool AutoSendPurchaseOrders { get; set; }
 
     public List<CreateSupplierEmailRequest> Emails { get; set; } = new();
     public List<CreateSupplierPhoneRequest> Phones { get; set; } = new();
@@ -129,6 +131,7 @@ public class UpdateSupplierRequest
 
     public string? ThumbnailUrl { get; set; }
     public string? FullImageUrl { get; set; }
+    public bool AutoSendPurchaseOrders { get; set; }
 
     public List<CreateSupplierEmailRequest>? Emails { get; set; }
     public List<CreateSupplierPhoneRequest>? Phones { get; set; }

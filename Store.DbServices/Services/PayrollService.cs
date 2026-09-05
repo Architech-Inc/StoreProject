@@ -59,7 +59,42 @@ public class PayrollService : IPayrollService
 
             decimal basicPay = contract.Salary.BasicAmount;
             decimal allowances = contract.Salary.AllowanceAmount ?? 0;
-            decimal grossPay = basicPay + allowances;
+            decimal commissions = 0;
+
+            // Calculate Commissions
+            if (contract.CommissionRate > 0 && contract.CommissionBasis != CommissionBasis.None)
+            {
+                var userIds = await _context.Users
+                    .Where(u => u.EmployeeId == contract.EmployeeId)
+                    .Select(u => u.UserId)
+                    .ToListAsync();
+
+                if (userIds.Any())
+                {
+                    if (contract.CommissionBasis == CommissionBasis.GrossSales)
+                    {
+                        var grossSales = await _context.Invoices
+                            .Where(i => userIds.Contains(i.UserId ?? Guid.Empty) && i.IsPaid && i.DateCreated >= periodStart && i.DateCreated <= periodEnd)
+                            .SumAsync(i => (decimal?)i.TotalAmount) ?? 0;
+                        commissions = grossSales * contract.CommissionRate;
+                    }
+                    else if (contract.CommissionBasis == CommissionBasis.ProfitMargin)
+                    {
+                        var profit = await _context.Sales
+                            .Include(s => s.Invoice)
+                            .Include(s => s.Item)
+                            .Where(s => userIds.Contains(s.Invoice.UserId ?? Guid.Empty) && s.Invoice.IsPaid && s.DateCreated >= periodStart && s.DateCreated <= periodEnd)
+                            .SumAsync(s => (decimal?)((s.UnitPrice - (s.Item.CostPrice ?? s.Item.UnitPrice * 0.7m)) * s.Quantity)) ?? 0;
+                        
+                        if (profit > 0)
+                        {
+                            commissions = profit * contract.CommissionRate;
+                        }
+                    }
+                }
+            }
+
+            decimal grossPay = basicPay + allowances + commissions;
             decimal taxDeducted = 0;
 
             if (contract.PayrollType == PayrollType.Taxed)
@@ -76,6 +111,7 @@ public class PayrollService : IPayrollService
                 EmployeeId = contract.EmployeeId,
                 BasicPay = basicPay,
                 Allowances = allowances,
+                Commissions = commissions,
                 GrossPay = grossPay,
                 TaxDeducted = taxDeducted,
                 NetPay = netPay,
@@ -87,6 +123,7 @@ public class PayrollService : IPayrollService
 
             payrollRun.TotalGross += grossPay;
             payrollRun.TotalAllowances += allowances;
+            payrollRun.TotalCommissions += commissions;
             payrollRun.TotalTax += taxDeducted;
             payrollRun.TotalNet += netPay;
         }

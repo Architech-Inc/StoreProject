@@ -79,6 +79,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IProcurementAutomationService, ProcurementAutomationService>();
         services.AddScoped<IPayrollService, PayrollService>();
         services.AddScoped<IDemandForecastingService, DemandForecastingService>();
+        services.AddScoped<IEmailService, MockEmailService>();
         
         services.AddHostedService<OfflineLogSyncWorker>();
         services.AddHostedService<LogRetentionWorker>();

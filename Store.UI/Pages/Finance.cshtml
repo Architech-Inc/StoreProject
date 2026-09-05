@@ -1,0 +1,274 @@
+@page "/Finance"
+@model StoreUI.Pages.FinanceModel
+@{
+    ViewData["Title"] = "Financial Reporting";
+    ViewData["ActivePage"] = "Finance";
+    ViewData["PageDescription"] = "General ledger, profit and loss, and balance sheet reporting.";
+}
+
+<div class="ops-page">
+    <div class="ops-header" style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px;">
+        <div class="tabs" style="display: flex; gap: 16px; border-bottom: 2px solid var(--border-soft); width: 100%;">
+            <a href="?ViewType=PnL" class="tab-item @(Model.ViewType == "PnL" ? "active" : "")" style="padding: 12px 24px; text-decoration: none; color: var(--text-main); font-weight: 600; border-bottom: @(Model.ViewType == "PnL" ? "3px solid var(--brand-primary)" : "3px solid transparent");">Profit & Loss</a>
+            <a href="?ViewType=BalanceSheet" class="tab-item @(Model.ViewType == "BalanceSheet" ? "active" : "")" style="padding: 12px 24px; text-decoration: none; color: var(--text-main); font-weight: 600; border-bottom: @(Model.ViewType == "BalanceSheet" ? "3px solid var(--brand-primary)" : "3px solid transparent");">Balance Sheet</a>
+            <a href="?ViewType=ARAging" class="tab-item @(Model.ViewType == "ARAging" ? "active" : "")" style="padding: 12px 24px; text-decoration: none; color: var(--text-main); font-weight: 600; border-bottom: @(Model.ViewType == "ARAging" ? "3px solid var(--brand-primary)" : "3px solid transparent");">A/R Aging</a>
+            <a href="?ViewType=APAging" class="tab-item @(Model.ViewType == "APAging" ? "active" : "")" style="padding: 12px 24px; text-decoration: none; color: var(--text-main); font-weight: 600; border-bottom: @(Model.ViewType == "APAging" ? "3px solid var(--brand-primary)" : "3px solid transparent");">A/P Aging</a>
+        </div>
+    </div>
+
+    @if (Model.ViewType == "PnL")
+    {
+        <section class="filter-dock">
+            <form method="get" style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+                <input type="hidden" name="ViewType" value="PnL" />
+                <div class="form-group" style="margin: 0;">
+                    <label style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">Start Date</label>
+                    <input type="date" name="StartDate" value="@(Model.StartDate?.ToString("yyyy-MM-dd") ?? new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1).ToString("yyyy-MM-dd"))" class="form-control" style="width: auto;" />
+                </div>
+                <div class="form-group" style="margin: 0;">
+                    <label style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">End Date</label>
+                    <input type="date" name="EndDate" value="@(Model.EndDate?.ToString("yyyy-MM-dd") ?? DateTime.UtcNow.ToString("yyyy-MM-dd"))" class="form-control" style="width: auto;" />
+                </div>
+                <div style="margin-top: 18px;">
+                    <button type="submit" class="btn-brand-primary">Generate Report</button>
+                </div>
+            </form>
+        </section>
+
+        @if (Model.ProfitAndLoss != null)
+        {
+            <div class="finance-report" style="background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-lg); padding: 32px; box-shadow: var(--shadow-sm); margin-top: 24px;">
+                <div style="text-align: center; margin-bottom: 32px;">
+                    <h2 style="margin: 0; font-size: 1.8rem; color: var(--text-main);">Profit & Loss Statement</h2>
+                    <p style="color: var(--text-muted); margin-top: 8px;">For the period: @Model.ProfitAndLoss.PeriodStart.ToString("MMM dd, yyyy") - @Model.ProfitAndLoss.PeriodEnd.ToString("MMM dd, yyyy")</p>
+                </div>
+
+                <div class="report-section">
+                    <h3 style="border-bottom: 2px solid var(--border-soft); padding-bottom: 8px; color: var(--text-main);">Revenue</h3>
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+                        @foreach (var acc in Model.ProfitAndLoss.RevenueAccounts)
+                        {
+                            <tr>
+                                <td style="padding: 8px 0; color: var(--text-secondary);">@acc.AccountCode - @acc.AccountName</td>
+                                <td style="padding: 8px 0; text-align: right; color: var(--text-main);">@acc.Balance.ToString("N2")</td>
+                            </tr>
+                        }
+                        <tr style="border-top: 1px solid var(--border-soft); font-weight: 600;">
+                            <td style="padding: 12px 0;">Total Revenue</td>
+                            <td style="padding: 12px 0; text-align: right;">@Model.ProfitAndLoss.TotalRevenue.ToString("N2")</td>
+                        </tr>
+                    </table>
+
+                    <h3 style="border-bottom: 2px solid var(--border-soft); padding-bottom: 8px; color: var(--text-main);">Cost of Goods Sold (COGS)</h3>
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+                        @foreach (var acc in Model.ProfitAndLoss.COGSAccounts)
+                        {
+                            <tr>
+                                <td style="padding: 8px 0; color: var(--text-secondary);">@acc.AccountCode - @acc.AccountName</td>
+                                <td style="padding: 8px 0; text-align: right; color: var(--text-main);">@acc.Balance.ToString("N2")</td>
+                            </tr>
+                        }
+                        <tr style="border-top: 1px solid var(--border-soft); font-weight: 600;">
+                            <td style="padding: 12px 0;">Total COGS</td>
+                            <td style="padding: 12px 0; text-align: right;">@Model.ProfitAndLoss.TotalCOGS.ToString("N2")</td>
+                        </tr>
+                    </table>
+
+                    <div style="background: rgba(34, 197, 94, 0.1); border-left: 4px solid var(--success); padding: 16px; margin-bottom: 32px; border-radius: 4px; display: flex; justify-content: space-between; font-size: 1.2rem; font-weight: 700;">
+                        <span>Gross Profit</span>
+                        <span>@Model.ProfitAndLoss.GrossProfit.ToString("N2")</span>
+                    </div>
+
+                    <h3 style="border-bottom: 2px solid var(--border-soft); padding-bottom: 8px; color: var(--text-main);">Operating Expenses</h3>
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+                        @foreach (var acc in Model.ProfitAndLoss.ExpenseAccounts)
+                        {
+                            <tr>
+                                <td style="padding: 8px 0; color: var(--text-secondary);">@acc.AccountCode - @acc.AccountName</td>
+                                <td style="padding: 8px 0; text-align: right; color: var(--text-main);">@acc.Balance.ToString("N2")</td>
+                            </tr>
+                        }
+                        <tr style="border-top: 1px solid var(--border-soft); font-weight: 600;">
+                            <td style="padding: 12px 0;">Total Operating Expenses</td>
+                            <td style="padding: 12px 0; text-align: right;">@Model.ProfitAndLoss.TotalOperatingExpenses.ToString("N2")</td>
+                        </tr>
+                    </table>
+
+                    <div style="background: @(Model.ProfitAndLoss.NetIncome >= 0 ? "rgba(34, 197, 94, 0.15)" : "rgba(239, 68, 68, 0.15)"); border-left: 4px solid @(Model.ProfitAndLoss.NetIncome >= 0 ? "var(--success)" : "var(--danger)"); padding: 20px; border-radius: 4px; display: flex; justify-content: space-between; font-size: 1.4rem; font-weight: 800;">
+                        <span>Net Income</span>
+                        <span>@Model.ProfitAndLoss.NetIncome.ToString("N2") XAF</span>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+    else if (Model.ViewType == "BalanceSheet")
+    {
+        <section class="filter-dock">
+            <form method="get" style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+                <input type="hidden" name="ViewType" value="BalanceSheet" />
+                <div class="form-group" style="margin: 0;">
+                    <label style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">As Of Date</label>
+                    <input type="date" name="AsOfDate" value="@(Model.AsOfDate?.ToString("yyyy-MM-dd") ?? DateTime.UtcNow.ToString("yyyy-MM-dd"))" class="form-control" style="width: auto;" />
+                </div>
+                <div style="margin-top: 18px;">
+                    <button type="submit" class="btn-brand-primary">Generate Report</button>
+                </div>
+            </form>
+        </section>
+
+        @if (Model.BalanceSheet != null)
+        {
+            <div class="finance-report" style="background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-lg); padding: 32px; box-shadow: var(--shadow-sm); margin-top: 24px;">
+                <div style="text-align: center; margin-bottom: 32px;">
+                    <h2 style="margin: 0; font-size: 1.8rem; color: var(--text-main);">Balance Sheet</h2>
+                    <p style="color: var(--text-muted); margin-top: 8px;">As of: @Model.BalanceSheet.AsOfDate.ToString("MMM dd, yyyy")</p>
+                </div>
+
+                <div class="report-section" style="display: grid; grid-template-columns: 1fr 1fr; gap: 48px;">
+                    <!-- Assets Column -->
+                    <div>
+                        <h3 style="border-bottom: 2px solid var(--border-soft); padding-bottom: 8px; color: var(--text-main); font-size: 1.4rem;">Assets</h3>
+                        <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+                            @foreach (var acc in Model.BalanceSheet.AssetAccounts)
+                            {
+                                <tr>
+                                    <td style="padding: 10px 0; color: var(--text-secondary);">@acc.AccountCode - @acc.AccountName</td>
+                                    <td style="padding: 10px 0; text-align: right; color: var(--text-main);">@acc.Balance.ToString("N2")</td>
+                                </tr>
+                            }
+                            <tr style="border-top: 2px solid var(--border-soft); font-weight: 700; font-size: 1.1rem;">
+                                <td style="padding: 16px 0;">Total Assets</td>
+                                <td style="padding: 16px 0; text-align: right;">@Model.BalanceSheet.TotalAssets.ToString("N2")</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <!-- Liabilities & Equity Column -->
+                    <div>
+                        <h3 style="border-bottom: 2px solid var(--border-soft); padding-bottom: 8px; color: var(--text-main); font-size: 1.4rem;">Liabilities</h3>
+                        <table style="width: 100%; border-collapse: collapse; margin-bottom: 32px;">
+                            @foreach (var acc in Model.BalanceSheet.LiabilityAccounts)
+                            {
+                                <tr>
+                                    <td style="padding: 10px 0; color: var(--text-secondary);">@acc.AccountCode - @acc.AccountName</td>
+                                    <td style="padding: 10px 0; text-align: right; color: var(--text-main);">@acc.Balance.ToString("N2")</td>
+                                </tr>
+                            }
+                            <tr style="border-top: 1px solid var(--border-soft); font-weight: 600;">
+                                <td style="padding: 12px 0;">Total Liabilities</td>
+                                <td style="padding: 12px 0; text-align: right;">@Model.BalanceSheet.TotalLiabilities.ToString("N2")</td>
+                            </tr>
+                        </table>
+
+                        <h3 style="border-bottom: 2px solid var(--border-soft); padding-bottom: 8px; color: var(--text-main); font-size: 1.4rem;">Equity</h3>
+                        <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+                            @foreach (var acc in Model.BalanceSheet.EquityAccounts)
+                            {
+                                <tr>
+                                    <td style="padding: 10px 0; color: var(--text-secondary);">@acc.AccountCode - @acc.AccountName</td>
+                                    <td style="padding: 10px 0; text-align: right; color: var(--text-main);">@acc.Balance.ToString("N2")</td>
+                                </tr>
+                            }
+                            <tr style="border-top: 1px solid var(--border-soft); font-weight: 600;">
+                                <td style="padding: 12px 0;">Total Equity</td>
+                                <td style="padding: 12px 0; text-align: right;">@Model.BalanceSheet.TotalEquity.ToString("N2")</td>
+                            </tr>
+                        </table>
+
+                        <div style="background: rgba(139, 92, 246, 0.08); border-top: 4px solid #8b5cf6; padding: 16px 0;">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <tr style="font-weight: 700; font-size: 1.1rem;">
+                                    <td style="padding: 0 16px;">Total Liabilities & Equity</td>
+                                    <td style="padding: 0 16px; text-align: right;">@((Model.BalanceSheet.TotalLiabilities + Model.BalanceSheet.TotalEquity).ToString("N2"))</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+    else if (Model.ViewType == "ARAging" || Model.ViewType == "APAging")
+    {
+        var isAR = Model.ViewType == "ARAging";
+        var report = isAR ? Model.ArAging : Model.ApAging;
+        var title = isAR ? "Accounts Receivable Aging" : "Accounts Payable Aging";
+
+        <section class="filter-dock">
+            <form method="get" style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+                <input type="hidden" name="ViewType" value="@Model.ViewType" />
+                <div class="form-group" style="margin: 0;">
+                    <label style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">As Of Date</label>
+                    <input type="date" name="AsOfDate" value="@(Model.AsOfDate?.ToString("yyyy-MM-dd") ?? DateTime.UtcNow.ToString("yyyy-MM-dd"))" class="form-control" style="width: auto;" />
+                </div>
+                <div style="margin-top: 18px;">
+                    <button type="submit" class="btn-brand-primary">Generate Report</button>
+                </div>
+            </form>
+        </section>
+
+        @if (report != null)
+        {
+            <div class="finance-report" style="background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-lg); padding: 32px; box-shadow: var(--shadow-sm); margin-top: 24px;">
+                <div style="text-align: center; margin-bottom: 32px;">
+                    <h2 style="margin: 0; font-size: 1.8rem; color: var(--text-main);">@title</h2>
+                    <p style="color: var(--text-muted); margin-top: 8px;">As of: @report.AsOfDate.ToString("MMM dd, yyyy")</p>
+                </div>
+
+                <div class="table-responsive" style="margin-top: 24px;">
+                    <table class="table-primary" style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>Party Name</th>
+                                <th>Reference</th>
+                                <th>Due Date</th>
+                                <th style="text-align: right;">Current</th>
+                                <th style="text-align: right;">1-30 Days</th>
+                                <th style="text-align: right;">31-60 Days</th>
+                                <th style="text-align: right;">61-90 Days</th>
+                                <th style="text-align: right;">> 90 Days</th>
+                                <th style="text-align: right;">Total Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (!report.Items.Any())
+                            {
+                                <tr>
+                                    <td colspan="9" style="text-align: center; padding: 24px; color: var(--text-muted);">
+                                        No outstanding balances found.
+                                    </td>
+                                </tr>
+                            }
+                            @foreach (var item in report.Items)
+                            {
+                                <tr>
+                                    <td><strong>@item.PartyName</strong></td>
+                                    <td>@item.ReferenceNumber</td>
+                                    <td>@(item.DueDate?.ToString("MMM dd, yyyy") ?? "-")</td>
+                                    <td style="text-align: right;">@(item.Current > 0 ? item.Current.ToString("N2") : "-")</td>
+                                    <td style="text-align: right; color: @(item.Days1To30 > 0 ? "var(--warning)" : "inherit");">@(item.Days1To30 > 0 ? item.Days1To30.ToString("N2") : "-")</td>
+                                    <td style="text-align: right; color: @(item.Days31To60 > 0 ? "var(--warning)" : "inherit");">@(item.Days31To60 > 0 ? item.Days31To60.ToString("N2") : "-")</td>
+                                    <td style="text-align: right; color: @(item.Days61To90 > 0 ? "var(--danger)" : "inherit");">@(item.Days61To90 > 0 ? item.Days61To90.ToString("N2") : "-")</td>
+                                    <td style="text-align: right; color: @(item.Over90Days > 0 ? "var(--danger)" : "inherit"); font-weight: bold;">@(item.Over90Days > 0 ? item.Over90Days.ToString("N2") : "-")</td>
+                                    <td style="text-align: right; font-weight: 600;">@item.Amount.ToString("N2")</td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot style="background: var(--bg-alt); font-weight: 700;">
+                            <tr>
+                                <td colspan="3" style="text-align: right;">Totals:</td>
+                                <td style="text-align: right;">@report.TotalCurrent.ToString("N2")</td>
+                                <td style="text-align: right;">@report.Total1To30Days.ToString("N2")</td>
+                                <td style="text-align: right;">@report.Total31To60Days.ToString("N2")</td>
+                                <td style="text-align: right;">@report.Total61To90Days.ToString("N2")</td>
+                                <td style="text-align: right; color: var(--danger);">@report.TotalOver90Days.ToString("N2")</td>
+                                <td style="text-align: right; font-size: 1.1em;">@report.TotalAmount.ToString("N2")</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        }
+    }
+</div>

@@ -11,6 +11,7 @@ public class Supplier : BaseEntity
     public string? Notes { get; set; }
     public string? ThumbnailUrl { get; set; }
     public string? FullImageUrl { get; set; }
+    public bool AutoSendPurchaseOrders { get; set; } = false;
 
     // Navigation
     public ICollection<SupplierEmail> Emails { get; set; } = new List<SupplierEmail>();

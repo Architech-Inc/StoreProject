@@ -12,11 +12,13 @@ public class PurchaseOrderService : IPurchaseOrderService
 {
     private readonly IUnitOfWork _uow;
     private readonly IFinanceService _financeService;
+    private readonly IEmailService _emailService;
 
-    public PurchaseOrderService(IUnitOfWork uow, IFinanceService financeService)
+    public PurchaseOrderService(IUnitOfWork uow, IFinanceService financeService, IEmailService emailService)
     {
         _uow = uow;
         _financeService = financeService;
+        _emailService = emailService;
     }
 
     public async Task<PurchaseOrderMetricsDto> GetPurchaseOrderMetricsAsync(CancellationToken ct = default)
@@ -197,7 +199,18 @@ public class PurchaseOrderService : IPurchaseOrderService
         _uow.Repository<PurchaseOrder>().Update(po);
         await _uow.SaveChangesAsync();
 
-        return MapToDto((await LoadWithNavsAsync(id))!);
+        var loaded = await LoadWithNavsAsync(id);
+
+        if (loaded?.Supplier?.AutoSendPurchaseOrders == true)
+        {
+            var email = loaded.Supplier.Emails.FirstOrDefault()?.Email?.Address;
+            if (!string.IsNullOrWhiteSpace(email))
+            {
+                await _emailService.SendPurchaseOrderEmailAsync(loaded, email);
+            }
+        }
+
+        return MapToDto(loaded!);
     }
 
     public async Task<PurchaseOrderDto?> ApproveAsync(int id, Guid approvedByUserId)
@@ -342,6 +355,64 @@ public class PurchaseOrderService : IPurchaseOrderService
         return MapToDto((await LoadWithNavsAsync(id))!);
     }
 
+    public async Task<PurchaseOrderDto?> PayAsync(int id, Guid paidByUserId)
+    {
+        var po = await _uow.Repository<PurchaseOrder>().Query()
+            .Include(p => p.Items)
+            .FirstOrDefaultAsync(p => p.PurchaseOrderId == id);
+
+        if (po is null || po.IsPaid) return null;
+
+        po.IsPaid = true;
+        _uow.Repository<PurchaseOrder>().Update(po);
+
+        var amountDue = po.Items.Sum(i => i.ReceivedQuantity * i.UnitCost); // Paying for what was received
+
+        if (amountDue > 0)
+        {
+            var accounts = await _financeService.GetChartOfAccountsAsync();
+            if (accounts.Any())
+            {
+                var accountsPayable = accounts.FirstOrDefault(a => a.AccountCode == "2000")?.AccountId;
+                var cashAccount = accounts.FirstOrDefault(a => a.AccountCode == "1000")?.AccountId;
+
+                if (accountsPayable.HasValue && cashAccount.HasValue)
+                {
+                    var journalEntry = new Store.Models.Entities.Finance.JournalEntry
+                    {
+                        Date = DateTime.UtcNow,
+                        ReferenceId = po.PurchaseOrderId.ToString(),
+                        ReferenceType = Store.Models.Entities.Finance.ReferenceType.Purchase,
+                        Description = $"PO Payment #{po.PurchaseOrderId}",
+                        CreatedByUserId = paidByUserId != Guid.Empty ? paidByUserId : null
+                    };
+
+                    // Debit AP
+                    journalEntry.Lines.Add(new Store.Models.Entities.Finance.JournalEntryLine
+                    {
+                        AccountId = accountsPayable.Value,
+                        DebitAmount = amountDue,
+                        CreditAmount = 0
+                    });
+
+                    // Credit Cash
+                    journalEntry.Lines.Add(new Store.Models.Entities.Finance.JournalEntryLine
+                    {
+                        AccountId = cashAccount.Value,
+                        DebitAmount = 0,
+                        CreditAmount = amountDue
+                    });
+
+                    await _financeService.PostJournalEntryAsync(journalEntry);
+                }
+            }
+        }
+
+        await _uow.SaveChangesAsync();
+
+        return MapToDto((await LoadWithNavsAsync(id))!);
+    }
+
     public async Task<PurchaseOrderDto?> CancelAsync(int id, Guid userId)
     {
         var po = await _uow.Repository<PurchaseOrder>().Query()
@@ -454,7 +525,7 @@ public class PurchaseOrderService : IPurchaseOrderService
                 var newPo = new PurchaseOrder
                 {
                     SupplierId = supplierId,
-                    Status = PurchaseOrderStatus.Draft,
+                    Status = supplier.AutoSendPurchaseOrders ? PurchaseOrderStatus.Submitted : PurchaseOrderStatus.Draft,
                     ReferenceNumber = refNum,
                     RequestedByUserId = userId,
                     ExpectedDeliveryDate = DateTime.UtcNow.AddDays(3),
@@ -479,6 +550,22 @@ public class PurchaseOrderService : IPurchaseOrderService
                 await _uow.Repository<PurchaseOrder>().AddAsync(newPo);
                 result.OrdersCreatedCount++;
                 result.GeneratedReferences.Add(refNum);
+                
+                // If auto-send is enabled, we need to send it after saving
+                if (supplier.AutoSendPurchaseOrders)
+                {
+                    // We need to save to get the ID for the PO and its items before sending
+                    await _uow.SaveChangesAsync(ct);
+                    var savedPo = await LoadWithNavsAsync(newPo.PurchaseOrderId);
+                    if (savedPo != null)
+                    {
+                        var email = savedPo.Supplier?.Emails.FirstOrDefault()?.Email?.Address;
+                        if (!string.IsNullOrWhiteSpace(email))
+                        {
+                            await _emailService.SendPurchaseOrderEmailAsync(savedPo, email, ct);
+                        }
+                    }
+                }
             }
         }
 

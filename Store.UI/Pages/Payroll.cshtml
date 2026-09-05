@@ -71,6 +71,7 @@
                     <th>Period</th>
                     <th>Status</th>
                     <th class="num">Total Gross</th>
+                    <th class="num">Commissions</th>
                     <th class="num">Total Net</th>
                     <th style="text-align: right;">Actions</th>
                 </tr>
@@ -104,6 +105,7 @@
                                 }
                             </td>
                             <td class="num">@run.TotalGross.ToString("N0") XAF</td>
+                            <td class="num" style="color:var(--brand-secondary);">@run.TotalCommissions.ToString("N0") XAF</td>
                             <td class="num font-bold">@run.TotalNet.ToString("N0") XAF</td>
                             <td style="text-align: right;">
                                 <div style="display:flex; gap:8px; justify-content:flex-end;">

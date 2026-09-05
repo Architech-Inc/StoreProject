@@ -31,6 +31,7 @@ public class SuppliersModel : SecurePageModel
     [BindProperty] public string CreateName { get; set; } = string.Empty;
     [BindProperty] public string? CreateRegistrationNumber { get; set; }
     [BindProperty] public string? CreateNotes { get; set; }
+    [BindProperty] public bool CreateAutoSendPurchaseOrders { get; set; }
     [BindProperty] public IFormFile? CreateImageUpload { get; set; }
     [BindProperty] public int? CropX { get; set; }
     [BindProperty] public int? CropY { get; set; }
@@ -59,6 +60,7 @@ public class SuppliersModel : SecurePageModel
     [BindProperty] public string EditName { get; set; } = string.Empty;
     [BindProperty] public string? EditRegistrationNumber { get; set; }
     [BindProperty] public string? EditNotes { get; set; }
+    [BindProperty] public bool EditAutoSendPurchaseOrders { get; set; }
     [BindProperty] public IFormFile? EditImageUpload { get; set; }
     [BindProperty] public int? EditCropX { get; set; }
     [BindProperty] public int? EditCropY { get; set; }
@@ -227,6 +229,7 @@ public class SuppliersModel : SecurePageModel
             Name = CreateName.Trim(),
             RegistrationNumber = string.IsNullOrWhiteSpace(CreateRegistrationNumber) ? null : CreateRegistrationNumber.Trim(),
             Notes = string.IsNullOrWhiteSpace(CreateNotes) ? null : CreateNotes.Trim(),
+            AutoSendPurchaseOrders = CreateAutoSendPurchaseOrders,
             ThumbnailUrl = thumbUrl,
             FullImageUrl = fullUrl,
             Emails = emails,
@@ -316,6 +319,7 @@ public class SuppliersModel : SecurePageModel
             Name = EditName.Trim(),
             RegistrationNumber = string.IsNullOrWhiteSpace(EditRegistrationNumber) ? null : EditRegistrationNumber.Trim(),
             Notes = string.IsNullOrWhiteSpace(EditNotes) ? null : EditNotes.Trim(),
+            AutoSendPurchaseOrders = EditAutoSendPurchaseOrders,
             ThumbnailUrl = thumbUrl,
             FullImageUrl = fullUrl,
             Emails = emails,

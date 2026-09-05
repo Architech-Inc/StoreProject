@@ -17,6 +17,7 @@ public class PayrollRun : BaseEntity
     public decimal TotalNet { get; set; }
     public decimal TotalTax { get; set; }
     public decimal TotalAllowances { get; set; }
+    public decimal TotalCommissions { get; set; }
     
     public Guid? ApprovedByUserId { get; set; }
     public DateTime? ApprovedAt { get; set; }
