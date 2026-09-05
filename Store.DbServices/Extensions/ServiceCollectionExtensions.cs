@@ -11,6 +11,7 @@ using Store.Models.Interfaces;
 using Store.Models.Interfaces.Repositories;
 using Store.Models.Interfaces.Repositories.Users;
 using Store.Models.Interfaces.Services;
+using Store.DbServices.Services.Interfaces;
 using Store.DbServices.Workers;
 
 namespace Store.DbServices.Extensions;
@@ -64,6 +65,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ILoyaltyService, LoyaltyService>();
         services.AddScoped<ILoyaltyCampaignService, LoyaltyCampaignService>();
         services.AddScoped<IDiscountService, DiscountService>();
+        services.AddScoped<IFinanceService, FinanceService>();
         services.AddScoped<IBatchService, BatchService>();
         services.AddScoped<IStockTransferService, StockTransferService>();
         services.AddScoped<IWastageService, WastageService>();
@@ -74,6 +76,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICommunicationLogService, CommunicationLogService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IAuditLogService, AuditLogService>();
+        services.AddScoped<IProcurementAutomationService, ProcurementAutomationService>();
+        services.AddScoped<IPayrollService, PayrollService>();
+        services.AddScoped<IDemandForecastingService, DemandForecastingService>();
         
         services.AddHostedService<OfflineLogSyncWorker>();
         services.AddHostedService<LogRetentionWorker>();

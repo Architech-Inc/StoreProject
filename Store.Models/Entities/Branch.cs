@@ -8,6 +8,8 @@ public class Branch : BaseEntity
     public int BranchId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Code { get; set; } = string.Empty;
+    public bool IsWarehouse { get; set; }
+    public int? SupplyingWarehouseId { get; set; }
     public string? Address { get; set; }
     public bool IsActive { get; set; } = true;
 
@@ -22,4 +24,6 @@ public class Branch : BaseEntity
     public ICollection<Employee> Employees { get; set; } = new List<Employee>();
     public ICollection<PersonnelTransferHistory> OutgoingTransfers { get; set; } = new List<PersonnelTransferHistory>();
     public ICollection<PersonnelTransferHistory> IncomingTransfers { get; set; } = new List<PersonnelTransferHistory>();
+    public Branch? SupplyingWarehouse { get; set; }
+    public ICollection<Branch> SuppliedBranches { get; set; } = new List<Branch>();
 }

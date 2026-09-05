@@ -19,7 +19,8 @@ using Microsoft.EntityFrameworkCore;
 using Store.API.Hubs;
 using Store.API.Services;
 using Store.Models.Interfaces.Services;
-
+using Hangfire;
+using Store.API.Extensions;
 var builder = WebApplication.CreateBuilder(args);
 
 // ─── Database & Domain Services ──────────────────────────────────────────────
@@ -259,6 +260,9 @@ builder.Services.AddSwaggerGen(options =>
 // ─── Health Checks ────────────────────────────────────────────────────────────
 builder.Services.AddHealthChecks();
 
+// ─── Background Jobs (Hangfire) ───────────────────────────────────────────────
+builder.Services.AddHangfireServices(builder.Configuration);
+
 // ═════════════════════════════════════════════════════════════════════════════
 var app = builder.Build();
 // ═════════════════════════════════════════════════════════════════════════════
@@ -315,5 +319,14 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHub<Store.API.Hubs.StoreNotificationHub>("/hubs/notifications");
 app.MapHealthChecks("/health");
+
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    // Configure authorization properly in production
+    Authorization = new[] { new Hangfire.Dashboard.LocalRequestsOnlyAuthorizationFilter() }
+});
+
+app.Services.ScheduleProcurementJobs();
+app.Services.SchedulePayrollJobs();
 
 app.Run();

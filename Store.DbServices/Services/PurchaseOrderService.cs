@@ -11,8 +11,13 @@ namespace Store.DbServices.Services;
 public class PurchaseOrderService : IPurchaseOrderService
 {
     private readonly IUnitOfWork _uow;
+    private readonly IFinanceService _financeService;
 
-    public PurchaseOrderService(IUnitOfWork uow) => _uow = uow;
+    public PurchaseOrderService(IUnitOfWork uow, IFinanceService financeService)
+    {
+        _uow = uow;
+        _financeService = financeService;
+    }
 
     public async Task<PurchaseOrderMetricsDto> GetPurchaseOrderMetricsAsync(CancellationToken ct = default)
     {
@@ -223,6 +228,8 @@ public class PurchaseOrderService : IPurchaseOrderService
              po.Status != PurchaseOrderStatus.PartiallyReceived))
             return null;
 
+        decimal totalReceivedValue = 0m;
+
         foreach (var line in request.Lines)
         {
             var poItem = po.Items.FirstOrDefault(i => i.PurchaseOrderItemId == line.PurchaseOrderItemId);
@@ -256,6 +263,8 @@ public class PurchaseOrderService : IPurchaseOrderService
 
             poItem.ReceivedQuantity += line.ReceivedQuantity;
             _uow.Repository<PurchaseOrderItem>().Update(poItem);
+
+            totalReceivedValue += line.ReceivedQuantity * poItem.UnitCost;
         }
 
         // Determine new status
@@ -263,6 +272,45 @@ public class PurchaseOrderService : IPurchaseOrderService
         po.Status = allFulfilled ? PurchaseOrderStatus.Received : PurchaseOrderStatus.PartiallyReceived;
         if (allFulfilled) po.ReceivedAt = DateTime.UtcNow;
         _uow.Repository<PurchaseOrder>().Update(po);
+
+        // Generate Journal Entry
+        if (totalReceivedValue > 0)
+        {
+            var accounts = await _financeService.GetChartOfAccountsAsync();
+            if (accounts.Any())
+            {
+                var inventoryAccount = accounts.FirstOrDefault(a => a.AccountCode == "1300")?.AccountId;
+                var accountsPayable = accounts.FirstOrDefault(a => a.AccountCode == "2000")?.AccountId;
+
+                if (inventoryAccount.HasValue && accountsPayable.HasValue)
+                {
+                    var journalEntry = new Store.Models.Entities.Finance.JournalEntry
+                    {
+                        Date = DateTime.UtcNow,
+                        ReferenceId = po.PurchaseOrderId.ToString(),
+                        ReferenceType = Store.Models.Entities.Finance.ReferenceType.Purchase,
+                        Description = $"PO Receipt #{po.PurchaseOrderId}",
+                        CreatedByUserId = receivedByUserId != Guid.Empty ? receivedByUserId : null
+                    };
+
+                    journalEntry.Lines.Add(new Store.Models.Entities.Finance.JournalEntryLine
+                    {
+                        AccountId = inventoryAccount.Value,
+                        DebitAmount = totalReceivedValue,
+                        CreditAmount = 0
+                    });
+
+                    journalEntry.Lines.Add(new Store.Models.Entities.Finance.JournalEntryLine
+                    {
+                        AccountId = accountsPayable.Value,
+                        DebitAmount = 0,
+                        CreditAmount = totalReceivedValue
+                    });
+
+                    await _financeService.PostJournalEntryAsync(journalEntry);
+                }
+            }
+        }
 
         await _uow.SaveChangesAsync();
 

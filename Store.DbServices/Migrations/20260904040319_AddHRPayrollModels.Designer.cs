@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Store.DbServices.Context;
 
@@ -11,9 +12,11 @@ using Store.DbServices.Context;
 namespace Store.DbServices.Migrations
 {
     [DbContext(typeof(StoreDbContext))]
-    partial class StoreDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260904040319_AddHRPayrollModels")]
+    partial class AddHRPayrollModels
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -151,10 +154,6 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("tinyint(1)")
                         .HasColumnName("is_active");
 
-                    b.Property<bool>("IsWarehouse")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("is_warehouse");
-
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("last_modified");
@@ -168,19 +167,12 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("decimal(65,30)")
                         .HasColumnName("price_multiplier");
 
-                    b.Property<int?>("SupplyingWarehouseId")
-                        .HasColumnType("int")
-                        .HasColumnName("supplying_warehouse_id");
-
                     b.Property<decimal?>("TaxRateOverride")
                         .HasColumnType("decimal(65,30)")
                         .HasColumnName("tax_rate_override");
 
                     b.HasKey("BranchId")
                         .HasName("pk_branch");
-
-                    b.HasIndex("SupplyingWarehouseId")
-                        .HasDatabaseName("ix_branch_supplying_warehouse_id");
 
                     b.ToTable("branch");
                 });
@@ -2482,71 +2474,6 @@ namespace Store.DbServices.Migrations
                     b.ToTable("tax_bracket");
                 });
 
-            modelBuilder.Entity("Store.Models.Entities.Inventory.RestockRecommendation", b =>
-                {
-                    b.Property<Guid>("RecommendationId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
-                        .HasColumnName("recommendation_id")
-                        .UseCollation("utf8mb4_general_ci");
-
-                    b.Property<int>("BranchId")
-                        .HasColumnType("int")
-                        .HasColumnName("branch_id");
-
-                    b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("date_created");
-
-                    b.Property<int?>("GeneratedPurchaseOrderId")
-                        .HasColumnType("int")
-                        .HasColumnName("generated_purchase_order_id");
-
-                    b.Property<int?>("GeneratedStockTransferId")
-                        .HasColumnType("int")
-                        .HasColumnName("generated_stock_transfer_id");
-
-                    b.Property<Guid>("ItemId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("item_id")
-                        .UseCollation("utf8mb4_general_ci");
-
-                    b.Property<DateTime>("LastModified")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("last_modified");
-
-                    b.Property<string>("Reason")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("varchar(500)")
-                        .HasColumnName("reason");
-
-                    b.Property<int>("RecommendedQuantity")
-                        .HasColumnType("int")
-                        .HasColumnName("recommended_quantity");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int")
-                        .HasColumnName("status");
-
-                    b.HasKey("RecommendationId")
-                        .HasName("pk_restock_recommendation");
-
-                    b.HasIndex("BranchId")
-                        .HasDatabaseName("ix_restock_recommendation_branch_id");
-
-                    b.HasIndex("GeneratedPurchaseOrderId")
-                        .HasDatabaseName("ix_restock_recommendation_generated_purchase_order_id");
-
-                    b.HasIndex("GeneratedStockTransferId")
-                        .HasDatabaseName("ix_restock_recommendation_generated_stock_transfer_id");
-
-                    b.HasIndex("ItemId")
-                        .HasDatabaseName("ix_restock_recommendation_item_id");
-
-                    b.ToTable("restock_recommendation");
-                });
-
             modelBuilder.Entity("Store.Models.Entities.Invoice", b =>
                 {
                     b.Property<Guid>("InvoiceId")
@@ -4405,7 +4332,7 @@ namespace Store.DbServices.Migrations
                         {
                             SettingKey = "Auth:PasswordRecoveryMethod",
                             Description = "Determines allowed password recovery methods (OTP, TempPassword, Both)",
-                            LastModified = new DateTime(2026, 9, 4, 4, 50, 51, 336, DateTimeKind.Utc).AddTicks(8637),
+                            LastModified = new DateTime(2026, 9, 4, 4, 3, 16, 932, DateTimeKind.Utc).AddTicks(4086),
                             SettingValue = "Both"
                         });
                 });
@@ -4922,17 +4849,6 @@ namespace Store.DbServices.Migrations
                         .HasConstraintName("fk_batch_items_item_id");
 
                     b.Navigation("Item");
-                });
-
-            modelBuilder.Entity("Store.Models.Entities.Branch", b =>
-                {
-                    b.HasOne("Store.Models.Entities.Branch", "SupplyingWarehouse")
-                        .WithMany("SuppliedBranches")
-                        .HasForeignKey("SupplyingWarehouseId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_branch_branch_supplying_warehouse_id");
-
-                    b.Navigation("SupplyingWarehouse");
                 });
 
             modelBuilder.Entity("Store.Models.Entities.BranchItemStock", b =>
@@ -5621,43 +5537,6 @@ namespace Store.DbServices.Migrations
                     b.Navigation("Employee");
 
                     b.Navigation("PayrollRun");
-                });
-
-            modelBuilder.Entity("Store.Models.Entities.Inventory.RestockRecommendation", b =>
-                {
-                    b.HasOne("Store.Models.Entities.Branch", "Branch")
-                        .WithMany()
-                        .HasForeignKey("BranchId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_restock_recommendation_branch_branch_id");
-
-                    b.HasOne("Store.Models.Entities.PurchaseOrder", "GeneratedPurchaseOrder")
-                        .WithMany()
-                        .HasForeignKey("GeneratedPurchaseOrderId")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("fk_restock_recommendation_purchase_orders_generated_purchase_ord~");
-
-                    b.HasOne("Store.Models.Entities.StockTransfer", "GeneratedStockTransfer")
-                        .WithMany()
-                        .HasForeignKey("GeneratedStockTransferId")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("fk_restock_recommendation_stock_transfers_generated_stock_transf~");
-
-                    b.HasOne("Store.Models.Entities.Item", "Item")
-                        .WithMany()
-                        .HasForeignKey("ItemId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_restock_recommendation_items_item_id");
-
-                    b.Navigation("Branch");
-
-                    b.Navigation("GeneratedPurchaseOrder");
-
-                    b.Navigation("GeneratedStockTransfer");
-
-                    b.Navigation("Item");
                 });
 
             modelBuilder.Entity("Store.Models.Entities.Invoice", b =>
@@ -6359,8 +6238,6 @@ namespace Store.DbServices.Migrations
                     b.Navigation("ItemStocks");
 
                     b.Navigation("OutgoingTransfers");
-
-                    b.Navigation("SuppliedBranches");
 
                     b.Navigation("UserBranchRoles");
                 });

@@ -1434,6 +1434,8 @@ public class StoreOperationsService : IStoreOperationsService
                 ItemName = s.Item.Name,
                 InStock = s.InStock,
                 ReorderLevel = s.ReorderLevel ?? s.Item.ReorderLevel,
+                ReorderQuantity = s.ReorderQuantity,
+                LeadTimeDays = s.LeadTimeDays,
                 BaseUnitPrice = s.Item.UnitPrice,
                 CustomUnitPrice = s.CustomUnitPrice,
                 EffectiveUnitPrice = effective,
@@ -1451,6 +1453,7 @@ public class StoreOperationsService : IStoreOperationsService
         if (item is null) throw new KeyNotFoundException($"Item {request.ItemId} not found.");
 
         var stock = await _uow.Repository<BranchItemStock>().Query()
+            .Include(s => s.Item)
             .FirstOrDefaultAsync(s => s.BranchId == request.BranchId && s.ItemId == request.ItemId, ct);
 
         if (stock is null)
@@ -1461,6 +1464,8 @@ public class StoreOperationsService : IStoreOperationsService
                 ItemId = request.ItemId,
                 InStock = request.AbsoluteInStock ?? Math.Max(0, request.InStockDelta ?? 0),
                 ReorderLevel = request.ReorderLevel,
+                ReorderQuantity = request.ReorderQuantity,
+                LeadTimeDays = request.LeadTimeDays,
                 CustomUnitPrice = request.CustomUnitPrice,
                 CustomCostPrice = request.CustomCostPrice
             };
@@ -1479,6 +1484,8 @@ public class StoreOperationsService : IStoreOperationsService
             }
 
             if (request.ReorderLevel.HasValue) stock.ReorderLevel = request.ReorderLevel.Value;
+            if (request.ReorderQuantity.HasValue) stock.ReorderQuantity = request.ReorderQuantity.Value;
+            if (request.LeadTimeDays.HasValue) stock.LeadTimeDays = request.LeadTimeDays.Value;
             if (request.CustomUnitPrice.HasValue) stock.CustomUnitPrice = request.CustomUnitPrice.Value;
             if (request.CustomCostPrice.HasValue) stock.CustomCostPrice = request.CustomCostPrice.Value;
 
@@ -1515,6 +1522,8 @@ public class StoreOperationsService : IStoreOperationsService
             ItemName = item.Name,
             InStock = stock.InStock,
             ReorderLevel = stock.ReorderLevel ?? item.ReorderLevel,
+            ReorderQuantity = stock.ReorderQuantity,
+            LeadTimeDays = stock.LeadTimeDays,
             BaseUnitPrice = item.UnitPrice,
             CustomUnitPrice = stock.CustomUnitPrice,
             EffectiveUnitPrice = effectivePrice,

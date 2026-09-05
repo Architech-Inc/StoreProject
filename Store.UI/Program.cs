@@ -83,6 +83,7 @@ builder.Services.AddScoped<IBranchManager, BranchManager>();
 builder.Services.AddScoped<IPaymentsManager, PaymentsManager>();
 builder.Services.AddScoped<IContactRequestManager, ContactRequestManager>();
 builder.Services.AddScoped<ICurrentUserContext, CurrentUserContext>();
+builder.Services.AddScoped<IPayrollManager, PayrollManager>();
 
 var app = builder.Build();
 

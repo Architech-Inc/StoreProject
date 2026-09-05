@@ -116,6 +116,8 @@ public class BranchItemStockDto
     public string ItemName { get; set; } = string.Empty;
     public int InStock { get; set; }
     public int? ReorderLevel { get; set; }
+    public int? ReorderQuantity { get; set; }
+    public int? LeadTimeDays { get; set; }
     public decimal BaseUnitPrice { get; set; }
     public decimal? CustomUnitPrice { get; set; }
     public decimal EffectiveUnitPrice { get; set; }
@@ -133,6 +135,8 @@ public class UpdateBranchStockRequest
     public int? InStockDelta { get; set; }
     public int? AbsoluteInStock { get; set; }
     public int? ReorderLevel { get; set; }
+    public int? ReorderQuantity { get; set; }
+    public int? LeadTimeDays { get; set; }
     public decimal? CustomUnitPrice { get; set; }
     public decimal? CustomCostPrice { get; set; }
 }

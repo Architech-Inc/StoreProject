@@ -9,6 +9,7 @@ public class Item : BaseEntity
     public int? CategoryId { get; set; }
     public int? UnitId { get; set; }
     public Guid? ManufacturerId { get; set; }
+    public Guid? PreferredSupplierId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
     public decimal UnitPrice { get; set; }
@@ -26,6 +27,7 @@ public class Item : BaseEntity
     public Category? Category { get; set; }
     public Unit? Unit { get; set; }
     public Manufacturer? Manufacturer { get; set; }
+    public Supplier? PreferredSupplier { get; set; }
     public ItemExpiry? ItemExpiry { get; set; }
     public Discount? Discount { get; set; }
     public TaxProfile? TaxProfile { get; set; }

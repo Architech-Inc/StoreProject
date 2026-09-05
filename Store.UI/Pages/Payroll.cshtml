@@ -1,0 +1,105 @@
+@page
+@model StoreUI.Pages.PayrollModel
+@using Store.Models.Enums
+@using Store.Models.Entities.HR
+@{
+    ViewData["Title"] = "Payroll Management";
+    ViewData["ActivePage"] = "Payroll";
+    ViewData["PageDescription"] = "Manage payroll runs, approvals, and payouts.";
+}
+
+<div class="emp-container">
+
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="status @(Model.StatusMessage.StartsWith("Error") || Model.StatusMessage.StartsWith("Failed") ? "error" : "ok")" style="margin-bottom: 20px;">
+            @Model.StatusMessage
+        </div>
+    }
+
+    <!-- ── Header Controls ──────────────────────────────────────── -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>Payroll Runs</h2>
+        <button class="btn btn-primary" onclick="document.getElementById('draftModal').style.display='block'">Draft New Payroll</button>
+    </div>
+
+    <!-- ── Data Table ──────────────────────────────────────── -->
+    <table class="table" style="width: 100%; border-collapse: collapse;">
+        <thead>
+            <tr style="border-bottom: 2px solid #ccc; text-align: left;">
+                <th style="padding: 10px;">ID</th>
+                <th style="padding: 10px;">Period</th>
+                <th style="padding: 10px;">Status</th>
+                <th style="padding: 10px;">Total Gross</th>
+                <th style="padding: 10px;">Total Net</th>
+                <th style="padding: 10px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.PayrollRuns != null && Model.PayrollRuns.Any())
+            {
+                foreach (var run in Model.PayrollRuns)
+                {
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 10px;">@run.PayrollRunId.ToString().Substring(0, 8)</td>
+                        <td style="padding: 10px;">@run.PeriodStartDate.ToShortDateString() - @run.PeriodEndDate.ToShortDateString()</td>
+                        <td style="padding: 10px;">
+                            <span class="badge @(run.Status == PayrollRunStatus.Draft ? "bg-warning" : run.Status == PayrollRunStatus.Approved ? "bg-info" : "bg-success")" style="padding: 5px 10px; border-radius: 4px; color: #fff;">
+                                @run.Status.ToString()
+                            </span>
+                        </td>
+                        <td style="padding: 10px;">@run.TotalGross.ToString("C")</td>
+                        <td style="padding: 10px;">@run.TotalNet.ToString("C")</td>
+                        <td style="padding: 10px;">
+                            @if (run.Status == PayrollRunStatus.Draft)
+                            {
+                                <form method="post" asp-page-handler="Approve" style="display:inline;">
+                                    <input type="hidden" name="runId" value="@run.PayrollRunId" />
+                                    <button type="submit" class="btn btn-sm" style="background-color: #17a2b8; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">Approve</button>
+                                </form>
+                            }
+                            else if (run.Status == PayrollRunStatus.Approved)
+                            {
+                                <form method="post" asp-page-handler="Pay" style="display:inline;">
+                                    <input type="hidden" name="runId" value="@run.PayrollRunId" />
+                                    <button type="submit" class="btn btn-sm" style="background-color: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">Pay</button>
+                                </form>
+                            }
+                            else
+                            {
+                                <span style="color: #6c757d; font-size: 0.9em;">Paid & Posted</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="6" style="padding: 20px; text-align: center; color: #666;">No payroll runs found.</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <!-- ── Draft Modal ──────────────────────────────────────── -->
+    <div id="draftModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000;">
+        <div style="background:#fff; width:400px; margin: 100px auto; padding: 20px; border-radius: 8px;">
+            <h3 style="margin-top: 0;">Draft Payroll</h3>
+            <form method="post" asp-page-handler="Draft">
+                <div style="margin-bottom: 15px;">
+                    <label style="display:block; margin-bottom: 5px;">Period Start</label>
+                    <input asp-for="DraftPeriodStart" type="date" class="form-control" style="width: 100%; padding: 8px; box-sizing: border-box;" required />
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display:block; margin-bottom: 5px;">Period End</label>
+                    <input asp-for="DraftPeriodEnd" type="date" class="form-control" style="width: 100%; padding: 8px; box-sizing: border-box;" required />
+                </div>
+                <div style="text-align: right;">
+                    <button type="button" onclick="document.getElementById('draftModal').style.display='none'" style="padding: 8px 15px; margin-right: 10px; border: 1px solid #ccc; background: #fff; cursor: pointer;">Cancel</button>
+                    <button type="submit" style="padding: 8px 15px; background: #007bff; color: #fff; border: none; cursor: pointer;">Draft</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

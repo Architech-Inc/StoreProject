@@ -15,11 +15,13 @@ public class InvoiceService : IInvoiceService
 {
     private readonly IUnitOfWork _uow;
     private readonly IDiscountService _discountService;
+    private readonly IFinanceService _financeService;
 
-    public InvoiceService(IUnitOfWork uow, IDiscountService discountService)
+    public InvoiceService(IUnitOfWork uow, IDiscountService discountService, IFinanceService financeService)
     {
         _uow = uow;
         _discountService = discountService;
+        _financeService = financeService;
     }
 
     public async Task<InvoiceDto?> GetByIdAsync(Guid invoiceId, CancellationToken ct = default)
@@ -137,7 +139,7 @@ public class InvoiceService : IInvoiceService
             i.TotalAmount,
             i.AmountTendered,
             i.IsPaid,
-            RefundedAmount = i.Sales.Where(s => s.Quantity < 0).Sum(s => -s.LineTotal)
+            RefundedAmount = i.Sales.Where(s => s.Quantity < 0).Sum(s => (decimal?)-s.LineTotal) ?? 0m
         }).ToListAsync(ct);
 
         var totalCount = invoices.Count;
@@ -294,6 +296,7 @@ public class InvoiceService : IInvoiceService
                 };
 
                 decimal total = 0m;
+                decimal totalCogs = 0m;
                 var sales = new List<Sale>();
 
                 foreach (var line in request.Lines)
@@ -338,6 +341,7 @@ public class InvoiceService : IInvoiceService
 
                     sales.Add(sale);
                     total += lineTotal;
+                    totalCogs += line.Quantity * (item.CostPrice ?? 0m);
                 }
 
                 invoice.TotalAmount = total;
@@ -387,6 +391,63 @@ public class InvoiceService : IInvoiceService
                             }
                             await _discountService.IncrementUsageAsync(discount.DiscountId);
                         }
+                    }
+                }
+
+                // Generate Journal Entry
+                var accounts = await _financeService.GetChartOfAccountsAsync(ct);
+                if (accounts.Any())
+                {
+                    var cashAccount = accounts.FirstOrDefault(a => a.AccountCode == "1000")?.AccountId;
+                    var arAccount = accounts.FirstOrDefault(a => a.AccountCode == "1200")?.AccountId;
+                    var revenueAccount = accounts.FirstOrDefault(a => a.AccountCode == "4000")?.AccountId;
+                    var cogsAccount = accounts.FirstOrDefault(a => a.AccountCode == "5000")?.AccountId;
+                    var inventoryAccount = accounts.FirstOrDefault(a => a.AccountCode == "1300")?.AccountId;
+
+                    if (cashAccount.HasValue && arAccount.HasValue && revenueAccount.HasValue && cogsAccount.HasValue && inventoryAccount.HasValue)
+                    {
+                        var journalEntry = new Store.Models.Entities.Finance.JournalEntry
+                        {
+                            Date = invoice.DateCreated,
+                            ReferenceId = invoice.InvoiceId.ToString(),
+                            ReferenceType = Store.Models.Entities.Finance.ReferenceType.Sale,
+                            Description = $"Sale Invoice {invoice.InvoiceId}",
+                            CreatedByUserId = actingUserId
+                        };
+
+                        // Revenue
+                        var debitAccount = invoice.IsPaid ? cashAccount.Value : arAccount.Value;
+                        journalEntry.Lines.Add(new Store.Models.Entities.Finance.JournalEntryLine
+                        {
+                            AccountId = debitAccount,
+                            DebitAmount = invoice.TotalAmount,
+                            CreditAmount = 0
+                        });
+                        journalEntry.Lines.Add(new Store.Models.Entities.Finance.JournalEntryLine
+                        {
+                            AccountId = revenueAccount.Value,
+                            DebitAmount = 0,
+                            CreditAmount = invoice.TotalAmount
+                        });
+
+                        // COGS
+                        if (totalCogs > 0)
+                        {
+                            journalEntry.Lines.Add(new Store.Models.Entities.Finance.JournalEntryLine
+                            {
+                                AccountId = cogsAccount.Value,
+                                DebitAmount = totalCogs,
+                                CreditAmount = 0
+                            });
+                            journalEntry.Lines.Add(new Store.Models.Entities.Finance.JournalEntryLine
+                            {
+                                AccountId = inventoryAccount.Value,
+                                DebitAmount = 0,
+                                CreditAmount = totalCogs
+                            });
+                        }
+
+                        await _financeService.PostJournalEntryAsync(journalEntry, ct);
                     }
                 }
 

@@ -17,7 +17,6 @@ public class InvoicesController : ControllerBase
     public InvoicesController(IInvoiceService invoiceService) => _invoiceService = invoiceService;
 
     [HttpGet]
-    [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> GetAll([FromQuery] InvoicePagedRequest request, CancellationToken ct)
     {
         var result = await _invoiceService.GetAllAsync(request, ct);
@@ -25,7 +24,6 @@ public class InvoicesController : ControllerBase
     }
 
     [HttpGet("summary")]
-    [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> GetSummary([FromQuery] InvoicePagedRequest request, CancellationToken ct)
     {
         var result = await _invoiceService.GetSummaryMetricsAsync(request, ct);

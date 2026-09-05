@@ -1,0 +1,91 @@
+@page "/Restock"
+@model StoreUI.Pages.RestockRecommendationsModel
+@{
+    ViewData["Title"] = "Restock & Warehouse Orchestration";
+    ViewData["ActivePage"] = "Restock";
+    ViewData["PageDescription"] = "Velocity-based restock recommendations and supply chain orchestration.";
+}
+
+<div class="inv-container">
+    @if (TempData["StatusMessage"] != null)
+    {
+        var msg = TempData["StatusMessage"].ToString();
+        <div class="status @(msg.StartsWith("Error") ? "error" : "ok")" style="margin-bottom: 20px;">
+            @msg
+        </div>
+    }
+
+    <div class="panel">
+        <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <h2 class="panel-title">Pending Recommendations</h2>
+        </div>
+        <div class="panel-body" style="padding:0;">
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Branch</th>
+                            <th>Reason (Velocity)</th>
+                            <th class="num">Rec. Qty</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Recommendations.Any())
+                        {
+                            foreach (var rec in Model.Recommendations)
+                            {
+                                <tr>
+                                    <td>
+                                        <strong>@rec.Item?.Name</strong>
+                                        <div class="text-sm text-gray">Code: @rec.Item?.Barcode</div>
+                                    </td>
+                                    <td>@rec.Branch?.Name</td>
+                                    <td>
+                                        <span class="badge bg-purple text-xs">AI Forecast</span>
+                                        <div class="text-sm mt-1">@rec.Reason</div>
+                                    </td>
+                                    <td class="num font-bold">@rec.RecommendedQuantity</td>
+                                    <td>
+                                        <div style="display:flex; gap:8px; justify-content:flex-end;">
+                                            <form method="post" asp-page-handler="ConvertToTransfer" style="display:inline;">
+                                                <input type="hidden" name="id" value="@rec.RecommendationId" />
+                                                <button type="submit" class="btn-brand-secondary btn-sm" title="Request Transfer from Warehouse">
+                                                    Transfer
+                                                </button>
+                                            </form>
+                                            <form method="post" asp-page-handler="ConvertToPurchaseOrder" style="display:inline;">
+                                                <input type="hidden" name="id" value="@rec.RecommendationId" />
+                                                <button type="submit" class="btn-brand-primary btn-sm" title="Generate Purchase Order to Supplier">
+                                                    Order PO
+                                                </button>
+                                            </form>
+                                            <form method="post" asp-page-handler="Dismiss" style="display:inline;" onsubmit="return confirm('Are you sure you want to dismiss this recommendation?');">
+                                                <input type="hidden" name="id" value="@rec.RecommendationId" />
+                                                <button type="submit" class="btn-outline-danger btn-sm" title="Dismiss">
+                                                    Dismiss
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="5" style="text-align:center; padding: 3rem 1rem; color: #64748b;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="margin-bottom: 1rem; opacity: 0.5;">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <p>No pending recommendations. Stock levels are healthy!</p>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

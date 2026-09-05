@@ -17,6 +17,12 @@ public class BranchItemStock : BaseEntity
     /// <summary>Branch-specific reorder alert threshold.</summary>
     public int? ReorderLevel { get; set; }
 
+    /// <summary>Default quantity to reorder when stock falls below ReorderLevel.</summary>
+    public int? ReorderQuantity { get; set; }
+
+    /// <summary>Expected number of days for delivery from the supplier.</summary>
+    public int? LeadTimeDays { get; set; }
+
     /// <summary>
     /// Optional explicit unit price override for this branch.
     /// If null, falls back to Branch.PriceMultiplier * Item.UnitPrice (or Item.UnitPrice).

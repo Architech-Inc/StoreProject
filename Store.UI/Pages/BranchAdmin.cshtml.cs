@@ -66,6 +66,8 @@ public class BranchAdminModel : SecurePageModel
     [BindProperty] public Guid StockItemId { get; set; }
     [BindProperty] public int? StockDelta { get; set; }
     [BindProperty] public int? StockReorderLevel { get; set; }
+    [BindProperty] public int? StockReorderQuantity { get; set; }
+    [BindProperty] public int? StockLeadTimeDays { get; set; }
     [BindProperty] public decimal? StockCustomPrice { get; set; }
 
     public BranchAdminModel(
@@ -254,6 +256,8 @@ public class BranchAdminModel : SecurePageModel
             ItemId = StockItemId,
             InStockDelta = StockDelta,
             ReorderLevel = StockReorderLevel,
+            ReorderQuantity = StockReorderQuantity,
+            LeadTimeDays = StockLeadTimeDays,
             CustomUnitPrice = StockCustomPrice
         };
 

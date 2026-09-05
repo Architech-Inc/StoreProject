@@ -2,6 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Store.Models.Entities;
 using Store.Models.Entities.Contacts;
+using Store.Models.Entities.Finance;
+using Store.Models.Entities.HR;
+using Store.Models.Entities.Inventory;
 
 namespace Store.DbServices.Context;
 
@@ -104,6 +107,7 @@ public class StoreDbContext : DbContext
     public DbSet<PersonnelTransferHistory> PersonnelTransferHistories => Set<PersonnelTransferHistory>();
     public DbSet<DiscountBranch> DiscountBranches => Set<DiscountBranch>();
     public DbSet<LoyaltyCampaignBranch> LoyaltyCampaignBranches => Set<LoyaltyCampaignBranch>();
+    public DbSet<RestockRecommendation> RestockRecommendations => Set<RestockRecommendation>();
 
     // ---- Wastage & Override ----
     public DbSet<WastageEntry> WastageEntries => Set<WastageEntry>();
@@ -121,6 +125,17 @@ public class StoreDbContext : DbContext
     public DbSet<LoyaltyTransaction> LoyaltyTransactions => Set<LoyaltyTransaction>();
     public DbSet<LoyaltyCampaign> LoyaltyCampaigns => Set<LoyaltyCampaign>();
 
+    // ---- Core Finance (General Ledger) ----
+    public DbSet<Account> Accounts => Set<Account>();
+    public DbSet<JournalEntry> JournalEntries => Set<JournalEntry>();
+    public DbSet<JournalEntryLine> JournalEntryLines => Set<JournalEntryLine>();
+
+    // ---- HR & Payroll ----
+    public DbSet<EmployeeContract> EmployeeContracts => Set<EmployeeContract>();
+    public DbSet<TaxBracket> TaxBrackets => Set<TaxBracket>();
+    public DbSet<PayrollRun> PayrollRuns => Set<PayrollRun>();
+    public DbSet<Payslip> Payslips => Set<Payslip>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -129,6 +144,40 @@ public class StoreDbContext : DbContext
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(StoreDbContext).Assembly);
 
         ConfigureOperationalRelationships(modelBuilder);
+
+        // HR & Payroll configurations
+        modelBuilder.Entity<EmployeeContract>()
+            .Property(e => e.EmployeeContractId)
+            .UseCollation("utf8mb4_general_ci");
+            
+        modelBuilder.Entity<EmployeeContract>()
+            .Property(e => e.EmployeeId)
+            .UseCollation("utf8mb4_general_ci");
+            
+        modelBuilder.Entity<Payslip>()
+            .Property(p => p.PayslipId)
+            .UseCollation("utf8mb4_general_ci");
+            
+        modelBuilder.Entity<Payslip>()
+            .Property(p => p.PayrollRunId)
+            .UseCollation("utf8mb4_general_ci");
+            
+        modelBuilder.Entity<Payslip>()
+            .Property(p => p.EmployeeId)
+            .UseCollation("utf8mb4_general_ci");
+            
+        modelBuilder.Entity<PayrollRun>()
+            .Property(p => p.PayrollRunId)
+            .UseCollation("utf8mb4_general_ci");
+            
+        // Inventory & Restock configurations
+        modelBuilder.Entity<RestockRecommendation>()
+            .Property(r => r.RecommendationId)
+            .UseCollation("utf8mb4_general_ci");
+            
+        modelBuilder.Entity<RestockRecommendation>()
+            .Property(r => r.ItemId)
+            .UseCollation("utf8mb4_general_ci");
 
         modelBuilder.Entity<SystemSetting>().HasData(new SystemSetting
         {
@@ -330,6 +379,38 @@ public class StoreDbContext : DbContext
             .WithMany()
             .HasForeignKey(v => v.CashierShiftId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        // Branch self-referencing relationship
+        modelBuilder.Entity<Branch>()
+            .HasOne(b => b.SupplyingWarehouse)
+            .WithMany(b => b.SuppliedBranches)
+            .HasForeignKey(b => b.SupplyingWarehouseId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // RestockRecommendation relationships
+        modelBuilder.Entity<RestockRecommendation>()
+            .HasOne(r => r.Branch)
+            .WithMany()
+            .HasForeignKey(r => r.BranchId)
+            .OnDelete(DeleteBehavior.Restrict);
+            
+        modelBuilder.Entity<RestockRecommendation>()
+            .HasOne(r => r.Item)
+            .WithMany()
+            .HasForeignKey(r => r.ItemId)
+            .OnDelete(DeleteBehavior.Restrict);
+            
+        modelBuilder.Entity<RestockRecommendation>()
+            .HasOne(r => r.GeneratedStockTransfer)
+            .WithMany()
+            .HasForeignKey(r => r.GeneratedStockTransferId)
+            .OnDelete(DeleteBehavior.SetNull);
+            
+        modelBuilder.Entity<RestockRecommendation>()
+            .HasOne(r => r.GeneratedPurchaseOrder)
+            .WithMany()
+            .HasForeignKey(r => r.GeneratedPurchaseOrderId)
+            .OnDelete(DeleteBehavior.SetNull);
 
         modelBuilder.Entity<CashVarianceRecord>()
             .HasOne(v => v.RecordedByUser)

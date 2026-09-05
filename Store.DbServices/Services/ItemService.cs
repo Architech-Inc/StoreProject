@@ -77,10 +77,11 @@ public class ItemService : IItemService
         var items = await orderedQuery
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
-            .Select(i => MapToDto(i))
             .ToListAsync(ct);
 
-        return new PagedResult<ItemDto>(items, total, request.Page, request.PageSize);
+        var dtos = items.Select(i => MapToDto(i)).ToList();
+
+        return new PagedResult<ItemDto>(dtos, total, request.Page, request.PageSize);
     }
 
     public async Task<IEnumerable<ItemDto>> GetLowStockAsync(CancellationToken ct = default)
@@ -91,10 +92,9 @@ public class ItemService : IItemService
             .Where(i => i.IsActive && i.InStock <= i.ReorderLevel)
             .AsNoTracking()
             .OrderBy(i => i.InStock)
-            .Select(i => MapToDto(i))
             .ToListAsync(ct);
 
-        return items;
+        return items.Select(i => MapToDto(i)).ToList();
     }
 
     public async Task<ItemDto> CreateAsync(CreateItemRequest request, CancellationToken ct = default)

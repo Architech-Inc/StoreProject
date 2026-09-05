@@ -602,9 +602,26 @@
                                         <strong style="color:#0f172a;">@s.ItemName</strong>
                                     </td>
                                     <td style="text-align:center;">
-                                        <span style="font-weight:700; color:@(s.InStock <= (s.ReorderLevel ?? 5) ? "#dc2626" : "#059669");">
-                                            @s.InStock
-                                        </span>
+                                        @if (s.InStock <= 0)
+                                        {
+                                            <span style="font-weight:700; color:#dc2626; display:inline-flex; align-items:center; gap:4px;" title="Out of Stock">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                                                @s.InStock
+                                            </span>
+                                        }
+                                        else if (s.InStock <= (s.ReorderLevel ?? 5))
+                                        {
+                                            <span style="font-weight:700; color:#d97706; display:inline-flex; align-items:center; gap:4px;" title="Low Stock - Auto Procurement Triggered">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                                                @s.InStock
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span style="font-weight:700; color:#059669;">
+                                                @s.InStock
+                                            </span>
+                                        }
                                     </td>
                                     <td style="text-align:center; color:#64748b;">
                                         @(s.ReorderLevel?.ToString() ?? "—")
@@ -627,7 +644,7 @@
                                     </td>
                                     <td style="text-align:right;">
                                         <button type="button" class="btn-table-action"
-                                                onclick="openStockAdjustModal(@s.BranchId, '@s.ItemId', '@Html.Raw(Html.Encode(s.ItemName))', @s.InStock, @(s.ReorderLevel?.ToString() ?? "null"), @(s.CustomUnitPrice?.ToString() ?? "null"))">
+                                                onclick="openStockAdjustModal(@s.BranchId, '@s.ItemId', '@Html.Raw(Html.Encode(s.ItemName))', @s.InStock, @(s.ReorderLevel?.ToString() ?? "null"), @(s.CustomUnitPrice?.ToString() ?? "null"), @(s.ReorderQuantity?.ToString() ?? "null"), @(s.LeadTimeDays?.ToString() ?? "null"))">
                                             Adjust / Override
                                         </button>
                                     </td>
@@ -660,6 +677,16 @@
             <div class="form-group">
                 <label asp-for="StockReorderLevel" class="form-label">Branch Reorder Alert Threshold</label>
                 <input asp-for="StockReorderLevel" id="modalReorderLevel" type="number" class="form-control" placeholder="Alert when stock falls below" />
+            </div>
+            <div class="form-group" style="display: flex; gap: 12px;">
+                <div style="flex: 1;">
+                    <label asp-for="StockReorderQuantity" class="form-label">Default Reorder Quantity</label>
+                    <input asp-for="StockReorderQuantity" id="modalReorderQuantity" type="number" class="form-control" placeholder="Qty to auto-order" />
+                </div>
+                <div style="flex: 1;">
+                    <label asp-for="StockLeadTimeDays" class="form-label">Lead Time (Days)</label>
+                    <input asp-for="StockLeadTimeDays" id="modalLeadTimeDays" type="number" class="form-control" placeholder="Expected delivery days" />
+                </div>
             </div>
             <div class="form-group">
                 <label asp-for="StockCustomPrice" class="form-label">Custom Branch Unit Price (Override)</label>
@@ -711,12 +738,14 @@
             document.getElementById('formTitle').textContent = 'Add New Branch';
         }
 
-        function openStockAdjustModal(branchId, itemId, itemName, currentStock, reorderLevel, customPrice) {
+        function openStockAdjustModal(branchId, itemId, itemName, currentStock, reorderLevel, customPrice, reorderQty, leadTimeDays) {
             document.getElementById('modalStockBranchId').value = branchId;
             document.getElementById('modalStockItemId').value = itemId;
             document.getElementById('adjustModalItemName').textContent = 'Adjust: ' + itemName;
             document.getElementById('modalCurrentStock').textContent = currentStock + ' units';
             document.getElementById('modalReorderLevel').value = reorderLevel || '';
+            document.getElementById('modalReorderQuantity').value = reorderQty || '';
+            document.getElementById('modalLeadTimeDays').value = leadTimeDays || '';
             document.getElementById('modalCustomPrice').value = customPrice || '';
             const modal = document.getElementById('stockAdjustModal');
             modal.style.display = 'flex';
