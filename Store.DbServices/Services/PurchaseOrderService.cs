@@ -240,6 +240,30 @@ public class PurchaseOrderService : IPurchaseOrderService
                 .FirstOrDefaultAsync(i => i.ItemId == poItem.ItemId);
             if (item is null) continue;
 
+            // Update Branch-level stock if PO is tied to a specific branch
+            if (po.BranchId.HasValue)
+            {
+                var branchStock = await _uow.Repository<BranchItemStock>().Query()
+                    .FirstOrDefaultAsync(s => s.BranchId == po.BranchId.Value && s.ItemId == poItem.ItemId);
+                
+                if (branchStock is not null)
+                {
+                    branchStock.InStock += line.ReceivedQuantity;
+                    _uow.Repository<BranchItemStock>().Update(branchStock);
+                }
+                else
+                {
+                    branchStock = new BranchItemStock
+                    {
+                        BranchId = po.BranchId.Value,
+                        ItemId = poItem.ItemId,
+                        InStock = line.ReceivedQuantity,
+                        ReorderLevel = item.ReorderLevel
+                    };
+                    await _uow.Repository<BranchItemStock>().AddAsync(branchStock);
+                }
+            }
+
             var stockBefore = item.InStock;
             item.InStock += line.ReceivedQuantity;
             _uow.Repository<Item>().Update(item);
@@ -247,6 +271,7 @@ public class PurchaseOrderService : IPurchaseOrderService
             // StockMovement audit
             var movement = new StockMovement
             {
+                BranchId = po.BranchId,
                 ItemId = poItem.ItemId,
                 MovementType = StockMovementType.Receive,
                 QuantityDelta = line.ReceivedQuantity,

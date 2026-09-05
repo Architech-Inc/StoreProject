@@ -44,14 +44,29 @@ public class ItemService : IItemService
         if (request.CategoryId.HasValue && request.CategoryId.Value > 0)
             query = query.Where(i => i.CategoryId == request.CategoryId.Value);
 
-        if (!string.IsNullOrWhiteSpace(request.StockStatus))
+        if (request.BranchId.HasValue)
         {
-            if (request.StockStatus == "low_stock")
-                query = query.Where(i => i.InStock > 0 && i.ReorderLevel.HasValue && i.InStock <= i.ReorderLevel.Value);
-            else if (request.StockStatus == "out_of_stock")
-                query = query.Where(i => i.InStock <= 0);
-            else if (request.StockStatus == "in_stock")
-                query = query.Where(i => i.InStock > 0);
+            if (!string.IsNullOrWhiteSpace(request.StockStatus))
+            {
+                if (request.StockStatus == "low_stock")
+                    query = query.Where(i => i.BranchStocks.Any(bs => bs.BranchId == request.BranchId.Value && bs.InStock > 0 && i.ReorderLevel.HasValue && bs.InStock <= i.ReorderLevel.Value));
+                else if (request.StockStatus == "out_of_stock")
+                    query = query.Where(i => !i.BranchStocks.Any(bs => bs.BranchId == request.BranchId.Value) || i.BranchStocks.Any(bs => bs.BranchId == request.BranchId.Value && bs.InStock <= 0));
+                else if (request.StockStatus == "in_stock")
+                    query = query.Where(i => i.BranchStocks.Any(bs => bs.BranchId == request.BranchId.Value && bs.InStock > 0));
+            }
+        }
+        else
+        {
+            if (!string.IsNullOrWhiteSpace(request.StockStatus))
+            {
+                if (request.StockStatus == "low_stock")
+                    query = query.Where(i => i.InStock > 0 && i.ReorderLevel.HasValue && i.InStock <= i.ReorderLevel.Value);
+                else if (request.StockStatus == "out_of_stock")
+                    query = query.Where(i => i.InStock <= 0);
+                else if (request.StockStatus == "in_stock")
+                    query = query.Where(i => i.InStock > 0);
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(request.SearchTerm))
@@ -64,22 +79,48 @@ public class ItemService : IItemService
 
         var total = await query.CountAsync(ct);
 
-        IOrderedQueryable<Item> orderedQuery = request.SortBy switch
+        IOrderedQueryable<Item> orderedQuery;
+        if (request.BranchId.HasValue)
         {
-            "price_asc" => query.OrderBy(i => i.UnitPrice),
-            "price_desc" => query.OrderByDescending(i => i.UnitPrice),
-            "stock_asc" => query.OrderBy(i => i.InStock),
-            "stock_desc" => query.OrderByDescending(i => i.InStock),
-            "created" => query.OrderByDescending(i => i.DateCreated),
-            _ => query.OrderBy(i => i.Name)
-        };
+            orderedQuery = request.SortBy switch
+            {
+                "price_asc" => query.OrderBy(i => i.UnitPrice),
+                "price_desc" => query.OrderByDescending(i => i.UnitPrice),
+                "stock_asc" => query.OrderBy(i => i.BranchStocks.FirstOrDefault(bs => bs.BranchId == request.BranchId.Value)!.InStock),
+                "stock_desc" => query.OrderByDescending(i => i.BranchStocks.FirstOrDefault(bs => bs.BranchId == request.BranchId.Value)!.InStock),
+                "created" => query.OrderByDescending(i => i.DateCreated),
+                _ => query.OrderBy(i => i.Name)
+            };
+        }
+        else
+        {
+            orderedQuery = request.SortBy switch
+            {
+                "price_asc" => query.OrderBy(i => i.UnitPrice),
+                "price_desc" => query.OrderByDescending(i => i.UnitPrice),
+                "stock_asc" => query.OrderBy(i => i.InStock),
+                "stock_desc" => query.OrderByDescending(i => i.InStock),
+                "created" => query.OrderByDescending(i => i.DateCreated),
+                _ => query.OrderBy(i => i.Name)
+            };
+        }
 
         var items = await orderedQuery
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
+            .Include(i => i.BranchStocks)
             .ToListAsync(ct);
 
-        var dtos = items.Select(i => MapToDto(i)).ToList();
+        var dtos = items.Select(i => 
+        {
+            var dto = MapToDto(i);
+            if (request.BranchId.HasValue)
+            {
+                var bs = i.BranchStocks.FirstOrDefault(b => b.BranchId == request.BranchId.Value);
+                dto.InStock = bs?.InStock ?? 0;
+            }
+            return dto;
+        }).ToList();
 
         return new PagedResult<ItemDto>(dtos, total, request.Page, request.PageSize);
     }

@@ -69,6 +69,7 @@
     <link rel="stylesheet" href="~/css/modules/cash-reconciliation.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/modules/pricing-promotions.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/modules/admin-governance.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/modules/hr-payroll.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/command-palette.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/notification-center.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/pwa.css" asp-append-version="true" />
@@ -114,9 +115,8 @@
                         <div class="nav-section-content">
                             @if (canInventoryRead)
                             {
-                                <a class="nav-link" href="/Employees">Employees</a>
-                                <a class="nav-link" href="/Payroll">Payroll</a>
                                 <a class="nav-link" href="/InventoryOps">Inventory Ops</a>
+                                <a class="nav-link" href="/Restock">Restock Recommendations</a>
                                 <a class="nav-link" href="/BatchTracking">Batch &amp; Expiry</a>
                                 <a class="nav-link" href="/StockTransfers">Stock Transfers</a>
                                 <a class="nav-link" href="/Wastage">Wastage Log</a>
@@ -143,6 +143,22 @@
                         </div>
                     </div>
                 }
+
+                @if (canAdminUsers || canAdminRoles || perms.Contains(PermissionKeys.ReportsRead))
+                {
+                    <hr class="nav-divider" />
+                    <div class="nav-section" id="nav-section-hr">
+                        <div class="nav-section-header" onclick="toggleNavSection('nav-section-hr')">
+                            <span class="nav-section-label">HR &amp; Finance</span>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </div>
+                        <div class="nav-section-content">
+                            <a class="nav-link" href="/Employees">Employees</a>
+                            <a class="nav-link" href="/Payroll">Payroll</a>
+                        </div>
+                    </div>
+                }
+
                 @if (hasAdminSection)
                 {
                     <hr class="nav-divider" />

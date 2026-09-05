@@ -8,7 +8,7 @@
     ViewData["PageDescription"] = "Manage payroll runs, approvals, and payouts.";
 }
 
-<div class="emp-container">
+<div class="ops-page">
 
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
     {
@@ -17,87 +17,157 @@
         </div>
     }
 
-    <!-- ── Header Controls ──────────────────────────────────────── -->
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h2>Payroll Runs</h2>
-        <button class="btn btn-primary" onclick="document.getElementById('draftModal').style.display='block'">Draft New Payroll</button>
-    </div>
+    <!-- ── Top KPI Metric Summary Cards ──────────────────────── -->
+    <section class="hr-kpi-grid">
+        <div class="hr-kpi-card" style="cursor:default;">
+            <div class="hr-kpi-icon hr-icon-blue">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            </div>
+            <div class="hr-kpi-info">
+                <span class="hr-kpi-label">Draft Runs</span>
+                <span class="hr-kpi-val">@(Model.PayrollRuns?.Count(r => r.Status == PayrollRunStatus.Draft) ?? 0)</span>
+                <span class="hr-kpi-sub">Awaiting review</span>
+            </div>
+        </div>
+
+        <div class="hr-kpi-card" style="cursor:default;">
+            <div class="hr-kpi-icon hr-icon-purple">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            </div>
+            <div class="hr-kpi-info">
+                <span class="hr-kpi-label">Approved Runs</span>
+                <span class="hr-kpi-val">@(Model.PayrollRuns?.Count(r => r.Status == PayrollRunStatus.Approved) ?? 0)</span>
+                <span class="hr-kpi-sub">Ready for payout</span>
+            </div>
+        </div>
+
+        <div class="hr-kpi-card" style="cursor:default;">
+            <div class="hr-kpi-icon hr-icon-green">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+            </div>
+            <div class="hr-kpi-info">
+                <span class="hr-kpi-label">Total Paid (YTD)</span>
+                <span class="hr-kpi-val">@(Model.PayrollRuns?.Where(r => r.Status == PayrollRunStatus.Paid).Sum(r => r.TotalNet).ToString("N0") ?? "0") <small style="font-size:0.75rem;">XAF</small></span>
+                <span class="hr-kpi-sub">Net payouts</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── Filter Dock & Action ─────────────────────────────── -->
+    <section class="catalog-filter-dock">
+        <div class="filter-dock-top" style="justify-content: flex-end;">
+            <button type="button" class="btn-brand-primary" onclick="document.getElementById('draftModalOverlay').classList.add('open')" style="padding:9px 16px;font-weight:600;display:flex;align-items:center;gap:6px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Draft New Payroll
+            </button>
+        </div>
+    </section>
 
     <!-- ── Data Table ──────────────────────────────────────── -->
-    <table class="table" style="width: 100%; border-collapse: collapse;">
-        <thead>
-            <tr style="border-bottom: 2px solid #ccc; text-align: left;">
-                <th style="padding: 10px;">ID</th>
-                <th style="padding: 10px;">Period</th>
-                <th style="padding: 10px;">Status</th>
-                <th style="padding: 10px;">Total Gross</th>
-                <th style="padding: 10px;">Total Net</th>
-                <th style="padding: 10px;">Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @if (Model.PayrollRuns != null && Model.PayrollRuns.Any())
-            {
-                foreach (var run in Model.PayrollRuns)
+    <div class="table-responsive" style="background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); border: 1px solid var(--border-soft);">
+        <table class="data-table" style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr>
+                    <th>Run ID</th>
+                    <th>Period</th>
+                    <th>Status</th>
+                    <th class="num">Total Gross</th>
+                    <th class="num">Total Net</th>
+                    <th style="text-align: right;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.PayrollRuns != null && Model.PayrollRuns.Any())
                 {
-                    <tr style="border-bottom: 1px solid #eee;">
-                        <td style="padding: 10px;">@run.PayrollRunId.ToString().Substring(0, 8)</td>
-                        <td style="padding: 10px;">@run.PeriodStartDate.ToShortDateString() - @run.PeriodEndDate.ToShortDateString()</td>
-                        <td style="padding: 10px;">
-                            <span class="badge @(run.Status == PayrollRunStatus.Draft ? "bg-warning" : run.Status == PayrollRunStatus.Approved ? "bg-info" : "bg-success")" style="padding: 5px 10px; border-radius: 4px; color: #fff;">
-                                @run.Status.ToString()
-                            </span>
-                        </td>
-                        <td style="padding: 10px;">@run.TotalGross.ToString("C")</td>
-                        <td style="padding: 10px;">@run.TotalNet.ToString("C")</td>
-                        <td style="padding: 10px;">
-                            @if (run.Status == PayrollRunStatus.Draft)
-                            {
-                                <form method="post" asp-page-handler="Approve" style="display:inline;">
-                                    <input type="hidden" name="runId" value="@run.PayrollRunId" />
-                                    <button type="submit" class="btn btn-sm" style="background-color: #17a2b8; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">Approve</button>
-                                </form>
-                            }
-                            else if (run.Status == PayrollRunStatus.Approved)
-                            {
-                                <form method="post" asp-page-handler="Pay" style="display:inline;">
-                                    <input type="hidden" name="runId" value="@run.PayrollRunId" />
-                                    <button type="submit" class="btn btn-sm" style="background-color: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">Pay</button>
-                                </form>
-                            }
-                            else
-                            {
-                                <span style="color: #6c757d; font-size: 0.9em;">Paid & Posted</span>
-                            }
+                    foreach (var run in Model.PayrollRuns)
+                    {
+                        <tr>
+                            <td>
+                                <strong>@run.PayrollRunId.ToString().Substring(0, 8)</strong>
+                            </td>
+                            <td>@run.PeriodStartDate.ToShortDateString() - @run.PeriodEndDate.ToShortDateString()</td>
+                            <td>
+                                @if (run.Status == PayrollRunStatus.Draft)
+                                {
+                                    <span class="badge badge-draft">Draft</span>
+                                }
+                                else if (run.Status == PayrollRunStatus.Approved)
+                                {
+                                    <span class="badge badge-approved">Approved</span>
+                                }
+                                else if (run.Status == PayrollRunStatus.Paid)
+                                {
+                                    <span class="badge badge-paid">Paid</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-posted">Posted</span>
+                                }
+                            </td>
+                            <td class="num">@run.TotalGross.ToString("N0") XAF</td>
+                            <td class="num font-bold">@run.TotalNet.ToString("N0") XAF</td>
+                            <td style="text-align: right;">
+                                <div style="display:flex; gap:8px; justify-content:flex-end;">
+                                    @if (run.Status == PayrollRunStatus.Draft)
+                                    {
+                                        <form method="post" asp-page-handler="Approve" style="display:inline;">
+                                            <input type="hidden" name="runId" value="@run.PayrollRunId" />
+                                            <button type="submit" class="btn-brand-secondary btn-sm" title="Approve Payroll">
+                                                Approve
+                                            </button>
+                                        </form>
+                                    }
+                                    else if (run.Status == PayrollRunStatus.Approved)
+                                    {
+                                        <form method="post" asp-page-handler="Pay" style="display:inline;" onsubmit="return confirm('Initiate payout for this run?');">
+                                            <input type="hidden" name="runId" value="@run.PayrollRunId" />
+                                            <button type="submit" class="btn-brand-primary btn-sm" title="Post & Pay">
+                                                Pay
+                                            </button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-sm text-gray" style="display:inline-block; padding: 4px 8px;">Completed</span>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" style="padding: 40px; text-align: center; color: var(--text-muted);">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="margin-bottom: 1rem; opacity: 0.5;">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <p>No payroll runs found.</p>
                         </td>
                     </tr>
                 }
-            }
-            else
-            {
-                <tr>
-                    <td colspan="6" style="padding: 20px; text-align: center; color: #666;">No payroll runs found.</td>
-                </tr>
-            }
-        </tbody>
-    </table>
+            </tbody>
+        </table>
+    </div>
 
-    <!-- ── Draft Modal ──────────────────────────────────────── -->
-    <div id="draftModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000;">
-        <div style="background:#fff; width:400px; margin: 100px auto; padding: 20px; border-radius: 8px;">
-            <h3 style="margin-top: 0;">Draft Payroll</h3>
+    <!-- ── Glassmorphic Draft Modal ──────────────────────────────────────── -->
+    <div id="draftModalOverlay" class="glass-modal-overlay">
+        <div class="glass-modal">
+            <div class="glass-modal-header">
+                <h3 class="glass-modal-title">Draft Payroll</h3>
+                <button type="button" class="glass-modal-close" onclick="document.getElementById('draftModalOverlay').classList.remove('open')">&times;</button>
+            </div>
             <form method="post" asp-page-handler="Draft">
-                <div style="margin-bottom: 15px;">
-                    <label style="display:block; margin-bottom: 5px;">Period Start</label>
-                    <input asp-for="DraftPeriodStart" type="date" class="form-control" style="width: 100%; padding: 8px; box-sizing: border-box;" required />
+                <div class="glass-form-group">
+                    <label class="glass-label">Period Start</label>
+                    <input asp-for="DraftPeriodStart" type="date" class="glass-input" required />
                 </div>
-                <div style="margin-bottom: 15px;">
-                    <label style="display:block; margin-bottom: 5px;">Period End</label>
-                    <input asp-for="DraftPeriodEnd" type="date" class="form-control" style="width: 100%; padding: 8px; box-sizing: border-box;" required />
+                <div class="glass-form-group">
+                    <label class="glass-label">Period End</label>
+                    <input asp-for="DraftPeriodEnd" type="date" class="glass-input" required />
                 </div>
-                <div style="text-align: right;">
-                    <button type="button" onclick="document.getElementById('draftModal').style.display='none'" style="padding: 8px 15px; margin-right: 10px; border: 1px solid #ccc; background: #fff; cursor: pointer;">Cancel</button>
-                    <button type="submit" style="padding: 8px 15px; background: #007bff; color: #fff; border: none; cursor: pointer;">Draft</button>
+                <div class="glass-actions">
+                    <button type="button" class="btn-brand-secondary" onclick="document.getElementById('draftModalOverlay').classList.remove('open')" style="padding: 10px 16px;">Cancel</button>
+                    <button type="submit" class="btn-brand-primary" style="padding: 10px 16px;">Draft Run</button>
                 </div>
             </form>
         </div>

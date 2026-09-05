@@ -36,4 +36,5 @@ public class PagedRequest
     public bool IncludeInactive { get; set; }
     public int? CategoryId { get; set; }
     public string? StockStatus { get; set; } // "all" | "low_stock" | "out_of_stock" | "in_stock"
+    public int? BranchId { get; set; }
 }

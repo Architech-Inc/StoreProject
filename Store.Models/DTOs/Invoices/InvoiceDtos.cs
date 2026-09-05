@@ -50,7 +50,6 @@ public class InvoicePagedRequest : PagedRequest
     public DateTime? ToDate { get; set; }
     public string? Status { get; set; } // "all" | "paid" | "unpaid" | "voided" | "refunded"
     public PaymentType? PaymentType { get; set; }
-    public int? BranchId { get; set; }
     public decimal? MinAmount { get; set; }
     public decimal? MaxAmount { get; set; }
 }

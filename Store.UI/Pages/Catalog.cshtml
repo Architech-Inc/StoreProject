@@ -75,6 +75,14 @@
             </div>
 
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                <select name="branchId" onchange="submitFilter()" style="padding:9px 12px;border-radius:8px;border:1px solid var(--ops-border);background:var(--ops-bg);color:var(--ops-ink);font-size:0.9rem;">
+                    <option value="">All Branches</option>
+                    @foreach (var b in Model.Branches)
+                    {
+                        <option value="@b.BranchId" selected="@(Model.BranchId == b.BranchId)">@b.Name</option>
+                    }
+                </select>
+
                 <select name="categoryId" onchange="submitFilter()" style="padding:9px 12px;border-radius:8px;border:1px solid var(--ops-border);background:var(--ops-bg);color:var(--ops-ink);font-size:0.9rem;">
                     <option value="">All Categories</option>
                     @foreach (var cat in Model.Categories)

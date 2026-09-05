@@ -17,6 +17,7 @@ public class CatalogModel : SecurePageModel
     public IReadOnlyList<ItemDto> Items { get; private set; } = Array.Empty<ItemDto>();
     public IReadOnlyList<Category> Categories { get; private set; } = Array.Empty<Category>();
     public IReadOnlyList<Unit> Units { get; private set; } = Array.Empty<Unit>();
+    public IReadOnlyList<Branch> Branches { get; private set; } = Array.Empty<Branch>();
     public int TotalItems { get; private set; }
     public int PageNumber { get; private set; } = 1;
     public int PageSize { get; private set; } = 25;
@@ -32,6 +33,7 @@ public class CatalogModel : SecurePageModel
     // Search and Filter parameters
     [BindProperty(SupportsGet = true)] public string? Search { get; set; }
     [BindProperty(SupportsGet = true)] public int? CategoryId { get; set; }
+    [BindProperty(SupportsGet = true)] public int? BranchId { get; set; }
     [BindProperty(SupportsGet = true)] public string? StockStatus { get; set; } = "all";
     [BindProperty(SupportsGet = true)] public string? SortBy { get; set; } = "name";
     [BindProperty(SupportsGet = true)] public string ViewMode { get; set; } = "table";
@@ -78,20 +80,25 @@ public class CatalogModel : SecurePageModel
             IncludeInactive = true,
             SearchTerm = Search,
             CategoryId = CategoryId,
+            BranchId = BranchId,
             StockStatus = StockStatus,
             SortBy = SortBy
         };
 
+        var allReq = new PagedRequest { Page = 1, PageSize = 1000, IncludeInactive = true, BranchId = BranchId };
+
         var itemsTask = _itemService.GetAllAsync(pagedReq, ct);
-        var allItemsTask = _itemService.GetAllAsync(new PagedRequest { Page = 1, PageSize = 1000, IncludeInactive = true }, ct);
+        var allItemsTask = _itemService.GetAllAsync(allReq, ct);
         var catsTask  = _apiClient.GetAsync<List<Category>>("/api/categories", ct);
         var unitsTask = _apiClient.GetAsync<List<Unit>>("/api/units", ct);
+        var branchesTask = _apiClient.GetAsync<List<Branch>>("/api/branches", ct);
 
         var result = await itemsTask;
         Items      = result.Items.ToList();
         TotalItems = result.TotalCount;
         Categories = (await catsTask)  ?? new();
         Units      = (await unitsTask) ?? new();
+        Branches   = (await branchesTask) ?? new();
 
         var allItemsResult = await allItemsTask;
         var allList = allItemsResult?.Items ?? Enumerable.Empty<ItemDto>();
