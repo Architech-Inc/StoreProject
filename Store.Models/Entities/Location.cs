@@ -12,8 +12,6 @@ public class Location : BaseEntity
     public string? Longitude { get; set; }
 
     public City? City { get; set; }
-    public ICollection<EmployeeLocation> EmployeeLocations { get; set; } = new List<EmployeeLocation>();
-    public ICollection<CustomerLocation> CustomerLocations { get; set; } = new List<CustomerLocation>();
     public ICollection<SupplierLocation> SupplierLocations { get; set; } = new List<SupplierLocation>();
     public ICollection<ManufacturerLocation> ManufacturerLocations { get; set; } = new List<ManufacturerLocation>();
 }

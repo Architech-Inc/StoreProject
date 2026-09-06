@@ -420,6 +420,11 @@
             modal.style.visibility = '';
             modal.style.zIndex = '';
         }
+        const applyBtn = document.getElementById('btnApplyCrop');
+        if (applyBtn) {
+            applyBtn.disabled = false;
+            applyBtn.style.opacity = '1';
+        }
         if (currentCropper) {
             try { currentCropper.destroy(); } catch (e) { }
             currentCropper = null;
@@ -436,7 +441,20 @@
 
     const applyCrop = () => {
         if (currentCropper && currentCropInput) {
-            const data = currentCropper.getData(true);
+            let data = null;
+            try {
+                if (typeof currentCropper.getData === 'function') {
+                    data = currentCropper.getData(true);
+                }
+            } catch (err) {
+                console.warn('Cropper was not ready yet:', err);
+                return;
+            }
+
+            if (!data || isNaN(data.width) || data.width <= 0) {
+                return;
+            }
+
             const form = currentCropInput.closest('form');
             if (form) {
                 const setHiddenInput = (name, value) => {
@@ -520,9 +538,19 @@
                         modal.classList.add('active');
                         modal.hidden = false;
 
+                        const applyBtn = document.getElementById('btnApplyCrop');
+                        if (applyBtn) {
+                            applyBtn.disabled = true;
+                            applyBtn.style.opacity = '0.6';
+                        }
+
                         const initCropper = () => {
                             if (typeof Cropper === 'undefined') {
                                 console.error('Cropper.js library not available.');
+                                if (applyBtn) {
+                                    applyBtn.disabled = false;
+                                    applyBtn.style.opacity = '1';
+                                }
                                 return;
                             }
                             if (currentCropper) {
@@ -543,18 +571,35 @@
                                         responsive: true,
                                         restore: true,
                                         checkCrossOrigin: false,
-                                        zoomable: true
+                                        zoomable: true,
+                                        ready() {
+                                            if (applyBtn) {
+                                                applyBtn.disabled = false;
+                                                applyBtn.style.opacity = '1';
+                                            }
+                                        }
                                     });
                                 } catch (err) {
                                     console.error('Failed to instantiate Cropper:', err);
+                                    if (applyBtn) {
+                                        applyBtn.disabled = false;
+                                        applyBtn.style.opacity = '1';
+                                    }
                                 }
                             }, 50);
                         };
 
-                        img.onload = initCropper;
+                        let initialized = false;
+                        const runInitOnce = () => {
+                            if (initialized) return;
+                            initialized = true;
+                            initCropper();
+                        };
+
+                        img.onload = runInitOnce;
                         img.src = event.target.result;
                         if (img.complete && img.naturalWidth > 0) {
-                            initCropper();
+                            runInitOnce();
                         }
                     };
                     reader.readAsDataURL(file);

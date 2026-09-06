@@ -45,8 +45,6 @@ public class StoreDbContext : DbContext
     public DbSet<Region> Regions => Set<Region>();
     public DbSet<City> Cities => Set<City>();
     public DbSet<Location> Locations => Set<Location>();
-    public DbSet<EmployeeLocation> EmployeeLocations => Set<EmployeeLocation>();
-    public DbSet<CustomerLocation> CustomerLocations => Set<CustomerLocation>();
     public DbSet<SupplierLocation> SupplierLocations => Set<SupplierLocation>();
     public DbSet<ManufacturerLocation> ManufacturerLocations => Set<ManufacturerLocation>();
     public DbSet<Currency> Currencies => Set<Currency>();
@@ -79,14 +77,6 @@ public class StoreDbContext : DbContext
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
     public DbSet<MobileMoneyTransaction> MobileMoneyTransactions => Set<MobileMoneyTransaction>();
 
-    // ---- Privileges ----
-    public DbSet<Privilege> Privileges => Set<Privilege>();
-    public DbSet<UserPrivilege> UserPrivileges => Set<UserPrivilege>();
-    public DbSet<UserPrivilegeAction> UserPrivilegeActions => Set<UserPrivilegeAction>();
-    public DbSet<EmployeePrivilege> EmployeePrivileges => Set<EmployeePrivilege>();
-    public DbSet<EmployeePrivilegeAction> EmployeePrivilegeActions => Set<EmployeePrivilegeAction>();
-    public DbSet<CustomerPrivilege> CustomerPrivileges => Set<CustomerPrivilege>();
-    public DbSet<CustomerPrivilegeAction> CustomerPrivilegeActions => Set<CustomerPrivilegeAction>();
 
     // ---- System ----
     public DbSet<Otp> Otps => Set<Otp>();

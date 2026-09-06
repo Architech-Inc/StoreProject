@@ -78,6 +78,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAuditLogService, AuditLogService>();
         services.AddScoped<IProcurementAutomationService, ProcurementAutomationService>();
         services.AddScoped<IPayrollService, PayrollService>();
+        services.AddScoped<ITaxBracketService, TaxBracketService>();
+        services.AddScoped<ISalaryService, SalaryService>();
         services.AddScoped<IDemandForecastingService, DemandForecastingService>();
         services.AddScoped<IEmailService, MockEmailService>();
         

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Store.Models.Entities.HR;
+using Store.Models.DTOs.HR;
 using StoreUI.Pages;
 using Store.Models.Interfaces.Services;
 using StoreUI.Services;
@@ -18,6 +19,7 @@ public class PayrollModel : SecurePageModel
     }
 
     public IEnumerable<PayrollRun> PayrollRuns { get; private set; } = new List<PayrollRun>();
+    public IEnumerable<TaxBracketDto> TaxBrackets { get; private set; } = new List<TaxBracketDto>();
 
     [BindProperty]
     public DateTime DraftPeriodStart { get; set; } = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
@@ -33,7 +35,13 @@ public class PayrollModel : SecurePageModel
         if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
         _apiClient.SetToken(token);
 
-        PayrollRuns = await _payrollManager.GetAllRunsAsync();
+        var runsTask = _payrollManager.GetAllRunsAsync();
+        var bracketsTask = _payrollManager.GetTaxBracketsAsync();
+
+        await Task.WhenAll(runsTask, bracketsTask);
+
+        PayrollRuns = await runsTask;
+        TaxBrackets = await bracketsTask;
         return Page();
     }
 
@@ -45,11 +53,11 @@ public class PayrollModel : SecurePageModel
         var response = await _payrollManager.DraftPayrollAsync(DraftPeriodStart, DraftPeriodEnd);
         if (response.Success)
         {
-            StatusMessage = "Payroll drafted successfully.";
+            StatusMessage = !string.IsNullOrWhiteSpace(response.Message) ? response.Message : "Payroll drafted successfully.";
         }
         else
         {
-            StatusMessage = $"Error: {response.Message}";
+            StatusMessage = $"Error: {(!string.IsNullOrWhiteSpace(response.Message) ? response.Message : "Failed to draft payroll run.")}";
         }
 
         return RedirectToPage();
@@ -63,11 +71,11 @@ public class PayrollModel : SecurePageModel
         var response = await _payrollManager.ApprovePayrollAsync(runId);
         if (response.Success)
         {
-            StatusMessage = "Payroll approved successfully.";
+            StatusMessage = !string.IsNullOrWhiteSpace(response.Message) ? response.Message : "Payroll approved successfully.";
         }
         else
         {
-            StatusMessage = $"Error: {response.Message}";
+            StatusMessage = $"Error: {(!string.IsNullOrWhiteSpace(response.Message) ? response.Message : "Failed to approve payroll run.")}";
         }
 
         return RedirectToPage();
@@ -81,11 +89,47 @@ public class PayrollModel : SecurePageModel
         var response = await _payrollManager.PayPayrollAsync(runId);
         if (response.Success)
         {
-            StatusMessage = "Payroll paid successfully.";
+            StatusMessage = !string.IsNullOrWhiteSpace(response.Message) ? response.Message : "Payroll paid successfully.";
         }
         else
         {
-            StatusMessage = $"Error: {response.Message}";
+            StatusMessage = $"Error: {(!string.IsNullOrWhiteSpace(response.Message) ? response.Message : "Failed to pay payroll run.")}";
+        }
+
+        return RedirectToPage();
+    }
+
+    public async Task<IActionResult> OnPostSaveTaxBracketAsync(int id, decimal minAmount, decimal? maxAmount, decimal taxPercentage, decimal fixedTaxAmount, bool isActive = true, CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        _apiClient.SetToken(token);
+
+        var response = await _payrollManager.SaveTaxBracketAsync(id, minAmount, maxAmount, taxPercentage, fixedTaxAmount, isActive, ct);
+        if (response.Success)
+        {
+            StatusMessage = id == 0 ? "Tax bracket created successfully." : "Tax bracket updated successfully.";
+        }
+        else
+        {
+            StatusMessage = $"Error: {(!string.IsNullOrWhiteSpace(response.Message) ? response.Message : "Failed to save tax bracket.")}";
+        }
+
+        return RedirectToPage();
+    }
+
+    public async Task<IActionResult> OnPostDeleteTaxBracketAsync(int id, CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        _apiClient.SetToken(token);
+
+        var ok = await _payrollManager.DeleteTaxBracketAsync(id, ct);
+        if (ok)
+        {
+            StatusMessage = "Tax bracket deleted successfully.";
+        }
+        else
+        {
+            StatusMessage = "Error: Could not delete tax bracket.";
         }
 
         return RedirectToPage();

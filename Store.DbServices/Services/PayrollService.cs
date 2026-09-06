@@ -154,13 +154,36 @@ public class PayrollService : IPayrollService
         if (run.Status != PayrollRunStatus.Approved) throw new InvalidOperationException("Only approved runs can be paid.");
 
         // Get Chart of Accounts to find relevant accounts
-        var coa = await _financeService.GetChartOfAccountsAsync();
+        var coa = (await _financeService.GetChartOfAccountsAsync()).ToList();
         
-        // Find specific accounts (fallback to defaults if not found, ideally these would be configured via settings)
-        var cashAccount = coa.FirstOrDefault(a => a.Name == "Cash") ?? throw new InvalidOperationException("Cash account not found.");
-        var salaryExpenseAccount = coa.FirstOrDefault(a => a.Name == "Salary Expense") ?? throw new InvalidOperationException("Salary Expense account not found.");
+        // Find specific accounts (fallback to defaults if not found, auto-creating them if needed)
+        var cashAccount = coa.FirstOrDefault(a => a.AccountCode == "1000" || a.Name.Contains("Cash", StringComparison.OrdinalIgnoreCase));
+        if (cashAccount == null)
+        {
+            cashAccount = new Account { AccountCode = "1000", Name = "Cash Equivalents", AccountType = AccountType.Asset, Description = "Cash on hand and in bank." };
+            _context.Accounts.Add(cashAccount);
+            await _context.SaveChangesAsync();
+            coa.Add(cashAccount);
+        }
+
+        var salaryExpenseAccount = coa.FirstOrDefault(a => a.AccountCode == "5200" || a.Name.Contains("Salary", StringComparison.OrdinalIgnoreCase) || a.Name.Contains("Payroll", StringComparison.OrdinalIgnoreCase));
+        if (salaryExpenseAccount == null)
+        {
+            salaryExpenseAccount = new Account { AccountCode = "5200", Name = "Salary Expense", AccountType = AccountType.Expense, Description = "Employee salaries, wages, and allowances." };
+            _context.Accounts.Add(salaryExpenseAccount);
+            await _context.SaveChangesAsync();
+            coa.Add(salaryExpenseAccount);
+        }
+
         // If we want to record tax liability
-        var payrollTaxPayable = coa.FirstOrDefault(a => a.Name == "Payroll Tax Payable"); // Optional
+        var payrollTaxPayable = coa.FirstOrDefault(a => a.AccountCode == "2100" || a.Name.Contains("Payroll Tax", StringComparison.OrdinalIgnoreCase));
+        if (payrollTaxPayable == null && run.TotalTax > 0)
+        {
+            payrollTaxPayable = new Account { AccountCode = "2100", Name = "Payroll Tax Payable", AccountType = AccountType.Liability, Description = "Withheld payroll taxes to remit." };
+            _context.Accounts.Add(payrollTaxPayable);
+            await _context.SaveChangesAsync();
+            coa.Add(payrollTaxPayable);
+        }
 
         // Create Journal Entry
         var je = new JournalEntry

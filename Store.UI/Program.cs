@@ -252,4 +252,29 @@ app.MapPost("/api/session/switch-branch", (HttpContext httpContext, System.Text.
     return Results.BadRequest(new { success = false, message = "Invalid branch ID" });
 });
 
+app.MapGet("/api/countries", () =>
+{
+    var countries = new[]
+    {
+        new Store.Models.DTOs.Common.CountryDto { CountryId = 1, IsoCode = "CM", Name = "Cameroon", PhoneCode = "+237", FlagEmoji = "🇨🇲" },
+        new Store.Models.DTOs.Common.CountryDto { CountryId = 2, IsoCode = "NG", Name = "Nigeria", PhoneCode = "+234", FlagEmoji = "🇳🇬" },
+        new Store.Models.DTOs.Common.CountryDto { CountryId = 3, IsoCode = "GH", Name = "Ghana", PhoneCode = "+233", FlagEmoji = "🇬🇭" },
+        new Store.Models.DTOs.Common.CountryDto { CountryId = 4, IsoCode = "CI", Name = "Côte d'Ivoire", PhoneCode = "+225", FlagEmoji = "🇨🇮" },
+        new Store.Models.DTOs.Common.CountryDto { CountryId = 5, IsoCode = "SN", Name = "Senegal", PhoneCode = "+221", FlagEmoji = "🇸🇳" },
+        new Store.Models.DTOs.Common.CountryDto { CountryId = 6, IsoCode = "KE", Name = "Kenya", PhoneCode = "+254", FlagEmoji = "🇰🇪" },
+        new Store.Models.DTOs.Common.CountryDto { CountryId = 7, IsoCode = "ZA", Name = "South Africa", PhoneCode = "+27", FlagEmoji = "🇿🇦" },
+        new Store.Models.DTOs.Common.CountryDto { CountryId = 8, IsoCode = "FR", Name = "France", PhoneCode = "+33", FlagEmoji = "🇫🇷" },
+        new Store.Models.DTOs.Common.CountryDto { CountryId = 9, IsoCode = "GB", Name = "United Kingdom", PhoneCode = "+44", FlagEmoji = "🇬🇧" },
+        new Store.Models.DTOs.Common.CountryDto { CountryId = 10, IsoCode = "US", Name = "United States", PhoneCode = "+1", FlagEmoji = "🇺🇸" },
+        new Store.Models.DTOs.Common.CountryDto { CountryId = 11, IsoCode = "CA", Name = "Canada", PhoneCode = "+1", FlagEmoji = "🇨🇦" },
+        new Store.Models.DTOs.Common.CountryDto { CountryId = 12, IsoCode = "DE", Name = "Germany", PhoneCode = "+49", FlagEmoji = "🇩🇪" },
+        new Store.Models.DTOs.Common.CountryDto { CountryId = 13, IsoCode = "IT", Name = "Italy", PhoneCode = "+39", FlagEmoji = "🇮🇹" },
+        new Store.Models.DTOs.Common.CountryDto { CountryId = 14, IsoCode = "NL", Name = "Netherlands", PhoneCode = "+31", FlagEmoji = "🇳🇱" },
+        new Store.Models.DTOs.Common.CountryDto { CountryId = 15, IsoCode = "AE", Name = "United Arab Emirates", PhoneCode = "+971", FlagEmoji = "🇦🇪" },
+        new Store.Models.DTOs.Common.CountryDto { CountryId = 16, IsoCode = "CN", Name = "China", PhoneCode = "+86", FlagEmoji = "🇨🇳" },
+        new Store.Models.DTOs.Common.CountryDto { CountryId = 17, IsoCode = "IN", Name = "India", PhoneCode = "+91", FlagEmoji = "🇮🇳" }
+    };
+    return Results.Ok(new { success = true, data = countries });
+});
+
 app.Run();

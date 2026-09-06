@@ -95,4 +95,22 @@ public class LookupManager : ILookupManager
     {
         return await _apiClient.DeleteAsync($"/api/departments/{id}", ct);
     }
+
+    public async Task<List<Salary>> GetSalariesAsync(CancellationToken ct = default)
+    {
+        return (await _apiClient.GetAsync<List<Salary>>("/api/salaries", ct)) ?? new();
+    }
+
+    public async Task SaveSalaryAsync(int id, string grade, decimal basicAmount, decimal? allowanceAmount, string? description, CancellationToken ct = default)
+    {
+        if (id == 0)
+            await _apiClient.PostAsync<Salary>("/api/salaries", new { grade, basicAmount, allowanceAmount, description }, ct);
+        else
+            await _apiClient.PutAsync<Salary>($"/api/salaries/{id}", new { grade, basicAmount, allowanceAmount, description }, ct);
+    }
+
+    public async Task<bool> DeleteSalaryAsync(int id, CancellationToken ct = default)
+    {
+        return await _apiClient.DeleteAsync($"/api/salaries/{id}", ct);
+    }
 }

@@ -18,6 +18,7 @@ public class EmployeesModel : SecurePageModel
     public IReadOnlyList<EmployeeDto> Employees { get; private set; } = Array.Empty<EmployeeDto>();
     public EmployeeMetricsDto Metrics { get; private set; } = new();
     public IReadOnlyList<Department> Departments { get; private set; } = Array.Empty<Department>();
+    public IReadOnlyList<Salary> Salaries { get; private set; } = Array.Empty<Salary>();
     public int TotalEmployees { get; private set; }
     public int PageNumber { get; private set; } = 1;
     public int PageSize { get; private set; } = 24;
@@ -41,6 +42,11 @@ public class EmployeesModel : SecurePageModel
     [BindProperty] public DateTime EmpDateEmployed { get; set; } = DateTime.Today;
     [BindProperty] public int? EmpDepartmentId { get; set; }
     [BindProperty] public string EmpStatus { get; set; } = "Active";
+    [BindProperty] public int? EmpSalaryId { get; set; }
+    [BindProperty] public Store.Models.Enums.PayrollType EmpPayrollType { get; set; } = Store.Models.Enums.PayrollType.Taxed;
+    [BindProperty] public bool EmpCalculateTaxOnGross { get; set; } = true;
+    [BindProperty] public decimal EmpCommissionRate { get; set; } = 0.00m;
+    [BindProperty] public Store.Models.Enums.CommissionBasis EmpCommissionBasis { get; set; } = Store.Models.Enums.CommissionBasis.None;
     [BindProperty] public IFormFile? ImageUpload { get; set; }
 
     [BindProperty] public int? CropX { get; set; }
@@ -66,6 +72,7 @@ public class EmployeesModel : SecurePageModel
 
         var metricsTask = _employeeService.GetMetricsAsync(ct);
         var deptsTask = _apiClient.GetAsync<List<Department>>("/api/departments", ct);
+        var salariesTask = _apiClient.GetAsync<List<Salary>>("/api/salaries", ct);
         var employeesTask = _employeeService.GetAllAsync(new EmployeeFilterRequest
         {
             Page = PageNumber,
@@ -77,10 +84,11 @@ public class EmployeesModel : SecurePageModel
             SortBy = SortBy
         }, ct);
 
-        await Task.WhenAll(metricsTask, deptsTask, employeesTask);
+        await Task.WhenAll(metricsTask, deptsTask, salariesTask, employeesTask);
 
         Metrics = await metricsTask ?? new EmployeeMetricsDto();
         Departments = await deptsTask ?? new List<Department>();
+        Salaries = await salariesTask ?? new List<Salary>();
         var result = await employeesTask ?? new PagedResult<EmployeeDto>();
 
         Employees = result.Items?.ToList() ?? new List<EmployeeDto>();
@@ -101,6 +109,7 @@ public class EmployeesModel : SecurePageModel
                 var updated = await _employeeManager.UpdateEmployeeAsync(
                     EditEmployeeId.Value, EmpFirstName, EmpMiddleName, EmpLastName,
                     EmpGender, EmpDateOfBirth, EmpDepartmentId, EmpStatus,
+                    EmpSalaryId, EmpPayrollType, EmpCalculateTaxOnGross, EmpCommissionRate, EmpCommissionBasis,
                     ImageUpload, CropX, CropY, CropW, CropH, ct);
                     
                 StatusMessage = updated is not null
@@ -111,7 +120,8 @@ public class EmployeesModel : SecurePageModel
             {
                 var created = await _employeeManager.CreateEmployeeAsync(
                     EmpFirstName, EmpMiddleName, EmpLastName,
-                    EmpGender, EmpDateOfBirth, EmpDateEmployed, EmpDepartmentId,
+                    EmpGender, EmpDateOfBirth, EmpDateEmployed, EmpDepartmentId, EmpSalaryId,
+                    EmpPayrollType, EmpCalculateTaxOnGross, EmpCommissionRate, EmpCommissionBasis,
                     ImageUpload, CropX, CropY, CropW, CropH, ct);
                     
                 StatusMessage = created is not null 

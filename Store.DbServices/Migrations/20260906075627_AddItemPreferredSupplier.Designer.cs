@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Store.DbServices.Context;
 
@@ -11,9 +12,11 @@ using Store.DbServices.Context;
 namespace Store.DbServices.Migrations
 {
     [DbContext(typeof(StoreDbContext))]
-    partial class StoreDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260906075627_AddItemPreferredSupplier")]
+    partial class AddItemPreferredSupplier
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1300,6 +1303,47 @@ namespace Store.DbServices.Migrations
                     b.ToTable("customer");
                 });
 
+            modelBuilder.Entity("Store.Models.Entities.CustomerLocation", b =>
+                {
+                    b.Property<int>("CustomerLocationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("customer_location_id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("CustomerLocationId"));
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("customer_id");
+
+                    b.Property<DateTime>("DateCreated")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("date_created");
+
+                    b.Property<bool>("IsPrimary")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_primary");
+
+                    b.Property<DateTime>("LastModified")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("last_modified");
+
+                    b.Property<int>("LocationId")
+                        .HasColumnType("int")
+                        .HasColumnName("location_id");
+
+                    b.HasKey("CustomerLocationId")
+                        .HasName("pk_customer_location");
+
+                    b.HasIndex("CustomerId")
+                        .HasDatabaseName("ix_customer_location_customer_id");
+
+                    b.HasIndex("LocationId")
+                        .HasDatabaseName("ix_customer_location_location_id");
+
+                    b.ToTable("customer_location");
+                });
+
             modelBuilder.Entity("Store.Models.Entities.CustomerLoyaltyAccount", b =>
                 {
                     b.Property<int>("LoyaltyAccountId")
@@ -1337,6 +1381,97 @@ namespace Store.DbServices.Migrations
                         .HasDatabaseName("ix_customer_loyalty_account_customer_id");
 
                     b.ToTable("customer_loyalty_account");
+                });
+
+            modelBuilder.Entity("Store.Models.Entities.CustomerPrivilege", b =>
+                {
+                    b.Property<int>("CustomerPrivilegeId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("customer_privilege_id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("CustomerPrivilegeId"));
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("customer_id");
+
+                    b.Property<DateTime>("DateCreated")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("date_created");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_active");
+
+                    b.Property<DateTime>("LastModified")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("last_modified");
+
+                    b.Property<int>("PrivilegeId")
+                        .HasColumnType("int")
+                        .HasColumnName("privilege_id");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int")
+                        .HasColumnName("type");
+
+                    b.HasKey("CustomerPrivilegeId")
+                        .HasName("pk_customer_privilege");
+
+                    b.HasIndex("CustomerId")
+                        .HasDatabaseName("ix_customer_privilege_customer_id");
+
+                    b.HasIndex("PrivilegeId")
+                        .HasDatabaseName("ix_customer_privilege_privilege_id");
+
+                    b.ToTable("customer_privilege");
+                });
+
+            modelBuilder.Entity("Store.Models.Entities.CustomerPrivilegeAction", b =>
+                {
+                    b.Property<int>("CustomerPrivilegeActionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("customer_privilege_action_id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("CustomerPrivilegeActionId"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("action");
+
+                    b.Property<int>("CustomerPrivilegeId")
+                        .HasColumnType("int")
+                        .HasColumnName("customer_privilege_id");
+
+                    b.Property<DateTime>("DateCreated")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("date_created");
+
+                    b.Property<DateTime>("LastModified")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("last_modified");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("longtext")
+                        .HasColumnName("notes");
+
+                    b.Property<Guid>("PerformedByUserId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("performed_by_user_id");
+
+                    b.HasKey("CustomerPrivilegeActionId")
+                        .HasName("pk_customer_privilege_action");
+
+                    b.HasIndex("CustomerPrivilegeId")
+                        .HasDatabaseName("ix_customer_privilege_action_customer_privilege_id");
+
+                    b.HasIndex("PerformedByUserId")
+                        .HasDatabaseName("ix_customer_privilege_action_performed_by_user_id");
+
+                    b.ToTable("customer_privilege_action");
                 });
 
             modelBuilder.Entity("Store.Models.Entities.CustomerSegmentPrice", b =>
@@ -1796,6 +1931,138 @@ namespace Store.DbServices.Migrations
                         .HasDatabaseName("ix_employee_salary_id");
 
                     b.ToTable("employee");
+                });
+
+            modelBuilder.Entity("Store.Models.Entities.EmployeeLocation", b =>
+                {
+                    b.Property<int>("EmployeeLocationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("employee_location_id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("EmployeeLocationId"));
+
+                    b.Property<DateTime>("DateCreated")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("date_created");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("employee_id");
+
+                    b.Property<bool>("IsPrimary")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_primary");
+
+                    b.Property<DateTime>("LastModified")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("last_modified");
+
+                    b.Property<int>("LocationId")
+                        .HasColumnType("int")
+                        .HasColumnName("location_id");
+
+                    b.HasKey("EmployeeLocationId")
+                        .HasName("pk_employee_location");
+
+                    b.HasIndex("EmployeeId")
+                        .HasDatabaseName("ix_employee_location_employee_id");
+
+                    b.HasIndex("LocationId")
+                        .HasDatabaseName("ix_employee_location_location_id");
+
+                    b.ToTable("employee_location");
+                });
+
+            modelBuilder.Entity("Store.Models.Entities.EmployeePrivilege", b =>
+                {
+                    b.Property<int>("EmployeePrivilegeId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("employee_privilege_id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("EmployeePrivilegeId"));
+
+                    b.Property<DateTime>("DateCreated")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("date_created");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("employee_id");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_active");
+
+                    b.Property<DateTime>("LastModified")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("last_modified");
+
+                    b.Property<int>("PrivilegeId")
+                        .HasColumnType("int")
+                        .HasColumnName("privilege_id");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int")
+                        .HasColumnName("type");
+
+                    b.HasKey("EmployeePrivilegeId")
+                        .HasName("pk_employee_privilege");
+
+                    b.HasIndex("EmployeeId")
+                        .HasDatabaseName("ix_employee_privilege_employee_id");
+
+                    b.HasIndex("PrivilegeId")
+                        .HasDatabaseName("ix_employee_privilege_privilege_id");
+
+                    b.ToTable("employee_privilege");
+                });
+
+            modelBuilder.Entity("Store.Models.Entities.EmployeePrivilegeAction", b =>
+                {
+                    b.Property<int>("EmployeePrivilegeActionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("employee_privilege_action_id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("EmployeePrivilegeActionId"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("action");
+
+                    b.Property<DateTime>("DateCreated")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("date_created");
+
+                    b.Property<int>("EmployeePrivilegeId")
+                        .HasColumnType("int")
+                        .HasColumnName("employee_privilege_id");
+
+                    b.Property<DateTime>("LastModified")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("last_modified");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("longtext")
+                        .HasColumnName("notes");
+
+                    b.Property<Guid>("PerformedByUserId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("performed_by_user_id");
+
+                    b.HasKey("EmployeePrivilegeActionId")
+                        .HasName("pk_employee_privilege_action");
+
+                    b.HasIndex("EmployeePrivilegeId")
+                        .HasDatabaseName("ix_employee_privilege_action_employee_privilege_id");
+
+                    b.HasIndex("PerformedByUserId")
+                        .HasDatabaseName("ix_employee_privilege_action_performed_by_user_id");
+
+                    b.ToTable("employee_privilege_action");
                 });
 
             modelBuilder.Entity("Store.Models.Entities.FidoCredential", b =>
@@ -3379,6 +3646,46 @@ namespace Store.DbServices.Migrations
                     b.ToTable("personnel_transfer_history");
                 });
 
+            modelBuilder.Entity("Store.Models.Entities.Privilege", b =>
+                {
+                    b.Property<int>("PrivilegeId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("privilege_id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("PrivilegeId"));
+
+                    b.Property<DateTime>("DateCreated")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("date_created");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("description");
+
+                    b.Property<DateTime>("LastModified")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("last_modified");
+
+                    b.Property<string>("Module")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("module");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("name");
+
+                    b.HasKey("PrivilegeId")
+                        .HasName("pk_privilege");
+
+                    b.ToTable("privilege");
+                });
+
             modelBuilder.Entity("Store.Models.Entities.PurchaseOrder", b =>
                 {
                     b.Property<int>("PurchaseOrderId")
@@ -4133,7 +4440,7 @@ namespace Store.DbServices.Migrations
                         {
                             SettingKey = "Auth:PasswordRecoveryMethod",
                             Description = "Determines allowed password recovery methods (OTP, TempPassword, Both)",
-                            LastModified = new DateTime(2026, 9, 6, 18, 35, 38, 100, DateTimeKind.Utc).AddTicks(414),
+                            LastModified = new DateTime(2026, 9, 6, 7, 56, 25, 3, DateTimeKind.Utc).AddTicks(1687),
                             SettingValue = "Both"
                         });
                 });
@@ -4407,6 +4714,97 @@ namespace Store.DbServices.Migrations
                         .HasDatabaseName("ix_user_password_user_id");
 
                     b.ToTable("user_password");
+                });
+
+            modelBuilder.Entity("Store.Models.Entities.UserPrivilege", b =>
+                {
+                    b.Property<int>("UserPrivilegeId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("user_privilege_id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("UserPrivilegeId"));
+
+                    b.Property<DateTime>("DateCreated")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("date_created");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_active");
+
+                    b.Property<DateTime>("LastModified")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("last_modified");
+
+                    b.Property<int>("PrivilegeId")
+                        .HasColumnType("int")
+                        .HasColumnName("privilege_id");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int")
+                        .HasColumnName("type");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("UserPrivilegeId")
+                        .HasName("pk_user_privilege");
+
+                    b.HasIndex("PrivilegeId")
+                        .HasDatabaseName("ix_user_privilege_privilege_id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_user_privilege_user_id");
+
+                    b.ToTable("user_privilege");
+                });
+
+            modelBuilder.Entity("Store.Models.Entities.UserPrivilegeAction", b =>
+                {
+                    b.Property<int>("UserPrivilegeActionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("user_privilege_action_id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("UserPrivilegeActionId"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("action");
+
+                    b.Property<DateTime>("DateCreated")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("date_created");
+
+                    b.Property<DateTime>("LastModified")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("last_modified");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("longtext")
+                        .HasColumnName("notes");
+
+                    b.Property<Guid>("PerformedByUserId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("performed_by_user_id");
+
+                    b.Property<int>("UserPrivilegeId")
+                        .HasColumnType("int")
+                        .HasColumnName("user_privilege_id");
+
+                    b.HasKey("UserPrivilegeActionId")
+                        .HasName("pk_user_privilege_action");
+
+                    b.HasIndex("PerformedByUserId")
+                        .HasDatabaseName("ix_user_privilege_action_performed_by_user_id");
+
+                    b.HasIndex("UserPrivilegeId")
+                        .HasDatabaseName("ix_user_privilege_action_user_privilege_id");
+
+                    b.ToTable("user_privilege_action");
                 });
 
             modelBuilder.Entity("Store.Models.Entities.UserToken", b =>
@@ -4929,6 +5327,27 @@ namespace Store.DbServices.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Store.Models.Entities.CustomerLocation", b =>
+                {
+                    b.HasOne("Store.Models.Entities.Customer", "Customer")
+                        .WithMany("Locations")
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_customer_location_customer_customer_id");
+
+                    b.HasOne("Store.Models.Entities.Location", "Location")
+                        .WithMany("CustomerLocations")
+                        .HasForeignKey("LocationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_customer_location_locations_location_id");
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("Location");
+                });
+
             modelBuilder.Entity("Store.Models.Entities.CustomerLoyaltyAccount", b =>
                 {
                     b.HasOne("Store.Models.Entities.Customer", "Customer")
@@ -4939,6 +5358,48 @@ namespace Store.DbServices.Migrations
                         .HasConstraintName("fk_customer_loyalty_account_customer_customer_id");
 
                     b.Navigation("Customer");
+                });
+
+            modelBuilder.Entity("Store.Models.Entities.CustomerPrivilege", b =>
+                {
+                    b.HasOne("Store.Models.Entities.Customer", "Customer")
+                        .WithMany("Privileges")
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_customer_privilege_customer_customer_id");
+
+                    b.HasOne("Store.Models.Entities.Privilege", "Privilege")
+                        .WithMany("CustomerPrivileges")
+                        .HasForeignKey("PrivilegeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_customer_privilege_privileges_privilege_id");
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("Privilege");
+                });
+
+            modelBuilder.Entity("Store.Models.Entities.CustomerPrivilegeAction", b =>
+                {
+                    b.HasOne("Store.Models.Entities.CustomerPrivilege", "CustomerPrivilege")
+                        .WithMany("Actions")
+                        .HasForeignKey("CustomerPrivilegeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_customer_privilege_action_customer_privilege_customer_privil~");
+
+                    b.HasOne("Store.Models.Entities.User", "PerformedByUser")
+                        .WithMany("CustomerPrivilegeActions")
+                        .HasForeignKey("PerformedByUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_customer_privilege_action_users_performed_by_user_id");
+
+                    b.Navigation("CustomerPrivilege");
+
+                    b.Navigation("PerformedByUser");
                 });
 
             modelBuilder.Entity("Store.Models.Entities.CustomerSegmentPrice", b =>
@@ -5059,6 +5520,69 @@ namespace Store.DbServices.Migrations
                     b.Navigation("HomeBranch");
 
                     b.Navigation("Salary");
+                });
+
+            modelBuilder.Entity("Store.Models.Entities.EmployeeLocation", b =>
+                {
+                    b.HasOne("Store.Models.Entities.Employee", "Employee")
+                        .WithMany("Locations")
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_employee_location_employee_employee_id");
+
+                    b.HasOne("Store.Models.Entities.Location", "Location")
+                        .WithMany("EmployeeLocations")
+                        .HasForeignKey("LocationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_employee_location_locations_location_id");
+
+                    b.Navigation("Employee");
+
+                    b.Navigation("Location");
+                });
+
+            modelBuilder.Entity("Store.Models.Entities.EmployeePrivilege", b =>
+                {
+                    b.HasOne("Store.Models.Entities.Employee", "Employee")
+                        .WithMany("Privileges")
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_employee_privilege_employee_employee_id");
+
+                    b.HasOne("Store.Models.Entities.Privilege", "Privilege")
+                        .WithMany("EmployeePrivileges")
+                        .HasForeignKey("PrivilegeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_employee_privilege_privileges_privilege_id");
+
+                    b.Navigation("Employee");
+
+                    b.Navigation("Privilege");
+                });
+
+            modelBuilder.Entity("Store.Models.Entities.EmployeePrivilegeAction", b =>
+                {
+                    b.HasOne("Store.Models.Entities.EmployeePrivilege", "EmployeePrivilege")
+                        .WithMany("Actions")
+                        .HasForeignKey("EmployeePrivilegeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_employee_privilege_action_employee_privilege_employee_privil~");
+
+                    b.HasOne("Store.Models.Entities.User", "PerformedByUser")
+                        .WithMany("EmployeePrivilegeActions")
+                        .HasForeignKey("PerformedByUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_employee_privilege_action_users_performed_by_user_id");
+
+                    b.Navigation("EmployeePrivilege");
+
+                    b.Navigation("PerformedByUser");
                 });
 
             modelBuilder.Entity("Store.Models.Entities.FidoCredential", b =>
@@ -5780,6 +6304,48 @@ namespace Store.DbServices.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Store.Models.Entities.UserPrivilege", b =>
+                {
+                    b.HasOne("Store.Models.Entities.Privilege", "Privilege")
+                        .WithMany("UserPrivileges")
+                        .HasForeignKey("PrivilegeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_user_privilege_privilege_privilege_id");
+
+                    b.HasOne("Store.Models.Entities.User", "User")
+                        .WithMany("Privileges")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_user_privilege_user_user_id");
+
+                    b.Navigation("Privilege");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Store.Models.Entities.UserPrivilegeAction", b =>
+                {
+                    b.HasOne("Store.Models.Entities.User", "PerformedByUser")
+                        .WithMany("PrivilegeActions")
+                        .HasForeignKey("PerformedByUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_user_privilege_action_user_performed_by_user_id");
+
+                    b.HasOne("Store.Models.Entities.UserPrivilege", "UserPrivilege")
+                        .WithMany("Actions")
+                        .HasForeignKey("UserPrivilegeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_user_privilege_action_user_privilege_user_privilege_id");
+
+                    b.Navigation("PerformedByUser");
+
+                    b.Navigation("UserPrivilege");
+                });
+
             modelBuilder.Entity("Store.Models.Entities.UserToken", b =>
                 {
                     b.HasOne("Store.Models.Entities.User", "User")
@@ -5883,14 +6449,23 @@ namespace Store.DbServices.Migrations
 
                     b.Navigation("Invoices");
 
+                    b.Navigation("Locations");
+
                     b.Navigation("LoyaltyAccount");
 
                     b.Navigation("Phones");
+
+                    b.Navigation("Privileges");
                 });
 
             modelBuilder.Entity("Store.Models.Entities.CustomerLoyaltyAccount", b =>
                 {
                     b.Navigation("Transactions");
+                });
+
+            modelBuilder.Entity("Store.Models.Entities.CustomerPrivilege", b =>
+                {
+                    b.Navigation("Actions");
                 });
 
             modelBuilder.Entity("Store.Models.Entities.Department", b =>
@@ -5909,11 +6484,20 @@ namespace Store.DbServices.Migrations
 
                     b.Navigation("Emails");
 
+                    b.Navigation("Locations");
+
                     b.Navigation("Phones");
+
+                    b.Navigation("Privileges");
 
                     b.Navigation("TransferHistories");
 
                     b.Navigation("Users");
+                });
+
+            modelBuilder.Entity("Store.Models.Entities.EmployeePrivilege", b =>
+                {
+                    b.Navigation("Actions");
                 });
 
             modelBuilder.Entity("Store.Models.Entities.Finance.Account", b =>
@@ -5974,6 +6558,10 @@ namespace Store.DbServices.Migrations
 
             modelBuilder.Entity("Store.Models.Entities.Location", b =>
                 {
+                    b.Navigation("CustomerLocations");
+
+                    b.Navigation("EmployeeLocations");
+
                     b.Navigation("ManufacturerLocations");
 
                     b.Navigation("SupplierLocations");
@@ -5993,6 +6581,15 @@ namespace Store.DbServices.Migrations
                     b.Navigation("Locations");
 
                     b.Navigation("Phones");
+                });
+
+            modelBuilder.Entity("Store.Models.Entities.Privilege", b =>
+                {
+                    b.Navigation("CustomerPrivileges");
+
+                    b.Navigation("EmployeePrivileges");
+
+                    b.Navigation("UserPrivileges");
                 });
 
             modelBuilder.Entity("Store.Models.Entities.PurchaseOrder", b =>
@@ -6053,7 +6650,11 @@ namespace Store.DbServices.Migrations
 
                     b.Navigation("ContactChangeRequests");
 
+                    b.Navigation("CustomerPrivilegeActions");
+
                     b.Navigation("Emails");
+
+                    b.Navigation("EmployeePrivilegeActions");
 
                     b.Navigation("FidoCredentials");
 
@@ -6073,6 +6674,10 @@ namespace Store.DbServices.Migrations
 
                     b.Navigation("Phones");
 
+                    b.Navigation("PrivilegeActions");
+
+                    b.Navigation("Privileges");
+
                     b.Navigation("Sales");
 
                     b.Navigation("StockMovements");
@@ -6080,6 +6685,11 @@ namespace Store.DbServices.Migrations
                     b.Navigation("UserBranchRoles");
 
                     b.Navigation("UserTokens");
+                });
+
+            modelBuilder.Entity("Store.Models.Entities.UserPrivilege", b =>
+                {
+                    b.Navigation("Actions");
                 });
 #pragma warning restore 612, 618
         }

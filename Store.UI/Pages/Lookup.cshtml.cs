@@ -15,10 +15,12 @@ public class LookupModel : SecurePageModel
     public IReadOnlyList<Category> Categories { get; private set; } = Array.Empty<Category>();
     public IReadOnlyList<Unit> Units { get; private set; } = Array.Empty<Unit>();
     public IReadOnlyList<Department> Departments { get; private set; } = Array.Empty<Department>();
+    public IReadOnlyList<Salary> Salaries { get; private set; } = Array.Empty<Salary>();
 
     public int TotalCategories => Categories.Count;
     public int TotalUnits => Units.Count;
     public int TotalDepartments => Departments.Count;
+    public int TotalSalaries => Salaries.Count;
 
     [TempData] public string? StatusMessage { get; set; }
 
@@ -39,17 +41,19 @@ public class LookupModel : SecurePageModel
         if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
         _apiClient.SetToken(token);
 
-        ActiveTab = tab is "categories" or "units" or "departments" ? tab : "categories";
+        ActiveTab = tab is "categories" or "units" or "departments" or "salaries" ? tab : "categories";
 
         var catTask = _lookupManager.GetCategoriesAsync(ct);
         var unitTask = _lookupManager.GetUnitsAsync(ct);
         var deptTask = _lookupManager.GetDepartmentsAsync(ct);
+        var salaryTask = _lookupManager.GetSalariesAsync(ct);
 
-        await Task.WhenAll(catTask, unitTask, deptTask);
+        await Task.WhenAll(catTask, unitTask, deptTask, salaryTask);
 
         Categories = await catTask;
         Units = await unitTask;
         Departments = await deptTask;
+        Salaries = await salaryTask;
 
         return Page();
     }
@@ -163,5 +167,42 @@ public class LookupModel : SecurePageModel
         }
 
         return RedirectToPage("/Lookup", new { tab = "departments" });
+    }
+
+    // ── Salary Grades ────────────────────────────────────────────
+    public async Task<IActionResult> OnPostSaveSalaryAsync(int id, string grade, decimal basicAmount, decimal? allowanceAmount, string? description, CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        _apiClient.SetToken(token);
+
+        try
+        {
+            await _lookupManager.SaveSalaryAsync(id, grade, basicAmount, allowanceAmount, description, ct);
+            StatusMessage = id == 0 ? $"Salary grade '{grade}' created successfully." : $"Salary grade '{grade}' updated successfully.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: {ex.Message}";
+        }
+
+        return RedirectToPage("/Lookup", new { tab = "salaries" });
+    }
+
+    public async Task<IActionResult> OnPostDeleteSalaryAsync(int id, CancellationToken ct = default)
+    {
+        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        _apiClient.SetToken(token);
+
+        try
+        {
+            var ok = await _lookupManager.DeleteSalaryAsync(id, ct);
+            StatusMessage = ok ? "Salary grade deleted successfully." : "Error: Could not delete salary grade.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: {ex.Message}";
+        }
+
+        return RedirectToPage("/Lookup", new { tab = "salaries" });
     }
 }

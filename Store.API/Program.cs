@@ -201,14 +201,28 @@ builder.Services.AddCors(options =>
     options.AddPolicy("StorePolicy", policy =>
     {
         if (builder.Environment.IsDevelopment())
-            policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
+        {
+            policy.SetIsOriginAllowed(_ => true)
+                  .AllowAnyMethod()
+                  .AllowAnyHeader()
+                  .AllowCredentials();
+        }
         else
-            policy.WithOrigins(allowedOrigins).AllowAnyMethod().AllowAnyHeader();
+        {
+            policy.WithOrigins(allowedOrigins)
+                  .AllowAnyMethod()
+                  .AllowAnyHeader()
+                  .AllowCredentials();
+        }
     });
 });
 
 // ─── Controllers ─────────────────────────────────────────────────────────────
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+    });
 builder.Services.Configure<ApiBehaviorOptions>(options =>
 {
     options.InvalidModelStateResponseFactory = context =>
@@ -286,7 +300,7 @@ app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<AuditLoggingMiddleware>();
 
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || app.Environment.IsStaging())
 {
     app.UseSwagger();
     app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Store API v1"));
@@ -328,5 +342,11 @@ app.UseHangfireDashboard("/hangfire", new DashboardOptions
 
 app.Services.ScheduleProcurementJobs();
 app.Services.SchedulePayrollJobs();
+
+using (var scope = app.Services.CreateScope())
+{
+    var financeService = scope.ServiceProvider.GetRequiredService<Store.Models.Interfaces.Services.IFinanceService>();
+    await financeService.SeedDefaultChartOfAccountsAsync();
+}
 
 app.Run();

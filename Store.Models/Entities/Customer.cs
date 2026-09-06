@@ -22,8 +22,6 @@ public class Customer : BaseEntity
     // Navigation
     public ICollection<CustomerEmail> Emails { get; set; } = new List<CustomerEmail>();
     public ICollection<CustomerPhone> Phones { get; set; } = new List<CustomerPhone>();
-    public ICollection<CustomerLocation> Locations { get; set; } = new List<CustomerLocation>();
-    public ICollection<CustomerPrivilege> Privileges { get; set; } = new List<CustomerPrivilege>();
     public ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
     public CustomerLoyaltyAccount? LoyaltyAccount { get; set; }
 }

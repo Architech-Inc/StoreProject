@@ -238,7 +238,21 @@
 
     // Initialize SignalR Connection
     function initSignalR() {
-        const token = sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
+        const getToken = () => (window.appConfig && window.appConfig.accessToken)
+            || sessionStorage.getItem('access_token')
+            || localStorage.getItem('access_token')
+            || '';
+
+        const token = getToken();
+        if (!token) {
+            // User is unauthenticated or session expired; keep notifications in local mode without failing HTTP 401
+            if (statusIndicator) {
+                statusIndicator.classList.add('offline');
+                statusIndicator.innerHTML = '<span class="status-dot"></span> Local Mode';
+            }
+            return;
+        }
+
         if (typeof signalR === 'undefined') {
             console.info('SignalR library not loaded yet; notifications initialized in local mode.');
             return;
@@ -248,7 +262,7 @@
             var baseUrl = (window.appConfig && window.appConfig.apiBaseUrl) ? window.appConfig.apiBaseUrl : '';
             connection = new signalR.HubConnectionBuilder()
                 .withUrl(baseUrl + '/hubs/notifications', {
-                    accessTokenFactory: () => token || ''
+                    accessTokenFactory: () => getToken()
                 })
                 .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
                 .configureLogging(signalR.LogLevel.Warning)

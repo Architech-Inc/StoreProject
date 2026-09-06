@@ -30,7 +30,6 @@ public class Employee : BaseEntity
     public ICollection<User> Users { get; set; } = new List<User>();
     public ICollection<EmployeeEmail> Emails { get; set; } = new List<EmployeeEmail>();
     public ICollection<EmployeePhone> Phones { get; set; } = new List<EmployeePhone>();
-    public ICollection<EmployeeLocation> Locations { get; set; } = new List<EmployeeLocation>();
-    public ICollection<EmployeePrivilege> Privileges { get; set; } = new List<EmployeePrivilege>();
     public ICollection<PersonnelTransferHistory> TransferHistories { get; set; } = new List<PersonnelTransferHistory>();
+    public ICollection<Store.Models.Entities.HR.EmployeeContract> Contracts { get; set; } = new List<Store.Models.Entities.HR.EmployeeContract>();
 }

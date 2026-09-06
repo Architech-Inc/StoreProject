@@ -20,7 +20,8 @@ public class EmployeeManager : IEmployeeManager
     public async Task<EmployeeDto?> CreateEmployeeAsync(
         string firstName, string? middleName, string lastName, 
         string gender, DateTime? dob, DateTime dateEmployed, 
-        int? departmentId, IFormFile? imageUpload, 
+        int? departmentId, int? salaryId, Store.Models.Enums.PayrollType payrollType, bool calculateTaxOnGross, decimal commissionRate, Store.Models.Enums.CommissionBasis commissionBasis, 
+        IFormFile? imageUpload, 
         int? cropX, int? cropY, int? cropW, int? cropH, 
         CancellationToken ct = default)
     {
@@ -46,6 +47,11 @@ public class EmployeeManager : IEmployeeManager
             DateOfBirth = dob,
             DateEmployed = dateEmployed,
             DepartmentId = departmentId,
+            SalaryId = salaryId,
+            PayrollType = payrollType,
+            CalculateTaxOnGross = calculateTaxOnGross,
+            CommissionRate = commissionRate,
+            CommissionBasis = commissionBasis,
             ThumbnailUrl = thumbUrl,
             FullImageUrl = fullUrl
         };
@@ -56,6 +62,7 @@ public class EmployeeManager : IEmployeeManager
     public async Task<EmployeeDto?> UpdateEmployeeAsync(
         Guid employeeId, string firstName, string? middleName, string lastName, 
         string gender, DateTime? dob, int? departmentId, string status, 
+        int? salaryId, Store.Models.Enums.PayrollType payrollType, bool calculateTaxOnGross, decimal commissionRate, Store.Models.Enums.CommissionBasis commissionBasis,
         IFormFile? imageUpload, int? cropX, int? cropY, int? cropW, int? cropH, 
         CancellationToken ct = default)
     {
@@ -89,6 +96,11 @@ public class EmployeeManager : IEmployeeManager
             Gender = parsedGender,
             DateOfBirth = dob,
             DepartmentId = departmentId,
+            SalaryId = salaryId,
+            PayrollType = payrollType,
+            CalculateTaxOnGross = calculateTaxOnGross,
+            CommissionRate = commissionRate,
+            CommissionBasis = commissionBasis,
             Status = parsedStatus,
             ThumbnailUrl = thumbUrl,
             FullImageUrl = fullUrl

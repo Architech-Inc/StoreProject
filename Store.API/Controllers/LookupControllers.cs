@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Store.Models.DTOs.Common;
+using Store.Models.DTOs.HR;
 using Store.Models.Entities;
 using Store.Models.Interfaces.Services;
 
@@ -131,6 +132,75 @@ public class DepartmentsController : ControllerBase
         var deleted = await _deptService.DeleteAsync(id, ct);
         if (!deleted) return NotFound(ApiResponse<object>.Fail("Department not found."));
         return Ok(ApiResponse<object>.Ok(null!, "Department deleted."));
+    }
+}
+
+[ApiController]
+[Route("api/[controller]")]
+[Authorize]
+public class SalariesController : ControllerBase
+{
+    private readonly ISalaryService _salaryService;
+
+    public SalariesController(ISalaryService salaryService) => _salaryService = salaryService;
+
+    [HttpGet]
+    public async Task<IActionResult> GetAll(CancellationToken ct) =>
+        Ok(ApiResponse<IEnumerable<Salary>>.Ok(await _salaryService.GetAllAsync(ct)));
+
+    [HttpGet("{id:int}")]
+    public async Task<IActionResult> GetById(int id, CancellationToken ct)
+    {
+        var salary = await _salaryService.GetByIdAsync(id, ct);
+        if (salary is null) return NotFound(ApiResponse<object>.Fail("Salary grade not found."));
+        return Ok(ApiResponse<Salary>.Ok(salary));
+    }
+
+    [HttpPost]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> Create([FromBody] CreateSalaryRequest request, CancellationToken ct)
+    {
+        try
+        {
+            var salary = await _salaryService.CreateAsync(request.Grade, request.BasicAmount, request.AllowanceAmount, request.Description, ct);
+            return CreatedAtAction(nameof(GetById), new { id = salary.SalaryId }, ApiResponse<Salary>.Ok(salary));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ApiResponse<object>.Fail(ex.Message));
+        }
+    }
+
+    [HttpPut("{id:int}")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> Update(int id, [FromBody] UpdateSalaryRequest request, CancellationToken ct)
+    {
+        try
+        {
+            var salary = await _salaryService.UpdateAsync(id, request.Grade, request.BasicAmount, request.AllowanceAmount, request.Description, ct);
+            if (salary is null) return NotFound(ApiResponse<object>.Fail("Salary grade not found."));
+            return Ok(ApiResponse<Salary>.Ok(salary));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ApiResponse<object>.Fail(ex.Message));
+        }
+    }
+
+    [HttpDelete("{id:int}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Delete(int id, CancellationToken ct)
+    {
+        try
+        {
+            var deleted = await _salaryService.DeleteAsync(id, ct);
+            if (!deleted) return NotFound(ApiResponse<object>.Fail("Salary grade not found."));
+            return Ok(ApiResponse<object>.Ok(null!, "Salary grade deleted."));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ApiResponse<object>.Fail(ex.Message));
+        }
     }
 }
 

@@ -1,0 +1,118 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: ${TENANT_ID}-mysql
+    restart: always
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - ${TENANT_ID}-mysql-data:/var/lib/mysql
+      - ../../Database/migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u $$MYSQL_USER -p$$MYSQL_PASSWORD || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - ${TENANT_ID}-network
+
+  mongodb:
+    image: mongo:latest
+    container_name: ${TENANT_ID}-mongodb
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    volumes:
+      - ${TENANT_ID}-mongodb-data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --eval 'db.adminCommand(\"ping\")' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - ${TENANT_ID}-network
+
+  api:
+    build:
+      context: ../..
+      dockerfile: Store.API/Dockerfile
+    container_name: ${TENANT_ID}-api
+    restart: always
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__Default=${STORE_CONNECTION_STRING}
+      - MongoDB__ConnectionString=${STORE_MONGO_CONNECTION_STRING}
+      - Jwt__Key=${STORE_JWT_SECRET}
+      - Payments__MoMoCallbackKey=${STORE_MOMO_CALLBACK_KEY}
+      - Cors__AllowedOrigins__0=https://${STORE_DOMAIN}
+      - Cors__AllowedOrigins__1=http://${STORE_DOMAIN}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    volumes:
+      - ${TENANT_ID}-dataprotection-keys:/root/.aspnet/DataProtection-Keys
+      - ${TENANT_ID}-uploads:/app/Uploads
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - ${TENANT_ID}-network
+      - proxy-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy-network"
+      - "traefik.http.routers.${TENANT_ID}-api.rule=Host(`api.${STORE_DOMAIN}`)"
+      - "traefik.http.services.${TENANT_ID}-api.loadbalancer.server.port=8080"
+
+  ui:
+    build:
+      context: ../..
+      dockerfile: Store.UI/Dockerfile
+    container_name: ${TENANT_ID}-ui
+    restart: always
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ApiSettings__InternalBaseUrl=http://${TENANT_ID}-api:8080
+      - ApiSettings__ExternalBaseUrl=https://api.${STORE_DOMAIN}
+    depends_on:
+      api:
+        condition: service_healthy
+    volumes:
+      - ${TENANT_ID}-dataprotection-keys:/root/.aspnet/DataProtection-Keys
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - ${TENANT_ID}-network
+      - proxy-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy-network"
+      - "traefik.http.routers.${TENANT_ID}-ui.rule=Host(`${STORE_DOMAIN}`)"
+      - "traefik.http.services.${TENANT_ID}-ui.loadbalancer.server.port=8080"
+
+volumes:
+  ${TENANT_ID}-mysql-data:
+  ${TENANT_ID}-mongodb-data:
+  ${TENANT_ID}-dataprotection-keys:
+  ${TENANT_ID}-uploads:
+
+networks:
+  ${TENANT_ID}-network:
+  proxy-network:
+    external: true

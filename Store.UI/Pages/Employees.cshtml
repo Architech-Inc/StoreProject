@@ -234,7 +234,12 @@
                             dob = e.DateOfBirth?.ToString("yyyy-MM-dd"),
                             dateEmployed = e.DateEmployed.ToString("yyyy-MM-dd"),
                             departmentId = e.DepartmentId,
+                            salaryId = e.SalaryId,
                             status = e.Status.ToString(),
+                            payrollType = e.PayrollType.ToString(),
+                            calculateTaxOnGross = e.CalculateTaxOnGross,
+                            commissionRate = e.CommissionRate,
+                            commissionBasis = e.CommissionBasis.ToString(),
                             thumbnailUrl = e.ThumbnailUrl
                         }))">
                             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -332,7 +337,12 @@
                                             dob = e.DateOfBirth?.ToString("yyyy-MM-dd"),
                                             dateEmployed = e.DateEmployed.ToString("yyyy-MM-dd"),
                                             departmentId = e.DepartmentId,
+                                            salaryId = e.SalaryId,
                                             status = e.Status.ToString(),
+                                            payrollType = e.PayrollType.ToString(),
+                                            calculateTaxOnGross = e.CalculateTaxOnGross,
+                                            commissionRate = e.CommissionRate,
+                                            commissionBasis = e.CommissionBasis.ToString(),
                                             thumbnailUrl = e.ThumbnailUrl
                                         }))">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -665,9 +675,56 @@
                 </select>
             </div>
             
-            <!-- Section 3: Profile Photo -->
+            <!-- Section 3: Contract & Payroll -->
             <div style="font-size:0.80rem; font-weight:700; text-transform:uppercase; color:var(--brand); letter-spacing:0.06em; margin-bottom:12px; border-top:1px solid var(--border); padding-top:16px;">
-                3. Identity Photo
+                3. Contract & Payroll
+            </div>
+
+            <div style="margin-bottom:14px;">
+                <label for="salaryGradeF" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Salary Grade</label>
+                <select asp-for="EmpSalaryId" id="salaryGradeF" class="emp-select" style="width:100%;">
+                    <option value="">— Unassigned (Custom / None) —</option>
+                    @foreach (var s in Model.Salaries)
+                    {
+                        var totalPkg = s.BasicAmount + (s.AllowanceAmount ?? 0);
+                        <option value="@s.SalaryId">@s.Grade (@s.BasicAmount.ToString("N0") + @((s.AllowanceAmount ?? 0).ToString("N0")) = @totalPkg.ToString("N0") XAF)</option>
+                    }
+                </select>
+                <span style="font-size:0.75rem; color:var(--text-muted); display:block; margin-top:3px;">Assigning a salary grade automatically populates basic compensation and recurring allowances during payroll drafting.</span>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px;">
+                <div>
+                    <label for="payrollTypeF" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Payroll Type</label>
+                    <select asp-for="EmpPayrollType" id="payrollTypeF" class="emp-select" style="width:100%;">
+                        <option value="Taxed">Taxed</option>
+                        <option value="NonTaxed">Non-Taxed</option>
+                        <option value="Contractor">Contractor</option>
+                    </select>
+                </div>
+                <div style="display:flex; align-items:flex-end;">
+                    <label style="display:flex; align-items:center; gap:8px; font-size:0.84rem; font-weight:600; cursor:pointer;">
+                        <input type="checkbox" asp-for="EmpCalculateTaxOnGross" id="calcTaxF" />
+                        Calculate Tax on Gross
+                    </label>
+                </div>
+                <div>
+                    <label for="commRateF" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Commission Rate</label>
+                    <input asp-for="EmpCommissionRate" id="commRateF" type="number" step="0.01" min="0" max="1" class="form-control" style="width:100%;" placeholder="e.g. 0.05 for 5%" />
+                </div>
+                <div>
+                    <label for="commBasisF" style="display:block; font-size:0.84rem; font-weight:600; margin-bottom:4px;">Commission Basis</label>
+                    <select asp-for="EmpCommissionBasis" id="commBasisF" class="emp-select" style="width:100%;">
+                        <option value="None">None</option>
+                        <option value="GrossSales">Gross Sales</option>
+                        <option value="NetProfit">Net Profit</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Section 4: Profile Photo -->
+            <div style="font-size:0.80rem; font-weight:700; text-transform:uppercase; color:var(--brand); letter-spacing:0.06em; margin-bottom:12px; border-top:1px solid var(--border); padding-top:16px;">
+                4. Identity Photo
             </div>
 
             <label class="emp-upload-tile" for="empImage">
@@ -891,7 +948,12 @@
                     dob: c.dateOfBirth ? c.dateOfBirth.split('T')[0] : '',
                     dateEmployed: c.dateEmployed ? c.dateEmployed.split('T')[0] : '',
                     departmentId: c.departmentId,
+                    salaryId: c.salaryId,
                     status: c.status,
+                    payrollType: c.payrollType,
+                    calculateTaxOnGross: c.calculateTaxOnGross,
+                    commissionRate: c.commissionRate,
+                    commissionBasis: c.commissionBasis,
                     thumbnailUrl: c.thumbnailUrl
                 });
                 document.getElementById('drawerEditBtn').setAttribute('onclick', `closeDrawer(); openEdit(${editData});`);
@@ -926,6 +988,11 @@
             document.getElementById('dateEmpF').value = new Date().toISOString().split('T')[0];
             document.getElementById('deptF').value = '';
             document.getElementById('statusRowEmp').style.display = 'none';
+            document.getElementById('salaryGradeF').value = '';
+            document.getElementById('payrollTypeF').value = 'Taxed';
+            document.getElementById('calcTaxF').checked = true;
+            document.getElementById('commRateF').value = '';
+            document.getElementById('commBasisF').value = 'None';
             document.getElementById('empSubmitBtn').textContent = 'Add Employee';
             
             // Reset photo preview
@@ -959,6 +1026,11 @@
             if (data.departmentId) document.getElementById('deptF').value = data.departmentId;
             document.getElementById('statusEmp').value = data.status || 'Active';
             document.getElementById('statusRowEmp').style.display = 'block';
+            document.getElementById('salaryGradeF').value = data.salaryId || '';
+            document.getElementById('payrollTypeF').value = data.payrollType || 'Taxed';
+            document.getElementById('calcTaxF').checked = data.calculateTaxOnGross !== false;
+            document.getElementById('commRateF').value = data.commissionRate || '';
+            document.getElementById('commBasisF').value = data.commissionBasis || 'None';
             document.getElementById('empSubmitBtn').textContent = 'Save Changes';
 
             // Preview photo if exists

@@ -177,14 +177,3 @@ public class RoleConfiguration : IEntityTypeConfiguration<Role>
         );
     }
 }
-
-public class PrivilegeConfiguration : IEntityTypeConfiguration<Privilege>
-{
-    public void Configure(EntityTypeBuilder<Privilege> builder)
-    {
-        builder.HasKey(p => p.PrivilegeId);
-        builder.Property(p => p.Name).IsRequired().HasMaxLength(100);
-        builder.Property(p => p.Module).IsRequired().HasMaxLength(100);
-        builder.Property(p => p.Description).HasMaxLength(500);
-    }
-}

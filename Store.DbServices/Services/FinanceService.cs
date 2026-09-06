@@ -46,9 +46,8 @@ public class FinanceService : IFinanceService
 
     public async Task SeedDefaultChartOfAccountsAsync(CancellationToken ct = default)
     {
-        var existingAccounts = await _uow.Repository<Account>().GetAllAsync(ct);
-        if (existingAccounts.Any())
-            return; // Already seeded
+        var existingAccounts = (await _uow.Repository<Account>().GetAllAsync(ct)).ToList();
+        var existingCodes = existingAccounts.Select(a => a.AccountCode).ToHashSet();
 
         var defaultAccounts = new List<Account>
         {
@@ -56,19 +55,29 @@ public class FinanceService : IFinanceService
             new Account { AccountCode = "1200", Name = "Accounts Receivable", AccountType = AccountType.Asset, Description = "Unpaid customer invoices." },
             new Account { AccountCode = "1300", Name = "Inventory", AccountType = AccountType.Asset, Description = "Value of goods in stock." },
             new Account { AccountCode = "2000", Name = "Accounts Payable", AccountType = AccountType.Liability, Description = "Unpaid vendor bills." },
+            new Account { AccountCode = "2100", Name = "Payroll Tax Payable", AccountType = AccountType.Liability, Description = "Withheld payroll taxes to be remitted." },
             new Account { AccountCode = "2200", Name = "Sales Tax Payable", AccountType = AccountType.Liability, Description = "Taxes collected to be remitted." },
             new Account { AccountCode = "3000", Name = "Retained Earnings", AccountType = AccountType.Equity, Description = "Cumulative business profit." },
             new Account { AccountCode = "4000", Name = "Sales Revenue", AccountType = AccountType.Revenue, Description = "Income from retail sales." },
             new Account { AccountCode = "5000", Name = "Cost of Goods Sold", AccountType = AccountType.Expense, Description = "Direct cost of products sold." },
-            new Account { AccountCode = "5100", Name = "Inventory Shrinkage", AccountType = AccountType.Expense, Description = "Loss due to theft or damage." }
+            new Account { AccountCode = "5100", Name = "Inventory Shrinkage", AccountType = AccountType.Expense, Description = "Loss due to theft or damage." },
+            new Account { AccountCode = "5200", Name = "Salary Expense", AccountType = AccountType.Expense, Description = "Employee salaries, wages, and allowances." }
         };
 
+        bool anyAdded = false;
         foreach (var account in defaultAccounts)
         {
-            await _uow.Repository<Account>().AddAsync(account, ct);
+            if (!existingCodes.Contains(account.AccountCode))
+            {
+                await _uow.Repository<Account>().AddAsync(account, ct);
+                anyAdded = true;
+            }
         }
 
-        await _uow.SaveChangesAsync(ct);
+        if (anyAdded)
+        {
+            await _uow.SaveChangesAsync(ct);
+        }
     }
 
     public async Task<ProfitAndLossDto> GenerateProfitAndLossAsync(DateTime periodStart, DateTime periodEnd, CancellationToken ct = default)

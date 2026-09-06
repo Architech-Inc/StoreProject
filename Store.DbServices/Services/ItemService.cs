@@ -22,6 +22,7 @@ public class ItemService : IItemService
             .Include(i => i.Manufacturer)
             .Include(i => i.Discount)
             .Include(i => i.ItemExpiry)
+            .Include(i => i.PreferredSupplier)
             .AsNoTracking()
             .FirstOrDefaultAsync(i => i.ItemId == itemId, ct);
 
@@ -34,6 +35,7 @@ public class ItemService : IItemService
             .Include(i => i.Category)
             .Include(i => i.Unit)
             .Include(i => i.Discount)
+            .Include(i => i.PreferredSupplier)
             .AsNoTracking();
 
         if (!request.IncludeInactive && request.StockStatus != "inactive")
@@ -130,6 +132,7 @@ public class ItemService : IItemService
         var items = await _uow.Repository<Item>().Query()
             .Include(i => i.Category)
             .Include(i => i.Unit)
+            .Include(i => i.PreferredSupplier)
             .Where(i => i.IsActive && i.InStock <= i.ReorderLevel)
             .AsNoTracking()
             .OrderBy(i => i.InStock)
@@ -158,6 +161,7 @@ public class ItemService : IItemService
             CategoryId = request.CategoryId,
             UnitId = request.UnitId,
             ManufacturerId = request.ManufacturerId,
+            PreferredSupplierId = request.PreferredSupplierId,
             IsActive = true,
             ThumbnailUrl = request.ThumbnailUrl?.Trim(),
             FullImageUrl = request.FullImageUrl?.Trim()
@@ -186,6 +190,7 @@ public class ItemService : IItemService
         if (request.CategoryId.HasValue) item.CategoryId = request.CategoryId;
         if (request.UnitId.HasValue) item.UnitId = request.UnitId;
         if (request.ManufacturerId.HasValue) item.ManufacturerId = request.ManufacturerId;
+        if (request.PreferredSupplierId.HasValue) item.PreferredSupplierId = request.PreferredSupplierId;
         if (request.IsActive.HasValue) item.IsActive = request.IsActive.Value;
         if (request.ThumbnailUrl != null) item.ThumbnailUrl = request.ThumbnailUrl.Trim();
         if (request.FullImageUrl != null) item.FullImageUrl = request.FullImageUrl.Trim();
@@ -243,6 +248,8 @@ public class ItemService : IItemService
         UnitAbbreviation = i.Unit?.Abbreviation,
         ManufacturerId = i.ManufacturerId,
         ManufacturerName = i.Manufacturer?.Name,
+        PreferredSupplierId = i.PreferredSupplierId,
+        PreferredSupplierName = i.PreferredSupplier?.Name,
         ThumbnailUrl = i.ThumbnailUrl,
             FullImageUrl = i.FullImageUrl,
         DiscountPercentage = i.Discount?.IsActive == true ? i.Discount.Percentage : null,

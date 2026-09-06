@@ -117,11 +117,43 @@ Because we control the deployment orchestration (`Store.ControlPlane`), we can m
 
 ---
 
+## 6. Database Schema Evolution & Model Lifecycle
+
+As part of the ERP audit and hardening, the database schema was analyzed to eliminate technical debt, operationalize orphaned features, and preserve models aligned with the enterprise roadmap.
+
+### 🟢 Pruned Dead Schema (Completed)
+The following 9 legacy/abandoned tables were completely removed from EF Core (`StoreDbContext`, entities, navigation collections) and dropped via migration `20260906183541_PruneDeadPrivilegeAndLocationTables`:
+- **`Privilege` Subsystem (7 tables):** `Privilege`, `UserPrivilege`, `UserPrivilegeAction`, `EmployeePrivilege`, `EmployeePrivilegeAction`, `CustomerPrivilege`, `CustomerPrivilegeAction`. Replaced entirely by the modern RBAC system (`Role`, `RolePermission`, `PermissionKeys`).
+- **Abandoned Join Tables (2 tables):** `CustomerLocation`, `EmployeeLocation`. Locations are now maintained on business entities (Branches, Warehouses, Suppliers) rather than individual staff or retail customers.
+
+### 🟢 Operationalized Orphaned Models (Completed)
+- **`Salary` (Salary Grades):** Fully wired end-to-end. Built `SalaryService`, `SalariesController`, "Salary Grades" tab in `Lookup.cshtml`, and integrated grade selection into Employee management (`Employees.cshtml`).
+- **`TaxBracket` (PAYE Progressive Tax Brackets):** Fully wired end-to-end. Built `TaxBracketService`, `TaxBracketsController`, and an interactive Tax Brackets / PAYE threshold management modal directly inside `Payroll.cshtml`.
+
+---
+
+### 📋 Remaining Models & Roadmap for Future Work
+
+The remaining dormant, legacy, or expansion models have been categorized into actionable future milestones:
+
+| Model / Subsystem | Current State | ERP Strategic Roadmap & Future Use Case |
+| :--- | :--- | :--- |
+| **`Manufacturer` Subsystem**<br>*(4 tables: `Manufacturer`, `ManufacturerLocation`, `ManufacturerEmail`, `ManufacturerPhone`)* | **Dormant** | **Brand & Warranty Tracking:** In enterprise retail/ERP, the **Supplier/Vendor** (who bills and delivers the goods) is distinct from the **Manufacturer/Brand** (who produces the product, e.g., *Nestlé*, *Unilever*, *Samsung*).<br>• *Future Work:* Link `Item.ManufacturerId` to enable brand-level sales analytics, warranty registrations, and batch recall tracking across multiple suppliers. Alternatively, prune if the business remains purely wholesale/retail distribution without brand distinction. |
+| **`Document`**<br>*(Table: `documents`)* | **Dormant** | **Document Management System (DMS):** File uploads (avatars, attachments) currently write directly to disk via `FileService` without database records.<br>• *Future Work:* Activate `Document` as a centralized DMS entity to attach digital assets to core records: signed employee contracts, supplier SLAs, delivery notes, and tax clearance certificates. |
+| **`Language`**<br>*(Table: `languages`)* | **Dormant** | **Enterprise Internationalization (i18n):**<br>• *Future Work:* Wire into ASP.NET Core Localization (`IStringLocalizer`) to support bilingual English/French switching for Central/West African markets and future regional expansion. |
+| **`ItemsOrder` & `OrderItem`**<br>*(Tables: `orders`, `order_items`)* | **Legacy / Archived** | **Historical Audit Preservation:** Replaced by the modern `PurchaseOrder` & `PurchaseOrderItem` procurement engine.<br>• *Decision:* Retained as read-only historical records because existing `StockMovement.ItemsOrderId` foreign keys reference past stock adjustments. No new orders are written here. |
+| **`Currency`**<br>*(Table: `currencies`)* | **Expansion Ready** | **Multi-Currency General Ledger:** Currently defaults to base currency (XAF).<br>• *Future Work:* Pair with an `ExchangeRate` history table to support foreign purchase orders (EUR, USD, RMB) with automated FX gain/loss journal entries during payment reconciliation. |
+| **`Region` & `City`**<br>*(Tables: `regions`, `cities`)* | **Partially Active** | **Logistics & Geographic Tax Zones:** Referenced by `Location` and `SupplierLocation`.<br>• *Future Work:* Expand into delivery route planning, regional sales reporting, and jurisdiction-based VAT/sales tax auto-assignment per branch. |
+
+---
+
 ## Summary of the Path Forward
 
-StoreProject is already operating firmly in **Tier 2 (The Advanced Tier)**, with flashes of **Tier 3 (Multi-Tenant Isolation)**. 
+StoreProject is operating firmly in **Tier 2 (The Advanced Tier)**, with enterprise capabilities in **Tier 3 (Multi-Tenant Data Isolation)** and clean, debt-free schema governance.
 
 To bridge the gap to a true, world-class enterprise system capable of landing a "Walmart-tier" client, the immediate development focus should be:
-1. **Multi-Currency & Regionalization:** Supporting tax profiles and currencies per branch.
-2. **Dashboard Customization (Low-Code):** Allowing enterprise managers to build their own reporting views.
-3. **AI Injection:** Tying an LLM into the `DemandForecastingService` to provide plain-text insights (e.g., "You will run out of Milk by Tuesday due to an upcoming holiday").
+1. **Multi-Currency & Regionalization:** Activating `Currency` exchange rates and regional tax profiles per branch.
+2. **Document Management (DMS):** Activating `Document` to attach signed employee contracts and supplier agreements.
+3. **Brand / Manufacturer Analytics:** Linking `Manufacturer` to Catalog items for brand velocity and recall management.
+4. **Dashboard Customization (Low-Code):** Allowing enterprise managers to build customizable KPI widgets.
+5. **AI Injection:** Tying an LLM into the `DemandForecastingService` to provide plain-text operational insights.

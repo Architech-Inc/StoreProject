@@ -9,13 +9,15 @@ public interface IEmployeeManager
     Task<EmployeeDto?> CreateEmployeeAsync(
         string firstName, string? middleName, string lastName, 
         string gender, DateTime? dob, DateTime dateEmployed, 
-        int? departmentId, IFormFile? imageUpload, 
+        int? departmentId, int? salaryId, Store.Models.Enums.PayrollType payrollType, bool calculateTaxOnGross, decimal commissionRate, Store.Models.Enums.CommissionBasis commissionBasis, 
+        IFormFile? imageUpload, 
         int? cropX, int? cropY, int? cropW, int? cropH, 
         CancellationToken ct = default);
 
     Task<EmployeeDto?> UpdateEmployeeAsync(
         Guid employeeId, string firstName, string? middleName, string lastName, 
         string gender, DateTime? dob, int? departmentId, string status, 
+        int? salaryId, Store.Models.Enums.PayrollType payrollType, bool calculateTaxOnGross, decimal commissionRate, Store.Models.Enums.CommissionBasis commissionBasis,
         IFormFile? imageUpload, int? cropX, int? cropY, int? cropW, int? cropH, 
         CancellationToken ct = default);
 

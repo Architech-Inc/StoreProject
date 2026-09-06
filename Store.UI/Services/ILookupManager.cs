@@ -19,4 +19,8 @@ public interface ILookupManager
 
     Task SaveDepartmentAsync(int id, string name, string? description, CancellationToken ct = default);
     Task<bool> DeleteDepartmentAsync(int id, CancellationToken ct = default);
+
+    Task<List<Salary>> GetSalariesAsync(CancellationToken ct = default);
+    Task SaveSalaryAsync(int id, string grade, decimal basicAmount, decimal? allowanceAmount, string? description, CancellationToken ct = default);
+    Task<bool> DeleteSalaryAsync(int id, CancellationToken ct = default);
 }

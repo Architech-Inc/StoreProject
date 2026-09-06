@@ -42,7 +42,8 @@ public class ApiClientService : IApiClientService
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogWarning("GET {Endpoint} returned {StatusCode}", endpoint, response.StatusCode);
-                return default;
+                var errorContent = await response.Content.ReadAsStringAsync(ct);
+                try { return DeserializeResponse<T>(errorContent); } catch { return default; }
             }
 
             var content = await response.Content.ReadAsStringAsync(ct);
@@ -66,7 +67,8 @@ public class ApiClientService : IApiClientService
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogWarning("POST {Endpoint} returned {StatusCode}", endpoint, response.StatusCode);
-                return default;
+                var errorContent = await response.Content.ReadAsStringAsync(ct);
+                try { return DeserializeResponse<T>(errorContent); } catch { return default; }
             }
 
             var responseContent = await response.Content.ReadAsStringAsync(ct);
@@ -109,7 +111,8 @@ public class ApiClientService : IApiClientService
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogWarning("POST Multipart {Endpoint} returned {StatusCode}", endpoint, response.StatusCode);
-                return default;
+                var errorContent = await response.Content.ReadAsStringAsync(ct);
+                try { return DeserializeResponse<T>(errorContent); } catch { return default; }
             }
 
             var responseContent = await response.Content.ReadAsStringAsync(ct);
@@ -133,7 +136,8 @@ public class ApiClientService : IApiClientService
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogWarning("PUT {Endpoint} returned {StatusCode}", endpoint, response.StatusCode);
-                return default;
+                var errorContent = await response.Content.ReadAsStringAsync(ct);
+                try { return DeserializeResponse<T>(errorContent); } catch { return default; }
             }
 
             var responseContent = await response.Content.ReadAsStringAsync(ct);
@@ -194,6 +198,12 @@ public class ApiClientService : IApiClientService
 
     private static T? DeserializeResponse<T>(string content)
     {
+        // If T is already ApiResponse or ApiResponse<TInner>, deserialize directly into T
+        if (typeof(T) == typeof(ApiResponse) || (typeof(T).IsGenericType && typeof(T).GetGenericTypeDefinition() == typeof(ApiResponse<>)))
+        {
+            return JsonSerializer.Deserialize<T>(content, JsonOptions);
+        }
+
         try
         {
             var apiResponse = JsonSerializer.Deserialize<ApiResponse<T>>(content, JsonOptions);

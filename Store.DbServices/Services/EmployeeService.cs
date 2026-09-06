@@ -20,6 +20,7 @@ public class EmployeeService : IEmployeeService
         var emp = await _uow.Repository<Employee>().Query()
             .Include(e => e.Department)
             .Include(e => e.Salary)
+            .Include(e => e.Contracts)
             .AsNoTracking()
             .FirstOrDefaultAsync(e => e.EmployeeId == employeeId, ct);
 
@@ -31,6 +32,7 @@ public class EmployeeService : IEmployeeService
         var emp = await _uow.Repository<Employee>().Query()
             .Include(e => e.Department)
             .Include(e => e.Salary)
+            .Include(e => e.Contracts)
             .Include(e => e.Emails).ThenInclude(ee => ee.Email)
             .Include(e => e.Phones).ThenInclude(ep => ep.Phone)
             .Include(e => e.Users).ThenInclude(u => u.Role)
@@ -63,6 +65,7 @@ public class EmployeeService : IEmployeeService
         var query = _uow.Repository<Employee>().Query()
             .Include(e => e.Department)
             .Include(e => e.Salary)
+            .Include(e => e.Contracts)
             .AsNoTracking();
 
         if (request is EmployeeFilterRequest filterReq)
@@ -145,6 +148,19 @@ public class EmployeeService : IEmployeeService
             FullImageUrl = request.FullImageUrl?.Trim()
         };
 
+        var contract = new Store.Models.Entities.HR.EmployeeContract
+        {
+            EmployeeId = employee.EmployeeId,
+            SalaryId = request.SalaryId,
+            StartDate = request.DateEmployed,
+            PayrollType = request.PayrollType,
+            CalculateTaxOnGross = request.CalculateTaxOnGross,
+            CommissionRate = request.CommissionRate,
+            CommissionBasis = request.CommissionBasis,
+            IsActive = true
+        };
+        employee.Contracts.Add(contract);
+
         await _uow.Repository<Employee>().AddAsync(employee, ct);
         await _uow.SaveChangesAsync(ct);
 
@@ -168,6 +184,26 @@ public class EmployeeService : IEmployeeService
         if (request.Status.HasValue) employee.Status = request.Status.Value;
         if (request.ThumbnailUrl != null) employee.ThumbnailUrl = request.ThumbnailUrl.Trim();
         if (request.FullImageUrl != null) employee.FullImageUrl = request.FullImageUrl.Trim();
+
+        var activeContract = await _uow.Repository<Store.Models.Entities.HR.EmployeeContract>().Query()
+            .FirstOrDefaultAsync(c => c.EmployeeId == employeeId && c.IsActive, ct);
+
+        if (activeContract == null)
+        {
+            activeContract = new Store.Models.Entities.HR.EmployeeContract
+            {
+                EmployeeId = employeeId,
+                StartDate = DateTime.UtcNow,
+                IsActive = true
+            };
+            await _uow.Repository<Store.Models.Entities.HR.EmployeeContract>().AddAsync(activeContract, ct);
+        }
+
+        if (request.SalaryId.HasValue) activeContract.SalaryId = request.SalaryId;
+        if (request.PayrollType.HasValue) activeContract.PayrollType = request.PayrollType.Value;
+        if (request.CalculateTaxOnGross.HasValue) activeContract.CalculateTaxOnGross = request.CalculateTaxOnGross.Value;
+        if (request.CommissionRate.HasValue) activeContract.CommissionRate = request.CommissionRate.Value;
+        if (request.CommissionBasis.HasValue) activeContract.CommissionBasis = request.CommissionBasis.Value;
 
         _uow.Repository<Employee>().Update(employee);
         await _uow.SaveChangesAsync(ct);
@@ -203,8 +239,12 @@ public class EmployeeService : IEmployeeService
         DepartmentName = e.Department?.Name,
         SalaryId = e.SalaryId,
         SalaryGrade = e.Salary?.Grade,
+        PayrollType = e.Contracts.FirstOrDefault(c => c.IsActive)?.PayrollType ?? Store.Models.Enums.PayrollType.Taxed,
+        CalculateTaxOnGross = e.Contracts.FirstOrDefault(c => c.IsActive)?.CalculateTaxOnGross ?? true,
+        CommissionRate = e.Contracts.FirstOrDefault(c => c.IsActive)?.CommissionRate ?? 0m,
+        CommissionBasis = e.Contracts.FirstOrDefault(c => c.IsActive)?.CommissionBasis ?? Store.Models.Enums.CommissionBasis.None,
         ThumbnailUrl = e.ThumbnailUrl,
-            FullImageUrl = e.FullImageUrl,
+        FullImageUrl = e.FullImageUrl,
         DateCreated = e.DateCreated
     };
 }

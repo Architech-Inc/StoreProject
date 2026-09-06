@@ -21,6 +21,13 @@ public class EmployeeDto
     public DateTime DateEmployed { get; set; }
     public string? ThumbnailUrl { get; set; }
     public string? FullImageUrl { get; set; }
+    
+    // Contract Fields
+    public PayrollType PayrollType { get; set; } = PayrollType.Taxed;
+    public bool CalculateTaxOnGross { get; set; } = true;
+    public decimal CommissionRate { get; set; }
+    public CommissionBasis CommissionBasis { get; set; }
+    
     public DateTime DateCreated { get; set; }
     public string ShortEmployeeCode => "EMP-" + EmployeeId.ToString("N")[..8].ToUpperInvariant();
     public string TenureDisplay
@@ -83,6 +90,12 @@ public class CreateEmployeeRequest
 
     public int? DepartmentId { get; set; }
     public int? SalaryId { get; set; }
+    
+    public PayrollType PayrollType { get; set; } = PayrollType.Taxed;
+    public bool CalculateTaxOnGross { get; set; } = true;
+    public decimal CommissionRate { get; set; }
+    public CommissionBasis CommissionBasis { get; set; }
+
     public string? ThumbnailUrl { get; set; }
     public string? FullImageUrl { get; set; }
 }
@@ -103,6 +116,12 @@ public class UpdateEmployeeRequest
     public int? DepartmentId { get; set; }
     public int? SalaryId { get; set; }
     public EmployeeStatus? Status { get; set; }
+    
+    public PayrollType? PayrollType { get; set; }
+    public bool? CalculateTaxOnGross { get; set; }
+    public decimal? CommissionRate { get; set; }
+    public CommissionBasis? CommissionBasis { get; set; }
+
     public string? ThumbnailUrl { get; set; }
     public string? FullImageUrl { get; set; }
 }

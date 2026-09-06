@@ -1,5 +1,6 @@
 using Store.Models.Entities.HR;
 using Store.Models.DTOs.Common;
+using Store.Models.DTOs.HR;
 using Store.Models.Interfaces.Services;
 using StoreUI.Services;
 
@@ -49,5 +50,31 @@ public class PayrollManager : IPayrollManager
     {
         return await _apiClient.PostAsync<ApiResponse>($"api/payroll/{runId}/pay", new { })
             ?? ApiResponse.Fail("Failed to pay payroll run.");
+    }
+
+    public async Task<IEnumerable<TaxBracketDto>> GetTaxBracketsAsync(CancellationToken ct = default)
+    {
+        var response = await _apiClient.GetAsync<ApiResponse<IEnumerable<TaxBracketDto>>>("api/taxbrackets", ct);
+        return response?.Data ?? Enumerable.Empty<TaxBracketDto>();
+    }
+
+    public async Task<ApiResponse<TaxBracketDto>> SaveTaxBracketAsync(int id, decimal minAmount, decimal? maxAmount, decimal taxPercentage, decimal fixedTaxAmount, bool isActive, CancellationToken ct = default)
+    {
+        var payload = new { minAmount, maxAmount, taxPercentage, fixedTaxAmount, isActive };
+        if (id == 0)
+        {
+            return await _apiClient.PostAsync<ApiResponse<TaxBracketDto>>("api/taxbrackets", payload, ct)
+                ?? ApiResponse<TaxBracketDto>.Fail("Failed to create tax bracket.");
+        }
+        else
+        {
+            return await _apiClient.PutAsync<ApiResponse<TaxBracketDto>>($"api/taxbrackets/{id}", payload, ct)
+                ?? ApiResponse<TaxBracketDto>.Fail("Failed to update tax bracket.");
+        }
+    }
+
+    public async Task<bool> DeleteTaxBracketAsync(int id, CancellationToken ct = default)
+    {
+        return await _apiClient.DeleteAsync($"api/taxbrackets/{id}", ct);
     }
 }

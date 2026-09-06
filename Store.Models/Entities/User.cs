@@ -33,10 +33,6 @@ public class User : BaseEntity
 
     public ICollection<UserEmail> Emails { get; set; } = new List<UserEmail>();
     public ICollection<UserPhone> Phones { get; set; } = new List<UserPhone>();
-    public ICollection<UserPrivilege> Privileges { get; set; } = new List<UserPrivilege>();
-    public ICollection<UserPrivilegeAction> PrivilegeActions { get; set; } = new List<UserPrivilegeAction>();
-    public ICollection<EmployeePrivilegeAction> EmployeePrivilegeActions { get; set; } = new List<EmployeePrivilegeAction>();
-    public ICollection<CustomerPrivilegeAction> CustomerPrivilegeActions { get; set; } = new List<CustomerPrivilegeAction>();
     public ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
     public ICollection<Sale> Sales { get; set; } = new List<Sale>();
     public ICollection<ItemsOrder> Orders { get; set; } = new List<ItemsOrder>();

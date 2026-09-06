@@ -83,9 +83,23 @@
                 <span class="kpi-subtext">Commercial sections &amp; aisles</span>
             </div>
         </div>
+
+        @* KPI 4: Salary Grades *@
+        <div class="lookup-kpi-card" onclick="switchLookupTab('salaries')">
+            <div class="kpi-icon-wrap kpi-blue">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div class="kpi-data">
+                <span class="kpi-label">Salary Grades</span>
+                <span class="kpi-value">@Model.TotalSalaries <small>Grades</small></span>
+                <span class="kpi-subtext">Compensation &amp; pay bands</span>
+            </div>
+        </div>
     </div>
 
-    @* ── 3-TAB DOCK SWITCHER ── *@
+    @* ── 4-TAB DOCK SWITCHER ── *@
     <div class="lookup-tabs-dock">
         <button type="button" class="lookup-tab-btn @(Model.ActiveTab == "categories" ? "active" : "")" onclick="switchLookupTab('categories')">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -104,6 +118,12 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
             </svg>
             Store Departments (@Model.TotalDepartments)
+        </button>
+        <button type="button" class="lookup-tab-btn @(Model.ActiveTab == "salaries" ? "active" : "")" onclick="switchLookupTab('salaries')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Salary Grades (@Model.TotalSalaries)
         </button>
     </div>
 
@@ -344,6 +364,95 @@
             }
         </div>
     </div>
+
+    @* ═════════════════════════════════════════════════════════════ *@
+    @* ── TAB 4: SALARY GRADES ────────────────────────────────────── *@
+    @* ═════════════════════════════════════════════════════════════ *@
+    <div id="tab-salaries" class="lookup-tab-content @(Model.ActiveTab == "salaries" ? "active" : "")">
+        <div class="lookup-panel">
+            <div class="panel-header-dock">
+                <div>
+                    <h2 class="panel-title">Compensation &amp; Salary Grades</h2>
+                    <p class="panel-subtitle">Define standardized pay grades, base salaries, and recurring allowances for payroll auto-drafting.</p>
+                </div>
+                <button type="button" class="btn-lookup-action btn-lookup-primary" onclick="openCreateSalaryModal()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    New Salary Grade
+                </button>
+            </div>
+
+            @if (!Model.Salaries.Any())
+            {
+                <div class="lookup-empty-state">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <h3>No Salary Grades Defined</h3>
+                    <p>Create standardized compensation grades to assign to employees for automated payroll processing.</p>
+                    <button type="button" class="btn-lookup-action btn-lookup-primary" onclick="openCreateSalaryModal()">
+                        Create First Salary Grade
+                    </button>
+                </div>
+            }
+            else
+            {
+                <div class="lookup-table-wrap">
+                    <table class="lookup-table">
+                        <thead>
+                            <tr>
+                                <th>Grade Title</th>
+                                <th>Basic Salary</th>
+                                <th>Allowances</th>
+                                <th>Total Package</th>
+                                <th>Description</th>
+                                <th style="text-align:right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var s in Model.Salaries)
+                            {
+                                var totalPkg = s.BasicAmount + (s.AllowanceAmount ?? 0);
+                                <tr>
+                                    <td>
+                                        <div style="font-weight:600; color:#0f172a;">@s.Grade</div>
+                                    </td>
+                                    <td>
+                                        <span style="font-weight:600; color:#059669;">@s.BasicAmount.ToString("N0") XAF</span>
+                                    </td>
+                                    <td>
+                                        @(s.AllowanceAmount.HasValue && s.AllowanceAmount > 0 ? $"{s.AllowanceAmount.Value.ToString("N0")} XAF" : "—")
+                                    </td>
+                                    <td>
+                                        <span style="font-weight:700; color:#1e293b;">@totalPkg.ToString("N0") XAF</span>
+                                    </td>
+                                    <td style="color:#64748b; font-size:0.82rem;">
+                                        @(s.Description ?? "—")
+                                    </td>
+                                    <td style="text-align:right;">
+                                        <div style="display:inline-flex; gap:6px; align-items:center;">
+                                            <button type="button" class="btn-ctrl-action"
+                                                    onclick="openEditSalaryModal(@s.SalaryId, '@Html.Raw(Html.Encode(s.Grade))', @s.BasicAmount, @(s.AllowanceAmount ?? 0), '@Html.Raw(Html.Encode(s.Description ?? ""))')">
+                                                Edit
+                                            </button>
+                                            <form method="post" asp-page-handler="DeleteSalary" style="margin:0; display:inline;">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@s.SalaryId" />
+                                                <button type="submit" class="btn-ctrl-danger" data-confirm="Delete salary grade @s.Grade?" data-confirm-type="danger" data-confirm-title="Delete Salary Grade">
+                                                    Delete
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
 </div>
 
 @* ── CATEGORY MODAL ── *@
@@ -439,6 +548,43 @@
     </form>
 </div>
 
+@* ── SALARY MODAL ── *@
+<div class="custom-modal-overlay" id="salaryModalOverlay" onclick="closeSalaryModal()"></div>
+<div class="custom-modal" id="salaryModal">
+    <div class="custom-modal-header">
+        <h3 id="salaryModalTitle">Add Salary Grade</h3>
+        <button type="button" class="btn-close-modal" onclick="closeSalaryModal()">&times;</button>
+    </div>
+    <form method="post" asp-page-handler="SaveSalary">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" id="salaryId" value="0" />
+        <div class="custom-modal-body">
+            <div class="form-group">
+                <label class="form-label">Grade Name / Title <span class="text-danger">*</span></label>
+                <input type="text" name="grade" id="salaryGrade" class="form-control" placeholder="e.g. Senior Cashier (Grade 3)" required maxlength="50" />
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                <div class="form-group">
+                    <label class="form-label">Basic Salary (XAF) <span class="text-danger">*</span></label>
+                    <input type="number" name="basicAmount" id="salaryBasic" class="form-control" placeholder="150000" min="0" step="100" required />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Allowance Amount (XAF)</label>
+                    <input type="number" name="allowanceAmount" id="salaryAllowance" class="form-control" placeholder="25000" min="0" step="100" />
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Description / Remarks</label>
+                <textarea name="description" id="salaryDesc" class="form-control" placeholder="Optional grade details or qualifications..." rows="3" maxlength="300"></textarea>
+            </div>
+        </div>
+        <div class="custom-modal-footer">
+            <button type="button" class="btn-lookup-action btn-lookup-secondary" onclick="closeSalaryModal()">Cancel</button>
+            <button type="submit" class="btn-lookup-action btn-lookup-primary">Save Salary Grade</button>
+        </div>
+    </form>
+</div>
+
 @* ── JAVASCRIPT INTERACTIONS ── *@
 @section Scripts {
     <script>
@@ -529,6 +675,32 @@
         function closeDeptModal() {
             document.getElementById('deptModalOverlay').style.display = 'none';
             document.getElementById('deptModal').style.display = 'none';
+        }
+
+        // Salary Modal
+        function openCreateSalaryModal() {
+            document.getElementById('salaryModalTitle').textContent = 'Add Salary Grade';
+            document.getElementById('salaryId').value = '0';
+            document.getElementById('salaryGrade').value = '';
+            document.getElementById('salaryBasic').value = '';
+            document.getElementById('salaryAllowance').value = '';
+            document.getElementById('salaryDesc').value = '';
+            document.getElementById('salaryModalOverlay').style.display = 'block';
+            document.getElementById('salaryModal').style.display = 'block';
+        }
+        function openEditSalaryModal(id, grade, basic, allowance, desc) {
+            document.getElementById('salaryModalTitle').textContent = 'Edit Salary Grade: ' + grade;
+            document.getElementById('salaryId').value = id;
+            document.getElementById('salaryGrade').value = grade;
+            document.getElementById('salaryBasic').value = basic;
+            document.getElementById('salaryAllowance').value = allowance;
+            document.getElementById('salaryDesc').value = desc;
+            document.getElementById('salaryModalOverlay').style.display = 'block';
+            document.getElementById('salaryModal').style.display = 'block';
+        }
+        function closeSalaryModal() {
+            document.getElementById('salaryModalOverlay').style.display = 'none';
+            document.getElementById('salaryModal').style.display = 'none';
         }
     </script>
 }

@@ -40,37 +40,10 @@ public class OrdersModel : SecurePageModel
         _logger = logger;
     }
 
-    public async Task<IActionResult> OnGetAsync(int page = 1, CancellationToken ct = default)
+    public IActionResult OnGet()
     {
-        if (!TryGetSecurityContext(out var token, out _))
-            return GoToLogin();
-
-        _apiClient.SetToken(token);
-        CurrentPage = Math.Max(1, page);
-
-        try
-        {
-            var ordersTask = _orderService.GetAllAsync(new PagedRequest { Page = CurrentPage, PageSize = PageSize }, ct);
-            var itemsTask = _itemService.GetAllAsync(new PagedRequest { Page = 1, PageSize = 300 }, ct);
-
-            await Task.WhenAll(ordersTask, itemsTask);
-
-            var result = await ordersTask;
-            Orders = (result.Items ?? Array.Empty<OrderDto>()).ToList();
-            TotalPages = Math.Max(1, (int)Math.Ceiling((double)(result.TotalCount) / PageSize));
-
-            Items = (await itemsTask).Items
-                .Where(i => i.IsActive)
-                .OrderBy(i => i.Name)
-                .ToList().AsReadOnly();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to load orders page");
-            StatusMessage = "Error: Could not load orders data.";
-        }
-
-        return Page();
+        // Legacy stock orders page has been superseded by the modern Purchase Orders hub
+        return RedirectToPage("/PurchaseOrders");
     }
 
     public async Task<IActionResult> OnPostCreateAsync(CancellationToken ct)

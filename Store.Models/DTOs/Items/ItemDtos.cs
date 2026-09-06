@@ -24,6 +24,8 @@ public class ItemDto
     public Guid? ManufacturerId { get; set; }
     public string? ManufacturerName { get; set; }
     public decimal? DiscountPercentage { get; set; }
+    public Guid? PreferredSupplierId { get; set; }
+    public string? PreferredSupplierName { get; set; }
     public DateTime DateCreated { get; set; }
 }
 
@@ -50,6 +52,7 @@ public class CreateItemRequest
     public int? CategoryId { get; set; }
     public int? UnitId { get; set; }
     public Guid? ManufacturerId { get; set; }
+    public Guid? PreferredSupplierId { get; set; }
     public string? ThumbnailUrl { get; set; }
     public string? FullImageUrl { get; set; }
 }
@@ -75,6 +78,7 @@ public class UpdateItemRequest
     public int? CategoryId { get; set; }
     public int? UnitId { get; set; }
     public Guid? ManufacturerId { get; set; }
+    public Guid? PreferredSupplierId { get; set; }
     public string? ThumbnailUrl { get; set; }
     public string? FullImageUrl { get; set; }
 }

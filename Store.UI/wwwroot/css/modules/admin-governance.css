@@ -2737,6 +2737,7 @@
     .kpi-emerald { background: #ecfdf5; color: #059669; }
     .kpi-teal    { background: #f0fdfa; color: #0d9488; }
     .kpi-purple  { background: #f5f3ff; color: #7c3aed; }
+    .kpi-blue    { background: #eff6ff; color: #2563eb; }
 
     .kpi-data {
         display: flex;
