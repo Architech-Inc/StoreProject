@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Store.DbServices.Services.Interfaces;
 using Store.Models.DTOs.Common;
 using Store.Models.DTOs.HR;
+using Store.Models.DTOs.Operations;
 using Store.Models.Entities.HR;
 
 namespace Store.API.Controllers;
@@ -21,6 +22,7 @@ public class TaxBracketsController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Policy = PermissionKeys.TaxBracketsRead)]
     public async Task<IActionResult> GetAll(CancellationToken ct)
     {
         var brackets = await _taxBracketService.GetAllAsync(ct);
@@ -37,6 +39,7 @@ public class TaxBracketsController : ControllerBase
     }
 
     [HttpGet("{id:int}")]
+    [Authorize(Policy = PermissionKeys.TaxBracketsRead)]
     public async Task<IActionResult> GetById(int id, CancellationToken ct)
     {
         var bracket = await _taxBracketService.GetByIdAsync(id, ct);
@@ -55,7 +58,7 @@ public class TaxBracketsController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin,Manager")]
+    [Authorize(Policy = PermissionKeys.TaxBracketsWrite)]
     public async Task<IActionResult> Create([FromBody] CreateTaxBracketRequest request, CancellationToken ct)
     {
         var bracket = await _taxBracketService.CreateAsync(
@@ -80,7 +83,7 @@ public class TaxBracketsController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [Authorize(Roles = "Admin,Manager")]
+    [Authorize(Policy = PermissionKeys.TaxBracketsWrite)]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateTaxBracketRequest request, CancellationToken ct)
     {
         var bracket = await _taxBracketService.UpdateAsync(
@@ -108,7 +111,7 @@ public class TaxBracketsController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = PermissionKeys.AdminSystem)]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
         var deleted = await _taxBracketService.DeleteAsync(id, ct);

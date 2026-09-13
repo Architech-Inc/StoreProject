@@ -28,6 +28,23 @@ builder.Services.AddStoreDbServices(builder.Configuration);
 builder.Services.AddArchitecture();
 builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
 builder.Services.AddScoped<Store.API.Infrastructure.Processing.IImageProcessorService, Store.API.Infrastructure.Processing.ImageProcessorService>();
+
+// ─── Antivirus (ClamAV sidecar) ───────────────────────────────────────────────
+var avProvider = builder.Configuration["Antivirus:Provider"] ?? "NoOp";
+if (string.Equals(avProvider, "ClamAV", StringComparison.OrdinalIgnoreCase))
+{
+    builder.Services.AddHttpClient<Store.DbServices.Abstractions.IVirusScanner, Store.DbServices.Services.ClamAvVirusScanner>();
+}
+else
+{
+    builder.Services.AddScoped<Store.DbServices.Abstractions.IVirusScanner, Store.DbServices.Services.NoOpVirusScanner>();
+    if (!builder.Environment.IsDevelopment())
+    {
+        // Hard warning, not a hard stop — operators may be running a fleet without
+        // AV during a phased rollout. CI will block deploys with NoOp in prod.
+        Console.Error.WriteLine("WARN: Antivirus provider is NoOp in non-development. Set Antivirus:Provider=ClamAV before production rollout.");
+    }
+}
 builder.Services.AddScoped<Store.Models.Interfaces.Services.IWebAuthnService, Store.API.Services.WebAuthnService>();
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpContextAccessor();
@@ -63,13 +80,24 @@ var jwtAudience = builder.Configuration["Jwt:Audience"];
 
 if (!builder.Environment.IsDevelopment())
 {
-    if (jwtKey.Contains("REPLACE_WITH_A_LONG_RANDOM_SECRET_KEY", StringComparison.OrdinalIgnoreCase)
+    if (jwtKey.Contains("REPLACE_WITH", StringComparison.OrdinalIgnoreCase)
+        || jwtKey.Contains("OVERRIDE_ME", StringComparison.OrdinalIgnoreCase)
         || jwtKey.Length < 32)
     {
         throw new InvalidOperationException(
             "Production JWT key is invalid. Configure Jwt:Key with a strong secret (at least 32 characters)."
         );
     }
+}
+
+// ─── Connection String guard (fail-fast on empty password in non-dev) ──────────
+var defaultConn = builder.Configuration.GetConnectionString("Default");
+if (!builder.Environment.IsDevelopment() &&
+    defaultConn is not null &&
+    ContainsEmptyMySqlPassword(defaultConn))
+{
+    throw new InvalidOperationException(
+        "Empty MySQL password detected in production. Set ConnectionStrings__Default with a real password.");
 }
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -130,18 +158,13 @@ builder.Services.AddScoped<IRealTimeNotificationService, RealTimeNotificationSer
 
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy(PermissionKeys.InventoryRead, p => p.RequireClaim("perm", PermissionKeys.InventoryRead));
-    options.AddPolicy(PermissionKeys.InventoryWrite, p => p.RequireClaim("perm", PermissionKeys.InventoryWrite));
-    options.AddPolicy(PermissionKeys.PricingRead, p => p.RequireClaim("perm", PermissionKeys.PricingRead));
-    options.AddPolicy(PermissionKeys.PricingWrite, p => p.RequireClaim("perm", PermissionKeys.PricingWrite));
-    options.AddPolicy(PermissionKeys.CashRead, p => p.RequireClaim("perm", PermissionKeys.CashRead));
-    options.AddPolicy(PermissionKeys.CashWrite, p => p.RequireClaim("perm", PermissionKeys.CashWrite));
-    options.AddPolicy(PermissionKeys.ReportsRead, p => p.RequireClaim("perm", PermissionKeys.ReportsRead));
-    options.AddPolicy(PermissionKeys.AdminRoleMatrix, p => p.RequireClaim("perm", PermissionKeys.AdminRoleMatrix));
-    options.AddPolicy(PermissionKeys.PaymentsRead, p => p.RequireClaim("perm", PermissionKeys.PaymentsRead));
-    options.AddPolicy(PermissionKeys.AdminBranches, p => p.RequireClaim("perm", PermissionKeys.AdminBranches));
-    options.AddPolicy(PermissionKeys.AdminUsers, p => p.RequireClaim("perm", PermissionKeys.AdminUsers));
-    options.AddPolicy(PermissionKeys.AdminSettings, p => p.RequireClaim("perm", PermissionKeys.AdminSettings));
+    // ─── Permission policies — auto-registered from PermissionKeys.All. ────────
+    // Adding a new permission? Just add the constant to PermissionKeys.All —
+    // it gets a policy automatically.
+    foreach (var key in PermissionKeys.All)
+    {
+        options.AddPolicy(key, p => p.RequireClaim("perm", key));
+    }
 });
 
 // ─── Rate Limiting ────────────────────────────────────────────────────────────
@@ -350,3 +373,19 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.Run();
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+static bool ContainsEmptyMySqlPassword(string cs)
+{
+    foreach (var part in cs.Split(';', StringSplitOptions.RemoveEmptyEntries))
+    {
+        var kv = part.Split('=', 2);
+        if (kv.Length == 2 &&
+            kv[0].Trim().Equals("Password", StringComparison.OrdinalIgnoreCase) &&
+            string.IsNullOrWhiteSpace(kv[1]))
+        {
+            return true;
+        }
+    }
+    return false;
+}

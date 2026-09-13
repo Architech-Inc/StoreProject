@@ -133,6 +133,17 @@ public class StoreDbContext : DbContext
         // Automatically discover and apply all IEntityTypeConfiguration<T> in this assembly
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(StoreDbContext).Assembly);
 
+        // ─── Soft-delete global query filter ────────────────────────────────────
+        // Entities implementing ISoftDeletable are hidden by default. Callers that
+        // need to see deleted rows can use .IgnoreQueryFilters(). For now we apply
+        // this only to the four business entities that benefit most from logical
+        // delete (Item, Supplier, Employee, Customer). Adding more later is
+        // a one-line change.
+        modelBuilder.Entity<Item>().HasQueryFilter(i => !i.IsDeleted);
+        modelBuilder.Entity<Supplier>().HasQueryFilter(s => !s.IsDeleted);
+        modelBuilder.Entity<Employee>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<Customer>().HasQueryFilter(c => !c.IsDeleted);
+
         ConfigureOperationalRelationships(modelBuilder);
 
         // HR & Payroll configurations
@@ -210,6 +221,29 @@ public class StoreDbContext : DbContext
         modelBuilder.Entity<RolePermission>()
             .HasIndex(x => new { x.RoleId, x.PermissionKey })
             .IsUnique();
+
+        // ─── Lookup / hot-path indexes ─────────────────────────────────────────
+        // Suppliers
+        modelBuilder.Entity<Supplier>()
+            .HasIndex(x => x.RegistrationNumber)
+            .HasFilter("registration_number IS NOT NULL");
+
+        // CashierShift — shift lookup is one of the most frequent queries in POS.
+        modelBuilder.Entity<CashierShift>()
+            .HasIndex(x => x.CashierShiftId)
+            .IsUnique();
+        modelBuilder.Entity<CashierShift>()
+            .HasIndex(x => new { x.OpenedByUserId, x.OpenedAtUtc });
+        modelBuilder.Entity<CashierShift>()
+            .HasIndex(x => x.Status);
+
+        // Audit log hot-path indexes for /audit-log filtering & dashboards.
+        // Note: AuditLog entity has no Severity column — severity lives on the
+        // CreateAuditLogEntryRequest DTO and is used only when writing.
+        modelBuilder.Entity<AuditLog>()
+            .HasIndex(x => new { x.UserId, x.DateCreated });
+        modelBuilder.Entity<AuditLog>()
+            .HasIndex(x => new { x.Action, x.DateCreated });
 
         modelBuilder.Entity<CustomerSegmentPrice>()
             .HasIndex(x => new { x.ItemId, x.Segment, x.IsActive });

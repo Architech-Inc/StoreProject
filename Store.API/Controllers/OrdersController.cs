@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Store.Models.DTOs.Common;
+using Store.Models.DTOs.Operations;
 using Store.Models.DTOs.Orders;
 using Store.Models.Interfaces.Services;
 
@@ -16,6 +17,7 @@ public class OrdersController : ControllerBase
     public OrdersController(IOrderService orderService) => _orderService = orderService;
 
     [HttpGet]
+    [Authorize(Policy = PermissionKeys.OrdersRead)]
     public async Task<IActionResult> GetAll([FromQuery] PagedRequest request, CancellationToken ct)
     {
         var result = await _orderService.GetAllAsync(request, ct);
@@ -23,6 +25,7 @@ public class OrdersController : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
+    [Authorize(Policy = PermissionKeys.OrdersRead)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
     {
         var order = await _orderService.GetByIdAsync(id, ct);
@@ -31,7 +34,7 @@ public class OrdersController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin,Manager")]
+    [Authorize(Policy = PermissionKeys.OrdersCreate)]
     public async Task<IActionResult> Create([FromBody] CreateOrderRequest request, CancellationToken ct)
     {
         var userIdClaim = User.FindFirst("uid")?.Value;
@@ -42,7 +45,7 @@ public class OrdersController : ControllerBase
     }
 
     [HttpPost("{id:guid}/receive")]
-    [Authorize(Roles = "Admin,Manager")]
+    [Authorize(Policy = PermissionKeys.PurchaseOrderWrite)]
     public async Task<IActionResult> Receive(Guid id, CancellationToken ct)
     {
         var success = await _orderService.ReceiveOrderAsync(id, ct);
@@ -51,7 +54,7 @@ public class OrdersController : ControllerBase
     }
 
     [HttpPost("{id:guid}/cancel")]
-    [Authorize(Roles = "Admin,Manager")]
+    [Authorize(Policy = PermissionKeys.OrdersVoid)]
     public async Task<IActionResult> Cancel(Guid id, CancellationToken ct)
     {
         var success = await _orderService.CancelOrderAsync(id, ct);

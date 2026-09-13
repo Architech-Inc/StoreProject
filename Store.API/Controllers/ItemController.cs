@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Items;
+using Store.Models.DTOs.Operations;
 using Store.Models.Interfaces.Services;
 
 namespace Store.API.Controllers;
@@ -32,7 +33,7 @@ public class ItemController : ControllerBase
     }
 
     [HttpGet("low-stock")]
-    [Authorize(Roles = "Admin,Manager")]
+    [Authorize(Policy = PermissionKeys.InventoryRead)]
     public async Task<IActionResult> GetLowStock(CancellationToken ct)
     {
         var items = await _itemService.GetLowStockAsync(ct);
@@ -40,7 +41,7 @@ public class ItemController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin,Manager")]
+    [Authorize(Policy = PermissionKeys.ItemCreate)]
     public async Task<IActionResult> Create([FromBody] CreateItemRequest request, CancellationToken ct)
     {
         var item = await _itemService.CreateAsync(request, ct);
@@ -48,7 +49,7 @@ public class ItemController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
-    [Authorize(Roles = "Admin,Manager")]
+    [Authorize(Policy = PermissionKeys.ItemUpdate)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateItemRequest request, CancellationToken ct)
     {
         var item = await _itemService.UpdateAsync(id, request, ct);
@@ -57,7 +58,7 @@ public class ItemController : ControllerBase
     }
 
     [HttpPatch("{id:guid}/stock")]
-    [Authorize(Roles = "Admin,Manager")]
+    [Authorize(Policy = PermissionKeys.InventoryWrite)]
     public async Task<IActionResult> AdjustStock(Guid id, [FromBody] AdjustStockRequest request, CancellationToken ct)
     {
         var success = await _itemService.AdjustStockAsync(id, request, ct);
@@ -66,7 +67,7 @@ public class ItemController : ControllerBase
     }
 
     [HttpPost("{id:guid}/adjust-stock")]
-    [Authorize(Roles = "Admin,Manager")]
+    [Authorize(Policy = PermissionKeys.InventoryWrite)]
     public async Task<IActionResult> AdjustStockCompat(Guid id, [FromBody] AdjustStockRequest request, CancellationToken ct)
     {
         var success = await _itemService.AdjustStockAsync(id, request, ct);
@@ -75,7 +76,7 @@ public class ItemController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = PermissionKeys.ItemDelete)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
         var deleted = await _itemService.DeleteAsync(id, ct);

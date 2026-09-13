@@ -52,10 +52,42 @@ builder.Services.AddRateLimiter(options =>
 });
 
 // Database & Security
-var connectionString = builder.Configuration.GetConnectionString("ControlPlane") 
-    ?? "Server=localhost;Port=3306;Database=store_controlplane;User Id=root;Password=;AllowPublicKeyRetrieval=True;";
+// The ControlPlane connection string MUST come from configuration (env var
+// `ConnectionStrings__ControlPlane`). We refuse to start with an empty password
+// or with the legacy fallback value — both are security holes.
+var connectionString = builder.Configuration.GetConnectionString("ControlPlane")
+    ?? throw new InvalidOperationException(
+        "ConnectionStrings__ControlPlane is required. " +
+        "Set the env var ConnectionStrings__ControlPlane (no default/fallback).");
+
+if (ContainsEmptyMySqlPassword(connectionString) && !builder.Environment.IsDevelopment())
+{
+    throw new InvalidOperationException(
+        "Empty MySQL password detected in production. Set a real password in " +
+        "ConnectionStrings__ControlPlane.");
+}
 
 builder.Services.AddSingleton<ISecretEncryptionService, SecretEncryptionService>();
+
+// Fail-fast on missing/placeholder master encryption key BEFORE we build the host.
+// We do this directly off the configuration rather than via BuildServiceProvider()
+// (which would create a second service container).
+var masterKey = builder.Configuration["ControlPlane:MasterEncryptionKey"];
+if (string.IsNullOrWhiteSpace(masterKey) ||
+    masterKey.Contains("REPLACE_WITH", StringComparison.OrdinalIgnoreCase) ||
+    masterKey.Contains("OVERRIDE_ME", StringComparison.OrdinalIgnoreCase) ||
+    masterKey.Contains("MasterSecretKey2026", StringComparison.OrdinalIgnoreCase))
+{
+    throw new InvalidOperationException(
+        "ControlPlane:MasterEncryptionKey is missing or set to a placeholder. " +
+        "Set it via env var ControlPlane__MasterEncryptionKey (>=32 chars, no placeholder).");
+}
+if (masterKey.Length < 32)
+{
+    throw new InvalidOperationException(
+        "ControlPlane:MasterEncryptionKey must be at least 32 characters. " +
+        "Generate with: openssl rand -base64 48");
+}
 
 builder.Services.AddDbContextFactory<ControlPlaneDbContext>((sp, options) =>
 {
@@ -77,9 +109,34 @@ builder.Services.AddSingleton<IBackupService, BackupService>();
 builder.Services.AddScoped<ITenantOrchestrator, TenantOrchestrator>();
 builder.Services.AddHostedService<TenantHealthMonitorWorker>();
 
+// CORS — explicit allowlist only, env-supplied. We refuse AllowAnyOrigin.
+var controlPlaneOrigins = builder.Configuration.GetSection("ControlPlaneCors:AllowedOrigins").Get<string[]>()
+    ?? Array.Empty<string>();
+
+if (!builder.Environment.IsDevelopment() &&
+    (controlPlaneOrigins.Length == 0 || controlPlaneOrigins.Any(o => o == "*")))
+{
+    throw new InvalidOperationException(
+        "ControlPlaneCors:AllowedOrigins must be explicitly configured for production (no '*' allowed).");
+}
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
+    options.AddPolicy("ControlPlanePolicy", policy =>
+    {
+        if (builder.Environment.IsDevelopment())
+        {
+            policy.SetIsOriginAllowed(_ => true)
+                  .AllowAnyMethod()
+                  .AllowAnyHeader();
+        }
+        else
+        {
+            policy.WithOrigins(controlPlaneOrigins)
+                  .AllowAnyMethod()
+                  .AllowAnyHeader();
+        }
+    });
 });
 
 var app = builder.Build();
@@ -93,9 +150,27 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Control Plane API v1"));
 }
 
-app.UseCors("AllowAll");
+app.UseCors("ControlPlanePolicy");
 app.UseRateLimiter();
 app.UseAuthorization();
 app.MapControllers();
+app.MapGet("/health", () => Results.Ok(new { status = "ok", service = "store-controlplane" }))
+   .AllowAnonymous();
 
 app.Run();
+
+// Helper for fail-fast on empty-password MySQL in non-dev environments.
+static bool ContainsEmptyMySqlPassword(string cs)
+{
+    foreach (var part in cs.Split(';', StringSplitOptions.RemoveEmptyEntries))
+    {
+        var kv = part.Split('=', 2);
+        if (kv.Length == 2 &&
+            kv[0].Trim().Equals("Password", StringComparison.OrdinalIgnoreCase) &&
+            string.IsNullOrWhiteSpace(kv[1]))
+        {
+            return true;
+        }
+    }
+    return false;
+}

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Customers;
+using Store.Models.DTOs.Operations;
 using Store.Models.Interfaces;
 using Store.Models.Interfaces.Services;
 
@@ -94,7 +95,7 @@ public class CustomersController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
-    [Authorize(Roles = "Admin,Manager")]
+    [Authorize(Policy = PermissionKeys.CustomerDelete)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
         var deleted = await _customerService.DeleteAsync(id, ct);

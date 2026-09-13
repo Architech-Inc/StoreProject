@@ -31,11 +31,19 @@ public class FilesController : ControllerBase
 
     private readonly IFileStorageService _fileStorageService;
     private readonly IImageProcessorService _imageProcessor;
+    private readonly Store.DbServices.Abstractions.IVirusScanner? _virusScanner;
+    private readonly ILogger<FilesController> _logger;
 
-    public FilesController(IFileStorageService fileStorageService, IImageProcessorService imageProcessor)
+    public FilesController(
+        IFileStorageService fileStorageService,
+        IImageProcessorService imageProcessor,
+        ILogger<FilesController> logger,
+        Store.DbServices.Abstractions.IVirusScanner? virusScanner = null)
     {
         _fileStorageService = fileStorageService;
         _imageProcessor = imageProcessor;
+        _logger = logger;
+        _virusScanner = virusScanner;
     }
 
     [HttpPost("upload")]
@@ -73,27 +81,72 @@ public class FilesController : ControllerBase
             if (cropX is >= 0 && cropY is >= 0 && cropW is > 0 && cropH is > 0)
                 cropArea = new SixLabors.ImageSharp.Rectangle(cropX.Value, cropY.Value, cropW.Value, cropH.Value);
 
-            await using var stream = file.OpenReadStream();
-            var (thumbStream, fullStream) = await _imageProcessor.ProcessImageAsync(stream, cropArea);
+            await using var rawStream = file.OpenReadStream();
 
-            var originalBase = Path.GetFileNameWithoutExtension(file.FileName);
-            if (string.IsNullOrWhiteSpace(originalBase))
-                originalBase = "image";
-
-            originalBase = string.Concat(originalBase.Where(ch => char.IsLetterOrDigit(ch) || ch is '-' or '_')).Trim();
-            if (string.IsNullOrEmpty(originalBase))
-                originalBase = "image";
-
-            var thumbPath = await _fileStorageService.SaveStreamAsync(thumbStream, originalBase + ".webp", safeFolder + "/thumb");
-            var fullPath = await _fileStorageService.SaveStreamAsync(fullStream, originalBase + ".webp", safeFolder + "/full");
-
-            var result = new FileUploadResultDto
+            // ─── Antivirus scan BEFORE processing and saving ────────────────────
+            if (_virusScanner is not null)
             {
-                ThumbnailUrl = $"/files/{thumbPath}",
-                FullImageUrl = $"/files/{fullPath}"
+                await using var scanBuffer = new MemoryStream();
+                await rawStream.CopyToAsync(scanBuffer, System.Threading.CancellationToken.None);
+                scanBuffer.Position = 0;
+                var scan = await _virusScanner.ScanAsync(scanBuffer, file.FileName, default);
+                scanBuffer.Position = 0;
+
+                if (!scan.IsClean)
+                {
+                    _logger.LogWarning("Upload rejected: AV scan flagged {FileName} — {Threat} ({Details})",
+                        file.FileName, scan.Threat ?? "n/a", scan.Details ?? "n/a");
+                    return StatusCode(StatusCodes.Status415UnsupportedMediaType,
+                        ApiResponse.Fail(scan.Threat is null
+                            ? "Upload rejected by antivirus scan."
+                            : $"Upload rejected: virus signature '{scan.Threat}'."));
+                }
+
+                // Re-use the buffered bytes for downstream processing.
+                await using var processingStream = new MemoryStream(scanBuffer.ToArray());
+                var (thumbStream, fullStream) = await _imageProcessor.ProcessImageAsync(processingStream, cropArea);
+
+                var originalBase = Path.GetFileNameWithoutExtension(file.FileName);
+                if (string.IsNullOrWhiteSpace(originalBase))
+                    originalBase = "image";
+
+                originalBase = string.Concat(originalBase.Where(ch => char.IsLetterOrDigit(ch) || ch is '-' or '_')).Trim();
+                if (string.IsNullOrEmpty(originalBase))
+                    originalBase = "image";
+
+                var thumbPath = await _fileStorageService.SaveStreamAsync(thumbStream, originalBase + ".webp", safeFolder + "/thumb");
+                var fullPath = await _fileStorageService.SaveStreamAsync(fullStream, originalBase + ".webp", safeFolder + "/full");
+
+                var avResult = new FileUploadResultDto
+                {
+                    ThumbnailUrl = $"/files/{thumbPath}",
+                    FullImageUrl = $"/files/{fullPath}"
+                };
+
+                return Ok(ApiResponse<FileUploadResultDto>.Ok(avResult, "File uploaded."));
+            }
+
+            // Fallback (no AV configured): continue with the legacy code path.
+            var (legacyThumb, legacyFull) = await _imageProcessor.ProcessImageAsync(rawStream, cropArea);
+
+            var originalBase2 = Path.GetFileNameWithoutExtension(file.FileName);
+            if (string.IsNullOrWhiteSpace(originalBase2))
+                originalBase2 = "image";
+
+            originalBase2 = string.Concat(originalBase2.Where(ch => char.IsLetterOrDigit(ch) || ch is '-' or '_')).Trim();
+            if (string.IsNullOrEmpty(originalBase2))
+                originalBase2 = "image";
+
+            var legacyThumbPath = await _fileStorageService.SaveStreamAsync(legacyThumb, originalBase2 + ".webp", safeFolder + "/thumb");
+            var legacyFullPath = await _fileStorageService.SaveStreamAsync(legacyFull, originalBase2 + ".webp", safeFolder + "/full");
+
+            var legacyResult = new FileUploadResultDto
+            {
+                ThumbnailUrl = $"/files/{legacyThumbPath}",
+                FullImageUrl = $"/files/{legacyFullPath}"
             };
 
-            return Ok(ApiResponse<FileUploadResultDto>.Ok(result, "File uploaded."));
+            return Ok(ApiResponse<FileUploadResultDto>.Ok(legacyResult, "File uploaded."));
         }
         catch (Exception)
         {

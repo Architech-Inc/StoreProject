@@ -13,10 +13,29 @@ env:
 
 jobs:
   # ═══════════════════════════════════════════════════════════════════════════
+  # Stage 0: Secret scan — fail fast on any committed credential.
+  # ═══════════════════════════════════════════════════════════════════════════
+  secret-scan:
+    name: Secret Scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: true
+          GITLEAKS_ENABLE_SUMMARY: true
+
+  # ═══════════════════════════════════════════════════════════════════════════
   # Stage 1: Continuous Integration (Lint, Build, Test)
   # ═══════════════════════════════════════════════════════════════════════════
   build-and-test:
     name: Build & Test Suite
+    needs: secret-scan
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -61,6 +80,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Extract Metadata for Store.API
         id: meta-api
         uses: docker/metadata-action@v5
@@ -78,6 +100,8 @@ jobs:
           push: true
           tags: ${{ steps.meta-api.outputs.tags }}
           labels: ${{ steps.meta-api.outputs.labels }}
+          provenance: true
+          sbom: true
 
       - name: Extract Metadata for Store.UI
         id: meta-ui
@@ -96,6 +120,8 @@ jobs:
           push: true
           tags: ${{ steps.meta-ui.outputs.tags }}
           labels: ${{ steps.meta-ui.outputs.labels }}
+          provenance: true
+          sbom: true
 
       - name: Extract Metadata for Store.ControlPlane
         id: meta-controlplane
@@ -114,6 +140,8 @@ jobs:
           push: true
           tags: ${{ steps.meta-controlplane.outputs.tags }}
           labels: ${{ steps.meta-controlplane.outputs.labels }}
+          provenance: true
+          sbom: true
 
       - name: Extract Metadata for Store.TenantPortal
         id: meta-tenantportal
@@ -132,6 +160,8 @@ jobs:
           push: true
           tags: ${{ steps.meta-tenantportal.outputs.tags }}
           labels: ${{ steps.meta-tenantportal.outputs.labels }}
+          provenance: true
+          sbom: true
 
   # ═══════════════════════════════════════════════════════════════════════════
   # Stage 3: Zero-Downtime Deployment
@@ -141,6 +171,7 @@ jobs:
     needs: docker-build-and-push
     if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    environment: production  # requires manual approval in repo settings
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -148,13 +179,41 @@ jobs:
       - name: Check VPS Secrets Configuration
         id: check-secrets
         run: |
-          if [ -n "${{ secrets.VPS_HOST }}" ] && [ -n "${{ secrets.VPS_SSH_KEY }}" ]; then
-            echo "has_secrets=true" >> $GITHUB_OUTPUT
-            echo "VPS deployment credentials detected."
-          else
-            echo "has_secrets=false" >> $GITHUB_OUTPUT
-            echo "::warning::VPS_HOST or VPS_SSH_KEY secret not found. Skipping automated SSH deployment."
+          missing=()
+          [ -z "${{ secrets.VPS_HOST }}" ]              && missing+=("VPS_HOST")
+          [ -z "${{ secrets.VPS_SSH_KEY }}" ]           && missing+=("VPS_SSH_KEY")
+          [ -z "${{ secrets.VPS_SSH_KNOWN_HOSTS }}" ]    && missing+=("VPS_SSH_KNOWN_HOSTS")
+          [ -z "${{ secrets.CONTROLPLANE_DB_CONNECTION_STRING }}" ] && missing+=("CONTROLPLANE_DB_CONNECTION_STRING")
+          [ -z "${{ secrets.CONTROLPLANE_MASTER_KEY }}" ]          && missing+=("CONTROLPLANE_MASTER_KEY")
+          [ -z "${{ secrets.CONTROLPLANE_WEBHOOK_SIGNING_SECRET }}" ] && missing+=("CONTROLPLANE_WEBHOOK_SIGNING_SECRET")
+          [ -z "${{ secrets.ROOT_DOMAIN }}" ]                       && missing+=("ROOT_DOMAIN")
+          if [ ${#missing[@]} -ne 0 ]; then
+            echo "::error::Missing required secrets: ${missing[*]}"
+            exit 1
           fi
+          echo "has_secrets=true" >> $GITHUB_OUTPUT
+
+      - name: Install SSH key with strict host checking
+        if: steps.check-secrets.outputs.has_secrets == 'true'
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER || 'deploy' }}
+          VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_SSH_KNOWN_HOSTS: ${{ secrets.VPS_SSH_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$VPS_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          # Write the PINNED known_hosts. Never use ssh-keyscan / accept-new —
+          # that introduces a MITM window on first deploy.
+          echo "$VPS_SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+          ssh-keygen -y -f ~/.ssh/deploy_key > /dev/null
+
+          # Verify host is reachable and matches known_hosts BEFORE any further step.
+          ssh -i ~/.ssh/deploy_key -p $VPS_PORT -o StrictHostKeyChecking=yes \
+              -o ConnectTimeout=15 $VPS_USER@$VPS_HOST "echo 'SSH OK on '$(hostname)"
 
       - name: Deploy Platform Services to VPS via SSH
         if: steps.check-secrets.outputs.has_secrets == 'true'
@@ -162,28 +221,62 @@ jobs:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER || 'deploy' }}
           VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
-          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          CONTROLPLANE_DB_CONNECTION_STRING: ${{ secrets.CONTROLPLANE_DB_CONNECTION_STRING }}
+          CONTROLPLANE_MASTER_KEY: ${{ secrets.CONTROLPLANE_MASTER_KEY }}
+          CONTROLPLANE_WEBHOOK_SIGNING_SECRET: ${{ secrets.CONTROLPLANE_WEBHOOK_SIGNING_SECRET }}
+          ROOT_DOMAIN: ${{ secrets.ROOT_DOMAIN }}
           IMAGE_PREFIX: ${{ env.IMAGE_PREFIX }}
         run: |
-          mkdir -p ~/.ssh
-          echo "$VPS_SSH_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -p $VPS_PORT -H $VPS_HOST >> ~/.ssh/known_hosts 2>/dev/null || true
-
           echo "==> Ensuring target directories exist on VPS..."
-          ssh -i ~/.ssh/deploy_key -p $VPS_PORT -o StrictHostKeyChecking=accept-new $VPS_USER@$VPS_HOST "sudo mkdir -p /opt/projects/platform/tenants /opt/projects/proxy/dynamic && sudo chown -R \$USER:\$USER /opt/projects/platform"
+          ssh -i ~/.ssh/deploy_key -p $VPS_PORT -o StrictHostKeyChecking=yes \
+              $VPS_USER@$VPS_HOST \
+              "sudo mkdir -p /opt/projects/platform/tenants /opt/projects/proxy/dynamic && sudo chown -R \$USER:\$USER /opt/projects/platform"
 
           echo "==> Copying docker-compose.platform.yml to VPS..."
-          scp -i ~/.ssh/deploy_key -P $VPS_PORT -o StrictHostKeyChecking=accept-new docker-compose.platform.yml $VPS_USER@$VPS_HOST:/opt/projects/platform/docker-compose.platform.yml
+          scp -i ~/.ssh/deploy_key -P $VPS_PORT -o StrictHostKeyChecking=yes \
+              docker-compose.platform.yml \
+              $VPS_USER@$VPS_HOST:/opt/projects/platform/docker-compose.platform.yml
 
           echo "==> Deploying Control Plane and Tenant Portal..."
-          ssh -i ~/.ssh/deploy_key -p $VPS_PORT -o StrictHostKeyChecking=accept-new $VPS_USER@$VPS_HOST "bash -s" << 'EOF'
-            set -e
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          ssh -i ~/.ssh/deploy_key -p $VPS_PORT -o StrictHostKeyChecking=yes \
+              -o BatchMode=yes \
+              $VPS_USER@$VPS_HOST "bash -s" << 'EOF'
+            set -euo pipefail
+
+            # Materialise secrets as an env file readable only by deploy user.
+            sudo install -m 0600 /dev/null /opt/projects/platform/.env.production
+            cat <<ENV | sudo tee /opt/projects/platform/.env.production > /dev/null
+CONTROLPLANE_DB_CONNECTION_STRING=${CONTROLPLANE_DB_CONNECTION_STRING}
+CONTROLPLANE_MASTER_KEY=${CONTROLPLANE_MASTER_KEY}
+CONTROLPLANE_WEBHOOK_SIGNING_SECRET=${CONTROLPLANE_WEBHOOK_SIGNING_SECRET}
+ROOT_DOMAIN=${ROOT_DOMAIN}
+IMAGE_PREFIX=${IMAGE_PREFIX}
+GITHUB_TOKEN=${GITHUB_TOKEN}
+ENV
+            sudo chown deploy:deploy /opt/projects/platform/.env.production
+
+            echo "$GITHUB_TOKEN" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
             cd /opt/projects/platform
-            export IMAGE_PREFIX="${{ env.IMAGE_PREFIX }}"
-            docker compose -f docker-compose.platform.yml pull
-            docker compose -f docker-compose.platform.yml up -d --remove-orphans
-            docker compose -f docker-compose.platform.yml ps
+            docker compose --env-file .env.production -f docker-compose.platform.yml pull
+            docker compose --env-file .env.production -f docker-compose.platform.yml up -d --remove-orphans
+            docker compose --env-file .env.production -f docker-compose.platform.yml ps
           EOF
 
+      - name: Post-deploy health-check
+        if: steps.check-secrets.outputs.has_secrets == 'true'
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER || 'deploy' }}
+          VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
+          ROOT_DOMAIN: ${{ secrets.ROOT_DOMAIN }}
+        run: |
+          for i in {1..12}; do
+            if ssh -i ~/.ssh/deploy_key -p $VPS_PORT -o StrictHostKeyChecking=yes \
+                $VPS_USER@$VPS_HOST "curl -fsS http://cp.${ROOT_DOMAIN}/health > /dev/null"; then
+              echo "Control plane healthy after ${i}x5s"; exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::Control plane failed to come up within 60s"
+          exit 1

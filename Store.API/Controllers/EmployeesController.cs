@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Employees;
+using Store.Models.DTOs.Operations;
 using Store.Models.Interfaces.Services;
 
 namespace Store.API.Controllers;
@@ -46,7 +47,7 @@ public class EmployeesController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin,Manager")]
+    [Authorize(Policy = PermissionKeys.EmployeeCreate)]
     public async Task<IActionResult> Create([FromBody] CreateEmployeeRequest request, CancellationToken ct)
     {
         var employee = await _employeeService.CreateAsync(request, ct);
@@ -54,7 +55,7 @@ public class EmployeesController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
-    [Authorize(Roles = "Admin,Manager")]
+    [Authorize(Policy = PermissionKeys.EmployeeUpdate)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateEmployeeRequest request, CancellationToken ct)
     {
         var employee = await _employeeService.UpdateAsync(id, request, ct);
@@ -63,7 +64,7 @@ public class EmployeesController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = PermissionKeys.EmployeeDelete)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
         var deleted = await _employeeService.DeleteAsync(id, ct);

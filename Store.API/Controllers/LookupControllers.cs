@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Store.Models.DTOs.Common;
 using Store.Models.DTOs.HR;
+using Store.Models.DTOs.Operations;
 using Store.Models.Entities;
 using Store.Models.Interfaces.Services;
 
@@ -29,7 +30,7 @@ public class CategoriesController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin,Manager")]
+    [Authorize(Policy = PermissionKeys.InventoryWrite)]
     public async Task<IActionResult> Create([FromBody] CreateCategoryRequest request, CancellationToken ct)
     {
         var category = await _categoryService.CreateAsync(request.Name, request.Description, request.ThumbnailUrl, request.FullImageUrl, ct);
@@ -37,7 +38,7 @@ public class CategoriesController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [Authorize(Roles = "Admin,Manager")]
+    [Authorize(Policy = PermissionKeys.InventoryWrite)]
     public async Task<IActionResult> Update(int id, [FromBody] CreateCategoryRequest request, CancellationToken ct)
     {
         var category = await _categoryService.UpdateAsync(id, request.Name, request.Description, request.ThumbnailUrl, request.FullImageUrl, ct);
@@ -46,7 +47,7 @@ public class CategoriesController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = PermissionKeys.AdminSystem)]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
         var deleted = await _categoryService.DeleteAsync(id, ct);
@@ -69,7 +70,7 @@ public class UnitsController : ControllerBase
         Ok(ApiResponse<IEnumerable<Unit>>.Ok(await _unitService.GetAllAsync(ct)));
 
     [HttpPost]
-    [Authorize(Roles = "Admin,Manager")]
+    [Authorize(Policy = PermissionKeys.InventoryWrite)]
     public async Task<IActionResult> Create([FromBody] CreateUnitRequest request, CancellationToken ct)
     {
         var unit = await _unitService.CreateAsync(request.Name, request.Abbreviation, request.Description, ct);
@@ -77,7 +78,7 @@ public class UnitsController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [Authorize(Roles = "Admin,Manager")]
+    [Authorize(Policy = PermissionKeys.InventoryWrite)]
     public async Task<IActionResult> Update(int id, [FromBody] CreateUnitRequest request, CancellationToken ct)
     {
         var unit = await _unitService.UpdateAsync(id, request.Name, request.Abbreviation, request.Description, ct);
@@ -86,7 +87,7 @@ public class UnitsController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = PermissionKeys.AdminSystem)]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
         var deleted = await _unitService.DeleteAsync(id, ct);
@@ -109,7 +110,7 @@ public class DepartmentsController : ControllerBase
         Ok(ApiResponse<IEnumerable<Department>>.Ok(await _deptService.GetAllAsync(ct)));
 
     [HttpPost]
-    [Authorize(Roles = "Admin,Manager")]
+    [Authorize(Policy = PermissionKeys.EmployeeCreate)]
     public async Task<IActionResult> Create([FromBody] CreateLookupRequest request, CancellationToken ct)
     {
         var dept = await _deptService.CreateAsync(request.Name, request.Description, ct);
@@ -117,7 +118,7 @@ public class DepartmentsController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [Authorize(Roles = "Admin,Manager")]
+    [Authorize(Policy = PermissionKeys.EmployeeUpdate)]
     public async Task<IActionResult> Update(int id, [FromBody] CreateLookupRequest request, CancellationToken ct)
     {
         var dept = await _deptService.UpdateAsync(id, request.Name, request.Description, ct);
@@ -126,7 +127,7 @@ public class DepartmentsController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = PermissionKeys.AdminSystem)]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
         var deleted = await _deptService.DeleteAsync(id, ct);
@@ -157,7 +158,7 @@ public class SalariesController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin,Manager")]
+    [Authorize(Policy = PermissionKeys.PayrollWrite)]
     public async Task<IActionResult> Create([FromBody] CreateSalaryRequest request, CancellationToken ct)
     {
         try
@@ -172,7 +173,7 @@ public class SalariesController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [Authorize(Roles = "Admin,Manager")]
+    [Authorize(Policy = PermissionKeys.PayrollWrite)]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateSalaryRequest request, CancellationToken ct)
     {
         try
@@ -188,7 +189,7 @@ public class SalariesController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = PermissionKeys.AdminSystem)]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
         try
@@ -223,4 +224,3 @@ public class CountriesController : ControllerBase
     public async Task<IActionResult> GetAll(CancellationToken ct) =>
         Ok(ApiResponse<IReadOnlyList<CountryDto>>.Ok(await _countryService.GetCountriesAsync(ct)));
 }
-

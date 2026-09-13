@@ -469,16 +469,48 @@ public class UserService : IUserService
             Email = request.NewEmail,
             Phone = request.NewPhone
         };
-        
+
         await UpdateContactsAsync(request.UserId, updateContactsRequest, ct);
-        
+
         await _db.SaveChangesAsync(ct);
+
+        // Notify the user that their contact change has been approved.
+        if (_notificationService != null)
+        {
+            var user = request.User;
+            var newEmail = request.NewEmail;
+            var newPhone = request.NewPhone;
+
+            if (!string.IsNullOrWhiteSpace(newEmail))
+            {
+                await _notificationService.SendEmailAsync(
+                    newEmail,
+                    "ClexAn Foods — Contact Information Updated",
+                    $"Hello {user?.Username ?? "user"},\n\n" +
+                    "Your contact information has been successfully updated. " +
+                    "If you did not initiate this change, please contact your administrator immediately.\n\n" +
+                    "— ClexAn Foods Operations",
+                    request.UserId,
+                    ct);
+            }
+
+            if (!string.IsNullOrWhiteSpace(newPhone))
+            {
+                await _notificationService.SendSmsAsync(
+                    newPhone,
+                    "ClexAn Foods: Your contact info has been updated. If you did not request this, contact your admin immediately.",
+                    request.UserId,
+                    ct);
+            }
+        }
+
         return true;
     }
 
     public async Task<bool> RejectContactChangeAsync(Guid requestId, Guid rejectedById, CancellationToken ct = default)
     {
         var request = await _db.ContactChangeRequests
+            .Include(r => r.User)
             .FirstOrDefaultAsync(r => r.Id == requestId && (r.Status == ContactChangeStatus.PendingApproval || r.Status == ContactChangeStatus.PendingVerification), ct);
 
         if (request == null) return false;
@@ -488,6 +520,39 @@ public class UserService : IUserService
         request.ApprovedById = rejectedById; // Store who rejected it in the same field
 
         await _db.SaveChangesAsync(ct);
+
+        // Notify the user that the change was rejected so they can re-submit or escalate.
+        if (_notificationService != null && request.User is not null)
+        {
+            var user = request.User;
+            var primaryEmail = user.Emails?.FirstOrDefault(e => e.IsPrimary)?.Email?.Address;
+            var primaryPhone = user.Phones?.FirstOrDefault(p => p.IsPrimary)?.Phone?.Number;
+            var recipientEmail = request.NewEmail ?? primaryEmail;
+            var recipientPhone = request.NewPhone ?? primaryPhone;
+
+            if (!string.IsNullOrWhiteSpace(recipientEmail))
+            {
+                await _notificationService.SendEmailAsync(
+                    recipientEmail,
+                    "ClexAn Foods — Contact Change Request Rejected",
+                    $"Hello {user.Username},\n\n" +
+                    "Your recent contact-information change request was not approved by an administrator. " +
+                    "If you believe this is in error, please speak with your administrator.\n\n" +
+                    "— ClexAn Foods Operations",
+                    user.UserId,
+                    ct);
+            }
+
+            if (!string.IsNullOrWhiteSpace(recipientPhone))
+            {
+                await _notificationService.SendSmsAsync(
+                    recipientPhone,
+                    "ClexAn Foods: Your contact change request was rejected. Please contact your administrator.",
+                    user.UserId,
+                    ct);
+            }
+        }
+
         return true;
     }
 

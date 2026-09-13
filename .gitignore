@@ -548,3 +548,39 @@ Store.ControlPlane/Snapshots/
 *.bak
 fix_db.sql
 schema_update.sql
+
+# ─── Local secret overrides (must never be committed) ─────────────────────────
+# Developer/operator-specific appsettings that override the tracked appsettings.json
+appsettings.*.Local.json
+*.env
+*.env.*
+!.env.example
+.env
+.env.local
+.env.*.local
+
+# Docker Compose secrets — keep templates tracked, ignore real env files
+.env.production
+.env.staging
+
+# Provisioned tenant compose files (contain tenant-specific secrets)
+Store.ControlPlane/Tenants/*/docker-compose.yml
+Store.ControlPlane/Tenants/*/docker-compose.yml.bak
+Store.ControlPlane/Tenants/*/.env
+Store.ControlPlane/Tenants/*/initdb/
+
+# Restore artifacts
+Store.ControlPlane/Snapshots/*.enc
+Store.ControlPlane/Backups/*.enc
+
+# IDE scratch / conversation history exports
+.vscode/cline-conversation-history/
+.idea/
+*.swp
+
+# Secrets scanner caches
+.gitleaks/
+.trufflehog/
+
+# Tracked placeholder for tooling — never put real values in appsettings.json
+# (the startup guards in SecretEncryptionService + Program.cs enforce this).

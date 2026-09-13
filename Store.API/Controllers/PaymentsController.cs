@@ -1,3 +1,6 @@
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
@@ -14,11 +17,13 @@ public class PaymentsController : ControllerBase
 {
     private readonly IMobileMoneyService _momo;
     private readonly IConfiguration _config;
+    private readonly ILogger<PaymentsController> _logger;
 
-    public PaymentsController(IMobileMoneyService momo, IConfiguration config)
+    public PaymentsController(IMobileMoneyService momo, IConfiguration config, ILogger<PaymentsController> logger)
     {
         _momo = momo;
         _config = config;
+        _logger = logger;
     }
 
     // ─── Initiate (requires auth) ─────────────────────────────────────────────
@@ -31,33 +36,31 @@ public class PaymentsController : ControllerBase
         return Ok(tx);
     }
 
-    // ─── Callbacks (no JWT — validated by shared secret header) ──────────────
+    // ─── Callbacks (no JWT — validated by HMAC-SHA256 over raw body) ────────
 
     [HttpPost("momo/callback")]
     [AllowAnonymous]
-    public async Task<IActionResult> MtnMomoCallback([FromBody] MtnMomoCallbackRequest callback, CancellationToken ct)
+    public async Task<IActionResult> MtnMomoCallback(CancellationToken ct)
     {
-        if (!ValidateCallbackKey())
-            return Unauthorized();
+        if (!await ValidateHmacSignatureAsync(ct)) return Unauthorized();
+        var callback = await ReadAndDeserializeAsync<MtnMomoCallbackRequest>(ct);
+        if (callback is null) return BadRequest(new { message = "Invalid payload" });
 
         var result = await _momo.HandleMtnMomoCallbackAsync(callback, ct);
-        if (result is null)
-            return NotFound();
-
+        if (result is null) return NotFound();
         return Ok(result);
     }
 
     [HttpPost("orange/callback")]
     [AllowAnonymous]
-    public async Task<IActionResult> OrangeMoneyCallback([FromBody] OrangeMoneyCallbackRequest callback, CancellationToken ct)
+    public async Task<IActionResult> OrangeMoneyCallback(CancellationToken ct)
     {
-        if (!ValidateCallbackKey())
-            return Unauthorized();
+        if (!await ValidateHmacSignatureAsync(ct)) return Unauthorized();
+        var callback = await ReadAndDeserializeAsync<OrangeMoneyCallbackRequest>(ct);
+        if (callback is null) return BadRequest(new { message = "Invalid payload" });
 
         var result = await _momo.HandleOrangeMoneyCallbackAsync(callback, ct);
-        if (result is null)
-            return NotFound();
-
+        if (result is null) return NotFound();
         return Ok(result);
     }
 
@@ -104,14 +107,79 @@ public class PaymentsController : ControllerBase
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
-    private bool ValidateCallbackKey()
+    /// <summary>
+    /// Validates the X-Callback-Signature header against HMAC-SHA256(rawBody, secret).
+    /// Header format: <c>X-Callback-Signature: sha256=&lt;hex&gt;</c> (lowercase hex).
+    /// Reject any other scheme (the older <c>X-Callback-Key</c> static scheme is removed).
+    /// </summary>
+    private async Task<bool> ValidateHmacSignatureAsync(CancellationToken ct)
     {
-        var expectedKey = _config["Payments:MoMoCallbackKey"];
-        if (string.IsNullOrWhiteSpace(expectedKey))
+        var secret = _config["Payments:MoMoCallbackKey"];
+        if (string.IsNullOrWhiteSpace(secret))
+        {
+            _logger.LogError("Payments:MoMoCallbackKey is not configured. Refusing to process callback.");
             return false;
+        }
 
-        var providedKey = Request.Headers["X-Callback-Key"].ToString();
-        return !string.IsNullOrEmpty(providedKey) &&
-               string.Equals(providedKey, expectedKey, StringComparison.Ordinal);
+        // Read the raw body once. EnableBuffering allows the model binder to re-read it.
+        Request.EnableBuffering();
+        using var reader = new StreamReader(Request.Body, Encoding.UTF8, leaveOpen: true);
+        var rawBody = await reader.ReadToEndAsync(ct);
+        Request.Body.Position = 0;
+
+        if (string.IsNullOrEmpty(rawBody))
+        {
+            _logger.LogWarning("Empty MoMo callback body — rejected.");
+            return false;
+        }
+
+        var header = Request.Headers["X-Callback-Signature"].ToString();
+        if (string.IsNullOrEmpty(header) || !header.StartsWith("sha256=", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning("MoMo callback missing or malformed X-Callback-Signature header.");
+            return false;
+        }
+
+        var providedHex = header["sha256=".Length..].Trim();
+        byte[] expected;
+        try
+        {
+            expected = HMACSHA256.HashData(
+                Encoding.UTF8.GetBytes(secret),
+                Encoding.UTF8.GetBytes(rawBody));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to compute HMAC for MoMo callback");
+            return false;
+        }
+
+        byte[] provided;
+        try { provided = Convert.FromHexString(providedHex); }
+        catch { return false; }
+
+        if (provided.Length != expected.Length) return false;
+        return CryptographicOperations.FixedTimeEquals(expected, provided);
+    }
+
+    private async Task<T?> ReadAndDeserializeAsync<T>(CancellationToken ct) where T : class
+    {
+        Request.EnableBuffering();
+        Request.Body.Position = 0;
+        using var reader = new StreamReader(Request.Body, Encoding.UTF8, leaveOpen: true);
+        var raw = await reader.ReadToEndAsync(ct);
+        if (string.IsNullOrEmpty(raw)) return null;
+        try
+        {
+            return JsonSerializer.Deserialize<T>(raw, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Failed to deserialize MoMo callback payload");
+            return null;
+        }
     }
 }

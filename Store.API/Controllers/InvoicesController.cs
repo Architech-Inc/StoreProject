@@ -58,7 +58,7 @@ public class InvoicesController : ControllerBase
     }
 
     [HttpDelete("{id:guid}/void")]
-    [Authorize(Roles = "Admin,Manager")]
+    [Authorize(Policy = PermissionKeys.InvoiceVoid)]
     public async Task<IActionResult> Void(Guid id, [FromQuery] string? reason, CancellationToken ct)
     {
         var userIdClaim = User.FindFirst("uid")?.Value;
@@ -70,7 +70,7 @@ public class InvoicesController : ControllerBase
     }
 
     [HttpPost("{id:guid}/void")]
-    [Authorize(Roles = "Admin,Manager")]
+    [Authorize(Policy = PermissionKeys.InvoiceVoid)]
     public async Task<IActionResult> VoidCompat(Guid id, [FromQuery] string? reason, CancellationToken ct)
     {
         var userIdClaim = User.FindFirst("uid")?.Value;
@@ -82,7 +82,7 @@ public class InvoicesController : ControllerBase
     }
 
     [HttpPost("{id:guid}/refund")]
-    [Authorize(Roles = "Admin,Manager")]
+    [Authorize(Policy = PermissionKeys.InvoiceRefund)]
     public async Task<IActionResult> Refund(Guid id, [FromBody] RefundInvoiceRequest request, CancellationToken ct)
     {
         var userIdClaim = User.FindFirst("uid")?.Value;

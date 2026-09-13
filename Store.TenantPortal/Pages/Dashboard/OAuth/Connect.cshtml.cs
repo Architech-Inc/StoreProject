@@ -31,14 +31,14 @@ public class ConnectModel : PageModel
         
         var redirectUri = Url.PageLink("/Dashboard/OAuth/Callback", values: new { provider = provider })!;
 
-        string authUrl = provider?.ToLowerInvariant() switch
+        var authUrl = provider?.ToLowerInvariant() switch
         {
             "onedrive" => _oAuthService.BuildMicrosoftAuthUrl(state, redirectUri),
             "googledrive" => _oAuthService.BuildGoogleAuthUrl(state, redirectUri),
             _ => null
         };
 
-        if (authUrl == null)
+        if (string.IsNullOrWhiteSpace(authUrl))
         {
             return BadRequest("Invalid provider specified.");
         }
