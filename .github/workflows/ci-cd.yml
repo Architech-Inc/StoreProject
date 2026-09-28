@@ -52,7 +52,7 @@ jobs:
         run: dotnet restore ${{ matrix.service.project }}/${{ matrix.service.project }}.csproj
 
       - name: Build ${{ matrix.service.project }} (Release)
-        run: dotnet build ${{ matrix.service.project }}/${{ matrix.service.project }}.csproj --configuration Release --no-restore --no-dependencies
+        run: dotnet build ${{ matrix.service.project }}/${{ matrix.service.project }}.csproj --configuration Release --no-restore
 
   # ═══════════════════════════════════════════════════════════════════════════
   # Stage 1b: Test Suite — runs once after every matrix leg is green.
