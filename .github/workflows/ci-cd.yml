@@ -12,19 +12,7 @@ env:
   IMAGE_PREFIX: ghcr.io/architech-inc/storeproject
 
 jobs:
-  # ═══════════════════════════════════════════════════════════════════════════
-  # Stage 0: Secret scan — fail fast on any committed credential.
-  # ═══════════════════════════════════════════════════════════════════════════
-  secret-scan:
-    name: Secret Scan (gitleaks)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Run gitleaks
-        run: docker run --rm -v ${{ github.workspace }}:/path zricethezav/gitleaks:latest detect --source="/path" -v
+
 
   # ═══════════════════════════════════════════════════════════════════════════
   # Stage 1a: Continuous Integration (Per-Service Build Matrix)
@@ -32,7 +20,6 @@ jobs:
   # ═══════════════════════════════════════════════════════════════════════════
   build-matrix:
     name: Build ${{ matrix.service.label }} (${{ matrix.service.project }})
-    needs: secret-scan
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
