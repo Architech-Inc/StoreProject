@@ -209,8 +209,15 @@ dotnet test Store.API.Tests
 
 ## 12. Known half-built features / follow-ups
 
-These are tracked in `IMPLEMENTATION_LOG.md`. Do not start one without updating
-the log so the next agent has continuity. Items still on the runway:
+The canonical tracker is `docs/audit-tracker.md` — every finding from the deep
+audit (security, functional gaps, UX, infra, multi-tenant, process) lives there
+with an ID (`SEC-*`, `GAP-*`, `UX-*`, `OPS-*`, `MT-*`, `PROC-*`, `DOC-*`), severity,
+status (`[ ]` / `[~]` / `[x]` / `[!]`), and recommended fix. Read it before
+starting work so you don't re-litigate closed items or miss open ones.
+
+`IMPLEMENTATION_LOG.md` is the chronological record of every change that has
+landed. Do not start one without updating both files so the next agent has
+continuity. Items still on the runway:
 
 - Soft-delete service-layer conversion (columns + global filter added; delete
   methods in `IItemService`, `ISupplierService`, `IEmployeeService`,

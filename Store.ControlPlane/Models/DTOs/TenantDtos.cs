@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using TenantTier = Store.Models.Billing.TenantTier;
 
 namespace Store.ControlPlane.Models.DTOs;
 
@@ -29,6 +30,28 @@ public class ProvisionTenantRequest
     public Guid? ReleaseId { get; set; }
 
     public string? CustomDomain { get; set; }
+}
+
+/// <summary>MT-01 — async-provisioning wrapper. The portal submits a job and polls its status.</summary>
+public class ProvisionTenantAsyncRequest : ProvisionTenantRequest
+{
+    /// <summary>The portal account that will own the tenant. Required for the Account → Tenant link.</summary>
+    [Required]
+    public Guid AccountId { get; set; }
+}
+
+/// <summary>MT-01 — what the portal polls for. JobId round-trip + terminal status.</summary>
+public class ProvisioningJobDto
+{
+    public Guid JobId { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public string? StatusDetail { get; set; }
+    public string? FailureReason { get; set; }
+    public Guid? TenantId { get; set; }
+    public string? TenantSlug { get; set; }
+    public DateTime DateCreated { get; set; }
+    public DateTime? StartedAt { get; set; }
+    public DateTime? CompletedAt { get; set; }
 }
 
 public class TenantDto
@@ -117,5 +140,67 @@ public class SandboxSummaryDto
     public string? ReleaseVersion { get; set; }
     public DateTime DateCreated { get; set; }
     public bool IsHealthy { get; set; }
+}
+
+// ─── MT-07 — public tenant status / maintenance schedule ───────────────────
+
+public class MaintenanceWindowDto
+{
+    public Guid MaintenanceWindowId { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public DateTime StartUtc { get; set; }
+    public DateTime EndUtc { get; set; }
+    public string Severity { get; set; } = "Info"; // Info | Warning | Critical
+    public bool IsResolved { get; set; }
+    public DateTime DateCreated { get; set; }
+}
+
+/// <summary>
+/// MT-07 — anonymous-facing tenant status payload. Returned by the public
+/// /api/public/tenants/{slug}/status endpoint. NEVER includes secrets,
+/// connection strings, internal ids of other tenants, or anything else that
+/// should not leave the platform.
+/// </summary>
+public class TenantStatusDto
+{
+    public Guid TenantId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Slug { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty; // Active | Provisioning | Suspended | ...
+    public bool IsHealthy { get; set; }
+    public DateTime? LastHealthCheckUtc { get; set; }
+    public string? LastHealthMessage { get; set; }
+
+    /// <summary>Active windows — start ≤ now ≤ end, not resolved. Empty if none.</summary>
+    public List<MaintenanceWindowDto> ActiveMaintenance { get; set; } = new();
+
+    /// <summary>Upcoming windows — start > now, not resolved. Empty if none.</summary>
+    public List<MaintenanceWindowDto> UpcomingMaintenance { get; set; } = new();
+
+    /// <summary>Recently completed windows (last 30 days, for context).</summary>
+    public List<MaintenanceWindowDto> RecentMaintenance { get; set; } = new();
+
+    /// <summary>True unless an active Critical window exists.</summary>
+    public bool IsAcceptingTraffic { get; set; } = true;
+
+    public DateTime GeneratedAtUtc { get; set; } = DateTime.UtcNow;
+}
+
+public class CreateMaintenanceWindowRequest
+{
+    [Required, StringLength(200, MinimumLength = 3)]
+    public string Title { get; set; } = string.Empty;
+
+    [StringLength(2000)]
+    public string? Description { get; set; }
+
+    [Required]
+    public DateTime StartUtc { get; set; }
+
+    [Required]
+    public DateTime EndUtc { get; set; }
+
+    public MaintenanceSeverity Severity { get; set; } = MaintenanceSeverity.Info;
 }
 

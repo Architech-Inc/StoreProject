@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Store.API.Contracts;
 using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Loyalty;
 using Store.Models.DTOs.Operations;
@@ -29,7 +28,7 @@ public class LoyaltyCampaignsController : ControllerBase
     public async Task<IActionResult> GetById(int id, CancellationToken ct)
     {
         var dto = await _campaignService.GetByIdAsync(id, ct);
-        if (dto is null) return NotFound(ApiErrorResponse.From("CAMPAIGN_NOT_FOUND", "Campaign not found.", traceId: HttpContext.TraceIdentifier));
+        if (dto is null) return NotFound(ApiErrorResponse.From(ErrorCode.CampaignNotFound, "Campaign not found.", traceId: HttpContext.TraceIdentifier));
         return Ok(ApiResponse<LoyaltyCampaignDto>.Ok(dto));
     }
 
@@ -45,10 +44,10 @@ public class LoyaltyCampaignsController : ControllerBase
     public async Task<IActionResult> Create([FromBody] CreateCampaignRequest request, CancellationToken ct)
     {
         if (!ModelState.IsValid)
-            return BadRequest(ApiErrorResponse.From("VALIDATION_ERROR", "Invalid request.", traceId: HttpContext.TraceIdentifier));
+            return BadRequest(ApiErrorResponse.From(ErrorCode.ValidationError, "Invalid request.", traceId: HttpContext.TraceIdentifier));
 
         if (request.EndDate <= request.StartDate)
-            return BadRequest(ApiErrorResponse.From("INVALID_DATES", "EndDate must be after StartDate.", traceId: HttpContext.TraceIdentifier));
+            return BadRequest(ApiErrorResponse.From(ErrorCode.InvalidDates, "EndDate must be after StartDate.", traceId: HttpContext.TraceIdentifier));
 
         var dto = await _campaignService.CreateAsync(request, ct);
         return CreatedAtAction(nameof(GetById), new { id = dto.LoyaltyCampaignId }, ApiResponse<LoyaltyCampaignDto>.Ok(dto));
@@ -59,10 +58,10 @@ public class LoyaltyCampaignsController : ControllerBase
     public async Task<IActionResult> Update(int id, [FromBody] UpdateCampaignRequest request, CancellationToken ct)
     {
         if (!ModelState.IsValid)
-            return BadRequest(ApiErrorResponse.From("VALIDATION_ERROR", "Invalid request.", traceId: HttpContext.TraceIdentifier));
+            return BadRequest(ApiErrorResponse.From(ErrorCode.ValidationError, "Invalid request.", traceId: HttpContext.TraceIdentifier));
 
         var dto = await _campaignService.UpdateAsync(id, request, ct);
-        if (dto is null) return NotFound(ApiErrorResponse.From("CAMPAIGN_NOT_FOUND", "Campaign not found.", traceId: HttpContext.TraceIdentifier));
+        if (dto is null) return NotFound(ApiErrorResponse.From(ErrorCode.CampaignNotFound, "Campaign not found.", traceId: HttpContext.TraceIdentifier));
         return Ok(ApiResponse<LoyaltyCampaignDto>.Ok(dto));
     }
 
@@ -71,7 +70,7 @@ public class LoyaltyCampaignsController : ControllerBase
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
         var success = await _campaignService.DeleteAsync(id, ct);
-        if (!success) return NotFound(ApiErrorResponse.From("CAMPAIGN_NOT_FOUND", "Campaign not found.", traceId: HttpContext.TraceIdentifier));
+        if (!success) return NotFound(ApiErrorResponse.From(ErrorCode.CampaignNotFound, "Campaign not found.", traceId: HttpContext.TraceIdentifier));
         return NoContent();
     }
 }

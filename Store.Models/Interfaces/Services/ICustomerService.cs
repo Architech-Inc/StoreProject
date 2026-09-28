@@ -9,5 +9,5 @@ public interface ICustomerService
     Task<PagedResult<CustomerDto>> GetAllAsync(PagedRequest request, CancellationToken ct = default);
     Task<CustomerDto> CreateAsync(CreateCustomerRequest request, CancellationToken ct = default);
     Task<CustomerDto?> UpdateAsync(Guid customerId, UpdateCustomerRequest request, CancellationToken ct = default);
-    Task<bool> DeleteAsync(Guid customerId, CancellationToken ct = default);
+    Task<bool> DeleteAsync(Guid customerId, Guid? deletedById = null, CancellationToken ct = default);
 }

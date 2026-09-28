@@ -3,7 +3,9 @@ using Store.Models.DTOs.Cash;
 using Store.Models.DTOs.Operations;
 using Store.Models.Enums;
 using StoreUI.Services;
+using Store.Models.Common;
 
+using Microsoft.Extensions.Logging.Abstractions;
 namespace StoreUI.Pages;
 
 public class CashVarianceModel : SecurePageModel
@@ -163,7 +165,7 @@ public class CashVarianceModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: Failed to record cash variance: {ex.Message}";
+            StatusMessage = $"Error: Failed to record cash variance: {SafeErrorMessage.From(ex, NullLogger<CashVarianceModel>.Instance, "Cash Variance operation")}";
         }
 
         return RedirectToPage(new { tab = ActiveTab });
@@ -193,7 +195,7 @@ public class CashVarianceModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: Review operation failed: {ex.Message}";
+            StatusMessage = $"Error: Review operation failed: {SafeErrorMessage.From(ex, NullLogger<CashVarianceModel>.Instance, "Cash Variance operation")}";
         }
 
         return RedirectToPage(new { tab = ActiveTab });

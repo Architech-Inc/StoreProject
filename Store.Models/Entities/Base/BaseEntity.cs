@@ -4,8 +4,10 @@ namespace Store.Models.Entities.Base;
 
 /// <summary>
 /// Base class for all persistent entities. Provides timestamps, audit fields, and a
-/// soft-delete contract. <see cref="StoreDbContext"/> applies a global query filter
-/// to every entity that derives from this class so callers never see deleted rows.
+/// soft-delete contract. The query filter is registered per-entity in
+/// <see cref="StoreDbContext.OnModelCreating"/> on a curated list of business
+/// entities (Item, Supplier, Employee, Customer) plus their dependent child
+/// entities (added automatically via reflection so EF Core 10622 warnings go away).
 /// </summary>
 public abstract class BaseEntity : ISoftDeletable
 {

@@ -107,7 +107,36 @@ builder.Services.AddSingleton<IDomainVerificationService, DomainVerificationServ
 builder.Services.AddSingleton<ITraefikConfigWriter, TraefikConfigWriter>();
 builder.Services.AddSingleton<IBackupService, BackupService>();
 builder.Services.AddScoped<ITenantOrchestrator, TenantOrchestrator>();
+// Wave 18 — payment reconciliation. Wired into the IPN handler so a
+// successful PayDunya webhook upgrades the tenant's plan tier.
+builder.Services.AddScoped<Store.ControlPlane.Services.SubscriptionReconciler>();
 builder.Services.AddHostedService<TenantHealthMonitorWorker>();
+// MT-01 — async provisioning queue processor
+builder.Services.AddHostedService<TenantProvisioningHostedService>();
+
+// MT-06 — per-tenant backup scheduler. Polls every 30s; evaluates each
+// tenant's BackupScheduleConfig and fires TriggerBackupNowAsync when due.
+builder.Services.AddHostedService<TenantBackupHostedService>();
+
+// Wave 20 — quota enforcement handler. The EnforceTenantQuota attribute
+// resolves IQuotaEnforcementHandler from DI; without this registration the
+// filter fails open (kept that way so tests + dev hosts can run unconfigured).
+builder.Services.AddSingleton<Store.Models.Billing.IQuotaEnforcementHandler,
+    Store.ControlPlane.Services.ControlPlaneQuotaHandler>();
+
+// Wave 17 / Wave 18 — PayDunya aggregator + options. Typed HttpClient so
+// DNS rotation + connection pooling are owned by the framework.
+builder.Services.Configure<Store.DbServices.Services.PayDunyaOptions>(
+    builder.Configuration.GetSection(Store.DbServices.Services.PayDunyaOptions.SectionName));
+builder.Services.AddHttpClient<Store.Models.Interfaces.Services.IPayDunyaPaymentService,
+    Store.DbServices.Services.PayDunyaPaymentService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(10);
+    if (client.DefaultRequestHeaders.UserAgent.Count == 0)
+    {
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("StoreProject/1.0 (PayDunya-Aggregator)");
+    }
+});
 
 // CORS — explicit allowlist only, env-supplied. We refuse AllowAnyOrigin.
 var controlPlaneOrigins = builder.Configuration.GetSection("ControlPlaneCors:AllowedOrigins").Get<string[]>()

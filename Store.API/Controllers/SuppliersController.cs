@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Store.API.Contracts;
 using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Operations;
 using Store.Models.DTOs.Procurement;
@@ -52,7 +51,7 @@ public class SuppliersController : ControllerBase
     {
         var supplier = await _supplierService.GetByIdAsync(id);
         if (supplier is null)
-            return NotFound(ApiErrorResponse.From("not_found", "Supplier not found",
+            return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "Supplier not found",
                 traceId: HttpContext.TraceIdentifier));
         return Ok(ApiResponse<SupplierDto>.Ok(supplier));
     }
@@ -63,7 +62,7 @@ public class SuppliersController : ControllerBase
     {
         var profile = await _supplierService.GetProfileAsync(id);
         if (profile is null)
-            return NotFound(ApiErrorResponse.From("not_found", "Supplier not found",
+            return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "Supplier not found",
                 traceId: HttpContext.TraceIdentifier));
         return Ok(ApiResponse<SupplierProfileDto>.Ok(profile));
     }
@@ -88,7 +87,7 @@ public class SuppliersController : ControllerBase
     {
         var supplier = await _supplierService.UpdateAsync(id, request);
         if (supplier is null)
-            return NotFound(ApiErrorResponse.From("not_found", "Supplier not found",
+            return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "Supplier not found",
                 traceId: HttpContext.TraceIdentifier));
         return Ok(ApiResponse<SupplierDto>.Ok(supplier));
     }
@@ -97,9 +96,12 @@ public class SuppliersController : ControllerBase
     [Authorize(Policy = PermissionKeys.InventoryWrite)]
     public async Task<IActionResult> Delete(Guid id)
     {
-        var success = await _supplierService.DeleteAsync(id);
+        var userIdClaim = User.FindFirst("uid")?.Value;
+        Guid.TryParse(userIdClaim, out var deletedById);
+
+        var success = await _supplierService.DeleteAsync(id, deletedById == Guid.Empty ? null : deletedById);
         if (!success)
-            return BadRequest(ApiErrorResponse.From("bad_request",
+            return BadRequest(ApiErrorResponse.From(ErrorCode.BadRequest,
                 "Supplier not found or has associated orders",
                 traceId: HttpContext.TraceIdentifier));
         return NoContent();

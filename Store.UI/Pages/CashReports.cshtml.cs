@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Store.Models.DTOs.Operations;
 using StoreUI.Services;
+using Store.Models.Common;
 
+using Microsoft.Extensions.Logging.Abstractions;
 namespace StoreUI.Pages;
 
 public class CashReportsModel : SecurePageModel
@@ -103,7 +105,7 @@ public class CashReportsModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: Failed to open shift: {ex.Message}";
+            StatusMessage = $"Error: Failed to open shift: {SafeErrorMessage.From(ex, NullLogger<CashReportsModel>.Instance, "Cash Reports operation")}";
         }
 
         return RedirectToPage(new { tab = "shift" });
@@ -129,7 +131,7 @@ public class CashReportsModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: Failed to close shift: {ex.Message}";
+            StatusMessage = $"Error: Failed to close shift: {SafeErrorMessage.From(ex, NullLogger<CashReportsModel>.Instance, "Cash Reports operation")}";
         }
 
         return RedirectToPage(new { tab = "shift" });

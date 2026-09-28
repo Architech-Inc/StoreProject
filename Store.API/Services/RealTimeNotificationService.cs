@@ -120,4 +120,39 @@ public class RealTimeNotificationService : IRealTimeNotificationService
             _logger.LogWarning(ex, "Failed to send low stock notification.");
         }
     }
+
+    public async Task NotifyRestockRecommendationAsync(RestockRecommendationNotificationDto dto, CancellationToken ct = default)
+    {
+        try
+        {
+            // 1. Push the structured payload to anyone subscribed to the restock UI
+            //    (manager / admin clients that joined the relevant branch group).
+            await _hubContext.Clients.All.ReceiveRestockRecommendation(dto);
+            await _hubContext.Clients.Group($"branch_{dto.BranchId}").ReceiveRestockRecommendation(dto);
+
+            // 2. Surface a generic toast in the notification bell so users who
+            //    aren't on the restock page still see something happened.
+            var severity = dto.Severity == "Critical" ? "Danger"
+                         : dto.Severity == "High" ? "Warning"
+                         : "Info";
+
+            var notif = new StoreNotificationDto
+            {
+                Title = $"Restock alert · {dto.ItemName}",
+                Message = $"Branch {dto.BranchName} needs {dto.RecommendedQuantity}× more. " +
+                          (dto.DaysOfStock.HasValue ? $"~{dto.DaysOfStock.Value:0.#} days left. " : "") +
+                          $"(Severity: {dto.Severity})",
+                Category = NotificationCategory.RestockRecommendation,
+                Severity = severity,
+                TargetUrl = "/Restock",
+                ActionLabel = "Open restock"
+            };
+            await _hubContext.Clients.Group("role_manager").ReceiveNotification(notif);
+            await _hubContext.Clients.Group("role_admin").ReceiveNotification(notif);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to send restock recommendation notification.");
+        }
+    }
 }

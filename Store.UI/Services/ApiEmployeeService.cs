@@ -69,7 +69,7 @@ public class ApiEmployeeService : IEmployeeService
         return await _client.PutAsync<EmployeeDto>($"/api/employees/{employeeId}", request, ct);
     }
 
-    public async Task<bool> DeleteAsync(Guid employeeId, CancellationToken ct = default)
+    public async Task<bool> DeleteAsync(Guid employeeId, Guid? deletedById = null, CancellationToken ct = default)
     {
         return await _client.DeleteAsync($"/api/employees/{employeeId}", ct);
     }

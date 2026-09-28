@@ -1,0 +1,140 @@
+@*
+    UX-04 — keyboard shortcut help dialog.
+
+    Press `?` (anywhere outside an input) to open this dialog. It enumerates
+    the global shortcuts wired in site.js + command-palette.js. Press Escape
+    or click the backdrop to close.
+*@
+<div class="kbd-help-backdrop" id="kbdHelpBackdrop" role="dialog" aria-modal="true"
+     aria-labelledby="kbdHelpTitle" onclick="closeKbdHelp()" hidden>
+    <div class="kbd-help-card" role="document" onclick="event.stopPropagation()">
+        <div class="kbd-help-header">
+            <h3 id="kbdHelpTitle" style="margin: 0; font-size: 1.15rem; font-weight: 600;">
+                Keyboard shortcuts
+            </h3>
+            <button type="button" class="kbd-help-close" onclick="closeKbdHelp()"
+                    aria-label="Close shortcut help">
+                &times;
+            </button>
+        </div>
+
+        <p style="margin: 0 0 16px; color: var(--text-secondary, #6b7280); font-size: 0.875rem;">
+            These shortcuts work on every page. They are suppressed inside
+            text inputs so they don't fight with text editing.
+        </p>
+
+        <table class="kbd-help-table" aria-label="Available keyboard shortcuts">
+            <thead>
+                <tr>
+                    <th scope="col">Shortcut</th>
+                    <th scope="col">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td><kbd>Ctrl</kbd> + <kbd>K</kbd></td><td>Open the command palette / search</td></tr>
+                <tr><td><kbd>?</kbd></td><td>Show this help dialog</td></tr>
+                <tr><td><kbd>Esc</kbd></td><td>Close any open dialog, sidebar, or palette</td></tr>
+                <tr><td><kbd>G</kbd> then <kbd>D</kbd></td><td>Go to Dashboard</td></tr>
+                <tr><td><kbd>G</kbd> then <kbd>P</kbd></td><td>Go to POS Terminal</td></tr>
+                <tr><td><kbd>G</kbd> then <kbd>C</kbd></td><td>Go to Item Catalog</td></tr>
+                <tr><td><kbd>G</kbd> then <kbd>M</kbd></td><td>Go to Customers</td></tr>
+                <tr><td><kbd>G</kbd> then <kbd>I</kbd></td><td>Go to Invoices</td></tr>
+                <tr><td><kbd>G</kbd> then <kbd>S</kbd></td><td>Go to Suppliers</td></tr>
+                <tr><td><kbd>G</kbd> then <kbd>O</kbd></td><td>Go to Purchase Orders</td></tr>
+            </tbody>
+        </table>
+
+        <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border, #e5e7eb);
+                    font-size: 0.8125rem; color: var(--text-secondary, #6b7280);">
+            Tip: Type <kbd style="font-size: 0.75rem;">?</kbd> while focused on a
+            page to surface the most-used actions in the command palette.
+        </div>
+    </div>
+</div>
+
+<style>
+    .kbd-help-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.55);
+        backdrop-filter: blur(4px);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+
+    .kbd-help-backdrop[hidden] {
+        display: none;
+    }
+
+    .kbd-help-card {
+        background: var(--surface, #fff);
+        border-radius: var(--radius-lg, 12px);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+        width: 100%;
+        max-width: 540px;
+        max-height: 90vh;
+        overflow-y: auto;
+        padding: 24px;
+    }
+
+    .kbd-help-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+    }
+
+    .kbd-help-close {
+        background: transparent;
+        border: none;
+        font-size: 24px;
+        color: var(--text-secondary, #6b7280);
+        cursor: pointer;
+        padding: 0;
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        line-height: 1;
+    }
+
+    .kbd-help-close:hover {
+        background: var(--surface-alt, #f3f4f6);
+    }
+
+    .kbd-help-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+    }
+
+    .kbd-help-table th,
+    .kbd-help-table td {
+        text-align: left;
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--border, #e5e7eb);
+    }
+
+    .kbd-help-table thead th {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-secondary, #6b7280);
+        font-weight: 600;
+    }
+
+    .kbd-help-table kbd {
+        display: inline-block;
+        padding: 2px 6px;
+        background: var(--surface-alt, #f3f4f6);
+        border: 1px solid var(--border, #e5e7eb);
+        border-bottom-width: 2px;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 0.8rem;
+        color: var(--text-primary, #111827);
+        margin: 0 2px;
+    }
+</style>

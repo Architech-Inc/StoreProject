@@ -5,6 +5,7 @@ using Store.TenantPortal.Models.DTOs;
 using Store.TenantPortal.Models.ViewModels;
 using Store.TenantPortal.Services;
 
+using Store.Models.Common;
 namespace Store.TenantPortal.Pages;
 
 [Authorize]
@@ -91,29 +92,28 @@ public class OnboardingModel : PageModel
                 CustomDomain: Input.DomainChoice == "Custom" ? Input.CustomDomain?.Trim() : null
             );
 
-            _logger.LogInformation("Triggering tenant provisioning for account {Email}, slug {Slug}", session.Email, provisionReq.Slug);
+            _logger.LogInformation("Queuing async tenant provisioning for account {Email}, slug {Slug}", session.Email, provisionReq.Slug);
 
-            var tenantSummary = await _cpClient.ProvisionTenantAsync(provisionReq, ct);
+            // MT-01 — async provisioning: submit returns a JobId; we poll the
+            // /Onboarding/Status page every 3 seconds until Completed/Failed.
+            var job = await _cpClient.ProvisionTenantAsyncJobAsync(provisionReq, session.AccountId, ct);
 
-            // Link account to the newly provisioned tenant
-            await _cpClient.LinkAccountToTenantAsync(session.AccountId, tenantSummary.TenantId, ct);
+            // Stash the JobId in TempData so the Status page can read it
+            // without us needing a server-side session for the request.
+            TempData["ProvisioningJobId"] = job.JobId.ToString();
+            TempData["ProvisioningSlug"] = provisionReq.Slug;
 
-            // Update cookie session claims
-            await _sessionService.UpdateTenantInfoAsync(HttpContext, tenantSummary.TenantId, tenantSummary.Slug, tenantSummary.Name);
-
-            _logger.LogInformation("Tenant {Slug} ({TenantId}) provisioned successfully!", tenantSummary.Slug, tenantSummary.TenantId);
-
-            return RedirectToPage("/Dashboard");
+            return RedirectToPage("/OnboardingStatus");
         }
         catch (InvalidOperationException ex)
         {
-            ErrorMessage = ex.Message;
+            ErrorMessage = SafeErrorMessage.From(ex, _logger, "Onboarding operation");
             return Page();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to provision tenant stack");
-            ErrorMessage = "An unexpected error occurred during container deployment. Please try again or contact support.";
+            _logger.LogError(ex, "Failed to queue tenant provisioning");
+            ErrorMessage = "An unexpected error occurred while queueing your tenant. Please try again or contact support.";
             return Page();
         }
     }

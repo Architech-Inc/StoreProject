@@ -1,7 +1,6 @@
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Store.API.Contracts;
 using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Discounts;
 using Store.Models.DTOs.Operations;
@@ -55,7 +54,7 @@ public class DiscountOverridesController : ControllerBase
     {
         var dto = await _overrideService.GetByIdAsync(id);
         if (dto is null)
-            return NotFound(ApiErrorResponse.From("not_found", "Override request not found", traceId: HttpContext.TraceIdentifier));
+            return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "Override request not found", traceId: HttpContext.TraceIdentifier));
         return Ok(ApiResponse<DiscountOverrideDto>.Ok(dto));
     }
 
@@ -93,7 +92,7 @@ public class DiscountOverridesController : ControllerBase
 
         var dto = await _overrideService.ReviewAsync(id, userId, request);
         if (dto is null)
-            return BadRequest(ApiErrorResponse.From("bad_request",
+            return BadRequest(ApiErrorResponse.From(ErrorCode.BadRequest,
                 "Override request is not in Pending state or does not exist",
                 traceId: HttpContext.TraceIdentifier));
 
@@ -120,7 +119,7 @@ public class DiscountOverridesController : ControllerBase
 
         var ok = await _overrideService.CancelAsync(id, userId);
         if (!ok)
-            return BadRequest(ApiErrorResponse.From("bad_request",
+            return BadRequest(ApiErrorResponse.From(ErrorCode.BadRequest,
                 "Override request is not in Pending state or does not exist",
                 traceId: HttpContext.TraceIdentifier));
 

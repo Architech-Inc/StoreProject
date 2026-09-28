@@ -217,14 +217,24 @@ public class ItemService : IItemService
         return true;
     }
 
-    public async Task<bool> DeleteAsync(Guid itemId, CancellationToken ct = default)
+    public async Task<bool> DeleteAsync(Guid itemId, Guid? deletedById = null, CancellationToken ct = default)
     {
+        // Use IgnoreQueryFilters() so an already-deleted item can't be re-deleted
+        // (and we can still report "already deleted" as a no-op success).
         var item = await _uow.Repository<Item>().Query()
+            .IgnoreQueryFilters()
             .FirstOrDefaultAsync(i => i.ItemId == itemId, ct);
 
         if (item is null) return false;
+        if (item.IsDeleted) return true; // idempotent
 
-        item.IsActive = false;  // soft delete
+        // Soft-delete + audit columns. We keep IsActive as a business flag too
+        // so existing callers that filter by IsActive continue to work.
+        item.IsDeleted = true;
+        item.DeletedAt = DateTime.UtcNow;
+        item.DeletedById = deletedById;
+        item.IsActive = false;
+
         _uow.Repository<Item>().Update(item);
         await _uow.SaveChangesAsync(ct);
         return true;

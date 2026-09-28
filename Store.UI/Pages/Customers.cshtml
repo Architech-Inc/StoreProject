@@ -123,17 +123,27 @@
     <!-- ── Main Content Area ───────────────────────────────── -->
     @if (!Model.Customers.Any())
     {
-        <div class="card" style="text-align:center;padding:48px 20px;">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-secondary);margin-bottom:12px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            <h3 style="margin-bottom:6px;">No Customer Profiles Found</h3>
-            <p style="color:var(--text-secondary);max-width:400px;margin:0 auto 16px;">
-                @(string.IsNullOrWhiteSpace(Model.Search) ? "Start building your customer relationship directory." : $"No customers match your search '{Model.Search}'.")
-            </p>
-            <button type="button" class="crm-btn-primary" onclick="openCreateModal()">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                <span>Create Customer Profile</span>
-            </button>
-        </div>
+        // UX-06 — cold-start vs filter miss.
+        var isColdStart = !(Model.Customers?.Any() ?? false);
+        var empty = new Store.UI.Pages.Shared.EmptyStateModel
+        {
+            Icon = "👥",
+            Title = isColdStart ? "No customers yet" : "No customers match your search",
+            Message = isColdStart
+                ? "Create your first customer profile to start building your relationship directory. Loyalty points and purchase history attach to customer profiles automatically."
+                : "No customers match the current search. Try a shorter term or clear the filter to see everyone.",
+            CtaText = isColdStart ? "Create Customer Profile" : "Clear Search"
+        };
+        <partial name="_EmptyState" model="empty" />
+        if (isColdStart)
+        {
+            <div style="text-align: center;">
+                <button type="button" class="crm-btn-primary" onclick="openCreateModal()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    <span>Create Customer Profile</span>
+                </button>
+            </div>
+        }
     }
     else
     {
@@ -483,14 +493,17 @@
     <!-- Drawer Footer Actions -->
     <div class="crm-drawer-footer">
         <div style="display:flex;gap:8px;">
-            <form method="post" asp-page-handler="Delete" id="drawerDeleteForm" style="margin:0;">
-                @Html.AntiForgeryToken()
-                <input type="hidden" name="customerId" id="drawerDeleteCustId" />
-                <button type="submit" class="crm-btn-danger" data-confirm="Are you sure you want to permanently remove this customer profile?" data-confirm-type="danger">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                    <span>Delete</span>
-                </button>
-            </form>
+            @if (Model.CanDelete)
+            {
+                <form method="post" asp-page-handler="Delete" id="drawerDeleteForm" style="margin:0;">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="customerId" id="drawerDeleteCustId" />
+                    <button type="submit" class="crm-btn-danger" data-confirm="Are you sure you want to permanently remove this customer profile?" data-confirm-type="danger">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        <span>Delete</span>
+                    </button>
+                </form>
+            }
             <button type="button" class="crm-btn-secondary" onclick="editFromDrawer()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                 <span>Edit Profile</span>

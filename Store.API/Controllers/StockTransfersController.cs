@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Store.API.Contracts;
 using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Operations;
 using Store.Models.DTOs.Transfers;
@@ -48,7 +47,7 @@ public class StockTransfersController : ControllerBase
     {
         var dto = await _transferService.GetByIdAsync(id);
         if (dto is null)
-            return NotFound(ApiErrorResponse.From("not_found", "Transfer not found", traceId: HttpContext.TraceIdentifier));
+            return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "Transfer not found", traceId: HttpContext.TraceIdentifier));
         return Ok(ApiResponse<StockTransferDto>.Ok(dto));
     }
 
@@ -61,7 +60,7 @@ public class StockTransfersController : ControllerBase
             return Unauthorized();
 
         if (request.FromBranchId == request.ToBranchId)
-            return BadRequest(ApiErrorResponse.From("bad_request", "Source and destination branches must differ", traceId: HttpContext.TraceIdentifier));
+            return BadRequest(ApiErrorResponse.From(ErrorCode.BadRequest, "Source and destination branches must differ", traceId: HttpContext.TraceIdentifier));
 
         var dto = await _transferService.CreateAsync(request, userId);
         return CreatedAtAction(nameof(GetById), new { id = dto.StockTransferId }, ApiResponse<StockTransferDto>.Ok(dto));
@@ -77,7 +76,7 @@ public class StockTransfersController : ControllerBase
 
         var dto = await _transferService.ApproveAsync(id, userId, request);
         if (dto is null)
-            return BadRequest(ApiErrorResponse.From("bad_request", "Transfer cannot be approved in its current state", traceId: HttpContext.TraceIdentifier));
+            return BadRequest(ApiErrorResponse.From(ErrorCode.BadRequest, "Transfer cannot be approved in its current state", traceId: HttpContext.TraceIdentifier));
         return Ok(ApiResponse<StockTransferDto>.Ok(dto));
     }
 
@@ -91,7 +90,7 @@ public class StockTransfersController : ControllerBase
 
         var ok = await _transferService.RejectAsync(id, userId, request);
         if (!ok)
-            return BadRequest(ApiErrorResponse.From("bad_request", "Transfer cannot be rejected in its current state", traceId: HttpContext.TraceIdentifier));
+            return BadRequest(ApiErrorResponse.From(ErrorCode.BadRequest, "Transfer cannot be rejected in its current state", traceId: HttpContext.TraceIdentifier));
         return NoContent();
     }
 
@@ -105,7 +104,7 @@ public class StockTransfersController : ControllerBase
 
         var dto = await _transferService.DispatchAsync(id, userId, request);
         if (dto is null)
-            return BadRequest(ApiErrorResponse.From("bad_request", "Transfer must be approved before dispatching", traceId: HttpContext.TraceIdentifier));
+            return BadRequest(ApiErrorResponse.From(ErrorCode.BadRequest, "Transfer must be approved before dispatching", traceId: HttpContext.TraceIdentifier));
         return Ok(ApiResponse<StockTransferDto>.Ok(dto));
     }
 
@@ -119,7 +118,7 @@ public class StockTransfersController : ControllerBase
 
         var dto = await _transferService.ReceiveAsync(id, userId, request);
         if (dto is null)
-            return BadRequest(ApiErrorResponse.From("bad_request", "Transfer must be dispatched before receiving", traceId: HttpContext.TraceIdentifier));
+            return BadRequest(ApiErrorResponse.From(ErrorCode.BadRequest, "Transfer must be dispatched before receiving", traceId: HttpContext.TraceIdentifier));
         return Ok(ApiResponse<StockTransferDto>.Ok(dto));
     }
 
@@ -133,7 +132,7 @@ public class StockTransfersController : ControllerBase
 
         var ok = await _transferService.CancelAsync(id, userId, reason);
         if (!ok)
-            return BadRequest(ApiErrorResponse.From("bad_request", "Transfer cannot be cancelled in its current state", traceId: HttpContext.TraceIdentifier));
+            return BadRequest(ApiErrorResponse.From(ErrorCode.BadRequest, "Transfer cannot be cancelled in its current state", traceId: HttpContext.TraceIdentifier));
         return NoContent();
     }
 }

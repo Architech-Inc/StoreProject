@@ -1,0 +1,77 @@
+@*
+    UX-06 — reusable empty-state partial with a call-to-action.
+
+    Usage:
+      <partial name="_EmptyState" model="new EmptyStateModel {
+          Icon = "📦",
+          Title = "No items yet",
+          Message = "Create your first item to start building your catalog.",
+          CtaText = "Create Item",
+          CtaHref = "/Catalog?handler=Create",
+          SecondaryText = "Import from CSV",
+          SecondaryHref = "/Items/Import"
+      }" />
+
+    When the list is empty we want operators to know WHY (cold start vs
+    search miss) and WHAT they can do about it. Every primary list page
+    in the app should render this instead of a bare "No records found".
+*@
+@model Store.UI.Pages.Shared.EmptyStateModel
+@{
+    string variant = Model.Variant ?? "info";
+    var palette = variant switch
+    {
+        "warning" => (bg: "#fef3c7", border: "#fbbf24", color: "#92400e", sub: "#92400e"),
+        "muted" => (bg: "transparent", border: "var(--border, #e5e7eb)", color: "var(--text-secondary, #6b7280)", sub: "var(--text-secondary, #6b7280)"),
+        _ => (bg: "transparent", border: "var(--border, #e5e7eb)", color: "var(--text-primary, #111827)", sub: "var(--text-secondary, #6b7280)")
+    };
+}
+
+<div class="empty-state" role="status"
+     style="display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 48px 24px; text-align: center; background: @(palette.bg);
+            border: 1px dashed @(palette.border); border-radius: var(--radius-lg, 12px);
+            margin: 24px 0;">
+    <div class="empty-state-icon" aria-hidden="true"
+         style="font-size: 48px; line-height: 1; margin-bottom: 12px; opacity: 0.85;">
+        @Model.Icon
+    </div>
+
+    <h3 class="empty-state-title"
+        style="margin: 0 0 8px; font-size: 1.125rem; font-weight: 600; color: @(palette.color);">
+        @Model.Title
+    </h3>
+
+    <p class="empty-state-message"
+       style="margin: 0 0 20px; max-width: 480px; font-size: 0.95rem; color: @(palette.sub); line-height: 1.5;">
+        @Model.Message
+    </p>
+
+    @if (!string.IsNullOrWhiteSpace(Model.CtaText) && !string.IsNullOrWhiteSpace(Model.CtaHref))
+    {
+        <a class="empty-state-cta btn-primary-glow" href="@Model.CtaHref"
+           style="display: inline-flex; align-items: center; gap: 8px;
+                  padding: 10px 20px; border-radius: 8px;
+                  background: linear-gradient(135deg, #019c01 0%, #00b800 100%);
+                  color: #fff; text-decoration: none; font-weight: 600; font-size: 14px;
+                  box-shadow: 0 2px 8px rgba(1, 156, 1, 0.25);
+                  transition: transform 0.1s ease, box-shadow 0.1s ease;">
+            <span>@Model.CtaText</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                 aria-hidden="true">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+        </a>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Model.SecondaryText) && !string.IsNullOrWhiteSpace(Model.SecondaryHref))
+    {
+        <a class="empty-state-secondary" href="@Model.SecondaryHref"
+           style="margin-top: 12px; font-size: 13px; color: var(--text-secondary, #6b7280);
+                  text-decoration: underline; text-underline-offset: 3px;">
+            @Model.SecondaryText
+        </a>
+    }
+</div>

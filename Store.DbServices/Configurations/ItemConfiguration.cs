@@ -90,6 +90,11 @@ public class BatchConfiguration : IEntityTypeConfiguration<Batch>
         builder.Property(b => b.CostPrice).HasPrecision(18, 4);
         builder.Property(b => b.Notes).HasMaxLength(500);
 
+        // GAP-19 — scanner / batch-tracking lookups by BatchNumber.
+        builder.HasIndex(b => b.BatchNumber)
+               .IsUnique()
+               .HasDatabaseName("ix_batch_batch_number");
+
         builder.HasOne(b => b.Item)
             .WithMany(i => i.Batches)
             .HasForeignKey(b => b.ItemId)

@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Store.API.Contracts;
 using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Operations;
 using Store.Models.Interfaces.Services;
@@ -26,18 +25,29 @@ public class SystemSettingsController : ControllerBase
         // but typically it handles them fine. If issues arise, we can pass it as a query param or body.
         // Actually, {*key} is safer for keys with colons or slashes.
         var value = await _systemSettings.GetSettingAsync(key, ct);
-        if (value == null) return NotFound(ApiErrorResponse.From("not_found", "Setting not found.", traceId: HttpContext.TraceIdentifier));
+        if (value == null) return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "Setting not found.", traceId: HttpContext.TraceIdentifier));
         return Ok(ApiResponse<string>.Ok(value));
     }
 
     [HttpPut("{*key}")]
     public async Task<IActionResult> UpdateSetting(string key, [FromBody] UpdateSettingRequest request, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(request.Value)) return BadRequest(ApiErrorResponse.From("invalid_request", "Value is required.", traceId: HttpContext.TraceIdentifier));
+        if (string.IsNullOrWhiteSpace(request.Value))
+        {
+            return BadRequest(ApiErrorResponse.From(ErrorCode.InvalidRequest, "Value is required.", traceId: HttpContext.TraceIdentifier));
+        }
 
-        var success = await _systemSettings.UpdateSettingAsync(key, request.Value, ct);
-        if (!success) return BadRequest(ApiErrorResponse.From("error", "Failed to update setting.", traceId: HttpContext.TraceIdentifier));
-        
+        var result = await _systemSettings.UpdateSettingAsync(key, request.Value, ct);
+        if (!result.Success)
+        {
+            // Surface the actual reason (constraint violation, missing key,
+            // connection failure, etc.) so the operator can act on it.
+            return BadRequest(ApiErrorResponse.From(
+                code: "update_failed",
+                message: $"Failed to update setting '{key}': {result.FailureReason}",
+                traceId: HttpContext.TraceIdentifier));
+        }
+
         return Ok(ApiResponse<string>.Ok(request.Value, "Setting updated successfully."));
     }
 }

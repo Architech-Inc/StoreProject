@@ -1,4 +1,23 @@
 services:
+  store-controlplane-db:
+    image: mysql:8.0
+    container_name: store-controlplane-db
+    restart: always
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: ${CONTROLPLANE_DB_ROOT_PASSWORD:-U2BUg2Jd4szfvSPUBy1fB9hNpgclkxXa}
+      MYSQL_DATABASE: store_controlplane
+    volumes:
+      - controlplane_db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - proxy-network
+
   store-controlplane:
     image: ${IMAGE_PREFIX:-ghcr.io/architech-inc/storeproject}/store-controlplane:${IMAGE_TAG:-latest}
     container_name: store-controlplane
@@ -35,6 +54,9 @@ services:
       - /opt/projects/proxy/dynamic:/app/traefik/dynamic
       - /opt/projects/platform/tenants:/app/Tenants
       - controlplane_data:/app/App_Data
+    depends_on:
+      store-controlplane-db:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:19999/health"]
       interval: 15s
@@ -91,6 +113,7 @@ services:
 
 volumes:
   controlplane_data:
+  controlplane_db_data:
 
 networks:
   proxy-network:

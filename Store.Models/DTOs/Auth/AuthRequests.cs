@@ -72,11 +72,20 @@ public class ResetPasswordRequest
 
 public class RefreshTokenRequest
 {
-    [Required]
-    public string Token { get; set; } = string.Empty;
+    /// <summary>
+    /// The expired access token. Still useful for audit logging which user
+    /// is asking for the refresh, but not strictly required.
+    /// </summary>
+    public string? Token { get; set; }
 
-    [Required]
-    public string RefreshToken { get; set; } = string.Empty;
+    /// <summary>
+    /// SEC-28 — refresh token. Now optional in the JSON body — when the
+    /// caller doesn't supply one, the controller reads the <c>store_rt</c>
+    /// HttpOnly cookie. JSON-body transmission is retained for non-browser
+    /// callers (CLI tools, Postman) but browser clients should send the
+    /// cookie automatically.
+    /// </summary>
+    public string? RefreshToken { get; set; }
 }
 
 public class RequestOtpRequest

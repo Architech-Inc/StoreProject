@@ -17,11 +17,16 @@ public class AuditLogService : IAuditLogService
         _uow = uow;
     }
 
-    public async Task<AuditLogMetricsDto> GetMetricsAsync(CancellationToken ct = default)
+    public async Task<AuditLogMetricsDto> GetMetricsAsync(Guid? tenantId = null, CancellationToken ct = default)
     {
-        var logs = await _uow.Repository<AuditLog>().Query()
+        // MT-05 — when a tenant is provided, restrict every metric to that
+        // tenant. Admins viewing the whole platform pass null; tenant
+        // admins get only their own rows.
+        var query = _uow.Repository<AuditLog>().Query()
             .AsNoTracking()
-            .ToListAsync(ct);
+            .Where(a => tenantId == null || a.TenantId == tenantId);
+
+        var logs = await query.ToListAsync(ct);
 
         var today = DateTime.UtcNow.Date;
 
@@ -44,6 +49,15 @@ public class AuditLogService : IAuditLogService
             .Include(a => a.User).ThenInclude(u => u.Role)
             .Include(a => a.User).ThenInclude(u => u.Employee)
             .AsQueryable();
+
+        // MT-05 — when the filter carries a tenant id, restrict the read to
+        // that tenant at the data layer. Cross-tenant reads must pass null
+        // AND be authorized at the controller layer.
+        if (request.TenantId.HasValue && request.TenantId.Value != Guid.Empty)
+        {
+            var tid = request.TenantId.Value;
+            query = query.Where(a => a.TenantId == tid);
+        }
 
         if (request.UserId.HasValue && request.UserId.Value != Guid.Empty)
         {
@@ -137,6 +151,7 @@ public class AuditLogService : IAuditLogService
         var log = new AuditLog
         {
             UserId = request.UserId,
+            TenantId = request.TenantId, // MT-05 — propagate tenant scope
             Action = request.Action.Trim(),
             Details = detailsJson,
             IpAddress = request.IpAddress,
@@ -178,6 +193,7 @@ public class AuditLogService : IAuditLogService
             Id = a.AuditLogId,
             Action = a.Action,
             ActorUserId = a.UserId,
+            TenantId = a.TenantId, // MT-05 — propagate tenant scope to UI
             ActorUsername = a.User?.Username ?? "Unknown Actor",
             ActorRole = a.User?.Role?.Name ?? "User",
             ActorFullName = a.User?.Employee != null ? $"{a.User.Employee.FirstName} {a.User.Employee.LastName}".Trim() : null,

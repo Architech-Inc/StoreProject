@@ -197,13 +197,16 @@
                                                     onclick="openEditCategoryModal(@c.CategoryId, '@Html.Raw(Html.Encode(c.Name))', '@Html.Raw(Html.Encode(c.Description ?? ""))')">
                                                 Edit
                                             </button>
-                                            <form method="post" asp-page-handler="DeleteCategory" style="margin:0; display:inline;">
-                                                @Html.AntiForgeryToken()
-                                                <input type="hidden" name="id" value="@c.CategoryId" />
-                                                <button type="submit" class="btn-ctrl-danger" data-confirm="Delete category @c.Name?" data-confirm-type="danger" data-confirm-title="Delete Category">
-                                                    Delete
-                                                </button>
-                                            </form>
+                                            @if (Model.CanAdmin)
+                                            {
+                                                <form method="post" asp-page-handler="DeleteCategory" style="margin:0; display:inline;">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="id" value="@c.CategoryId" />
+                                                    <button type="submit" class="btn-ctrl-danger" data-confirm="Delete category @c.Name?" data-confirm-type="danger" data-confirm-title="Delete Category">
+                                                        Delete
+                                                    </button>
+                                                </form>
+                                            }
                                         </div>
                                     </td>
                                 </tr>
@@ -274,13 +277,16 @@
                                                     onclick="openEditUnitModal(@u.UnitId, '@Html.Raw(Html.Encode(u.Name))', '@Html.Raw(Html.Encode(u.Abbreviation))', '@Html.Raw(Html.Encode(u.Description ?? ""))')">
                                                 Edit
                                             </button>
-                                            <form method="post" asp-page-handler="DeleteUnit" style="margin:0; display:inline;">
-                                                @Html.AntiForgeryToken()
-                                                <input type="hidden" name="id" value="@u.UnitId" />
-                                                <button type="submit" class="btn-ctrl-danger" data-confirm="Delete measurement unit @u.Name?" data-confirm-type="danger" data-confirm-title="Delete Measurement Unit">
-                                                    Delete
-                                                </button>
-                                            </form>
+                                            @if (Model.CanAdmin)
+                                            {
+                                                <form method="post" asp-page-handler="DeleteUnit" style="margin:0; display:inline;">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="id" value="@u.UnitId" />
+                                                    <button type="submit" class="btn-ctrl-danger" data-confirm="Delete measurement unit @u.Name?" data-confirm-type="danger" data-confirm-title="Delete Measurement Unit">
+                                                        Delete
+                                                    </button>
+                                                </form>
+                                            }
                                         </div>
                                     </td>
                                 </tr>
@@ -347,13 +353,16 @@
                                                     onclick="openEditDeptModal(@d.DepartmentId, '@Html.Raw(Html.Encode(d.Name))', '@Html.Raw(Html.Encode(d.Description ?? ""))')">
                                                 Edit
                                             </button>
-                                            <form method="post" asp-page-handler="DeleteDepartment" style="margin:0; display:inline;">
-                                                @Html.AntiForgeryToken()
-                                                <input type="hidden" name="id" value="@d.DepartmentId" />
-                                                <button type="submit" class="btn-ctrl-danger" data-confirm="Delete department @d.Name?" data-confirm-type="danger" data-confirm-title="Delete Department">
-                                                    Delete
-                                                </button>
-                                            </form>
+                                            @if (Model.CanAdmin)
+                                            {
+                                                <form method="post" asp-page-handler="DeleteDepartment" style="margin:0; display:inline;">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="id" value="@d.DepartmentId" />
+                                                    <button type="submit" class="btn-ctrl-danger" data-confirm="Delete department @d.Name?" data-confirm-type="danger" data-confirm-title="Delete Department">
+                                                        Delete
+                                                    </button>
+                                                </form>
+                                            }
                                         </div>
                                     </td>
                                 </tr>
@@ -436,13 +445,16 @@
                                                     onclick="openEditSalaryModal(@s.SalaryId, '@Html.Raw(Html.Encode(s.Grade))', @s.BasicAmount, @(s.AllowanceAmount ?? 0), '@Html.Raw(Html.Encode(s.Description ?? ""))')">
                                                 Edit
                                             </button>
-                                            <form method="post" asp-page-handler="DeleteSalary" style="margin:0; display:inline;">
-                                                @Html.AntiForgeryToken()
-                                                <input type="hidden" name="id" value="@s.SalaryId" />
-                                                <button type="submit" class="btn-ctrl-danger" data-confirm="Delete salary grade @s.Grade?" data-confirm-type="danger" data-confirm-title="Delete Salary Grade">
-                                                    Delete
-                                                </button>
-                                            </form>
+                                            @if (Model.CanAdmin)
+                                            {
+                                                <form method="post" asp-page-handler="DeleteSalary" style="margin:0; display:inline;">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="id" value="@s.SalaryId" />
+                                                    <button type="submit" class="btn-ctrl-danger" data-confirm="Delete salary grade @s.Grade?" data-confirm-type="danger" data-confirm-title="Delete Salary Grade">
+                                                        Delete
+                                                    </button>
+                                                </form>
+                                            }
                                         </div>
                                     </td>
                                 </tr>

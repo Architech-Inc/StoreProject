@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
 using Store.ControlPlane.Models.DTOs;
 using Store.ControlPlane.Services;
+using Store.Models.Billing;
 using Store.Models.DTOs.Common;
 
+using Microsoft.Extensions.Logging;
+using Store.Models.Common;
 namespace Store.ControlPlane.Controllers;
 
 [ApiController]
@@ -25,7 +28,13 @@ public class BranchesController : ControllerBase
         return Ok(ApiResponse<IReadOnlyList<BranchDto>>.Ok(branches));
     }
 
+    /// <summary>
+    /// Wave 20 — gated by the tenant's plan tier branch quota. Returns
+    /// HTTP 402 Payment Required with the upgrade reason if the post-mutation
+    /// state would exceed the tier's <c>MaxBranches</c> limit.
+    /// </summary>
     [HttpPost]
+    [EnforceTenantQuota(TenantQuota.Branches, QuotaUsageSource.CurrentPlusOne)]
     public async Task<IActionResult> AddBranch(Guid id, [FromBody] CreateBranchRequest request, CancellationToken ct)
     {
         if (!ModelState.IsValid)
@@ -40,7 +49,7 @@ public class BranchesController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(ApiResponse<object>.Fail(ex.Message));
+            return BadRequest(ApiResponse<object>.Fail(SafeErrorMessage.From(ex, _logger, "Branches operation")));
         }
         catch (Exception ex)
         {
@@ -59,7 +68,7 @@ public class BranchesController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(ApiResponse<object>.Fail(ex.Message));
+            return BadRequest(ApiResponse<object>.Fail(SafeErrorMessage.From(ex, _logger, "Branches operation")));
         }
         catch (Exception ex)
         {

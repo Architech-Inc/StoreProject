@@ -8,7 +8,8 @@ public enum NotificationCategory
     PurchaseOrder = 3,
     ContactRequest = 4,
     Security = 5,
-    CashVariance = 6
+    CashVariance = 6,
+    RestockRecommendation = 7
 }
 
 public class StoreNotificationDto
@@ -44,5 +45,27 @@ public class LowStockAlertDto
     public int CurrentStock { get; set; }
     public int ReorderLevel { get; set; }
     public int? BranchId { get; set; }
+    public DateTime DateCreated { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>
+/// Broadcast whenever the velocity engine creates a new restock recommendation.
+/// Carries enough denormalised info so the receiving client can update its UI
+/// without a follow-up API round-trip.
+/// </summary>
+public class RestockRecommendationNotificationDto
+{
+    public Guid RecommendationId { get; set; }
+    public int BranchId { get; set; }
+    public string BranchName { get; set; } = string.Empty;
+    public Guid ItemId { get; set; }
+    public string ItemName { get; set; } = string.Empty;
+    public string? ItemBarcode { get; set; }
+    public int RecommendedQuantity { get; set; }
+    public string Severity { get; set; } = "Medium";
+    public int CurrentStock { get; set; }
+    public double? DaysOfStock { get; set; }
+    public decimal ProjectedValue { get; set; }
+    public string Reason { get; set; } = string.Empty;
     public DateTime DateCreated { get; set; } = DateTime.UtcNow;
 }

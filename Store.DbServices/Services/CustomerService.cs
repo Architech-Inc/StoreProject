@@ -206,24 +206,27 @@ public class CustomerService : ICustomerService
         return MapToDto(customer);
     }
 
-    public async Task<bool> DeleteAsync(Guid customerId, CancellationToken ct = default)
+    public async Task<bool> DeleteAsync(Guid customerId, Guid? deletedById = null, CancellationToken ct = default)
     {
         var customer = await _uow.Repository<Customer>().Query()
-            .Include(c => c.Phones)
-            .Include(c => c.Emails)
-            .Include(c => c.LoyaltyAccount)
+            .IgnoreQueryFilters()
             .FirstOrDefaultAsync(c => c.CustomerId == customerId, ct);
 
         if (customer is null) return false;
+        if (customer.IsDeleted) return true; // idempotent
 
-        // Guard against deleting customers with existing sales invoices for audit integrity
+        // Guard against deleting customers with existing sales invoices for audit integrity.
         var hasInvoices = await _uow.Repository<Invoice>().ExistsAsync(i => i.CustomerId == customerId);
         if (hasInvoices)
         {
             return false;
         }
 
-        _uow.Repository<Customer>().Remove(customer);
+        customer.IsDeleted = true;
+        customer.DeletedAt = DateTime.UtcNow;
+        customer.DeletedById = deletedById;
+
+        _uow.Repository<Customer>().Update(customer);
         await _uow.SaveChangesAsync(ct);
         return true;
     }

@@ -4,24 +4,28 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Store.TenantPortal.Models.DTOs;
 using Store.TenantPortal.Services;
 
+using Store.Models.Common;
 namespace Store.TenantPortal.Pages;
 
 [Authorize]
 public class BackupsModel : PageModel
 {
+    private readonly ILogger<BackupsModel> _logger;
     private readonly IControlPlaneClient _cpClient;
     private readonly IOAuthService _oauthService;
     private readonly IPortalSessionService _sessionService;
 
     public BackupsModel(
         IControlPlaneClient cpClient,
-        IOAuthService oauthService,
+        IOAuthService oauthService,        ILogger<BackupsModel> logger,
+
         IPortalSessionService sessionService)
     {
         _cpClient = cpClient;
         _oauthService = oauthService;
         _sessionService = sessionService;
-    }
+    
+        _logger = logger;}
 
     public BackupSummaryDto? Summary { get; set; }
     public string MicrosoftAuthUrl { get; set; } = string.Empty;
@@ -62,7 +66,7 @@ public class BackupsModel : PageModel
         }
         catch (Exception ex)
         {
-            FeedbackMessage = ex.Message;
+            FeedbackMessage = SafeErrorMessage.From(ex, _logger, "Backups operation");
             IsError = true;
         }
 
@@ -82,7 +86,7 @@ public class BackupsModel : PageModel
         }
         catch (Exception ex)
         {
-            FeedbackMessage = ex.Message;
+            FeedbackMessage = SafeErrorMessage.From(ex, _logger, "Backups operation");
             IsError = true;
         }
 
@@ -114,7 +118,7 @@ public class BackupsModel : PageModel
         }
         catch (Exception ex)
         {
-            FeedbackMessage = ex.Message;
+            FeedbackMessage = SafeErrorMessage.From(ex, _logger, "Backups operation");
             IsError = true;
         }
 

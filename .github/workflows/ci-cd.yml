@@ -258,8 +258,14 @@ jobs:
               "sudo mkdir -p /opt/projects/platform/tenants /opt/projects/proxy/dynamic && sudo chown -R \$USER:\$USER /opt/projects/platform"
 
           echo "==> Writing .env.production on runner..."
-          printf 'CONTROLPLANE_DB_CONNECTION_STRING=%s\nCONTROLPLANE_MASTER_KEY=%s\nCONTROLPLANE_WEBHOOK_SIGNING_SECRET=%s\nROOT_DOMAIN=%s\nIMAGE_PREFIX=%s\nGITHUB_TOKEN=%s\n' \
-            "$CONTROLPLANE_DB_CONNECTION_STRING" \
+          # Extract the password from the connection string secret
+          DB_PWD=$(echo "$CONTROLPLANE_DB_CONNECTION_STRING" | grep -oP -i '(?<=Pwd=)[^;]+' || echo "U2BUg2Jd4szfvSPUBy1fB9hNpgclkxXa")
+          # Replace the Server IP with the internal docker container name
+          DB_CONN_FIXED=$(echo "$CONTROLPLANE_DB_CONNECTION_STRING" | sed -E 's/Server=[^;]+/Server=store-controlplane-db/i')
+
+          printf 'CONTROLPLANE_DB_CONNECTION_STRING=%s\nCONTROLPLANE_DB_ROOT_PASSWORD=%s\nCONTROLPLANE_MASTER_KEY=%s\nCONTROLPLANE_WEBHOOK_SIGNING_SECRET=%s\nROOT_DOMAIN=%s\nIMAGE_PREFIX=%s\nGITHUB_TOKEN=%s\n' \
+            "$DB_CONN_FIXED" \
+            "$DB_PWD" \
             "$CONTROLPLANE_MASTER_KEY" \
             "$CONTROLPLANE_WEBHOOK_SIGNING_SECRET" \
             "$ROOT_DOMAIN" \

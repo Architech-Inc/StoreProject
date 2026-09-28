@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Store.Models\Store.Models.csproj" />
+    <ProjectReference Include="..\Store.DbServices\Store.DbServices.csproj" />
   </ItemGroup>
 
 </Project>

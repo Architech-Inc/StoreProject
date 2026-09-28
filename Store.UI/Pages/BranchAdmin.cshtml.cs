@@ -23,6 +23,11 @@ public class BranchAdminModel : SecurePageModel
     public IReadOnlyList<PersonnelTransferDto> Transfers { get; private set; } = Array.Empty<PersonnelTransferDto>();
     public IReadOnlyList<BranchItemStockDto> BranchStocks { get; private set; } = Array.Empty<BranchItemStockDto>();
 
+    // UX-05 — secondary affordance gate. Revoke branch assignment +
+    // any other destructive op is admin-level. Server-side already
+    // checks AdminBranches; this just mirrors that on the UI.
+    public bool CanAdmin { get; private set; }
+
     // ─── KPI Metrics ──────────────────────────────────────────────────────────
     public int TotalBranches => Branches.Count;
     public int ActiveBranchesCount => Branches.Count(b => b.IsActive);
@@ -91,6 +96,8 @@ public class BranchAdminModel : SecurePageModel
 
         if (!HasPermission(permissions, PermissionKeys.AdminBranches))
             return AccessDenied();
+
+        CanAdmin = true; // already gated above
 
         await LoadDataAsync(ct);
         return Page();

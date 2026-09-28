@@ -216,23 +216,26 @@
                                             Edit
                                         </button>
                                         
-                                        <form method="post" asp-page-handler="IssuePassword" style="margin:0; display:inline;">
-                                            @Html.AntiForgeryToken()
-                                            <input type="hidden" name="userId" value="@u.UserId" />
-                                            <button type="submit" class="btn-ctrl-action" data-confirm="Generate a temporary password for @u.Username?" data-confirm-type="warning">
-                                                Reset Pwd
-                                            </button>
-                                        </form>
-
-                                        @if (u.Status == Store.Models.Enums.UserStatus.Active)
+                                        @if (Model.CanAdmin)
                                         {
-                                            <form method="post" asp-page-handler="Suspend" style="margin:0; display:inline;">
+                                            <form method="post" asp-page-handler="IssuePassword" style="margin:0; display:inline;">
                                                 @Html.AntiForgeryToken()
                                                 <input type="hidden" name="userId" value="@u.UserId" />
-                                                <button type="submit" class="btn-ctrl-danger" data-confirm="Suspend user account @u.Username?" data-confirm-type="danger">
-                                                    Suspend
+                                                <button type="submit" class="btn-ctrl-action" data-confirm="Generate a temporary password for @u.Username?" data-confirm-type="warning">
+                                                    Reset Pwd
                                                 </button>
                                             </form>
+
+                                            @if (u.Status == Store.Models.Enums.UserStatus.Active)
+                                            {
+                                                <form method="post" asp-page-handler="Suspend" style="margin:0; display:inline;">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="userId" value="@u.UserId" />
+                                                    <button type="submit" class="btn-ctrl-danger" data-confirm="Suspend user account @u.Username?" data-confirm-type="danger">
+                                                        Suspend
+                                                    </button>
+                                                </form>
+                                            }
                                         }
                                     </div>
                                 </td>

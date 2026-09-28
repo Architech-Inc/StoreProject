@@ -4,19 +4,22 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Store.TenantPortal.Models.DTOs;
 using Store.TenantPortal.Services;
 
+using Store.Models.Common;
 namespace Store.TenantPortal.Pages;
 
 [Authorize]
 public class DomainsModel : PageModel
 {
+    private readonly ILogger<DomainsModel> _logger;
     private readonly IControlPlaneClient _cpClient;
     private readonly IPortalSessionService _sessionService;
 
-    public DomainsModel(IControlPlaneClient cpClient, IPortalSessionService sessionService)
+    public DomainsModel(IControlPlaneClient cpClient, IPortalSessionService sessionService, ILogger<DomainsModel> logger)
     {
         _cpClient = cpClient;
         _sessionService = sessionService;
-    }
+    
+        _logger = logger;}
 
     public TenantDomainDto? DomainConfig { get; set; }
     public string? FeedbackMessage { get; set; }
@@ -47,7 +50,7 @@ public class DomainsModel : PageModel
         }
         catch (Exception ex)
         {
-            FeedbackMessage = ex.Message;
+            FeedbackMessage = SafeErrorMessage.From(ex, _logger, "Domains operation");
             IsError = true;
             DomainConfig = await _cpClient.GetDomainConfigAsync(session.TenantId!.Value, ct);
         }

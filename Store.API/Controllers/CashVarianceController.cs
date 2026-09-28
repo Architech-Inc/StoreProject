@@ -1,9 +1,8 @@
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Store.API.Contracts;
-using Store.Models.DTOs.Cash;
 using Store.Models.DTOs.Common;
+using Store.Models.DTOs.Cash;
 using Store.Models.DTOs.Operations;
 using Store.Models.Enums;
 using Store.Models.Interfaces.Services;
@@ -50,7 +49,7 @@ public class CashVarianceController : ControllerBase
     {
         var dto = await _varianceService.GetByIdAsync(id);
         if (dto is null)
-            return NotFound(ApiErrorResponse.From("not_found", "Cash variance record not found",
+            return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "Cash variance record not found",
                 traceId: HttpContext.TraceIdentifier));
         return Ok(ApiResponse<CashVarianceDto>.Ok(dto));
     }
@@ -86,7 +85,7 @@ public class CashVarianceController : ControllerBase
 
         var dto = await _varianceService.ReviewAsync(id, userId, request);
         if (dto is null)
-            return BadRequest(ApiErrorResponse.From("bad_request",
+            return BadRequest(ApiErrorResponse.From(ErrorCode.BadRequest,
                 "Variance record must be in Pending status to review",
                 traceId: HttpContext.TraceIdentifier));
 
@@ -95,14 +94,19 @@ public class CashVarianceController : ControllerBase
 
     [HttpGet("export/csv")]
     [Authorize(Policy = PermissionKeys.CashRead)]
-    public async Task<IActionResult> ExportCsv([FromQuery] string? status)
+    public async Task<IActionResult> ExportCsv(
+        [FromQuery] string? status,
+        [FromQuery] DateTime? fromDate = null,
+        [FromQuery] DateTime? toDate = null)
     {
         CashVarianceStatus? parsed = null;
         if (!string.IsNullOrWhiteSpace(status) &&
             Enum.TryParse<CashVarianceStatus>(status, ignoreCase: true, out var s))
             parsed = s;
 
-        var list = await _varianceService.GetAllAsync(parsed);
+        // GAP-09 — date filters for export too. Without them, exporting the entire
+        // history at year-end would pull every row the tenant has ever recorded.
+        var list = await _varianceService.GetAllAsync(parsed, fromDate, toDate);
         var metrics = await _varianceService.GetMetricsAsync();
         var sb = new StringBuilder();
 

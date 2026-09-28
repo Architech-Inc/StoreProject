@@ -1764,6 +1764,67 @@
         }
     });
 
+    // GAP-23 / UX-02 — mobile sidebar toggle. The backdrop is also wired
+    // to close the sidebar when tapped. Pressing Escape closes it too.
+    window.toggleMobileSidebar = function(force) {
+        const sidebar = document.getElementById('appSidebar');
+        const backdrop = document.getElementById('mobileSidebarBackdrop');
+        const toggle = document.getElementById('mobileSidebarToggle');
+        if (!sidebar || !backdrop || !toggle) return;
+
+        const willOpen = typeof force === 'boolean' ? force : !sidebar.classList.contains('is-open');
+        sidebar.classList.toggle('is-open', willOpen);
+        backdrop.classList.toggle('is-visible', willOpen);
+        toggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+    };
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const sidebar = document.getElementById('appSidebar');
+            if (sidebar && sidebar.classList.contains('is-open')) {
+                window.toggleMobileSidebar(false);
+            }
+            // Close keyboard help dialog if open.
+            closeKbdHelp();
+        }
+    });
+
+    // UX-04 — keyboard shortcut help dialog. Bound to `?` (shift + /).
+    // Suppressed when the user is typing in an input / textarea / contenteditable.
+    function isTypingTarget(el) {
+        if (!el) return false;
+        const tag = (el.tagName || '').toLowerCase();
+        if (tag === 'input' || tag === 'textarea' || tag === 'select') return true;
+        if (el.isContentEditable) return true;
+        return false;
+    }
+
+    window.openKbdHelp = function () {
+        const el = document.getElementById('kbdHelpBackdrop');
+        if (el) {
+            el.hidden = false;
+            const close = el.querySelector('.kbd-help-close');
+            if (close) close.focus();
+        }
+    };
+
+    window.closeKbdHelp = function () {
+        const el = document.getElementById('kbdHelpBackdrop');
+        if (el && !el.hidden) {
+            el.hidden = true;
+        }
+    };
+
+    document.addEventListener('keydown', (e) => {
+        if (isTypingTarget(e.target)) return;
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+        if (e.key === '?') {
+            e.preventDefault();
+            openKbdHelp();
+        }
+    });
+
 })();
 
 

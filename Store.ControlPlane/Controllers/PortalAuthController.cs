@@ -5,6 +5,8 @@ using Store.Models.DTOs.Common;
 
 using Microsoft.AspNetCore.RateLimiting;
 
+using Microsoft.Extensions.Logging;
+using Store.Models.Common;
 namespace Store.ControlPlane.Controllers;
 
 [ApiController]
@@ -36,7 +38,7 @@ public class PortalAuthController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(ApiResponse<object>.Fail(ex.Message));
+            return BadRequest(ApiResponse<object>.Fail(SafeErrorMessage.From(ex, _logger, "Portal Auth operation")));
         }
         catch (Exception ex)
         {

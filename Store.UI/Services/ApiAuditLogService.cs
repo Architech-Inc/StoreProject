@@ -13,8 +13,13 @@ public class ApiAuditLogService : IAuditLogService
         _client = client;
     }
 
-    public async Task<AuditLogMetricsDto> GetMetricsAsync(CancellationToken ct = default)
-        => await _client.GetAsync<AuditLogMetricsDto>("/api/audit-logs/metrics") ?? new();
+    public async Task<AuditLogMetricsDto> GetMetricsAsync(Guid? tenantId = null, CancellationToken ct = default)
+    {
+        var qs = tenantId.HasValue && tenantId.Value != Guid.Empty
+            ? $"?tenantId={tenantId.Value}"
+            : string.Empty;
+        return await _client.GetAsync<AuditLogMetricsDto>($"/api/audit-logs/metrics{qs}") ?? new();
+    }
 
     public async Task<PagedResult<AuditLogDto>> GetAuditLogsPagedAsync(AuditLogFilterRequest request, CancellationToken ct = default)
     {
@@ -35,6 +40,10 @@ public class ApiAuditLogService : IAuditLogService
 
         if (request.UserId.HasValue && request.UserId.Value != Guid.Empty)
             qs.Add($"userId={request.UserId.Value}");
+
+        // MT-05 — tenant filter propagated to API as ?tenantId=
+        if (request.TenantId.HasValue && request.TenantId.Value != Guid.Empty)
+            qs.Add($"tenantId={request.TenantId.Value}");
 
         if (request.FromDate.HasValue)
             qs.Add($"fromDate={request.FromDate.Value:yyyy-MM-dd}");

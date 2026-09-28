@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Store.Models.DTOs.Auth;
 using Store.Models.Entities;
@@ -13,6 +14,7 @@ using Store.Models.Enums;
 using Store.Models.Interfaces;
 using Store.Models.Interfaces.Repositories;
 using Store.Models.Interfaces.Services;
+using Store.Models.Security;
 
 namespace Store.DbServices.Services;
 
@@ -21,12 +23,48 @@ public class AuthenticationService : IAuthenticationService
     private readonly IUnitOfWork _uow;
     private readonly IConfiguration _config;
     private readonly Microsoft.AspNetCore.Http.IHttpContextAccessor _httpContextAccessor;
+    // SEC-23 — device binding. Both nullable so the service stays
+    // constructable in tests / hosts that have not yet wired the device
+    // layer; when null, the binding checks fail open.
+    private readonly ITrustedDeviceService? _trustedDevices;
+    private readonly IDeviceBindingGuard? _deviceGuard;
+    private readonly ILogger<AuthenticationService>? _logger;
 
-    public AuthenticationService(IUnitOfWork uow, IConfiguration config, Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor)
+    public AuthenticationService(
+        IUnitOfWork uow,
+        IConfiguration config,
+        Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor,
+        ITrustedDeviceService? trustedDevices = null,
+        IDeviceBindingGuard? deviceGuard = null,
+        ILogger<AuthenticationService>? logger = null)
     {
         _uow = uow;
         _config = config;
         _httpContextAccessor = httpContextAccessor;
+        _trustedDevices = trustedDevices;
+        _deviceGuard = deviceGuard;
+        _logger = logger;
+    }
+
+    /// <summary>
+    /// SEC-23 — register-or-update the calling device after a successful
+    /// login. Best-effort: a failure here must not block the user's
+    /// sign-in (the device layer is observability + anomaly detection,
+    /// not a hard gate on the password path).
+    /// </summary>
+    private async Task RegisterDeviceAsync(Guid userId, CancellationToken ct)
+    {
+        var ctx = _httpContextAccessor.HttpContext;
+        if (_trustedDevices is null || ctx is null) return;
+
+        try
+        {
+            await _trustedDevices.RegisterOrUpdateAsync(userId, ctx, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "SEC-23 — device registration failed for user {UserId}", userId);
+        }
     }
 
     public async Task<LoginResponse?> LoginAsync(LoginRequest request, CancellationToken ct = default)
@@ -162,19 +200,25 @@ public class AuthenticationService : IAuthenticationService
 
     public async Task<LoginResponse?> RefreshTokenAsync(RefreshTokenRequest request, CancellationToken ct = default)
     {
-        var principal = GetPrincipalFromExpiredToken(request.Token);
+        // SEC-28 — controller guarantees RefreshToken is non-null; the access
+        // token is optional (used only for audit / user identification).
+        var accessToken = request.Token ?? string.Empty;
+        var refreshToken = request.RefreshToken ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(refreshToken)) return null;
+
+        var principal = GetPrincipalFromExpiredToken(accessToken);
         if (principal is null) return null;
 
         var userIdClaim = principal.FindFirst("uid")?.Value;
         if (!Guid.TryParse(userIdClaim, out var userId)) return null;
 
         var userToken = await _uow.Repository<UserToken>().Query()
-            .FirstOrDefaultAsync(t => t.UserId == userId && t.Token == request.Token && !t.IsRevoked, ct);
+            .FirstOrDefaultAsync(t => t.UserId == userId && t.Token == accessToken && !t.IsRevoked, ct);
 
         if (userToken is null) return null;
         if (userToken.RefreshTokenExpiryDate < DateTime.UtcNow) return null;
 
-        var refreshHash = HashRefreshToken(request.RefreshToken);
+        var refreshHash = HashRefreshToken(refreshToken);
         if (!CryptographicEquals(userToken.RefreshTokenHash, refreshHash)) return null;
 
         var user = await _uow.Repository<User>().Query()
@@ -183,17 +227,52 @@ public class AuthenticationService : IAuthenticationService
 
         if (user is null || user.Status != UserStatus.Active) return null;
 
+        // SEC-23 — device-binding gate. A refresh token presented from a
+        // device the user has never used (token stolen / shared-device
+        // replay) is rejected before we mint a fresh session. Password-
+        // only users still pass (LastWebAuthnAtUtc == null → PasswordOnly
+        // is allowed); only UnknownDevice / RevokedDevice block.
+        if (_deviceGuard is not null && _httpContextAccessor.HttpContext is { } ctx)
+        {
+            var binding = await _deviceGuard.CheckAsync(userId, ctx, ct);
+            if (binding == DeviceBindingResult.UnknownDevice || binding == DeviceBindingResult.RevokedDevice)
+            {
+                _logger?.LogWarning(
+                    "SEC-23 — refresh denied for user {UserId}: device binding verdict {Verdict}",
+                    userId, binding);
+                return null;
+            }
+        }
+
         var permissions = await GetPermissionClaimsAsync(user.RoleId, ct);
         var (token, newRefresh, expiry, refreshExpiry) = GenerateTokens(user, permissions);
 
-        userToken.Token = token;
-        userToken.RefreshTokenHash = HashRefreshToken(newRefresh);
-        userToken.ExpiryDate = expiry;
-        userToken.RefreshTokenExpiryDate = refreshExpiry;
-        userToken.IsRevoked = false;
+        // SEC-14 — atomic compare-and-set on the OLD token value.
+        // Two concurrent refreshes both read the same Token=X. The first UPDATE
+        // flips Token from X to Y (and revokes X via the WHERE). The second
+        // UPDATE matches 0 rows because Token is no longer X — that's the race
+        // loser and we return null so it can re-authenticate.
+        var repo = _uow.Repository<UserToken>();
+        var newRefreshHash = HashRefreshToken(newRefresh);
+        var rowsAffected = await repo.Query()
+            .Where(t => t.UserTokenId == userToken.UserTokenId && t.Token == request.Token && !t.IsRevoked)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(t => t.Token, token)
+                .SetProperty(t => t.RefreshTokenHash, newRefreshHash)
+                .SetProperty(t => t.ExpiryDate, expiry)
+                .SetProperty(t => t.RefreshTokenExpiryDate, refreshExpiry)
+                .SetProperty(t => t.IsRevoked, false), ct);
 
-        _uow.Repository<UserToken>().Update(userToken);
-        await _uow.SaveChangesAsync(ct);
+        if (rowsAffected == 0)
+        {
+            // Concurrent refresh won. The AuditLoggingMiddleware will pick up
+            // the resulting 401 from the next API call and log the event.
+            return null;
+        }
+
+        // SEC-23 — register-or-update the calling device so the next
+        // refresh sees this fingerprint as known.
+        await RegisterDeviceAsync(user.UserId, ct);
 
         return new LoginResponse
         {
@@ -447,6 +526,10 @@ public class AuthenticationService : IAuthenticationService
 
         await _uow.SaveChangesAsync(ct);
 
+        // SEC-23 — register the calling device so subsequent refreshes
+        // can detect replay-from-an-unknown-device.
+        await RegisterDeviceAsync(user.UserId, ct);
+
         return new LoginResponse
         {
             AccessToken = token,
@@ -490,6 +573,15 @@ public class AuthenticationService : IAuthenticationService
                 ClaimValueTypes.Integer64),
             new("stamp", user.SecurityStamp.ToString())
         };
+
+        // GAP-04 — surface ForcePasswordChange so the Razor Pages UI can short-circuit
+        // to /ForceResetPassword without an extra /me round-trip on every page.
+        // The claim is regenerated on each login / refresh, so once the user resets
+        // their password the next login removes the flag.
+        if (user.Password is { ForcePasswordChange: true })
+        {
+            claimList.Add(new Claim("force_password_change", "true"));
+        }
 
         foreach (var permission in permissions)
         {

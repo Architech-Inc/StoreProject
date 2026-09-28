@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
-using Store.API.Contracts;
-using Store.API.Controllers;
 using Store.Models.DTOs.Common;
+using Store.API.Controllers;
+
 using Store.Models.DTOs.Procurement;
 using Store.Models.Interfaces.Services;
 using Xunit;
@@ -93,7 +93,7 @@ public class SupplierControllerTests
     {
         var supplierId = Guid.NewGuid();
         var mockService = new Mock<ISupplierService>();
-        mockService.Setup(s => s.DeleteAsync(supplierId)).ReturnsAsync(false);
+        mockService.Setup(s => s.DeleteAsync(supplierId, null)).ReturnsAsync(false);
 
         var controller = CreateController(mockService.Object);
         var result = await controller.Delete(supplierId);

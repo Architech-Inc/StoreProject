@@ -23,29 +23,48 @@ public class SystemSettingService : ISystemSettingService
         return setting?.SettingValue;
     }
 
-    public async Task<bool> UpdateSettingAsync(string key, string value, CancellationToken ct = default)
+    public async Task<SystemSettingUpdateResult> UpdateSettingAsync(string key, string value, CancellationToken ct = default)
     {
-        var setting = await _uow.Repository<SystemSetting>().Query()
-            .FirstOrDefaultAsync(s => s.SettingKey == key, ct);
-
-        if (setting == null)
+        if (string.IsNullOrWhiteSpace(key))
         {
-            setting = new SystemSetting
+            return SystemSettingUpdateResult.Failed("Setting key is required.");
+        }
+
+        try
+        {
+            var setting = await _uow.Repository<SystemSetting>().Query()
+                .FirstOrDefaultAsync(s => s.SettingKey == key, ct);
+
+            if (setting == null)
             {
-                SettingKey = key,
-                SettingValue = value,
-                LastModified = DateTime.UtcNow
-            };
-            await _uow.Repository<SystemSetting>().AddAsync(setting, ct);
-        }
-        else
-        {
-            setting.SettingValue = value;
-            setting.LastModified = DateTime.UtcNow;
-            _uow.Repository<SystemSetting>().Update(setting);
-        }
+                setting = new SystemSetting
+                {
+                    SettingKey = key,
+                    SettingValue = value,
+                    LastModified = DateTime.UtcNow
+                };
+                await _uow.Repository<SystemSetting>().AddAsync(setting, ct);
+            }
+            else
+            {
+                setting.SettingValue = value;
+                setting.LastModified = DateTime.UtcNow;
+                _uow.Repository<SystemSetting>().Update(setting);
+            }
 
-        await _uow.SaveChangesAsync(ct);
-        return true;
+            await _uow.SaveChangesAsync(ct);
+            return SystemSettingUpdateResult.Ok();
+        }
+        catch (DbUpdateException ex)
+        {
+            // Surface the SQL exception message (constraint violation, etc.) so
+            // the operator can fix the data instead of guessing.
+            var inner = ex.InnerException?.Message ?? ex.Message;
+            return SystemSettingUpdateResult.Failed($"Database error: {inner}");
+        }
+        catch (Exception ex)
+        {
+            return SystemSettingUpdateResult.Failed(ex.Message);
+        }
     }
 }

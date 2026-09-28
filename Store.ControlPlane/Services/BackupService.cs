@@ -42,7 +42,10 @@ public class BackupService : IBackupService
             schedule.Frequency.ToString(),
             schedule.RetentionCount,
             schedule.IsEnabled,
-            schedule.NextRunAt ?? DateTime.UtcNow.AddDays(1)
+            schedule.NextRunAt ?? DateTime.UtcNow.AddDays(1),
+            // MT-06 — expose last run state to the UI
+            schedule.LastRunAt,
+            schedule.LastRunStatus
         );
 
         var providerConfigs = tenant.BackupProviders ?? new List<BackupProviderConfig>();
@@ -270,12 +273,18 @@ public class BackupService : IBackupService
             freq = BackupFrequency.Daily;
         }
 
+        // MT-06 — preserve LastRunAt/LastRunStatus across schedule edits so
+        // operators don't lose audit trail when tweaking retention/frequency.
+        var existingSchedule = tenant.BackupSchedule;
+
         tenant.BackupSchedule = new BackupScheduleConfig
         {
             Frequency = freq,
             RetentionCount = Math.Clamp(request.RetentionCount, 1, 60),
             IsEnabled = request.IsEnabled,
-            NextRunAt = DateTime.UtcNow.AddDays(freq == BackupFrequency.Hourly ? 0.04 : freq == BackupFrequency.Weekly ? 7 : 1)
+            NextRunAt = DateTime.UtcNow.AddDays(freq == BackupFrequency.Hourly ? 0.04 : freq == BackupFrequency.Weekly ? 7 : 1),
+            LastRunAt = existingSchedule?.LastRunAt,
+            LastRunStatus = existingSchedule?.LastRunStatus
         };
 
         await _tenantRepo.SaveAsync(tenant, ct);
@@ -287,7 +296,10 @@ public class BackupService : IBackupService
             tenant.BackupSchedule.Frequency.ToString(),
             tenant.BackupSchedule.RetentionCount,
             tenant.BackupSchedule.IsEnabled,
-            tenant.BackupSchedule.NextRunAt
+            tenant.BackupSchedule.NextRunAt,
+            // MT-06 — surface last run state
+            tenant.BackupSchedule.LastRunAt,
+            tenant.BackupSchedule.LastRunStatus
         );
     }
 

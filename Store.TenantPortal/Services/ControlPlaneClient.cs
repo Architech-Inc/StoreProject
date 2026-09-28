@@ -1,5 +1,8 @@
 using System.Net.Http.Json;
 using Store.TenantPortal.Models.DTOs;
+// MT-02 — alias so the return type stays close to its origin while still
+// being visible to portal callers.
+using CreateInvoiceResponse = Store.Models.DTOs.Payments.CreateInvoiceResponse;
 
 namespace Store.TenantPortal.Services;
 
@@ -92,6 +95,50 @@ public class ControlPlaneClient : IControlPlaneClient
 
         var result = await response.Content.ReadFromJsonAsync<ApiResponse<TenantSummaryDto>>(cancellationToken: ct);
         return result!.Data;
+    }
+
+    // MT-01 — async provisioning: submit + poll for status.
+    public async Task<ProvisioningJobResponse> ProvisionTenantAsyncJobAsync(
+        ProvisionTenantDto request, Guid accountId, CancellationToken ct = default)
+    {
+        var body = new
+        {
+            StoreName = request.StoreName,
+            Slug = request.Slug,
+            AdminEmail = request.AdminEmail,
+            AdminUsername = request.AdminUsername,
+            AdminPassword = request.AdminPassword,
+            Currency = request.Currency,
+            PlanTier = request.PlanTier,
+            CustomDomain = request.CustomDomain,
+            AccountId = accountId
+        };
+        var response = await _http.PostAsJsonAsync("api/control/tenants/provision-async", body, ct);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var err = await response.Content.ReadFromJsonAsync<ApiResponse<object>>(cancellationToken: ct);
+            throw new InvalidOperationException(err?.Message ?? "Tenant provisioning queue failed.");
+        }
+
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse<ProvisioningJobResponse>>(cancellationToken: ct);
+        return result!.Data;
+    }
+
+    public async Task<ProvisioningJobResponse?> GetProvisioningJobAsync(Guid jobId, CancellationToken ct = default)
+    {
+        var response = await _http.GetAsync($"api/control/tenants/provisioning/{jobId}", ct);
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return null;
+        if (!response.IsSuccessStatusCode) return null;
+
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse<ProvisioningJobResponse>>(cancellationToken: ct);
+        return result?.Data;
+    }
+
+    public async Task<bool> RetryProvisioningJobAsync(Guid jobId, CancellationToken ct = default)
+    {
+        var response = await _http.PostAsync($"api/control/tenants/provisioning/{jobId}/retry", null, ct);
+        return response.IsSuccessStatusCode;
     }
 
     public async Task<TenantDetailDto?> GetTenantDetailsAsync(Guid tenantId, CancellationToken ct = default)
@@ -480,6 +527,100 @@ public class ControlPlaneClient : IControlPlaneClient
     {
         var response = await _http.DeleteAsync($"api/control/sdlc/tenants/{slug}/sandbox/{sandboxSlug}", ct);
         return response.IsSuccessStatusCode;
+    }
+
+    // ─── MT-07 — public tenant status + maintenance windows ─────────────────
+
+    /// <summary>
+    /// MT-07 — anonymous lookup of tenant status + maintenance schedule.
+    /// Used by the public <c>/Status/{slug}</c> page. No authentication
+    /// header required; the endpoint is on the public route prefix.
+    /// </summary>
+    public async Task<TenantStatusDto?> GetTenantPublicStatusAsync(string slug, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(slug)) return null;
+
+        try
+        {
+            var response = await _http.GetAsync($"api/public/tenants/{Uri.EscapeDataString(slug)}/status", ct);
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return null;
+            if (!response.IsSuccessStatusCode) return null;
+
+            return await response.Content.ReadFromJsonAsync<TenantStatusDto>(cancellationToken: ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Public status lookup failed for slug {Slug}", slug);
+            return null;
+        }
+    }
+
+    public async Task<MaintenanceWindowDto> AddMaintenanceWindowAsync(Guid tenantId, CreateMaintenanceWindowRequest request, CancellationToken ct = default)
+    {
+        var response = await _http.PostAsJsonAsync($"api/control/tenants/{tenantId}/maintenance-windows", request, ct);
+        response.EnsureSuccessStatusCode();
+        var dto = await response.Content.ReadFromJsonAsync<MaintenanceWindowDto>(cancellationToken: ct);
+        return dto ?? throw new InvalidOperationException("Empty response when scheduling maintenance window.");
+    }
+
+    public async Task<bool> RemoveMaintenanceWindowAsync(Guid tenantId, Guid windowId, CancellationToken ct = default)
+    {
+        var response = await _http.DeleteAsync($"api/control/tenants/{tenantId}/maintenance-windows/{windowId}", ct);
+        return response.IsSuccessStatusCode;
+    }
+
+    public async Task<bool> ResolveMaintenanceWindowAsync(Guid tenantId, Guid windowId, CancellationToken ct = default)
+    {
+        var response = await _http.PostAsync($"api/control/tenants/{tenantId}/maintenance-windows/{windowId}/resolve", null, ct);
+        return response.IsSuccessStatusCode;
+    }
+
+    // ─── MT-02 — billing surface ────────────────────────────────────────────
+
+    public async Task<TenantDetailDto?> GetTenantAsync(string slug, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(slug)) return null;
+        try
+        {
+            var response = await _http.GetAsync($"api/control/tenants/{Uri.EscapeDataString(slug)}", ct);
+            if (!response.IsSuccessStatusCode) return null;
+            return await response.Content.ReadFromJsonAsync<TenantDetailDto>(cancellationToken: ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "GetTenant({Slug}) failed.", slug);
+            return null;
+        }
+    }
+
+    public async Task<CreateInvoiceResponse?> CreateBillingInvoiceAsync(string slug, CreateBillingInvoiceRequest request, CancellationToken ct = default)
+    {
+        // MT-02 — ControlPlane proxies PayDunya. The portal hands the
+        // invoice request off and gets back the hosted-checkout URL.
+        var response = await _http.PostAsJsonAsync($"api/billing/paydunya/invoice", request, ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("CreateBillingInvoice failed for {Slug}: {Status}", slug, response.StatusCode);
+            return null;
+        }
+        var dto = await response.Content.ReadFromJsonAsync<CreateInvoiceResponse>(cancellationToken: ct);
+        return dto;
+    }
+
+    public async Task<TenantPaymentHistoryDto?> GetBillingHistoryAsync(string slug, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(slug)) return null;
+        try
+        {
+            var response = await _http.GetAsync($"api/billing/paydunya/payments/{Uri.EscapeDataString(slug)}", ct);
+            if (!response.IsSuccessStatusCode) return null;
+            return await response.Content.ReadFromJsonAsync<TenantPaymentHistoryDto>(cancellationToken: ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "GetBillingHistory({Slug}) failed.", slug);
+            return null;
+        }
     }
 }
 

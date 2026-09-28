@@ -4,7 +4,9 @@ using Store.Models.DTOs.Discounts;
 using Store.Models.DTOs.Operations;
 using Store.Models.Enums;
 using StoreUI.Services;
+using Store.Models.Common;
 
+using Microsoft.Extensions.Logging.Abstractions;
 namespace StoreUI.Pages;
 
 public class DiscountOverridesModel : SecurePageModel
@@ -46,6 +48,10 @@ public class DiscountOverridesModel : SecurePageModel
     public string? StatusMessage { get; set; }
 
     public IEnumerable<DiscountType> DiscountTypes { get; } = Enum.GetValues<DiscountType>();
+    // UX-05 — secondary affordance gates. Cashier-side create uses
+    // DiscountRead (any user who can see the page can request an
+    // override); manager-side approve uses DiscountWrite.
+    public bool CanCreate { get; private set; }
     public bool CanApprove { get; private set; }
 
     public DiscountOverridesModel(
@@ -69,6 +75,7 @@ public class DiscountOverridesModel : SecurePageModel
         }
 
         CanApprove = HasPermission(permissions, PermissionKeys.PricingWrite);
+        CanCreate = HasPermission(permissions, PermissionKeys.DiscountRead);
         _apiClient.SetToken(token);
 
         Metrics = await _overrideManager.GetMetricsAsync(ct);
@@ -163,8 +170,19 @@ public class DiscountOverridesModel : SecurePageModel
 
     public async Task<IActionResult> OnPostCreateAsync(CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out var token, out _))
+        if (!TryGetSecurityContext(out var token, out var permissions))
             return GoToLogin();
+
+        // UX-05 — server-side gate. Anyone who can view the page
+        // (PricingRead / CashWrite / InventoryRead per the OnGet) can
+        // request an override; this mirrors the cashier-side workflow.
+        if (!HasPermission(permissions, PermissionKeys.PricingRead) &&
+            !HasPermission(permissions, PermissionKeys.CashWrite) &&
+            !HasPermission(permissions, PermissionKeys.InventoryRead))
+        {
+            StatusMessage = "Error: You do not have permission to request discount overrides.";
+            return RedirectToPage(new { Search, Status, OverrideType, PageNumber });
+        }
 
         _apiClient.SetToken(token);
 
@@ -175,7 +193,7 @@ public class DiscountOverridesModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: Failed to submit override request - {ex.Message}";
+            StatusMessage = $"Error: Failed to submit override request - {SafeErrorMessage.From(ex, NullLogger<DiscountOverridesModel>.Instance, "Discount Overrides operation")}";
         }
 
         return RedirectToPage(new { Search, Status, OverrideType, PageNumber });
@@ -203,7 +221,7 @@ public class DiscountOverridesModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: Failed to review override request - {ex.Message}";
+            StatusMessage = $"Error: Failed to review override request - {SafeErrorMessage.From(ex, NullLogger<DiscountOverridesModel>.Instance, "Discount Overrides operation")}";
         }
 
         return RedirectToPage(new { Search, Status, OverrideType, PageNumber });
@@ -223,7 +241,7 @@ public class DiscountOverridesModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: Failed to cancel override - {ex.Message}";
+            StatusMessage = $"Error: Failed to cancel override - {SafeErrorMessage.From(ex, NullLogger<DiscountOverridesModel>.Instance, "Discount Overrides operation")}";
         }
 
         return RedirectToPage(new { Search, Status, OverrideType, PageNumber });

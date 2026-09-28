@@ -1,4 +1,7 @@
 using Store.TenantPortal.Models.DTOs;
+// MT-02 — re-export the PayDunya response DTO so callers don't need
+// a separate using for Store.Models.DTOs.Payments.
+using CreateInvoiceResponse = Store.Models.DTOs.Payments.CreateInvoiceResponse;
 
 namespace Store.TenantPortal.Services;
 
@@ -10,6 +13,11 @@ public interface IControlPlaneClient
     Task<PortalAuthDto?> LoginAsync(string email, string password, CancellationToken ct = default);
     Task<PortalAuthDto?> GetAccountAsync(Guid accountId, CancellationToken ct = default);
     Task<TenantSummaryDto> ProvisionTenantAsync(ProvisionTenantDto request, CancellationToken ct = default);
+
+    // MT-01 — async provisioning (preferred): submit returns a JobId; portal polls.
+    Task<ProvisioningJobResponse> ProvisionTenantAsyncJobAsync(ProvisionTenantDto request, Guid accountId, CancellationToken ct = default);
+    Task<ProvisioningJobResponse?> GetProvisioningJobAsync(Guid jobId, CancellationToken ct = default);
+    Task<bool> RetryProvisioningJobAsync(Guid jobId, CancellationToken ct = default);
     Task<TenantDetailDto?> GetTenantDetailsAsync(Guid tenantId, CancellationToken ct = default);
     Task<bool> CheckTenantHealthAsync(Guid tenantId, CancellationToken ct = default);
     Task LinkAccountToTenantAsync(Guid accountId, Guid tenantId, CancellationToken ct = default);
@@ -51,5 +59,22 @@ public interface IControlPlaneClient
     Task<bool> RollbackTenantAsync(string slug, Guid snapshotId, CancellationToken ct = default);
     Task<TenantSummaryDto?> CreateSandboxAsync(string slug, Guid releaseId, bool maskData = true, CancellationToken ct = default);
     Task<bool> DeleteSandboxAsync(string slug, string sandboxSlug, CancellationToken ct = default);
+
+    // MT-07 — public tenant status + maintenance windows.
+    // GetTenantPublicStatusAsync is anonymous-friendly (no auth needed).
+    Task<TenantStatusDto?> GetTenantPublicStatusAsync(string slug, CancellationToken ct = default);
+    Task<MaintenanceWindowDto> AddMaintenanceWindowAsync(Guid tenantId, CreateMaintenanceWindowRequest request, CancellationToken ct = default);
+    Task<bool> RemoveMaintenanceWindowAsync(Guid tenantId, Guid windowId, CancellationToken ct = default);
+    Task<bool> ResolveMaintenanceWindowAsync(Guid tenantId, Guid windowId, CancellationToken ct = default);
+
+    // MT-02 — billing surface. GetTenantAsync returns the tenant detail with
+    // current PlanTier so the Billing page can render the upgrade matrix.
+    // CreateBillingInvoiceAsync calls ControlPlane's PayDunya aggregator and
+    // returns the hosted-checkout URL.
+    // GetBillingHistoryAsync returns the full invoice history for the portal's
+    // "recent payments" table.
+    Task<TenantDetailDto?> GetTenantAsync(string slug, CancellationToken ct = default);
+    Task<CreateInvoiceResponse?> CreateBillingInvoiceAsync(string slug, CreateBillingInvoiceRequest request, CancellationToken ct = default);
+    Task<TenantPaymentHistoryDto?> GetBillingHistoryAsync(string slug, CancellationToken ct = default);
 }
 

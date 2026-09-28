@@ -33,12 +33,20 @@ namespace Store.DbServices.Migrations
 
                     b.Property<string>("Action")
                         .IsRequired()
-                        .HasColumnType("longtext")
+                        .HasColumnType("varchar(255)")
                         .HasColumnName("action");
 
                     b.Property<DateTime>("DateCreated")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
 
                     b.Property<string>("Details")
                         .HasColumnType("longtext")
@@ -48,9 +56,17 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("longtext")
                         .HasColumnName("ip_address");
 
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
+
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("last_modified");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("tenant_id");
 
                     b.Property<string>("UserAgent")
                         .HasColumnType("longtext")
@@ -63,8 +79,14 @@ namespace Store.DbServices.Migrations
                     b.HasKey("AuditLogId")
                         .HasName("pk_audit_log");
 
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("ix_audit_log_user_id");
+                    b.HasIndex("Action", "DateCreated")
+                        .HasDatabaseName("ix_audit_log_action_date_created");
+
+                    b.HasIndex("TenantId", "DateCreated")
+                        .HasDatabaseName("ix_audit_log_tenant_date");
+
+                    b.HasIndex("UserId", "DateCreated")
+                        .HasDatabaseName("ix_audit_log_user_id_date_created");
 
                     b.ToTable("audit_log");
                 });
@@ -91,9 +113,21 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<DateTime?>("ExpiryDate")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("expiry_date");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<Guid>("ItemId")
                         .HasColumnType("char(36)")
@@ -122,6 +156,11 @@ namespace Store.DbServices.Migrations
                     b.HasIndex("ItemId")
                         .HasDatabaseName("ix_batch_item_id");
 
+                    // GAP-19 — scanner / batch-tracking lookup by BatchNumber.
+                    b.HasIndex("BatchNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_batch_batch_number");
+
                     b.ToTable("batch");
                 });
 
@@ -147,9 +186,21 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("tinyint(1)")
                         .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<bool>("IsWarehouse")
                         .HasColumnType("tinyint(1)")
@@ -207,9 +258,21 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<int>("InStock")
                         .HasColumnType("int")
                         .HasColumnName("in_stock");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -249,9 +312,21 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("tinyint(1)")
                         .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -323,9 +398,21 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<decimal>("ExpectedAmount")
                         .HasColumnType("decimal(65,30)")
                         .HasColumnName("expected_amount");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -403,9 +490,21 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<decimal?>("ExpectedClosingAmount")
                         .HasColumnType("decimal(65,30)")
                         .HasColumnName("expected_closing_amount");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -438,11 +537,18 @@ namespace Store.DbServices.Migrations
                     b.HasKey("CashierShiftId")
                         .HasName("pk_cashier_shift");
 
+                    b.HasIndex("CashierShiftId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_cashier_shift_cashier_shift_id");
+
                     b.HasIndex("ClosedByUserId")
                         .HasDatabaseName("ix_cashier_shift_closed_by_user_id");
 
-                    b.HasIndex("OpenedByUserId")
-                        .HasDatabaseName("ix_cashier_shift_opened_by_user_id");
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_cashier_shift_status");
+
+                    b.HasIndex("OpenedByUserId", "OpenedAtUtc")
+                        .HasDatabaseName("ix_cashier_shift_opened_by_user_id_opened_at_utc");
 
                     b.ToTable("cashier_shift");
                 });
@@ -460,6 +566,14 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<string>("Description")
                         .HasMaxLength(500)
                         .HasColumnType("varchar(500)")
@@ -468,6 +582,10 @@ namespace Store.DbServices.Migrations
                     b.Property<string>("FullImageUrl")
                         .HasColumnType("longtext")
                         .HasColumnName("full_image_url");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -513,6 +631,14 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<string>("EntityId")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -529,6 +655,10 @@ namespace Store.DbServices.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("varchar(50)")
                         .HasColumnName("ip_address");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -567,6 +697,18 @@ namespace Store.DbServices.Migrations
                     b.Property<DateTime>("DateCreated")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -609,6 +751,18 @@ namespace Store.DbServices.Migrations
                     b.Property<DateTime>("DateCreated")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -669,9 +823,21 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<int>("EmailId")
                         .HasColumnType("int")
                         .HasColumnName("email_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<bool>("IsPrimary")
                         .HasColumnType("tinyint(1)")
@@ -709,6 +875,18 @@ namespace Store.DbServices.Migrations
                     b.Property<DateTime>("DateCreated")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<bool>("IsPrimary")
                         .HasColumnType("tinyint(1)")
@@ -753,6 +931,18 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
+
                     b.Property<bool>("IsVerified")
                         .HasColumnType("tinyint(1)")
                         .HasColumnName("is_verified");
@@ -790,6 +980,14 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<int>("EmailId")
                         .HasColumnType("int")
                         .HasColumnName("email_id");
@@ -797,6 +995,10 @@ namespace Store.DbServices.Migrations
                     b.Property<Guid>("EmployeeId")
                         .HasColumnType("char(36)")
                         .HasColumnName("employee_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<bool>("IsPrimary")
                         .HasColumnType("tinyint(1)")
@@ -831,9 +1033,21 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<Guid>("EmployeeId")
                         .HasColumnType("char(36)")
                         .HasColumnName("employee_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<bool>("IsPrimary")
                         .HasColumnType("tinyint(1)")
@@ -872,9 +1086,21 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<int>("EmailId")
                         .HasColumnType("int")
                         .HasColumnName("email_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<bool>("IsPrimary")
                         .HasColumnType("tinyint(1)")
@@ -912,6 +1138,18 @@ namespace Store.DbServices.Migrations
                     b.Property<DateTime>("DateCreated")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<bool>("IsPrimary")
                         .HasColumnType("tinyint(1)")
@@ -958,6 +1196,18 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
+
                     b.Property<bool>("IsVerified")
                         .HasColumnType("tinyint(1)")
                         .HasColumnName("is_verified");
@@ -1001,9 +1251,21 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<int>("EmailId")
                         .HasColumnType("int")
                         .HasColumnName("email_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<bool>("IsPrimary")
                         .HasColumnType("tinyint(1)")
@@ -1041,6 +1303,18 @@ namespace Store.DbServices.Migrations
                     b.Property<DateTime>("DateCreated")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<bool>("IsPrimary")
                         .HasColumnType("tinyint(1)")
@@ -1083,9 +1357,21 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<int>("EmailId")
                         .HasColumnType("int")
                         .HasColumnName("email_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<bool>("IsPrimary")
                         .HasColumnType("tinyint(1)")
@@ -1123,6 +1409,18 @@ namespace Store.DbServices.Migrations
                     b.Property<DateTime>("DateCreated")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<bool>("IsPrimary")
                         .HasColumnType("tinyint(1)")
@@ -1164,6 +1462,18 @@ namespace Store.DbServices.Migrations
                     b.Property<DateTime>("DateCreated")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<string>("IsoCode")
                         .HasMaxLength(3)
@@ -1214,6 +1524,18 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
+
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("last_modified");
@@ -1249,6 +1571,14 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_of_birth");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -1264,6 +1594,10 @@ namespace Store.DbServices.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("varchar(20)")
                         .HasColumnName("gender");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -1317,6 +1651,18 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
+
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("last_modified");
@@ -1352,9 +1698,21 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("tinyint(1)")
                         .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<Guid>("ItemId")
                         .HasColumnType("char(36)")
@@ -1402,10 +1760,22 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<string>("Description")
                         .HasMaxLength(500)
                         .HasColumnType("varchar(500)")
                         .HasColumnName("description");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -1449,6 +1819,14 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<int>("DiscountType")
                         .HasColumnType("int")
                         .HasColumnName("discount_type");
@@ -1460,6 +1838,10 @@ namespace Store.DbServices.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("tinyint(1)")
                         .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<Guid?>("ItemId")
                         .HasColumnType("char(36)")
@@ -1550,6 +1932,18 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
+
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("last_modified");
@@ -1576,9 +1970,21 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<Guid?>("InvoiceId")
                         .HasColumnType("char(36)")
                         .HasColumnName("invoice_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<Guid?>("ItemId")
                         .HasColumnType("char(36)")
@@ -1656,6 +2062,14 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<string>("EntityId")
                         .HasColumnType("longtext")
                         .HasColumnName("entity_id");
@@ -1677,6 +2091,10 @@ namespace Store.DbServices.Migrations
                     b.Property<long?>("FileSizeBytes")
                         .HasColumnType("bigint")
                         .HasColumnName("file_size_bytes");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -1715,6 +2133,14 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_of_birth");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<int?>("DepartmentId")
                         .HasColumnType("int")
                         .HasColumnName("department_id");
@@ -1740,6 +2166,10 @@ namespace Store.DbServices.Migrations
                     b.Property<int?>("HomeBranchId")
                         .HasColumnType("int")
                         .HasColumnName("home_branch_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -1825,6 +2255,18 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
+
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("last_modified");
@@ -1882,6 +2324,14 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<string>("Description")
                         .HasColumnType("longtext")
                         .HasColumnName("description");
@@ -1889,6 +2339,10 @@ namespace Store.DbServices.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("tinyint(1)")
                         .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -1924,10 +2378,22 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("longtext")
                         .HasColumnName("description");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<bool>("IsPosted")
                         .HasColumnType("tinyint(1)")
@@ -1974,9 +2440,21 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("decimal(65,30)")
                         .HasColumnName("debit_amount");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<string>("Description")
                         .HasColumnType("longtext")
                         .HasColumnName("description");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<Guid>("JournalEntryId")
                         .HasColumnType("char(36)")
@@ -2022,6 +2500,14 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<Guid>("EmployeeId")
                         .HasColumnType("char(36)")
                         .HasColumnName("employee_id")
@@ -2034,6 +2520,10 @@ namespace Store.DbServices.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("tinyint(1)")
                         .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -2082,6 +2572,18 @@ namespace Store.DbServices.Migrations
                     b.Property<DateTime>("DateCreated")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -2153,6 +2655,14 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<Guid>("EmployeeId")
                         .HasColumnType("char(36)")
                         .HasColumnName("employee_id")
@@ -2161,6 +2671,10 @@ namespace Store.DbServices.Migrations
                     b.Property<decimal>("GrossPay")
                         .HasColumnType("decimal(65,30)")
                         .HasColumnName("gross_pay");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -2204,6 +2718,14 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<decimal>("FixedTaxAmount")
                         .HasColumnType("decimal(65,30)")
                         .HasColumnName("fixed_tax_amount");
@@ -2211,6 +2733,10 @@ namespace Store.DbServices.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("tinyint(1)")
                         .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -2250,6 +2776,14 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<int?>("GeneratedPurchaseOrderId")
                         .HasColumnType("int")
                         .HasColumnName("generated_purchase_order_id");
@@ -2257,6 +2791,10 @@ namespace Store.DbServices.Migrations
                     b.Property<int?>("GeneratedStockTransferId")
                         .HasColumnType("int")
                         .HasColumnName("generated_stock_transfer_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<Guid>("ItemId")
                         .HasColumnType("char(36)")
@@ -2328,9 +2866,21 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<DateTime?>("DueDate")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("due_date");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<bool>("IsPaid")
                         .HasColumnType("tinyint(1)")
@@ -2395,9 +2945,21 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<Guid>("InvoiceId")
                         .HasColumnType("char(36)")
                         .HasColumnName("invoice_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -2448,6 +3010,14 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<string>("Description")
                         .HasMaxLength(2000)
                         .HasColumnType("varchar(2000)")
@@ -2464,6 +3034,10 @@ namespace Store.DbServices.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("tinyint(1)")
                         .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -2556,6 +3130,18 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
+
                     b.Property<Guid>("ItemId")
                         .HasColumnType("char(36)")
                         .HasColumnName("item_id");
@@ -2601,6 +3187,18 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
+
                     b.Property<Guid>("ItemId")
                         .HasColumnType("char(36)")
                         .HasColumnName("item_id");
@@ -2639,9 +3237,21 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("int")
                         .HasColumnName("days_warning_before");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<DateTime>("ExpiryDate")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("expiry_date");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<Guid>("ItemId")
                         .HasColumnType("char(36)")
@@ -2676,9 +3286,21 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<DateTime?>("ExpectedDeliveryDate")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("expected_delivery_date");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -2746,6 +3368,18 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
+
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("last_modified");
@@ -2777,6 +3411,18 @@ namespace Store.DbServices.Migrations
                     b.Property<DateTime>("DateCreated")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -2832,6 +3478,14 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<string>("Description")
                         .HasMaxLength(1000)
                         .HasColumnType("varchar(1000)")
@@ -2844,6 +3498,10 @@ namespace Store.DbServices.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("tinyint(1)")
                         .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -2894,6 +3552,18 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
+
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("last_modified");
@@ -2920,9 +3590,21 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<Guid?>("InvoiceId")
                         .HasColumnType("char(36)")
                         .HasColumnName("invoice_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -2967,9 +3649,21 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<string>("FullImageUrl")
                         .HasColumnType("longtext")
                         .HasColumnName("full_image_url");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -3019,6 +3713,18 @@ namespace Store.DbServices.Migrations
                     b.Property<DateTime>("DateCreated")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<bool>("IsPrimary")
                         .HasColumnType("tinyint(1)")
@@ -3071,9 +3777,21 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<Guid>("InvoiceId")
                         .HasColumnType("char(36)")
                         .HasColumnName("invoice_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -3102,6 +3820,13 @@ namespace Store.DbServices.Migrations
                     b.HasIndex("InvoiceId")
                         .HasDatabaseName("ix_mobile_money_transaction_invoice_id");
 
+                    // SEC-15 — UNIQUE on the provider's transaction reference so
+                    // callback duplicates are deduped by the DB, not by the service.
+                    b.HasIndex("ProviderTransactionId")
+                        .IsUnique()
+                        .HasFilter("provider_transaction_id IS NOT NULL AND provider_transaction_id <> ''")
+                        .HasDatabaseName("ux_mobile_money_provider_tx_id");
+
                     b.ToTable("mobile_money_transaction");
                 });
 
@@ -3117,6 +3842,18 @@ namespace Store.DbServices.Migrations
                     b.Property<DateTime>("DateCreated")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<bool>("IsRead")
                         .HasColumnType("tinyint(1)")
@@ -3169,6 +3906,18 @@ namespace Store.DbServices.Migrations
                     b.Property<DateTime>("DateCreated")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<Guid>("ItemId")
                         .HasColumnType("char(36)")
@@ -3227,19 +3976,32 @@ namespace Store.DbServices.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("OtpId"));
 
-                    b.Property<string>("Code")
+                    // SEC-06 — HMAC-SHA256 digest of the OTP code, keyed by Auth:OtpPepper.
+                    b.Property<string>("CodeHash")
                         .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("varchar(10)")
-                        .HasColumnName("code");
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)")
+                        .HasColumnName("code_hash");
 
                     b.Property<DateTime>("DateCreated")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<DateTime>("ExpiresAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("expires_at");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<bool>("IsUsed")
                         .HasColumnType("tinyint(1)")
@@ -3262,8 +4024,10 @@ namespace Store.DbServices.Migrations
                     b.HasKey("OtpId")
                         .HasName("pk_otp");
 
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("ix_otp_user_id");
+                    // SEC-06 — Composite index for the verify-OTP lookup
+                    // (WHERE user_id=? AND purpose=? AND is_used=false AND expires_at > now)
+                    b.HasIndex(new[] { "UserId", "Purpose", "IsUsed", "ExpiresAt" })
+                        .HasDatabaseName("ix_otp_user_purpose_used_expires");
 
                     b.ToTable("otp");
                 });
@@ -3281,9 +4045,21 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<DateTime>("ExpiryDate")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("expiry_date");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<bool>("IsUsed")
                         .HasColumnType("tinyint(1)")
@@ -3328,6 +4104,14 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<DateTime>("EffectiveDate")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("effective_date");
@@ -3343,6 +4127,10 @@ namespace Store.DbServices.Migrations
                     b.Property<int>("FromBranchId")
                         .HasColumnType("int")
                         .HasColumnName("from_branch_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -3404,6 +4192,14 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<DateTime?>("DueDate")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("due_date");
@@ -3411,6 +4207,10 @@ namespace Store.DbServices.Migrations
                     b.Property<DateTime?>("ExpectedDeliveryDate")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("expected_delivery_date");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<bool>("IsPaid")
                         .HasColumnType("tinyint(1)")
@@ -3485,6 +4285,18 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
+
                     b.Property<Guid>("ItemId")
                         .HasColumnType("char(36)")
                         .HasColumnName("item_id");
@@ -3543,6 +4355,18 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
+
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("last_modified");
@@ -3575,10 +4399,22 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<string>("Description")
                         .HasMaxLength(300)
                         .HasColumnType("varchar(300)")
                         .HasColumnName("description");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -3605,6 +4441,7 @@ namespace Store.DbServices.Migrations
                             RoleId = 1,
                             DateCreated = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Full system access",
+                            IsDeleted = false,
                             LastModified = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Name = "Admin"
                         },
@@ -3613,6 +4450,7 @@ namespace Store.DbServices.Migrations
                             RoleId = 2,
                             DateCreated = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Management level access",
+                            IsDeleted = false,
                             LastModified = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Name = "Manager"
                         },
@@ -3621,6 +4459,7 @@ namespace Store.DbServices.Migrations
                             RoleId = 3,
                             DateCreated = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Standard user access",
+                            IsDeleted = false,
                             LastModified = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Name = "User"
                         });
@@ -3639,9 +4478,21 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<bool>("IsAllowed")
                         .HasColumnType("tinyint(1)")
                         .HasColumnName("is_allowed");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -3689,6 +4540,14 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<string>("Description")
                         .HasMaxLength(500)
                         .HasColumnType("varchar(500)")
@@ -3699,6 +4558,10 @@ namespace Store.DbServices.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("varchar(50)")
                         .HasColumnName("grade");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -3721,6 +4584,14 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<decimal?>("DiscountAmount")
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)")
@@ -3729,6 +4600,10 @@ namespace Store.DbServices.Migrations
                     b.Property<Guid>("InvoiceId")
                         .HasColumnType("char(36)")
                         .HasColumnName("invoice_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<Guid>("ItemId")
                         .HasColumnType("char(36)")
@@ -3799,9 +4674,21 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<Guid?>("InvoiceId")
                         .HasColumnType("char(36)")
                         .HasColumnName("invoice_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<Guid>("ItemId")
                         .HasColumnType("char(36)")
@@ -3894,6 +4781,14 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<DateTime?>("DispatchedAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("dispatched_at");
@@ -3905,6 +4800,10 @@ namespace Store.DbServices.Migrations
                     b.Property<int>("FromBranchId")
                         .HasColumnType("int")
                         .HasColumnName("from_branch_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -3971,9 +4870,21 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<int?>("DispatchedQuantity")
                         .HasColumnType("int")
                         .HasColumnName("dispatched_quantity");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<Guid>("ItemId")
                         .HasColumnType("char(36)")
@@ -4027,9 +4938,21 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<string>("FullImageUrl")
                         .HasColumnType("longtext")
                         .HasColumnName("full_image_url");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -4059,6 +4982,10 @@ namespace Store.DbServices.Migrations
                     b.HasKey("SupplierId")
                         .HasName("pk_supplier");
 
+                    b.HasIndex("RegistrationNumber")
+                        .HasDatabaseName("ix_supplier_registration_number")
+                        .HasFilter("registration_number IS NOT NULL");
+
                     b.ToTable("supplier");
                 });
 
@@ -4074,6 +5001,18 @@ namespace Store.DbServices.Migrations
                     b.Property<DateTime>("DateCreated")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<bool>("IsPrimary")
                         .HasColumnType("tinyint(1)")
@@ -4133,7 +5072,7 @@ namespace Store.DbServices.Migrations
                         {
                             SettingKey = "Auth:PasswordRecoveryMethod",
                             Description = "Determines allowed password recovery methods (OTP, TempPassword, Both)",
-                            LastModified = new DateTime(2026, 9, 6, 18, 35, 38, 100, DateTimeKind.Utc).AddTicks(414),
+                            LastModified = new DateTime(2026, 9, 13, 21, 56, 27, 75, DateTimeKind.Utc).AddTicks(4351),
                             SettingValue = "Both"
                         });
                 });
@@ -4155,9 +5094,21 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("tinyint(1)")
                         .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -4176,6 +5127,94 @@ namespace Store.DbServices.Migrations
                         .HasName("pk_tax_profile");
 
                     b.ToTable("tax_profile");
+                });
+
+            modelBuilder.Entity("Store.Models.Entities.TrustedDevice", b =>
+                {
+                    b.Property<int>("TrustedDeviceId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("trusted_device_id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("TrustedDeviceId"));
+
+                    b.Property<DateTime>("DateCreated")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("date_created");
+
+                    b.Property<string>("DeviceId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)")
+                        .HasColumnName("device_id");
+
+                    b.Property<string>("DeviceName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("device_name");
+
+                    b.Property<string>("FingerprintHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)")
+                        .HasColumnName("fingerprint_hash");
+
+                    b.Property<DateTime>("FirstSeenAtUtc")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("first_seen_at_utc");
+
+                    b.Property<string>("IpAddressCidr")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)")
+                        .HasColumnName("ip_address_cidr");
+
+                    b.Property<bool>("IsRevoked")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_revoked");
+
+                    b.Property<bool>("IsTrusted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_trusted");
+
+                    b.Property<DateTime>("LastModified")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("last_modified");
+
+                    b.Property<DateTime>("LastSeenAtUtc")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("last_seen_at_utc");
+
+                    b.Property<DateTime?>("LastWebAuthnAtUtc")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("last_web_authn_at_utc");
+
+                    b.Property<DateTime?>("TrustedUntilUtc")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("trusted_until_utc");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("user_id");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("user_agent");
+
+                    b.HasKey("TrustedDeviceId")
+                        .HasName("pk_trusted_device");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_trusted_device_user_id");
+
+                    b.HasIndex(new[] { "UserId", "DeviceId" }, "ix_trusted_device_user_id_device_id")
+                        .IsUnique();
+
+                    b.HasIndex(new[] { "UserId", "FingerprintHash" }, "ix_trusted_device_user_id_fingerprint_hash")
+                        .IsUnique();
+
+                    b.ToTable("trusted_device");
                 });
 
             modelBuilder.Entity("Store.Models.Entities.Unit", b =>
@@ -4197,10 +5236,22 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<string>("Description")
                         .HasMaxLength(300)
                         .HasColumnType("varchar(300)")
                         .HasColumnName("description");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -4233,6 +5284,14 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<Guid?>("EmployeeId")
                         .HasColumnType("char(36)")
                         .HasColumnName("employee_id");
@@ -4244,6 +5303,10 @@ namespace Store.DbServices.Migrations
                     b.Property<string>("FullImageUrl")
                         .HasColumnType("longtext")
                         .HasColumnName("full_image_url");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -4321,6 +5384,14 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<string>("GrantReason")
                         .HasColumnType("longtext")
                         .HasColumnName("grant_reason");
@@ -4328,6 +5399,10 @@ namespace Store.DbServices.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("tinyint(1)")
                         .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -4377,9 +5452,21 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<bool>("ForcePasswordChange")
                         .HasColumnType("tinyint(1)")
                         .HasColumnName("force_password_change");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime(6)")
@@ -4422,6 +5509,14 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
                     b.Property<string>("DeviceName")
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)")
@@ -4435,6 +5530,10 @@ namespace Store.DbServices.Migrations
                         .HasMaxLength(45)
                         .HasColumnType("varchar(45)")
                         .HasColumnName("ip_address");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<bool>("IsRevoked")
                         .HasColumnType("tinyint(1)")
@@ -4494,6 +5593,18 @@ namespace Store.DbServices.Migrations
                     b.Property<DateTime>("DateCreated")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("date_created");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("deleted_by_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_deleted");
 
                     b.Property<Guid>("ItemId")
                         .HasColumnType("char(36)")
@@ -5069,6 +6180,18 @@ namespace Store.DbServices.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_fido_credential_users_user_id");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Store.Models.Entities.TrustedDevice", b =>
+                {
+                    b.HasOne("Store.Models.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_trusted_device_user_user_id");
 
                     b.Navigation("User");
                 });

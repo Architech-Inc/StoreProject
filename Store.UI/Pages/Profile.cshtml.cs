@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Store.Models.DTOs.Users;
 using Store.Models.Interfaces.Services;
 using StoreUI.Services;
+using Store.Models.Common;
 
 namespace StoreUI.Pages;
 
@@ -28,6 +29,7 @@ public class ProfileModel : SecurePageModel
     public bool TwoFactorEnabled { get; private set; }
     public IReadOnlyCollection<AuditLogDto> RecentActivity { get; private set; } = Array.Empty<AuditLogDto>();
     public List<Store.Models.DTOs.Auth.FidoCredentialDto> RegisteredPasskeys { get; private set; } = new();
+    public List<Store.Models.DTOs.Auth.TrustedDeviceDto> TrustedDevices { get; private set; } = new();
 
     // 2FA Setup state
     [TempData] public string? TwoFactorSharedKey { get; set; }
@@ -45,6 +47,8 @@ public class ProfileModel : SecurePageModel
     [BindProperty] public string? NewPassword { get; set; }
     [BindProperty] public string? ConfirmPassword { get; set; }
     [BindProperty] public IFormFile? AvatarUpload { get; set; }
+    [BindProperty] public string? RevokeDeviceId { get; set; }
+    [BindProperty] public string? TrustDeviceId { get; set; }
 
     public ProfileModel(
         IUserService userService,
@@ -134,6 +138,14 @@ public class ProfileModel : SecurePageModel
                     RegisteredPasskeys = passkeysResponse;
                 }
 
+                // SEC-23 — enrolled devices. The host may not have the
+                // device layer wired; GetAsync returns null in that case.
+                var devicesResponse = await _apiClient.GetAsync<List<Store.Models.DTOs.Auth.TrustedDeviceDto>>("api/webauthn/devices", ct);
+                if (devicesResponse != null)
+                {
+                    TrustedDevices = devicesResponse;
+                }
+
                 var pendingChanges = await _userService.GetPendingContactChangesByUserIdAsync(userId, ct);
                 PendingContactChanges = pendingChanges ?? Array.Empty<ContactChangeRequestDto>();
             }
@@ -198,6 +210,52 @@ public class ProfileModel : SecurePageModel
             TempData["StatusMessage"] = "Error: Could not change password.";
         }
 
+        return RedirectToPage();
+    }
+
+    /// <summary>
+    /// SEC-23 — revoke an enrolled device. Subsequent refresh tokens
+    /// from that fingerprint will be denied; the user must re-authenticate
+    /// (and re-enroll) from the device.
+    /// </summary>
+    public async Task<IActionResult> OnPostRevokeDeviceAsync(CancellationToken ct)
+    {
+        if (!TryGetSecurityContext(out _, out _))
+            return GoToLogin();
+
+        if (string.IsNullOrWhiteSpace(RevokeDeviceId))
+        {
+            TempData["StatusMessage"] = "Error: missing device id.";
+            return RedirectToPage();
+        }
+
+        var ok = await _apiClient.DeleteAsync($"api/webauthn/devices/{Uri.EscapeDataString(RevokeDeviceId)}", ct);
+        TempData["StatusMessage"] = ok
+            ? "Device revoked. It will need to re-authenticate on next sign-in."
+            : "Error: device could not be revoked.";
+        return RedirectToPage();
+    }
+
+    /// <summary>
+    /// SEC-23 — promote a device to operator-trusted for 30 days. A
+    /// trusted device is allowed to refresh from new IPs without
+    /// re-WebAuthn. Useful for shared office workstations.
+    /// </summary>
+    public async Task<IActionResult> OnPostTrustDeviceAsync(CancellationToken ct)
+    {
+        if (!TryGetSecurityContext(out _, out _))
+            return GoToLogin();
+
+        if (string.IsNullOrWhiteSpace(TrustDeviceId))
+        {
+            TempData["StatusMessage"] = "Error: missing device id.";
+            return RedirectToPage();
+        }
+
+        var ok = await _apiClient.PostAsync($"api/webauthn/devices/{Uri.EscapeDataString(TrustDeviceId)}/trust", null, ct);
+        TempData["StatusMessage"] = ok
+            ? "Device trusted for 30 days."
+            : "Error: device could not be trusted.";
         return RedirectToPage();
     }
 
@@ -478,7 +536,7 @@ public class ProfileModel : SecurePageModel
         }
         catch (InvalidOperationException ex)
         {
-            TempData["StatusMessage"] = $"Error: {ex.Message}";
+            TempData["StatusMessage"] = $"Error: {SafeErrorMessage.From(ex, _logger, "Profile operation")}";
         }
         catch (Exception ex)
         {

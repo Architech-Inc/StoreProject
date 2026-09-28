@@ -11,5 +11,5 @@ public interface IItemService
     Task<ItemDto> CreateAsync(CreateItemRequest request, CancellationToken ct = default);
     Task<ItemDto?> UpdateAsync(Guid itemId, UpdateItemRequest request, CancellationToken ct = default);
     Task<bool> AdjustStockAsync(Guid itemId, AdjustStockRequest request, CancellationToken ct = default);
-    Task<bool> DeleteAsync(Guid itemId, CancellationToken ct = default);
+    Task<bool> DeleteAsync(Guid itemId, Guid? deletedById = null, CancellationToken ct = default);
 }

@@ -15,7 +15,17 @@
 
     if (isStandalone) {
         console.info('ClexAn POS running in standalone native app shell.');
-        return;
+    }
+
+    // UX-01 — register the offline service worker on every page load, in
+    // any display mode. Browsers gate the registration by HTTPS + origin,
+    // and localhost is exempted, so dev works out of the box.
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js')
+                .then((reg) => console.info('Service worker registered:', reg.scope))
+                .catch((err) => console.warn('Service worker registration failed:', err));
+        });
     }
 
     function isDismissedRecently() {

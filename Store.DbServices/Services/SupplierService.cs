@@ -410,19 +410,26 @@ public class SupplierService : ISupplierService
         return (await GetByIdAsync(supplier.SupplierId)) ?? MapToDto(supplier);
     }
 
-    public async Task<bool> DeleteAsync(Guid id)
+    public async Task<bool> DeleteAsync(Guid id, Guid? deletedById = null)
     {
-        var supplier = await _uow.Repository<Supplier>().GetByIdAsync(id);
+        var supplier = await _uow.Repository<Supplier>().Query()
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(s => s.SupplierId == id);
         if (supplier is null) return false;
+        if (supplier.IsDeleted) return true; // idempotent
 
-        // Check for related items orders and purchase orders
-        var hasItemsOrders = await _uow.Repository<ItemsOrder>().ExistsAsync(o => o.SupplierId == id);
+        // Guard against deleting suppliers with open purchase orders or items orders.
+        var hasItemsOrders = await _uow.Repository<ItemsOrder>().ExistsAsync(o => o.SupplierId == id && !o.IsDeleted);
         if (hasItemsOrders) return false;
 
-        var hasPurchaseOrders = await _uow.Repository<PurchaseOrder>().ExistsAsync(p => p.SupplierId == id);
+        var hasPurchaseOrders = await _uow.Repository<PurchaseOrder>().ExistsAsync(p => p.SupplierId == id && !p.IsDeleted);
         if (hasPurchaseOrders) return false;
 
-        _uow.Repository<Supplier>().Remove(supplier);
+        supplier.IsDeleted = true;
+        supplier.DeletedAt = DateTime.UtcNow;
+        supplier.DeletedById = deletedById;
+
+        _uow.Repository<Supplier>().Update(supplier);
         await _uow.SaveChangesAsync();
         return true;
     }

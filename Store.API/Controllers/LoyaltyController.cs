@@ -1,10 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Store.API.Contracts;
 using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Loyalty;
 using Store.Models.Interfaces.Services;
 
+using Microsoft.Extensions.Logging;
+using Store.Models.Common;
 namespace Store.API.Controllers;
 
 [ApiController]
@@ -12,12 +13,15 @@ namespace Store.API.Controllers;
 [Authorize]
 public class LoyaltyController : ControllerBase
 {
+    private readonly ILogger<LoyaltyController> _logger;
     private readonly ILoyaltyService _loyaltyService;
 
-    public LoyaltyController(ILoyaltyService loyaltyService)
+    public LoyaltyController(ILoyaltyService loyaltyService, ILogger<LoyaltyController> logger)
     {
         _loyaltyService = loyaltyService;
-    }
+    
+
+        _logger = logger;}
 
     /// <summary>Get aggregate store-wide loyalty metrics and KPI indicators.</summary>
     [HttpGet("metrics")]
@@ -47,7 +51,7 @@ public class LoyaltyController : ControllerBase
     {
         var profile = await _loyaltyService.GetMemberProfileAsync(customerId, ct);
         if (profile is null)
-            return NotFound(ApiErrorResponse.From("not_found", "No loyalty account found for this customer.", traceId: HttpContext.TraceIdentifier));
+            return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "No loyalty account found for this customer.", traceId: HttpContext.TraceIdentifier));
 
         return Ok(ApiResponse<LoyaltyMemberProfileDto>.Ok(profile));
     }
@@ -58,7 +62,7 @@ public class LoyaltyController : ControllerBase
     {
         var account = await _loyaltyService.GetAccountAsync(customerId, ct);
         if (account is null)
-            return NotFound(ApiErrorResponse.From("not_found", "No loyalty account found for this customer.", traceId: HttpContext.TraceIdentifier));
+            return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "No loyalty account found for this customer.", traceId: HttpContext.TraceIdentifier));
 
         var custName = account.Customer != null ? $"{account.Customer.FirstName} {account.Customer.LastName}".Trim() : null;
         return Ok(ApiResponse<LoyaltyAccountDto>.Ok(new LoyaltyAccountDto
@@ -114,7 +118,7 @@ public class LoyaltyController : ControllerBase
         }
         catch (ArgumentOutOfRangeException ex)
         {
-            return BadRequest(ApiErrorResponse.From("invalid_points", ex.Message, traceId: HttpContext.TraceIdentifier));
+            return BadRequest(ApiErrorResponse.From(ErrorCode.InvalidPoints, SafeErrorMessage.From(ex, _logger, "Loyalty operation"), traceId: HttpContext.TraceIdentifier));
         }
     }
 
@@ -130,7 +134,7 @@ public class LoyaltyController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return Conflict(ApiErrorResponse.From("insufficient_points", ex.Message, traceId: HttpContext.TraceIdentifier));
+            return Conflict(ApiErrorResponse.From(ErrorCode.InsufficientPoints, SafeErrorMessage.From(ex, _logger, "Loyalty operation"), traceId: HttpContext.TraceIdentifier));
         }
     }
 
@@ -167,11 +171,11 @@ public class LoyaltyController : ControllerBase
         }
         catch (ArgumentOutOfRangeException ex)
         {
-            return BadRequest(ApiErrorResponse.From("invalid_points", ex.Message, traceId: HttpContext.TraceIdentifier));
+            return BadRequest(ApiErrorResponse.From(ErrorCode.InvalidPoints, SafeErrorMessage.From(ex, _logger, "Loyalty operation"), traceId: HttpContext.TraceIdentifier));
         }
         catch (InvalidOperationException ex)
         {
-            return Conflict(ApiErrorResponse.From("insufficient_points", ex.Message, traceId: HttpContext.TraceIdentifier));
+            return Conflict(ApiErrorResponse.From(ErrorCode.InsufficientPoints, SafeErrorMessage.From(ex, _logger, "Loyalty operation"), traceId: HttpContext.TraceIdentifier));
         }
     }
 

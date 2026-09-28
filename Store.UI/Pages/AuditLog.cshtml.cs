@@ -69,7 +69,9 @@ public class AuditLogModel : SecurePageModel
 
         _apiClient.SetToken(token);
 
-        Metrics = await _auditLogManager.GetMetricsAsync(ct);
+        // MT-05 — pass null tenantId; platform admins see all tenants.
+        // Tenant admins in a future role can be wired to pass their tenant.
+        Metrics = await _auditLogManager.GetMetricsAsync(tenantId: null, ct);
 
         var filter = new AuditLogFilterRequest
         {

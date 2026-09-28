@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Store.API.Contracts;
 using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Inventory;
 using Store.Models.DTOs.Operations;
@@ -48,7 +47,7 @@ public class WastageController : ControllerBase
     {
         var dto = await _wastageService.GetByIdAsync(id);
         if (dto is null)
-            return NotFound(ApiErrorResponse.From("not_found", "Wastage entry not found", traceId: HttpContext.TraceIdentifier));
+            return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "Wastage entry not found", traceId: HttpContext.TraceIdentifier));
         return Ok(ApiResponse<WastageEntryDto>.Ok(dto));
     }
 
@@ -70,7 +69,7 @@ public class WastageController : ControllerBase
     {
         var ok = await _wastageService.DeleteAsync(id);
         if (!ok)
-            return NotFound(ApiErrorResponse.From("not_found", "Wastage entry not found", traceId: HttpContext.TraceIdentifier));
+            return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "Wastage entry not found", traceId: HttpContext.TraceIdentifier));
         return NoContent();
     }
 }

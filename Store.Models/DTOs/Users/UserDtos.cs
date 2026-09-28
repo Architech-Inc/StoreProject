@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Store.Models.DTOs.Auth;
 using Store.Models.Enums;
 
 namespace Store.Models.DTOs.Users;
@@ -31,7 +32,10 @@ public class CreateUserRequest
     [Required, EmailAddress, StringLength(254)]
     public string Email { get; set; } = string.Empty;
 
-    [Required, StringLength(128, MinimumLength = 8)]
+    // SEC-26 — server-side password policy (length, character classes, blocklist,
+    // optional HIBP breach check). The StringLength stays as a hard ceiling so
+    // even when the policy is misconfigured we never accept absurd inputs.
+    [Required, StringLength(128, MinimumLength = 12), PasswordComplexity]
     public string Password { get; set; } = string.Empty;
 
     public int RoleId { get; set; } = 1;
@@ -56,7 +60,8 @@ public class ChangePasswordRequest
     [Required]
     public string CurrentPassword { get; set; } = string.Empty;
 
-    [Required, StringLength(128, MinimumLength = 8)]
+    // SEC-26 — applies the same PasswordComplexity policy as Create.
+    [Required, StringLength(128, MinimumLength = 12), PasswordComplexity]
     public string NewPassword { get; set; } = string.Empty;
 
     [Required, Compare(nameof(NewPassword))]

@@ -4,6 +4,8 @@ using Polly;
 using Polly.Extensions.Http;
 using Store.TenantPortal.Services;
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Store.Models.Common;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add Razor Pages
@@ -106,7 +108,7 @@ app.MapPost("/api/backups/trigger", async (HttpContext ctx, IControlPlaneClient 
         var res = await client.TriggerBackupAsync(session.TenantId.Value, ct);
         return Results.Ok(new { success = true, message = res.Message, data = res });
     } catch (Exception ex) {
-        return Results.Ok(new { success = false, message = ex.Message });
+        return Results.Ok(new { success = false, message = SafeErrorMessage.From(ex, NullLogger.Instance, "TenantPortal endpoint") });
     }
 }).RequireAuthorization();
 
@@ -118,7 +120,7 @@ app.MapPost("/api/backups/providers/s3", async (HttpContext ctx, [FromBody] Stor
         var res = await client.ConfigureS3ProviderAsync(session.TenantId.Value, req, ct);
         return Results.Ok(new { success = true, message = "S3 Configured successfully.", data = res });
     } catch (Exception ex) {
-        return Results.Ok(new { success = false, message = ex.Message });
+        return Results.Ok(new { success = false, message = SafeErrorMessage.From(ex, NullLogger.Instance, "TenantPortal endpoint") });
     }
 }).RequireAuthorization();
 
@@ -130,7 +132,7 @@ app.MapDelete("/api/backups/providers/{provider}", async (string provider, HttpC
         var success = await client.DisconnectBackupProviderAsync(session.TenantId.Value, provider, ct);
         return Results.Ok(new { success, message = success ? "Disconnected" : "Failed to disconnect" });
     } catch (Exception ex) {
-        return Results.Ok(new { success = false, message = ex.Message });
+        return Results.Ok(new { success = false, message = SafeErrorMessage.From(ex, NullLogger.Instance, "TenantPortal endpoint") });
     }
 }).RequireAuthorization();
 
@@ -142,7 +144,7 @@ app.MapPut("/api/backups/schedule", async (HttpContext ctx, [FromBody] Store.Ten
         var res = await client.UpdateBackupScheduleAsync(session.TenantId.Value, req, ct);
         return Results.Ok(new { success = true, message = "Schedule updated." });
     } catch (Exception ex) {
-        return Results.Ok(new { success = false, message = ex.Message });
+        return Results.Ok(new { success = false, message = SafeErrorMessage.From(ex, NullLogger.Instance, "TenantPortal endpoint") });
     }
 }).RequireAuthorization();
 

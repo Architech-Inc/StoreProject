@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Store.API.Contracts;
 using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Operations;
 using Store.Models.Interfaces.Services;
@@ -31,7 +30,7 @@ public class AdminRoleMatrixController : ControllerBase
     {
         if (request.RoleId <= 0 || string.IsNullOrWhiteSpace(request.PermissionKey))
         {
-            return BadRequest(ApiErrorResponse.From("invalid_request", "RoleId and PermissionKey are required.", traceId: HttpContext.TraceIdentifier));
+            return BadRequest(ApiErrorResponse.From(ErrorCode.InvalidRequest, "RoleId and PermissionKey are required.", traceId: HttpContext.TraceIdentifier));
         }
 
         var result = await _ops.UpdateRolePermissionAsync(request, ct);

@@ -1,0 +1,243 @@
+@page "/Billing/{slug}"
+@model Store.TenantPortal.Pages.BillingModel
+@{
+    ViewData["Title"] = $"{Model.TenantName} — Billing";
+}
+
+<div class="billing-page" style="max-width: 1080px; margin: 32px auto; padding: 24px;">
+
+    @if (!string.IsNullOrEmpty(Model.Error))
+    {
+        <div role="alert" style="padding: 12px 16px; background: #fee2e2; color: #991b1b; border-radius: 8px; margin-bottom: 16px;">
+            @Model.Error
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(Model.Success))
+    {
+        <div role="status" style="padding: 12px 16px; background: #d1fae5; color: #065f46; border-radius: 8px; margin-bottom: 16px;">
+            @Model.Success
+        </div>
+    }
+
+    <header style="margin-bottom: 32px;">
+        <h1 style="margin: 0; font-size: 1.75rem; color: var(--text-primary, #111827);">Billing &amp; subscription</h1>
+        <p style="margin: 4px 0 0; color: var(--text-secondary, #6b7280);">
+            Manage your plan for <strong>@Model.TenantName</strong>
+            (<code style="background: #f3f4f6; padding: 2px 6px; border-radius: 4px;">@Model.Slug</code>).
+        </p>
+        <p style="margin: 16px 0 0; font-size: 0.95rem; color: var(--text-secondary, #6b7280);">
+            <span style="display: inline-flex; align-items: center; gap: 8px;">
+                Current plan:
+                <strong style="color: var(--brand, #019c01);">@Model.CurrentTier</strong>
+                @if (!string.IsNullOrEmpty(Model.SubscriptionStatus))
+                {
+                    <span style="padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600;
+                                 background: @(Model.SubscriptionStatus == "Active" ? "#d1fae5" : "#fef3c7");
+                                 color: @(Model.SubscriptionStatus == "Active" ? "#065f46" : "#92400e");">
+                        @Model.SubscriptionStatus
+                    </span>
+                }
+            </span>
+            @if (Model.NextBillingAtUtc.HasValue)
+            {
+                <span style="margin-left: 12px; color: var(--text-secondary, #6b7280); font-size: 0.875rem;">
+                    Next billing: @Model.NextBillingAtUtc.Value.ToString("yyyy-MM-dd")
+                </span>
+            }
+        </p>
+
+        @if (Model.UnlockedFeatures.Any())
+        {
+            <div style="margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px;">
+                @foreach (var feat in Model.UnlockedFeatures)
+                {
+                    <span style="padding: 4px 10px; background: #d1fae5; color: #065f46; border-radius: 999px; font-size: 12px;">@feat</span>
+                }
+            </div>
+        }
+    </header>
+
+    @* Wave 19 — usage vs limits panel. Numbers reflect what's been recorded
+        in the tenant's primary collections; the limits mirror
+        PlanCatalog.GetLimits(tier) so the numbers stay in sync. *@
+    <section style="margin-bottom: 32px;">
+        <h2 style="font-size: 1.125rem; margin: 0 0 12px;">Usage</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+            @{
+                string LimitDisplay(int limit) => limit == int.MaxValue ? "Unlimited" : limit.ToString("N0");
+                double BranchPct = Model.MaxBranches == int.MaxValue ? 0 : Math.Min(100, (Model.CurrentBranches ?? 0) * 100.0 / Model.MaxBranches);
+                double UserPct = Model.MaxUsers == int.MaxValue ? 0 : Math.Min(100, (Model.CurrentUsers ?? 0) * 100.0 / Model.MaxUsers);
+                double InvPct = Model.MaxInvoicesPerMonth == int.MaxValue ? 0 : Math.Min(100, (Model.CurrentInvoicesThisMonth ?? 0) * 100.0 / Model.MaxInvoicesPerMonth);
+            }
+            <div style="background: var(--surface, #fff); border: 1px solid var(--border, #e5e7eb); border-radius: 10px; padding: 16px;">
+                <div style="font-size: 12px; color: var(--text-secondary, #6b7280); text-transform: uppercase; letter-spacing: 0.05em;">Branches</div>
+                <div style="font-size: 1.25rem; font-weight: 600; margin-top: 4px;">
+                    @(Model.CurrentBranches?.ToString() ?? "—") / @LimitDisplay(Model.MaxBranches)
+                </div>
+                @if (Model.MaxBranches != int.MaxValue)
+                {
+                    <div style="margin-top: 8px; height: 6px; background: #f3f4f6; border-radius: 999px; overflow: hidden;">
+                        <div style="height: 100%; background: @(BranchPct > 80 ? "#f59e0b" : "#019c01"); width: @(BranchPct.ToString("0"))%; transition: width 0.3s;"></div>
+                    </div>
+                }
+            </div>
+            <div style="background: var(--surface, #fff); border: 1px solid var(--border, #e5e7eb); border-radius: 10px; padding: 16px;">
+                <div style="font-size: 12px; color: var(--text-secondary, #6b7280); text-transform: uppercase; letter-spacing: 0.05em;">User seats</div>
+                <div style="font-size: 1.25rem; font-weight: 600; margin-top: 4px;">
+                    @(Model.CurrentUsers?.ToString() ?? "—") / @LimitDisplay(Model.MaxUsers)
+                </div>
+                @if (Model.MaxUsers != int.MaxValue)
+                {
+                    <div style="margin-top: 8px; height: 6px; background: #f3f4f6; border-radius: 999px; overflow: hidden;">
+                        <div style="height: 100%; background: @(UserPct > 80 ? "#f59e0b" : "#019c01"); width: @(UserPct.ToString("0"))%;"></div>
+                    </div>
+                }
+            </div>
+            <div style="background: var(--surface, #fff); border: 1px solid var(--border, #e5e7eb); border-radius: 10px; padding: 16px;">
+                <div style="font-size: 12px; color: var(--text-secondary, #6b7280); text-transform: uppercase; letter-spacing: 0.05em;">Invoices / month</div>
+                <div style="font-size: 1.25rem; font-weight: 600; margin-top: 4px;">
+                    @(Model.CurrentInvoicesThisMonth?.ToString() ?? "—") / @LimitDisplay(Model.MaxInvoicesPerMonth)
+                </div>
+                @if (Model.MaxInvoicesPerMonth != int.MaxValue)
+                {
+                    <div style="margin-top: 8px; height: 6px; background: #f3f4f6; border-radius: 999px; overflow: hidden;">
+                        <div style="height: 100%; background: @(InvPct > 80 ? "#f59e0b" : "#019c01"); width: @(InvPct.ToString("0"))%;"></div>
+                    </div>
+                }
+            </div>
+        </div>
+    </section>
+
+    @* Wave 19 — recent-payments table. *@
+    @if (Model.BillingHistory is not null && Model.BillingHistory.Payments.Any())
+    {
+        <section style="margin-bottom: 32px;">
+            <h2 style="font-size: 1.125rem; margin: 0 0 12px;">Recent payments</h2>
+            <div style="background: var(--surface, #fff); border: 1px solid var(--border, #e5e7eb); border-radius: 10px; overflow: hidden;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.875rem;">
+                    <thead>
+                        <tr style="background: #f9fafb; color: var(--text-secondary, #6b7280); text-transform: uppercase; letter-spacing: 0.05em; font-size: 11px;">
+                            <th style="text-align: left; padding: 10px 12px;">Date</th>
+                            <th style="text-align: left; padding: 10px 12px;">Plan</th>
+                            <th style="text-align: left; padding: 10px 12px;">Channel</th>
+                            <th style="text-align: right; padding: 10px 12px;">Amount</th>
+                            <th style="text-align: left; padding: 10px 12px;">Status</th>
+                            <th style="text-align: left; padding: 10px 12px;">Reference</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in Model.BillingHistory.Payments.Take(10))
+                        {
+                            <tr style="border-top: 1px solid var(--border, #e5e7eb);">
+                                <td style="padding: 10px 12px;">@p.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm")</td>
+                                <td style="padding: 10px 12px;">@(p.PlanId ?? "—")</td>
+                                <td style="padding: 10px 12px;">@(p.Channel ?? "—")</td>
+                                <td style="padding: 10px 12px; text-align: right;">@p.Amount.ToString("N0") @p.Currency</td>
+                                <td style="padding: 10px 12px;">
+                                    @{
+                                        var statusColor = p.Status switch
+                                        {
+                                            "completed" => "#065f46",
+                                            "pending" => "#92400e",
+                                            "failed" => "#991b1b",
+                                            "cancelled" => "#6b7280",
+                                            _ => "#1f2937"
+                                        };
+                                        var statusBg = p.Status switch
+                                        {
+                                            "completed" => "#d1fae5",
+                                            "pending" => "#fef3c7",
+                                            "failed" => "#fee2e2",
+                                            "cancelled" => "#f3f4f6",
+                                            _ => "#f9fafb"
+                                        };
+                                    }
+                                    <span style="padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; background: @statusBg; color: @statusColor;">
+                                        @p.Status
+                                    </span>
+                                    @if (!string.IsNullOrEmpty(p.FailureReason))
+                                    {
+                                        <div style="font-size: 11px; color: #991b1b; margin-top: 2px;">@p.FailureReason</div>
+                                    }
+                                </td>
+                                <td style="padding: 10px 12px; font-family: monospace; font-size: 11px; color: var(--text-secondary, #6b7280);">@p.ProviderToken</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    }
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+        @foreach (var plan in Model.Plans)
+        {
+            var isHighlighted = plan.Id == "professional"; // middle tier = recommended
+            var cardBorder = isHighlighted ? "var(--brand, #019c01)" : "var(--border, #e5e7eb)";
+            var cardShadow = isHighlighted ? "0 8px 24px rgba(1, 156, 1, 0.18)" : "var(--shadow-sm, 0 1px 4px rgba(0, 0, 0, 0.04))";
+
+            <div style="background: var(--surface, #fff); border: 2px solid @cardBorder; border-radius: var(--radius-lg, 12px); padding: 24px; box-shadow: @cardShadow; display: flex; flex-direction: column;">
+                @if (isHighlighted)
+                {
+                    <span style="display: inline-block; padding: 4px 10px; background: linear-gradient(135deg, #019c01 0%, #00b800 100%); color: #fff; border-radius: 999px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; align-self: flex-start;">Recommended</span>
+                }
+
+                <h3 style="margin: 0 0 4px; font-size: 1.25rem; font-weight: 600; color: var(--text-primary, #111827);">@plan.Name</h3>
+                <p style="margin: 0 0 16px; color: var(--text-secondary, #6b7280); font-size: 0.875rem;">@plan.Period</p>
+
+                <div style="margin: 0 0 20px;">
+                    <span style="font-size: 1.875rem; font-weight: 700; color: var(--text-primary, #111827);">@plan.Price</span>
+                </div>
+
+                <ul style="list-style: none; padding: 0; margin: 0 0 24px; flex-grow: 1;">
+                    @foreach (var highlight in plan.Highlights)
+                    {
+                        <li style="padding: 6px 0; display: flex; align-items: flex-start; gap: 8px; font-size: 0.9rem; color: var(--text-primary, #1f2937);">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                                 style="color: #019c01; flex-shrink: 0; margin-top: 2px;" aria-hidden="true">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            <span>@highlight</span>
+                        </li>
+                    }
+                </ul>
+
+                @if (plan.IsCurrent)
+                {
+                    <button type="button" disabled
+                            style="width: 100%; padding: 10px 16px; background: var(--surface-alt, #f3f4f6); color: var(--text-secondary, #6b7280); border: 1px solid var(--border, #e5e7eb); border-radius: 8px; font-weight: 600; cursor: not-allowed;">
+                        Current plan
+                    </button>
+                }
+                else if (plan.Id == "enterprise")
+                {
+                    <form method="post" asp-page-handler="Subscribe" style="margin: 0;">
+                        <input type="hidden" name="slug" value="@Model.Slug" />
+                        <input type="hidden" name="planId" value="@plan.Id" />
+                        <button type="submit"
+                                style="width: 100%; padding: 10px 16px; background: var(--surface, #fff); color: var(--text-primary, #111827); border: 1px solid var(--border, #e5e7eb); border-radius: 8px; font-weight: 600; cursor: pointer;">
+                            Contact sales
+                        </button>
+                    </form>
+                }
+                else
+                {
+                    <form method="post" asp-page-handler="Subscribe" style="margin: 0;">
+                        <input type="hidden" name="slug" value="@Model.Slug" />
+                        <input type="hidden" name="planId" value="@plan.Id" />
+                        <button type="submit"
+                                style="width: 100%; padding: 10px 16px; background: linear-gradient(135deg, #019c01 0%, #00b800 100%); color: #fff; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 8px rgba(1, 156, 1, 0.25);">
+                            @((plan.Id == "starter") ? "Start free trial" : "Subscribe")
+                        </button>
+                    </form>
+                }
+            </div>
+        }
+    </div>
+
+    <footer style="margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--border, #e5e7eb); color: var(--text-secondary, #6b7280); font-size: 0.8125rem;">
+        Payments are processed by PayDunya — MTN MoMo, Orange Money, Wave, Visa/Mastercard. No card details are stored on our servers.
+    </footer>
+</div>

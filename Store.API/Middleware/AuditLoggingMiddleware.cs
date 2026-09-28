@@ -80,6 +80,15 @@ public class AuditLoggingMiddleware
             var req = new CreateAuditLogEntryRequest
             {
                 UserId = userGuid == Guid.Empty ? Guid.Empty : userGuid,
+
+                // MT-05 — propagate tenant context. Resolution order:
+                //   1. JWT claim `tenant` (preferred — server-asserted, signed)
+                //   2. X-Tenant-Id request header (set by Traefik forwardAuth or
+                //      by the UI when calling a tenant-scoped endpoint).
+                // Either way we never trust the claim blindly for READ access —
+                // tenant filter is enforced by AuditLogService at the data layer.
+                TenantId = ResolveTenantId(context, userGuid),
+
                 Action = $"{method} {path}",
                 Category = category,
                 Severity = severity,
@@ -129,5 +138,38 @@ public class AuditLoggingMiddleware
             return ("Application", "Warning", $"{method} {path} -> {statusCode}");
 
         return ("Application", "Info", $"{method} {path}");
+    }
+
+    // ─── Helpers ─────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// MT-05 — resolve the tenant scope for this request.
+    ///
+    /// Resolution order:
+    ///   1. JWT claim "tenant"  (server-asserted, signed — preferred).
+    ///   2. HTTP header X-Tenant-Id (set by Traefik forwardAuth or by the
+    ///      Razor UI when issuing tenant-scoped API calls).
+    ///
+    /// Returns <c>null</c> for system-level / pre-provisioning audits. The
+    /// audit service writes NULL verbatim into the <c>tenant_id</c> column
+    /// so pre-tenant audits remain visible to platform admins.
+    /// </summary>
+    private static Guid? ResolveTenantId(HttpContext context, Guid userId)
+    {
+        // 1. JWT claim
+        var tenantClaim = context.User?.FindFirst("tenant")?.Value;
+        if (!string.IsNullOrWhiteSpace(tenantClaim) && Guid.TryParse(tenantClaim, out var claimGuid) && claimGuid != Guid.Empty)
+        {
+            return claimGuid;
+        }
+
+        // 2. Header
+        var headerVal = context.Request.Headers["X-Tenant-Id"].ToString();
+        if (!string.IsNullOrWhiteSpace(headerVal) && Guid.TryParse(headerVal, out var headerGuid) && headerGuid != Guid.Empty)
+        {
+            return headerGuid;
+        }
+
+        return null;
     }
 }

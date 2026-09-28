@@ -7,6 +7,7 @@ using Store.ControlPlane.Models.DTOs;
 using Store.ControlPlane.Repositories;
 using Store.ControlPlane.Services;
 using Xunit;
+using TenantTier = Store.Models.Billing.TenantTier;
 
 namespace Store.API.Tests;
 

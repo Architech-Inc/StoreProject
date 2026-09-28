@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Customers;
 using Store.Models.DTOs.Loyalty;
+using Store.Models.DTOs.Operations;
 using Store.Models.Enums;
 using Store.Models.Interfaces.Services;
 using StoreUI.Services;
@@ -16,6 +17,10 @@ public class CampaignsModel : SecurePageModel
     private readonly IApiClientService _apiClient;
 
     public IReadOnlyList<LoyaltyCampaignDto> Campaigns { get; private set; } = Array.Empty<LoyaltyCampaignDto>();
+
+    // UX-05 — campaign deletion is admin-level (deletes member enrollments
+    // and accrual history). Same key as write: LoyaltyWrite.
+    public bool CanDelete { get; private set; }
 
     // KPI Metrics
     public int LiveCampaignsCount { get; private set; }
@@ -81,8 +86,9 @@ public class CampaignsModel : SecurePageModel
 
     public async Task<IActionResult> OnGetAsync(CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out var token, out _))
+        if (!TryGetSecurityContext(out var token, out var permissions))
             return GoToLogin();
+        CanDelete = HasPermission(permissions, PermissionKeys.LoyaltyWrite);
 
         _apiClient.SetToken(token);
         
@@ -263,9 +269,13 @@ public class CampaignsModel : SecurePageModel
 
     public async Task<IActionResult> OnPostDeleteAsync(int campaignId, CancellationToken ct)
     {
-        if (!TryGetSecurityContext(out var token, out _))
+        if (!TryGetSecurityContext(out var token, out var permissions))
             return GoToLogin();
-
+        if (!HasPermission(permissions, PermissionKeys.LoyaltyWrite))
+        {
+            StatusMessage = "Error: deleting a campaign requires LoyaltyWrite permissions.";
+            return RedirectToPage();
+        }
         _apiClient.SetToken(token);
 
         await _campaignService.DeleteAsync(campaignId, ct);

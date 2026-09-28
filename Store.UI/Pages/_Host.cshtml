@@ -10,7 +10,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Store Management System</title>
     <base href="~/" />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <!-- SEC-18 — Bootstrap CSS loaded from jsdelivr CDN with SRI integrity + crossorigin.
+         Hash covers bootstrap@5.3.0/dist/css/bootstrap.min.css as of Wave 12.
+         Bump the hash whenever the upstream version changes. -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-f67742c946886f3022d855155c98b40a39826a94a63bb4a7a4979fd38f3aaa12e7b99d9c75e4613b4da2b8ae8551454c"
+          crossorigin="anonymous"
+          referrerpolicy="no-referrer" />
     <style>
             body {
                 background-color: #f5f5f5;
@@ -53,7 +60,13 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- SEC-18 — Bootstrap JS loaded from jsdelivr CDN with SRI integrity + crossorigin.
+         Hash covers bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js as of Wave 12.
+         Bump the hash whenever the upstream version changes. -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-81e585efa442c0bb6767cab05a8c0f40d82e2f7466c075410bd16119d94aaf17622498a06ff8ffebc488cb74dee01933"
+            crossorigin="anonymous"
+            referrerpolicy="no-referrer"></script>
 </body>
 
 </html>

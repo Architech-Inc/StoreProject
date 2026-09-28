@@ -5,6 +5,8 @@ using Store.Models.DTOs.Common;
 
 using Microsoft.AspNetCore.RateLimiting;
 
+using Microsoft.Extensions.Logging;
+using Store.Models.Common;
 namespace Store.ControlPlane.Controllers;
 
 [ApiController]
@@ -42,7 +44,7 @@ public class BackupsController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(ApiResponse<object>.Fail(ex.Message));
+            return BadRequest(ApiResponse<object>.Fail(SafeErrorMessage.From(ex, _logger, "Backups operation")));
         }
         catch (Exception ex)
         {
@@ -66,7 +68,7 @@ public class BackupsController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(ApiResponse<object>.Fail(ex.Message));
+            return BadRequest(ApiResponse<object>.Fail(SafeErrorMessage.From(ex, _logger, "Backups operation")));
         }
         catch (Exception ex)
         {
@@ -90,7 +92,7 @@ public class BackupsController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(ApiResponse<object>.Fail(ex.Message));
+            return BadRequest(ApiResponse<object>.Fail(SafeErrorMessage.From(ex, _logger, "Backups operation")));
         }
         catch (Exception ex)
         {
@@ -120,7 +122,7 @@ public class BackupsController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(ApiResponse<object>.Fail(ex.Message));
+            return BadRequest(ApiResponse<object>.Fail(SafeErrorMessage.From(ex, _logger, "Backups operation")));
         }
         catch (Exception ex)
         {

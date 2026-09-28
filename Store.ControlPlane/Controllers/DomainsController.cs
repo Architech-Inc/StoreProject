@@ -3,6 +3,8 @@ using Store.ControlPlane.Models.DTOs;
 using Store.ControlPlane.Services;
 using Store.Models.DTOs.Common;
 
+using Microsoft.Extensions.Logging;
+using Store.Models.Common;
 namespace Store.ControlPlane.Controllers;
 
 [ApiController]
@@ -44,7 +46,7 @@ public class DomainsController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(ApiResponse<object>.Fail(ex.Message));
+            return BadRequest(ApiResponse<object>.Fail(SafeErrorMessage.From(ex, _logger, "Domains operation")));
         }
         catch (Exception ex)
         {
@@ -63,7 +65,7 @@ public class DomainsController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(ApiResponse<object>.Fail(ex.Message));
+            return BadRequest(ApiResponse<object>.Fail(SafeErrorMessage.From(ex, _logger, "Domains operation")));
         }
         catch (Exception ex)
         {

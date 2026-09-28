@@ -122,7 +122,7 @@ public class EmployeeManager : IEmployeeManager
         if (existing.Status == EmployeeStatus.Pending)
         {
             // Hard delete is safe for Pending (e.g. mistaken entry)
-            return await _employeeService.DeleteAsync(employeeId, ct);
+            return await _employeeService.DeleteAsync(employeeId, null, ct);
         }
         
         // Soft delete / terminate for active staff

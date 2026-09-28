@@ -7,4 +7,5 @@ public interface IStoreNotificationClient
     Task ReceiveNotification(StoreNotificationDto notification);
     Task ReceiveDiscountOverrideUpdate(DiscountOverrideNotificationDto dto);
     Task ReceiveLowStockAlert(LowStockAlertDto dto);
+    Task ReceiveRestockRecommendation(RestockRecommendationNotificationDto dto);
 }

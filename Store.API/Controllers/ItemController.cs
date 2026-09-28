@@ -79,7 +79,10 @@ public class ItemController : ControllerBase
     [Authorize(Policy = PermissionKeys.ItemDelete)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
-        var deleted = await _itemService.DeleteAsync(id, ct);
+        var userIdClaim = User.FindFirst("uid")?.Value;
+        Guid.TryParse(userIdClaim, out var deletedById);
+
+        var deleted = await _itemService.DeleteAsync(id, deletedById == Guid.Empty ? null : deletedById, ct);
         if (!deleted) return NotFound(ApiResponse<object>.Fail("Item not found."));
         return Ok(ApiResponse<object>.Ok(null!, "Item deactivated."));
     }

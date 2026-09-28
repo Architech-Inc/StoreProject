@@ -1,7 +1,6 @@
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Store.API.Contracts;
 using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Discounts;
 using Store.Models.DTOs.Operations;
@@ -49,7 +48,7 @@ public class DiscountsController : ControllerBase
     {
         var dto = await _discountService.GetByIdAsync(id);
         if (dto is null)
-            return NotFound(ApiErrorResponse.From("not_found", "Discount not found", traceId: HttpContext.TraceIdentifier));
+            return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "Discount not found", traceId: HttpContext.TraceIdentifier));
         return Ok(ApiResponse<DiscountDto>.Ok(dto));
     }
 
@@ -64,11 +63,11 @@ public class DiscountsController : ControllerBase
     public async Task<IActionResult> ValidateCoupon([FromQuery] string code, [FromQuery] int? branchId)
     {
         if (string.IsNullOrWhiteSpace(code))
-            return BadRequest(ApiErrorResponse.From("bad_request", "Coupon code is required", traceId: HttpContext.TraceIdentifier));
+            return BadRequest(ApiErrorResponse.From(ErrorCode.BadRequest, "Coupon code is required", traceId: HttpContext.TraceIdentifier));
 
         var dto = await _discountService.ValidateCouponAsync(code, branchId);
         if (dto is null)
-            return NotFound(ApiErrorResponse.From("not_found", "Coupon is invalid, expired, or not authorized for this branch", traceId: HttpContext.TraceIdentifier));
+            return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "Coupon is invalid, expired, or not authorized for this branch", traceId: HttpContext.TraceIdentifier));
 
         return Ok(ApiResponse<DiscountDto>.Ok(dto));
     }
@@ -91,7 +90,7 @@ public class DiscountsController : ControllerBase
     {
         var dto = await _discountService.UpdateAsync(id, request);
         if (dto is null)
-            return NotFound(ApiErrorResponse.From("not_found", "Discount not found", traceId: HttpContext.TraceIdentifier));
+            return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "Discount not found", traceId: HttpContext.TraceIdentifier));
         return Ok(ApiResponse<DiscountDto>.Ok(dto));
     }
 
@@ -101,7 +100,7 @@ public class DiscountsController : ControllerBase
     {
         var ok = await _discountService.DeleteAsync(id);
         if (!ok)
-            return NotFound(ApiErrorResponse.From("not_found", "Discount not found", traceId: HttpContext.TraceIdentifier));
+            return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "Discount not found", traceId: HttpContext.TraceIdentifier));
         return NoContent();
     }
 

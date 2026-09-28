@@ -5,7 +5,9 @@ using Store.Models.DTOs.Invoices;
 using Store.Models.Enums;
 using Store.Models.Interfaces.Services;
 using StoreUI.Services;
+using Store.Models.Common;
 
+using Microsoft.Extensions.Logging.Abstractions;
 namespace StoreUI.Pages;
 
 public class InvoicesModel : SecurePageModel
@@ -158,7 +160,7 @@ public class InvoicesModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error voiding invoice: {ex.Message}";
+            StatusMessage = $"Error voiding invoice: {SafeErrorMessage.From(ex, NullLogger<InvoicesModel>.Instance, "Invoices operation")}";
         }
 
         return RedirectToPage(new { page = PageNumber, search = Search, status = Status, payType = PayType, datePreset = DatePreset, fromDate = FromDate?.ToString("yyyy-MM-dd"), toDate = ToDate?.ToString("yyyy-MM-dd"), sortBy = SortBy });
@@ -186,7 +188,7 @@ public class InvoicesModel : SecurePageModel
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new { message = SafeErrorMessage.From(ex, NullLogger<InvoicesModel>.Instance, "Invoices.cs operation") });
         }
     }
 
@@ -209,7 +211,7 @@ public class InvoicesModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new { message = SafeErrorMessage.From(ex, NullLogger<InvoicesModel>.Instance, "Invoices.cs operation") });
         }
     }
 

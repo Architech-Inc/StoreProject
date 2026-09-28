@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Store.Models.Entities.HR;
 using Store.Models.DTOs.HR;
+using Store.Models.DTOs.Operations;
 using StoreUI.Pages;
 using Store.Models.Interfaces.Services;
 using StoreUI.Services;
@@ -21,6 +22,10 @@ public class PayrollModel : SecurePageModel
     public IEnumerable<PayrollRun> PayrollRuns { get; private set; } = new List<PayrollRun>();
     public IEnumerable<TaxBracketDto> TaxBrackets { get; private set; } = new List<TaxBracketDto>();
 
+    // UX-05 — payroll approval + tax-bracket deletion are admin actions.
+    public bool CanApprove { get; private set; }
+    public bool CanDelete { get; private set; }
+
     [BindProperty]
     public DateTime DraftPeriodStart { get; set; } = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
     
@@ -32,8 +37,14 @@ public class PayrollModel : SecurePageModel
 
     public async Task<IActionResult> OnGetAsync()
     {
-        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        if (!TryGetSecurityContext(out var token, out var permissions)) return GoToLogin();
         _apiClient.SetToken(token);
+
+        // UX-05 — payroll approval + tax-bracket deletion both require
+        // AdminUsers. Anyone with PayrollRead/PayrollWrite can view; only
+        // admins can act on destructive operations.
+        CanApprove = HasPermission(permissions, PermissionKeys.AdminUsers);
+        CanDelete = HasPermission(permissions, PermissionKeys.AdminUsers);
 
         var runsTask = _payrollManager.GetAllRunsAsync();
         var bracketsTask = _payrollManager.GetTaxBracketsAsync();
@@ -65,7 +76,16 @@ public class PayrollModel : SecurePageModel
 
     public async Task<IActionResult> OnPostApproveAsync(Guid runId)
     {
-        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        if (!TryGetSecurityContext(out var token, out var permissions)) return GoToLogin();
+
+        // UX-05 — server-side gate. Payroll approval triggers journal
+        // entries; that's an admin action.
+        if (!HasPermission(permissions, PermissionKeys.AdminUsers))
+        {
+            StatusMessage = "Error: approving a payroll run requires administrator privileges.";
+            return RedirectToPage();
+        }
+
         _apiClient.SetToken(token);
 
         var response = await _payrollManager.ApprovePayrollAsync(runId);
@@ -119,7 +139,16 @@ public class PayrollModel : SecurePageModel
 
     public async Task<IActionResult> OnPostDeleteTaxBracketAsync(int id, CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        if (!TryGetSecurityContext(out var token, out var permissions)) return GoToLogin();
+
+        // UX-05 — server-side gate. Tax brackets are global config;
+        // only admins should mutate them.
+        if (!HasPermission(permissions, PermissionKeys.AdminUsers))
+        {
+            StatusMessage = "Error: deleting tax brackets requires administrator privileges.";
+            return RedirectToPage();
+        }
+
         _apiClient.SetToken(token);
 
         var ok = await _payrollManager.DeleteTaxBracketAsync(id, ct);

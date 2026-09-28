@@ -1,10 +1,13 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Store.Models.DTOs.Common;
+using Store.Models.DTOs.Operations;
 using Store.Models.DTOs.Users;
 using Store.Models.Enums;
 using StoreUI.Services;
+using Store.Models.Common;
 
+using Microsoft.Extensions.Logging.Abstractions;
 namespace StoreUI.Pages;
 
 public class UsersModel : SecurePageModel
@@ -16,6 +19,11 @@ public class UsersModel : SecurePageModel
     public int TotalUsers { get; private set; }
     public int ActiveUsersCount { get; private set; }
     public int SuspendedUsersCount { get; private set; }
+
+    // UX-05 — destructive user actions (suspend / generate password /
+    // revoke sessions) require AdminUsers. UI hides the buttons via
+    // CanAdmin; server-side is the authoritative gate.
+    public bool CanAdmin { get; private set; }
     public string? SearchQuery { get; private set; }
     
     public int PendingContactChangesCount { get; private set; }
@@ -47,7 +55,8 @@ public class UsersModel : SecurePageModel
 
     public async Task<IActionResult> OnGetAsync(string? search = null, int page = 1, CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        if (!TryGetSecurityContext(out var token, out var permissions)) return GoToLogin();
+        CanAdmin = HasPermission(permissions, PermissionKeys.AdminUsers);
         _apiClient.SetToken(token);
 
         PageNumber = Math.Max(1, page);
@@ -104,7 +113,7 @@ public class UsersModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: {ex.Message}";
+            StatusMessage = $"Error: {SafeErrorMessage.From(ex, NullLogger<UsersModel>.Instance, "Users operation")}";
         }
 
         return RedirectToPage();
@@ -112,7 +121,12 @@ public class UsersModel : SecurePageModel
 
     public async Task<IActionResult> OnPostSuspendAsync(Guid userId, CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        if (!TryGetSecurityContext(out var token, out var permissions)) return GoToLogin();
+        if (!HasPermission(permissions, PermissionKeys.AdminUsers))
+        {
+            StatusMessage = "Error: suspending a user requires administrator privileges.";
+            return RedirectToPage();
+        }
         _apiClient.SetToken(token);
 
         try
@@ -122,7 +136,7 @@ public class UsersModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: {ex.Message}";
+            StatusMessage = $"Error: {SafeErrorMessage.From(ex, NullLogger<UsersModel>.Instance, "Users operation")}";
         }
 
         return RedirectToPage();
@@ -130,7 +144,12 @@ public class UsersModel : SecurePageModel
 
     public async Task<IActionResult> OnPostIssuePasswordAsync(Guid userId, CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        if (!TryGetSecurityContext(out var token, out var permissions)) return GoToLogin();
+        if (!HasPermission(permissions, PermissionKeys.AdminUsers))
+        {
+            StatusMessage = "Error: issuing a temporary password requires administrator privileges.";
+            return RedirectToPage();
+        }
         _apiClient.SetToken(token);
 
         try
@@ -142,7 +161,7 @@ public class UsersModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: {ex.Message}";
+            StatusMessage = $"Error: {SafeErrorMessage.From(ex, NullLogger<UsersModel>.Instance, "Users operation")}";
         }
 
         return RedirectToPage();
@@ -150,7 +169,12 @@ public class UsersModel : SecurePageModel
 
     public async Task<IActionResult> OnPostRevokeSessionsAsync(Guid userId, CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        if (!TryGetSecurityContext(out var token, out var permissions)) return GoToLogin();
+        if (!HasPermission(permissions, PermissionKeys.AdminUsers))
+        {
+            StatusMessage = "Error: revoking user sessions requires administrator privileges.";
+            return RedirectToPage();
+        }
         _apiClient.SetToken(token);
 
         try
@@ -160,7 +184,7 @@ public class UsersModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: {ex.Message}";
+            StatusMessage = $"Error: {SafeErrorMessage.From(ex, NullLogger<UsersModel>.Instance, "Users operation")}";
         }
 
         return RedirectToPage();
@@ -180,7 +204,7 @@ public class UsersModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { error = ex.Message });
+            return StatusCode(500, new { error = SafeErrorMessage.From(ex, NullLogger<UsersModel>.Instance, "Users.cs operation") });
         }
     }
 }

@@ -1,3 +1,5 @@
+using TenantTier = Store.Models.Billing.TenantTier;
+
 namespace Store.ControlPlane.Models;
 
 public class Tenant
@@ -10,6 +12,18 @@ public class Tenant
     public string Currency { get; set; } = "XAF";
     public TenantStatus Status { get; set; } = TenantStatus.Pending;
     public TenantTier PlanTier { get; set; } = TenantTier.Professional;
+
+    // Wave 18 — subscription lifecycle. Updated by the BillingController when
+    // a PayDunya IPN succeeds. Stale subscriptions fall into GracePeriod then
+    // Expired per PlanCatalog.GetLimits(...).GracePeriodDays.
+    public string? SubscriptionPlanId { get; set; }
+    public SubscriptionStatus SubscriptionStatus { get; set; } = SubscriptionStatus.Active;
+    public DateTime? SubscriptionStartUtc { get; set; }
+    public DateTime? SubscriptionEndUtc { get; set; }
+    public DateTime? NextBillingAtUtc { get; set; }
+    public DateTime? GracePeriodUntilUtc { get; set; }
+    public string? LastPaymentToken { get; set; }
+
     public string CustomDomain { get; set; } = string.Empty;
     public string UiUrl { get; set; } = string.Empty;
     public string ApiUrl { get; set; } = string.Empty;
@@ -21,6 +35,17 @@ public class Tenant
     public List<TenantBackupJobRecord> BackupHistory { get; set; } = new();
     public List<TenantAuditRecord> AuditTrail { get; set; } = new();
     public List<TenantProvisioningLog> ProvisioningLogs { get; set; } = new();
+
+    // Wave 18 — payment history. Each PayDunya IPN appends a record so the
+    // portal can show an invoice history table and operators can audit
+    // failed charges. Stored as JSON (consistent with AuditTrail pattern).
+    public List<TenantPayment> Payments { get; set; } = new();
+
+    // MT-07 — scheduled / in-progress maintenance windows. Operators publish
+    // these to warn tenants before / during planned outages. Stored as a
+    // JSON-serialized collection (see ControlPlaneDbContext). The public
+    // /api/public/tenants/{slug}/status endpoint surfaces this anonymously.
+    public List<MaintenanceWindow> MaintenanceWindows { get; set; } = new();
     public DateTime DateCreated { get; set; } = DateTime.UtcNow;
     public DateTime? LastHealthCheck { get; set; }
     public bool IsHealthy { get; set; }
@@ -118,6 +143,12 @@ public class BackupScheduleConfig
     public int RetentionCount { get; set; } = 14;
     public bool IsEnabled { get; set; } = true;
     public DateTime? NextRunAt { get; set; }
+
+    /// <summary>MT-06 — when the schedule last fired (UTC).</summary>
+    public DateTime? LastRunAt { get; set; }
+
+    /// <summary>MT-06 — outcome of the last scheduled run.</summary>
+    public string? LastRunStatus { get; set; }
 }
 
 public enum BackupFrequency

@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Store.Models.DTOs.Operations;
 using Store.Models.Interfaces.Services;
 
+using Microsoft.Extensions.Logging;
+using Store.Models.Common;
 namespace Store.API.Controllers;
 
 [ApiController]
@@ -10,12 +12,15 @@ namespace Store.API.Controllers;
 [Authorize(Policy = PermissionKeys.AdminBranches)]
 public class BranchController : ControllerBase
 {
+    private readonly ILogger<BranchController> _logger;
     private readonly IStoreOperationsService _ops;
 
-    public BranchController(IStoreOperationsService ops)
+    public BranchController(IStoreOperationsService ops, ILogger<BranchController> logger)
     {
         _ops = ops;
-    }
+    
+
+        _logger = logger;}
 
     [HttpGet]
     public async Task<IActionResult> GetBranches(CancellationToken ct)
@@ -76,7 +81,7 @@ public class BranchController : ControllerBase
         }
         catch (KeyNotFoundException ex)
         {
-            return NotFound(ex.Message);
+            return NotFound(SafeErrorMessage.From(ex, _logger, "Branch operation"));
         }
     }
 
@@ -113,7 +118,7 @@ public class BranchController : ControllerBase
         }
         catch (KeyNotFoundException ex)
         {
-            return NotFound(ex.Message);
+            return NotFound(SafeErrorMessage.From(ex, _logger, "Branch operation"));
         }
     }
 }

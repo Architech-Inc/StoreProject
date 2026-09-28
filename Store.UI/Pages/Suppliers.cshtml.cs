@@ -1,9 +1,11 @@
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
+using Store.Models.DTOs.Operations;
 using Store.Models.DTOs.Procurement;
 using Store.Models.Enums;
 using Store.Models.Interfaces.Services;
 using StoreUI.Services;
+using Store.Models.Common;
 
 namespace StoreUI.Pages;
 
@@ -17,6 +19,9 @@ public class SuppliersModel : SecurePageModel
     public SupplierMetricsDto Metrics { get; private set; } = new();
     public List<string> AvailableCities { get; private set; } = new();
     public List<string> AvailableCountries { get; private set; } = new();
+
+    // UX-05 — supplier deletion is admin-level.
+    public bool CanDelete { get; private set; }
 
     // Query & Filtering
     [BindProperty(SupportsGet = true)] public string? Search { get; set; }
@@ -104,8 +109,9 @@ public class SuppliersModel : SecurePageModel
 
     public async Task<IActionResult> OnGetAsync(CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out var token, out _))
+        if (!TryGetSecurityContext(out var token, out var permissions))
             return GoToLogin();
+        CanDelete = HasPermission(permissions, PermissionKeys.AdminUsers);
 
         _apiClient.SetToken(token);
 
@@ -246,7 +252,7 @@ public class SuppliersModel : SecurePageModel
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to create supplier with name '{SupplierName}'", CreateName);
-            StatusMessage = $"Error: Failed to create supplier ({ex.Message}).";
+            StatusMessage = $"Error: Failed to create supplier ({SafeErrorMessage.From(ex, _logger, "Suppliers operation")}).";
             return RedirectToPage();
         }
     }
@@ -337,9 +343,13 @@ public class SuppliersModel : SecurePageModel
 
     public async Task<IActionResult> OnPostDeleteAsync(Guid supplierId)
     {
-        if (!TryGetSecurityContext(out var token, out _))
+        if (!TryGetSecurityContext(out var token, out var permissions))
             return GoToLogin();
-
+        if (!HasPermission(permissions, PermissionKeys.AdminUsers))
+        {
+            StatusMessage = "Error: deleting a supplier requires administrator privileges.";
+            return RedirectToPage();
+        }
         _apiClient.SetToken(token);
 
         var success = await _supplierService.DeleteAsync(supplierId);

@@ -2,12 +2,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Store.API.Application.Abstractions;
 using Store.API.Application.Users.Requests;
-using Store.API.Contracts;
 using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Operations;
 using Store.Models.DTOs.Users;
 using Store.Models.Interfaces.Services;
 
+using Microsoft.Extensions.Logging;
+using Store.Models.Common;
 namespace Store.API.Controllers;
 
 [ApiController]
@@ -15,16 +16,18 @@ namespace Store.API.Controllers;
 [Authorize]
 public class UsersController : ControllerBase
 {
+    private readonly ILogger<UsersController> _logger;
     private readonly IRequestDispatcher _dispatcher;
     private readonly ISystemSettingService _systemSettings;
     private readonly IUserService _userService;
 
-    public UsersController(IRequestDispatcher dispatcher, ISystemSettingService systemSettings, IUserService userService)
+    public UsersController(IRequestDispatcher dispatcher, ISystemSettingService systemSettings, IUserService userService, ILogger<UsersController> logger)
     {
         _dispatcher = dispatcher;
         _systemSettings = systemSettings;
         _userService = userService;
-    }
+    
+        _logger = logger;}
 
     [HttpGet]
     [Authorize(Policy = PermissionKeys.AdminUsers)]
@@ -40,7 +43,7 @@ public class UsersController : ControllerBase
         var user = await _dispatcher.SendAsync(new GetUserByIdQuery(id), ct);
         if (user is null)
         {
-            return NotFound(ApiErrorResponse.From("not_found", "User not found.", traceId: HttpContext.TraceIdentifier));
+            return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "User not found.", traceId: HttpContext.TraceIdentifier));
         }
 
         return Ok(ApiResponse<UserDto>.Ok(user));
@@ -52,7 +55,7 @@ public class UsersController : ControllerBase
         var user360 = await _userService.Get360ByIdAsync(id, ct);
         if (user360 is null)
         {
-            return NotFound(ApiErrorResponse.From("not_found", "User not found.", traceId: HttpContext.TraceIdentifier));
+            return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "User not found.", traceId: HttpContext.TraceIdentifier));
         }
 
         return Ok(ApiResponse<User360Dto>.Ok(user360));
@@ -73,7 +76,7 @@ public class UsersController : ControllerBase
         var user = await _dispatcher.SendAsync(new UpdateUserCommand(id, request), ct);
         if (user is null)
         {
-            return NotFound(ApiErrorResponse.From("not_found", "User not found.", traceId: HttpContext.TraceIdentifier));
+            return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "User not found.", traceId: HttpContext.TraceIdentifier));
         }
 
         return Ok(ApiResponse<UserDto>.Ok(user));
@@ -86,7 +89,7 @@ public class UsersController : ControllerBase
         var deleted = await _dispatcher.SendAsync(new DeleteUserCommand(id), ct);
         if (!deleted)
         {
-            return NotFound(ApiErrorResponse.From("not_found", "User not found.", traceId: HttpContext.TraceIdentifier));
+            return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "User not found.", traceId: HttpContext.TraceIdentifier));
         }
 
         return Ok(ApiResponse<object>.Ok(null!, "User deactivated."));
@@ -97,7 +100,7 @@ public class UsersController : ControllerBase
     {
         var userIdClaim = User.FindFirst("uid")?.Value;
         if (!Guid.TryParse(userIdClaim, out var userId))
-            return Unauthorized(ApiErrorResponse.From("unauthorized", "Unauthorized.", traceId: HttpContext.TraceIdentifier));
+            return Unauthorized(ApiErrorResponse.From(ErrorCode.Unauthorized, "Unauthorized.", traceId: HttpContext.TraceIdentifier));
 
         var success = await _dispatcher.SendAsync(new ChangeUserPasswordCommand(userId, request), ct);
         if (!success)
@@ -116,7 +119,7 @@ public class UsersController : ControllerBase
     {
         var userIdClaim = User.FindFirst("uid")?.Value;
         if (!Guid.TryParse(userIdClaim, out var userId))
-            return Unauthorized(ApiErrorResponse.From("unauthorized", "Unauthorized.", traceId: HttpContext.TraceIdentifier));
+            return Unauthorized(ApiErrorResponse.From(ErrorCode.Unauthorized, "Unauthorized.", traceId: HttpContext.TraceIdentifier));
 
         var updateRequest = new UpdateUserRequest
         {
@@ -127,7 +130,7 @@ public class UsersController : ControllerBase
         var user = await _dispatcher.SendAsync(new UpdateUserCommand(userId, updateRequest), ct);
         if (user is null)
         {
-            return NotFound(ApiErrorResponse.From("not_found", "User not found.", traceId: HttpContext.TraceIdentifier));
+            return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "User not found.", traceId: HttpContext.TraceIdentifier));
         }
 
         return Ok(ApiResponse<UserDto>.Ok(user, "Avatar updated."));
@@ -138,12 +141,12 @@ public class UsersController : ControllerBase
     {
         var userIdClaim = User.FindFirst("uid")?.Value;
         if (!Guid.TryParse(userIdClaim, out var userId))
-            return Unauthorized(ApiErrorResponse.From("unauthorized", "Unauthorized.", traceId: HttpContext.TraceIdentifier));
+            return Unauthorized(ApiErrorResponse.From(ErrorCode.Unauthorized, "Unauthorized.", traceId: HttpContext.TraceIdentifier));
 
         var success = await _dispatcher.SendAsync(new UpdateUserContactsCommand(userId, request), ct);
         if (!success)
         {
-            return NotFound(ApiErrorResponse.From("not_found", "User not found.", traceId: HttpContext.TraceIdentifier));
+            return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "User not found.", traceId: HttpContext.TraceIdentifier));
         }
 
         return Ok(ApiResponse<object>.Ok(null!, "Contacts updated."));
@@ -162,7 +165,7 @@ public class UsersController : ControllerBase
         var tempPassword = await _dispatcher.SendAsync(new IssueTempPasswordCommand(id), ct);
         if (string.IsNullOrEmpty(tempPassword))
         {
-            return NotFound(ApiErrorResponse.From("not_found", "User not found or unable to issue password.", traceId: HttpContext.TraceIdentifier));
+            return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "User not found or unable to issue password.", traceId: HttpContext.TraceIdentifier));
         }
 
         return Ok(ApiResponse<string>.Ok(tempPassword, "Temporary password issued. User must change it on next login."));
@@ -173,7 +176,7 @@ public class UsersController : ControllerBase
     {
         var userIdClaim = User.FindFirst("uid")?.Value;
         if (!Guid.TryParse(userIdClaim, out var userId))
-            return Unauthorized(ApiErrorResponse.From("unauthorized", "Unauthorized.", traceId: HttpContext.TraceIdentifier));
+            return Unauthorized(ApiErrorResponse.From(ErrorCode.Unauthorized, "Unauthorized.", traceId: HttpContext.TraceIdentifier));
 
         var result = await _dispatcher.SendAsync(new Enable2FACommand(userId), ct);
         return Ok(ApiResponse<Enable2FAResponse>.Ok(result, "2FA setup initiated."));
@@ -184,7 +187,7 @@ public class UsersController : ControllerBase
     {
         var userIdClaim = User.FindFirst("uid")?.Value;
         if (!Guid.TryParse(userIdClaim, out var userId))
-            return Unauthorized(ApiErrorResponse.From("unauthorized", "Unauthorized.", traceId: HttpContext.TraceIdentifier));
+            return Unauthorized(ApiErrorResponse.From(ErrorCode.Unauthorized, "Unauthorized.", traceId: HttpContext.TraceIdentifier));
 
         var success = await _dispatcher.SendAsync(new Verify2FACommand(userId, request), ct);
         if (!success)
@@ -200,7 +203,7 @@ public class UsersController : ControllerBase
     {
         var userIdClaim = User.FindFirst("uid")?.Value;
         if (!Guid.TryParse(userIdClaim, out var userId))
-            return Unauthorized(ApiErrorResponse.From("unauthorized", "Unauthorized.", traceId: HttpContext.TraceIdentifier));
+            return Unauthorized(ApiErrorResponse.From(ErrorCode.Unauthorized, "Unauthorized.", traceId: HttpContext.TraceIdentifier));
 
         var success = await _dispatcher.SendAsync(new Disable2FACommand(userId), ct);
         if (!success)
@@ -216,7 +219,7 @@ public class UsersController : ControllerBase
     {
         var userIdClaim = User.FindFirst("uid")?.Value;
         if (!Guid.TryParse(userIdClaim, out var userId))
-            return Unauthorized(ApiErrorResponse.From("unauthorized", "Unauthorized.", traceId: HttpContext.TraceIdentifier));
+            return Unauthorized(ApiErrorResponse.From(ErrorCode.Unauthorized, "Unauthorized.", traceId: HttpContext.TraceIdentifier));
 
         var result = await _dispatcher.SendAsync(new GetRecentActivityQuery(userId), ct);
         return Ok(ApiResponse<IReadOnlyCollection<AuditLogDto>>.Ok(result));
@@ -227,7 +230,7 @@ public class UsersController : ControllerBase
     {
         var userIdClaim = User.FindFirst("uid")?.Value;
         if (!Guid.TryParse(userIdClaim, out var userId))
-            return Unauthorized(ApiErrorResponse.From("unauthorized", "Unauthorized.", traceId: HttpContext.TraceIdentifier));
+            return Unauthorized(ApiErrorResponse.From(ErrorCode.Unauthorized, "Unauthorized.", traceId: HttpContext.TraceIdentifier));
 
         var success = await _dispatcher.SendAsync(new RevokeAllSessionsCommand(userId), ct);
         if (!success)
@@ -257,7 +260,7 @@ public class UsersController : ControllerBase
     {
         var userIdClaim = User.FindFirst("uid")?.Value;
         if (!Guid.TryParse(userIdClaim, out var userId))
-            return Unauthorized(ApiErrorResponse.From("unauthorized", "Unauthorized.", traceId: HttpContext.TraceIdentifier));
+            return Unauthorized(ApiErrorResponse.From(ErrorCode.Unauthorized, "Unauthorized.", traceId: HttpContext.TraceIdentifier));
 
         try
         {
@@ -266,7 +269,7 @@ public class UsersController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(ApiErrorResponse.From("pending_request_exists", ex.Message, traceId: HttpContext.TraceIdentifier));
+            return BadRequest(ApiErrorResponse.From("pending_request_exists", SafeErrorMessage.From(ex, _logger, "Users operation"), traceId: HttpContext.TraceIdentifier));
         }
     }
 

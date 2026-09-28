@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Store.Models.DTOs.Operations;
 using Store.Models.Entities;
 using StoreUI.Services;
+using Store.Models.Common;
 
+using Microsoft.Extensions.Logging.Abstractions;
 namespace StoreUI.Pages;
 
 public class LookupModel : SecurePageModel
@@ -22,6 +25,10 @@ public class LookupModel : SecurePageModel
     public int TotalDepartments => Departments.Count;
     public int TotalSalaries => Salaries.Count;
 
+    // UX-05 — delete actions on lookup tables are admin actions (categories,
+    // units, departments, salary grades all affect every branch).
+    public bool CanAdmin { get; private set; }
+
     [TempData] public string? StatusMessage { get; set; }
 
     [BindProperty] public IFormFile? CategoryImageUpload { get; set; }
@@ -38,7 +45,8 @@ public class LookupModel : SecurePageModel
 
     public async Task<IActionResult> OnGetAsync(string tab = "categories", CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        if (!TryGetSecurityContext(out var token, out var permissions)) return GoToLogin();
+        CanAdmin = HasPermission(permissions, PermissionKeys.AdminUsers);
         _apiClient.SetToken(token);
 
         ActiveTab = tab is "categories" or "units" or "departments" or "salaries" ? tab : "categories";
@@ -71,7 +79,7 @@ public class LookupModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: {ex.Message}";
+            StatusMessage = $"Error: {SafeErrorMessage.From(ex, NullLogger<LookupModel>.Instance, "Lookup operation")}";
         }
 
         return RedirectToPage("/Lookup", new { tab = "categories" });
@@ -79,7 +87,13 @@ public class LookupModel : SecurePageModel
 
     public async Task<IActionResult> OnPostDeleteCategoryAsync(int id, CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        if (!TryGetSecurityContext(out var token, out var permissions)) return GoToLogin();
+        // UX-05 — server-side gate (categories affect every branch).
+        if (!HasPermission(permissions, PermissionKeys.AdminUsers))
+        {
+            StatusMessage = "Error: deleting a category requires administrator privileges.";
+            return RedirectToPage();
+        }
         _apiClient.SetToken(token);
 
         try
@@ -89,7 +103,7 @@ public class LookupModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: {ex.Message}";
+            StatusMessage = $"Error: {SafeErrorMessage.From(ex, NullLogger<LookupModel>.Instance, "Lookup operation")}";
         }
 
         return RedirectToPage("/Lookup", new { tab = "categories" });
@@ -108,7 +122,7 @@ public class LookupModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: {ex.Message}";
+            StatusMessage = $"Error: {SafeErrorMessage.From(ex, NullLogger<LookupModel>.Instance, "Lookup operation")}";
         }
 
         return RedirectToPage("/Lookup", new { tab = "units" });
@@ -116,7 +130,12 @@ public class LookupModel : SecurePageModel
 
     public async Task<IActionResult> OnPostDeleteUnitAsync(int id, CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        if (!TryGetSecurityContext(out var token, out var permissions)) return GoToLogin();
+        if (!HasPermission(permissions, PermissionKeys.AdminUsers))
+        {
+            StatusMessage = "Error: deleting a measurement unit requires administrator privileges.";
+            return RedirectToPage();
+        }
         _apiClient.SetToken(token);
 
         try
@@ -126,7 +145,7 @@ public class LookupModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: {ex.Message}";
+            StatusMessage = $"Error: {SafeErrorMessage.From(ex, NullLogger<LookupModel>.Instance, "Lookup operation")}";
         }
 
         return RedirectToPage("/Lookup", new { tab = "units" });
@@ -145,7 +164,7 @@ public class LookupModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: {ex.Message}";
+            StatusMessage = $"Error: {SafeErrorMessage.From(ex, NullLogger<LookupModel>.Instance, "Lookup operation")}";
         }
 
         return RedirectToPage("/Lookup", new { tab = "departments" });
@@ -153,7 +172,12 @@ public class LookupModel : SecurePageModel
 
     public async Task<IActionResult> OnPostDeleteDepartmentAsync(int id, CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        if (!TryGetSecurityContext(out var token, out var permissions)) return GoToLogin();
+        if (!HasPermission(permissions, PermissionKeys.AdminUsers))
+        {
+            StatusMessage = "Error: deleting a department requires administrator privileges.";
+            return RedirectToPage();
+        }
         _apiClient.SetToken(token);
 
         try
@@ -163,7 +187,7 @@ public class LookupModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: {ex.Message}";
+            StatusMessage = $"Error: {SafeErrorMessage.From(ex, NullLogger<LookupModel>.Instance, "Lookup operation")}";
         }
 
         return RedirectToPage("/Lookup", new { tab = "departments" });
@@ -182,7 +206,7 @@ public class LookupModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: {ex.Message}";
+            StatusMessage = $"Error: {SafeErrorMessage.From(ex, NullLogger<LookupModel>.Instance, "Lookup operation")}";
         }
 
         return RedirectToPage("/Lookup", new { tab = "salaries" });
@@ -190,7 +214,12 @@ public class LookupModel : SecurePageModel
 
     public async Task<IActionResult> OnPostDeleteSalaryAsync(int id, CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        if (!TryGetSecurityContext(out var token, out var permissions)) return GoToLogin();
+        if (!HasPermission(permissions, PermissionKeys.AdminUsers))
+        {
+            StatusMessage = "Error: deleting a salary grade requires administrator privileges.";
+            return RedirectToPage();
+        }
         _apiClient.SetToken(token);
 
         try
@@ -200,7 +229,7 @@ public class LookupModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: {ex.Message}";
+            StatusMessage = $"Error: {SafeErrorMessage.From(ex, NullLogger<LookupModel>.Instance, "Lookup operation")}";
         }
 
         return RedirectToPage("/Lookup", new { tab = "salaries" });

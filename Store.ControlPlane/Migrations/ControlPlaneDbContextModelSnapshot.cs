@@ -197,6 +197,14 @@ namespace Store.ControlPlane.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    // MT-07 — scheduled / in-progress maintenance windows. JSON-encoded.
+                    b.Property<string>("MaintenanceWindows")
+                        .HasColumnType("longtext");
+
+                    // Wave 18 — payment history surfaced on the Billing page.
+                    b.Property<string>("Payments")
+                        .HasColumnType("longtext");
+
                     b.Property<string>("Secrets")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -213,6 +221,30 @@ namespace Store.ControlPlane.Migrations
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("varchar(500)");
+
+                    // Wave 18 — subscription lifecycle scalars.
+                    b.Property<string>("SubscriptionPlanId")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<int>("SubscriptionStatus")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("SubscriptionStartUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("SubscriptionEndUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("NextBillingAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("GracePeriodUntilUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("LastPaymentToken")
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
 
                     b.HasKey("TenantId");
 

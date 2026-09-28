@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Store.API.Contracts;
 using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Inventory;
 using Store.Models.DTOs.Operations;
@@ -60,7 +59,7 @@ public class BatchesController : ControllerBase
 
         var ok = await _batchService.WriteOffBatchAsync(request, uid, ct);
         if (!ok)
-            return NotFound(ApiErrorResponse.From("not_found", "Batch not found or cannot be written off", traceId: HttpContext.TraceIdentifier));
+            return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "Batch not found or cannot be written off", traceId: HttpContext.TraceIdentifier));
         return Ok(ApiResponse<bool>.Ok(true));
     }
 
@@ -70,7 +69,7 @@ public class BatchesController : ControllerBase
     {
         var dto = await _batchService.GetByIdAsync(id);
         if (dto is null)
-            return NotFound(ApiErrorResponse.From("not_found", "Batch not found", traceId: HttpContext.TraceIdentifier));
+            return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "Batch not found", traceId: HttpContext.TraceIdentifier));
         return Ok(ApiResponse<BatchDto>.Ok(dto));
     }
 
@@ -88,7 +87,7 @@ public class BatchesController : ControllerBase
     {
         var dto = await _batchService.UpdateAsync(id, request);
         if (dto is null)
-            return NotFound(ApiErrorResponse.From("not_found", "Batch not found", traceId: HttpContext.TraceIdentifier));
+            return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "Batch not found", traceId: HttpContext.TraceIdentifier));
         return Ok(ApiResponse<BatchDto>.Ok(dto));
     }
 
@@ -98,7 +97,7 @@ public class BatchesController : ControllerBase
     {
         var ok = await _batchService.DeleteAsync(id);
         if (!ok)
-            return NotFound(ApiErrorResponse.From("not_found", "Batch not found", traceId: HttpContext.TraceIdentifier));
+            return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "Batch not found", traceId: HttpContext.TraceIdentifier));
         return NoContent();
     }
 }

@@ -146,12 +146,28 @@
     <!-- ── Data Display: Table or Grid ──────────────────────── -->
     @if (!Model.Items.Any())
     {
-        <div class="card" style="padding:48px 24px;text-align:center;">
-            <div style="font-size:3rem;margin-bottom:12px;">📦</div>
-            <h3 style="margin:0 0 6px;">No Products Found</h3>
-            <p style="color:var(--ops-subtle);margin:0 0 16px;">There are no catalog items matching your filter criteria.</p>
-            <button type="button" onclick="resetFilters()">Reset Filters</button>
-        </div>
+        // UX-06 — distinguish cold-start from filter miss. Use a strongly-
+        // typed model so the partial gets null-safety and IntelliSense.
+        var isColdStart = !(Model.Items?.Any() ?? false);
+        var empty = new Store.UI.Pages.Shared.EmptyStateModel
+        {
+            Icon = "📦",
+            Title = isColdStart ? "No products yet" : "No products match these filters",
+            Message = isColdStart
+                ? "Create your first item to start building your catalog. Items can be scanned at the POS terminal and surfaced in customer loyalty pricing."
+                : "No catalog items match your current search or filter. Try widening the criteria or reset them to see everything.",
+            CtaText = isColdStart ? "Create Product" : "Reset Filters",
+            CtaHref = isColdStart ? "/Catalog?handler=Create" : null,
+            SecondaryText = isColdStart ? "Import from CSV" : null,
+            SecondaryHref = isColdStart ? "/Catalog/Import" : null
+        };
+        <partial name="_EmptyState" model="empty" />
+        @if (!isColdStart)
+        {
+            <div style="text-align: center; margin-top: -16px;">
+                <button type="button" class="btn-glass" onclick="resetFilters()">Reset Filters</button>
+            </div>
+        }
     }
     else
     {

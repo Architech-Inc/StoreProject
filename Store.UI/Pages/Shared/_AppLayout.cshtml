@@ -91,7 +91,21 @@
     </script>
 </head>
 <body data-authenticated="@(!string.IsNullOrWhiteSpace(token) ? "true" : "false")">
+    @* GAP-23 / UX-02 — mobile sidebar backdrop + hamburger toggle. The
+        toggle is hidden on desktop via CSS media queries (>= 901px). *@
+    <div class="mobile-sidebar-backdrop" id="mobileSidebarBackdrop" onclick="toggleMobileSidebar(false)"></div>
+
     <div class="app-shell" id="appShell">
+        <button type="button" class="mobile-sidebar-toggle" id="mobileSidebarToggle"
+                aria-label="Toggle navigation menu" aria-controls="appSidebar" aria-expanded="false"
+                onclick="toggleMobileSidebar()">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+        </button>
         <aside class="app-sidebar" id="appSidebar" aria-label="Primary navigation">
             <div class="brand-block">
                 <img src="~/images/clarkstore.png" alt="ClexAn Foods" />
@@ -301,6 +315,9 @@
 
     <!-- Global OmniSearch & Command Palette (Ctrl + K) -->
     <partial name="_CommandPalette" />
+
+    <!-- UX-04 — keyboard shortcut help dialog (press ?) -->
+    <partial name="_KeyboardHelp" />
 
     <!-- Real-Time Activity Center & Notification Drawer -->
     <partial name="_NotificationCenter" />

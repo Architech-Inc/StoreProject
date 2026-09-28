@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Store.TenantPortal.Models.DTOs;
 using Store.TenantPortal.Services;
 
+using Store.Models.Common;
 namespace Store.TenantPortal.Pages.OAuth;
 
 [Authorize]
@@ -80,7 +81,7 @@ public class MicrosoftCallbackModel : PageModel
         {
             _logger.LogError(ex, "Failed to complete Microsoft OAuth exchange.");
             IsSuccess = false;
-            Message = $"Failed to connect OneDrive: {ex.Message}";
+            Message = $"Failed to connect OneDrive: {SafeErrorMessage.From(ex, _logger, "Microsoft Callback operation")}";
             return Page();
         }
     }

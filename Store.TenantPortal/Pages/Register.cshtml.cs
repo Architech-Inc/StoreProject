@@ -3,18 +3,21 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Store.TenantPortal.Models.ViewModels;
 using Store.TenantPortal.Services;
 
+using Store.Models.Common;
 namespace Store.TenantPortal.Pages;
 
 public class RegisterModel : PageModel
 {
+    private readonly ILogger<RegisterModel> _logger;
     private readonly IControlPlaneClient _cpClient;
     private readonly IPortalSessionService _sessionService;
 
-    public RegisterModel(IControlPlaneClient cpClient, IPortalSessionService sessionService)
+    public RegisterModel(IControlPlaneClient cpClient, IPortalSessionService sessionService, ILogger<RegisterModel> logger)
     {
         _cpClient = cpClient;
         _sessionService = sessionService;
-    }
+    
+        _logger = logger;}
 
     [BindProperty]
     public RegisterVm Input { get; set; } = new();
@@ -46,7 +49,7 @@ public class RegisterModel : PageModel
         }
         catch (InvalidOperationException ex)
         {
-            ErrorMessage = ex.Message;
+            ErrorMessage = SafeErrorMessage.From(ex, _logger, "Register operation");
             return Page();
         }
         catch (Exception)

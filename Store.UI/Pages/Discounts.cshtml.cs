@@ -4,7 +4,9 @@ using Store.Models.DTOs.Discounts;
 using Store.Models.DTOs.Operations;
 using Store.Models.Enums;
 using StoreUI.Services;
+using Store.Models.Common;
 
+using Microsoft.Extensions.Logging.Abstractions;
 namespace StoreUI.Pages;
 
 public class DiscountsModel : SecurePageModel
@@ -14,6 +16,12 @@ public class DiscountsModel : SecurePageModel
 
     public DiscountMetricsDto Metrics { get; private set; } = new();
     public PagedResult<DiscountDto> DiscountsPaged { get; private set; } = new();
+
+    // UX-05 — secondary affordance gates. Mirrored on the server side
+    // in the OnPost handlers below; never trust the UI flag alone.
+    public bool CanCreate { get; private set; }
+    public bool CanEdit { get; private set; }
+    public bool CanDelete { get; private set; }
 
     [BindProperty(SupportsGet = true)]
     public string? Search { get; set; }
@@ -64,6 +72,12 @@ public class DiscountsModel : SecurePageModel
         {
             return AccessDenied();
         }
+
+        // UX-05 — secondary affordance gates. Set from the same
+        // permission list so server + UI stay in sync.
+        CanCreate = HasPermission(permissions, PermissionKeys.DiscountWrite);
+        CanEdit = HasPermission(permissions, PermissionKeys.DiscountWrite);
+        CanDelete = HasPermission(permissions, PermissionKeys.DiscountWrite);
 
         _apiClient.SetToken(token);
 
@@ -169,8 +183,16 @@ public class DiscountsModel : SecurePageModel
 
     public async Task<IActionResult> OnPostCreateAsync(CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out var token, out _))
+        if (!TryGetSecurityContext(out var token, out var permissions))
             return GoToLogin();
+
+        // UX-05 — server-side gate (UI hides the button via CanCreate,
+        // but never trust the client). DiscountWrite covers create.
+        if (!HasPermission(permissions, PermissionKeys.DiscountWrite))
+        {
+            StatusMessage = "Error: You do not have permission to create discounts.";
+            return RedirectToPage(new { Search, TypeFilter, SegmentFilter, ActiveOnly, PageNumber });
+        }
 
         _apiClient.SetToken(token);
 
@@ -187,7 +209,7 @@ public class DiscountsModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: Failed to create discount - {ex.Message}";
+            StatusMessage = $"Error: Failed to create discount - {SafeErrorMessage.From(ex, NullLogger<DiscountsModel>.Instance, "Discounts operation")}";
         }
 
         return RedirectToPage(new { Search, TypeFilter, SegmentFilter, ActiveOnly, PageNumber });
@@ -195,8 +217,15 @@ public class DiscountsModel : SecurePageModel
 
     public async Task<IActionResult> OnPostEditAsync(CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out var token, out _))
+        if (!TryGetSecurityContext(out var token, out var permissions))
             return GoToLogin();
+
+        // UX-05 — server-side gate. DiscountWrite covers edit.
+        if (!HasPermission(permissions, PermissionKeys.DiscountWrite))
+        {
+            StatusMessage = "Error: You do not have permission to edit discounts.";
+            return RedirectToPage(new { Search, TypeFilter, SegmentFilter, ActiveOnly, PageNumber });
+        }
 
         _apiClient.SetToken(token);
 
@@ -207,7 +236,7 @@ public class DiscountsModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: Failed to update discount - {ex.Message}";
+            StatusMessage = $"Error: Failed to update discount - {SafeErrorMessage.From(ex, NullLogger<DiscountsModel>.Instance, "Discounts operation")}";
         }
 
         return RedirectToPage(new { Search, TypeFilter, SegmentFilter, ActiveOnly, PageNumber });
@@ -215,8 +244,18 @@ public class DiscountsModel : SecurePageModel
 
     public async Task<IActionResult> OnPostDeleteAsync(CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out var token, out _))
+        if (!TryGetSecurityContext(out var token, out var permissions))
             return GoToLogin();
+
+        // UX-05 — server-side gate. DiscountWrite covers delete (deletion
+        // is destructive — a stricter admin-only key would be possible
+        // later via an AdminDiscounts permission, but for now the write
+        // key gates the whole CRUD set).
+        if (!HasPermission(permissions, PermissionKeys.DiscountWrite))
+        {
+            StatusMessage = "Error: You do not have permission to delete discounts.";
+            return RedirectToPage(new { Search, TypeFilter, SegmentFilter, ActiveOnly, PageNumber });
+        }
 
         _apiClient.SetToken(token);
 
@@ -227,7 +266,7 @@ public class DiscountsModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: Failed to delete discount - {ex.Message}";
+            StatusMessage = $"Error: Failed to delete discount - {SafeErrorMessage.From(ex, NullLogger<DiscountsModel>.Instance, "Discounts operation")}";
         }
 
         return RedirectToPage(new { Search, TypeFilter, SegmentFilter, ActiveOnly, PageNumber });

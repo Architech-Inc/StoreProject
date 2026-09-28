@@ -211,14 +211,22 @@ public class EmployeeService : IEmployeeService
         return await GetByIdAsync(employeeId, ct);
     }
 
-    public async Task<bool> DeleteAsync(Guid employeeId, CancellationToken ct = default)
+    public async Task<bool> DeleteAsync(Guid employeeId, Guid? deletedById = null, CancellationToken ct = default)
     {
         var employee = await _uow.Repository<Employee>().Query()
+            .IgnoreQueryFilters()
             .FirstOrDefaultAsync(e => e.EmployeeId == employeeId, ct);
 
         if (employee is null) return false;
+        if (employee.IsDeleted) return true; // idempotent
 
+        // Soft-delete + audit columns. We also flip Status to Fired so the
+        // existing "fired employee" filters keep working without change.
+        employee.IsDeleted = true;
+        employee.DeletedAt = DateTime.UtcNow;
+        employee.DeletedById = deletedById;
         employee.Status = EmployeeStatus.Fired;
+
         _uow.Repository<Employee>().Update(employee);
         await _uow.SaveChangesAsync(ct);
         return true;

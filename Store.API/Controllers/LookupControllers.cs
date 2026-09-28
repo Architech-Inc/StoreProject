@@ -6,6 +6,8 @@ using Store.Models.DTOs.Operations;
 using Store.Models.Entities;
 using Store.Models.Interfaces.Services;
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Store.Models.Common;
 namespace Store.API.Controllers;
 
 [ApiController]
@@ -168,7 +170,7 @@ public class SalariesController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(ApiResponse<object>.Fail(ex.Message));
+            return BadRequest(ApiResponse<object>.Fail(SafeErrorMessage.From(ex, NullLogger<SalariesController>.Instance, "SalariesController operation")));
         }
     }
 
@@ -184,7 +186,7 @@ public class SalariesController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(ApiResponse<object>.Fail(ex.Message));
+            return BadRequest(ApiResponse<object>.Fail(SafeErrorMessage.From(ex, NullLogger<SalariesController>.Instance, "SalariesController operation")));
         }
     }
 
@@ -200,7 +202,7 @@ public class SalariesController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(ApiResponse<object>.Fail(ex.Message));
+            return BadRequest(ApiResponse<object>.Fail(SafeErrorMessage.From(ex, NullLogger<SalariesController>.Instance, "SalariesController operation")));
         }
     }
 }

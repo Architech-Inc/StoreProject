@@ -82,7 +82,15 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISalaryService, SalaryService>();
         services.AddScoped<IDemandForecastingService, DemandForecastingService>();
         services.AddScoped<IEmailService, MockEmailService>();
-        
+
+        // SEC-06 — HMAC pepper for OTP hashing. Bound at startup so the service
+        // throws on construction if the pepper is missing or < 32 bytes (raw or base64-decoded).
+        services.AddOptions<OtpPepperOptions>()
+                .Bind(config.GetSection(OtpPepperOptions.SectionName))
+                .Validate(o => !string.IsNullOrWhiteSpace(o.OtpPepper),
+                    "Auth:OtpPepper must be set to a non-empty value (env var Auth__OtpPepper).")
+                .ValidateOnStart();
+
         services.AddHostedService<OfflineLogSyncWorker>();
         services.AddHostedService<LogRetentionWorker>();
         services.AddHostedService<AutomatedReorderWorker>();

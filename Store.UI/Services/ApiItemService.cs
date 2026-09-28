@@ -67,7 +67,7 @@ public class ApiItemService : IItemService
         return result.HasValue && result.Value;
     }
 
-    public async Task<bool> DeleteAsync(Guid itemId, CancellationToken ct = default)
+    public async Task<bool> DeleteAsync(Guid itemId, Guid? deletedById = null, CancellationToken ct = default)
     {
         return await _client.DeleteAsync($"/api/items/{itemId}", ct);
     }

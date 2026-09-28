@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Store.Models.DTOs.Operations;
 using StoreUI.Services;
+using Store.Models.Common;
 
+using Microsoft.Extensions.Logging.Abstractions;
 namespace StoreUI.Pages;
 
 public class ReconciliationModel : SecurePageModel
@@ -68,7 +70,7 @@ public class ReconciliationModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Failed to load day-end reconciliation data: {ex.Message}";
+            ErrorMessage = $"Failed to load day-end reconciliation data: {SafeErrorMessage.From(ex, NullLogger<ReconciliationModel>.Instance, "Reconciliation operation")}";
         }
 
         return Page();

@@ -1,7 +1,8 @@
 using System.Net;
 using System.Text.Json;
 using Store.API.Application.Common;
-using Store.API.Contracts;
+using Store.Models.Common;
+using Store.Models.DTOs.Common;
 
 namespace Store.API.Middleware;
 
@@ -43,17 +44,17 @@ public class ExceptionHandlingMiddleware
         var (statusCode, code, message, errors) = exception switch
         {
             RequestValidationException vex =>
-                (HttpStatusCode.BadRequest, "validation_error", "Validation failed.", vex.Errors),
+                (HttpStatusCode.BadRequest, ErrorCode.ValidationError, "Validation failed.", vex.Errors),
             InvalidOperationException =>
-                (HttpStatusCode.BadRequest, "invalid_operation", exception.Message, (IReadOnlyCollection<string>?)null),
+                (HttpStatusCode.BadRequest, ErrorCode.InvalidRequest, SafeErrorMessage.From(exception, _logger, "InvalidOperation"), (IReadOnlyCollection<string>?)null),
             UnauthorizedAccessException =>
-                (HttpStatusCode.Unauthorized, "unauthorized", "Unauthorized.", (IReadOnlyCollection<string>?)null),
+                (HttpStatusCode.Unauthorized, ErrorCode.Unauthorized, "Unauthorized.", (IReadOnlyCollection<string>?)null),
             KeyNotFoundException =>
-                (HttpStatusCode.NotFound, "not_found", exception.Message, (IReadOnlyCollection<string>?)null),
+                (HttpStatusCode.NotFound, ErrorCode.NotFound, SafeErrorMessage.From(exception, _logger, "NotFound"), (IReadOnlyCollection<string>?)null),
             ArgumentException =>
-                (HttpStatusCode.BadRequest, "invalid_argument", exception.Message, (IReadOnlyCollection<string>?)null),
+                (HttpStatusCode.BadRequest, ErrorCode.InvalidRequest, SafeErrorMessage.From(exception, _logger, "Argument"), (IReadOnlyCollection<string>?)null),
             _ =>
-                (HttpStatusCode.InternalServerError, "server_error", "An unexpected error occurred.", (IReadOnlyCollection<string>?)null)
+                (HttpStatusCode.InternalServerError, ErrorCode.Internal, "An unexpected error occurred.", (IReadOnlyCollection<string>?)null)
         };
 
         context.Response.StatusCode = (int)statusCode;

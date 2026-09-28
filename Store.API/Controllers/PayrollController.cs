@@ -1,12 +1,13 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Store.API.Contracts;
-using Store.DbServices.Services.Interfaces;
 using Store.Models.DTOs.Common;
+using Store.DbServices.Services.Interfaces;
 using Store.Models.DTOs.Operations;
 using Store.Models.Entities.HR;
 using Store.Models.Enums;
 
+using Microsoft.Extensions.Logging;
+using Store.Models.Common;
 namespace Store.API.Controllers;
 
 [ApiController]
@@ -63,7 +64,7 @@ public class PayrollController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(ApiResponse.Fail(ex.Message));
+            return BadRequest(ApiResponse.Fail(SafeErrorMessage.From(ex, _logger, "Payroll operation")));
         }
         catch (Exception ex)
         {
@@ -86,7 +87,7 @@ public class PayrollController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(ApiResponse.Fail(ex.Message));
+            return BadRequest(ApiResponse.Fail(SafeErrorMessage.From(ex, _logger, "Payroll operation")));
         }
         catch (KeyNotFoundException)
         {
@@ -104,7 +105,7 @@ public class PayrollController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(ApiResponse.Fail(ex.Message));
+            return BadRequest(ApiResponse.Fail(SafeErrorMessage.From(ex, _logger, "Payroll operation")));
         }
         catch (KeyNotFoundException)
         {

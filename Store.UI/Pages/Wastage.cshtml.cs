@@ -1,9 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
 using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Inventory;
+using Store.Models.DTOs.Operations;
 using Store.Models.Enums;
 using StoreUI.Services;
+using Store.Models.Common;
 
+using Microsoft.Extensions.Logging.Abstractions;
 namespace StoreUI.Pages;
 
 public class WastageModel : SecurePageModel
@@ -13,6 +16,11 @@ public class WastageModel : SecurePageModel
 
     public WastageMetricsDto Metrics { get; private set; } = new();
     public PagedResult<WastageEntryDto> WastagePaged { get; private set; } = new();
+
+    // UX-05 — gate the write buttons. Read access is still allowed for any
+    // user with InventoryRead so they can audit wastage.
+    public bool CanRecord { get; private set; }
+    public bool CanDelete { get; private set; }
 
     [BindProperty(SupportsGet = true)]
     public string? Search { get; set; }
@@ -42,10 +50,17 @@ public class WastageModel : SecurePageModel
 
     public async Task<IActionResult> OnGetAsync(CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out var token, out _))
+        if (!TryGetSecurityContext(out var token, out var permissions))
             return GoToLogin();
 
         _apiClient.SetToken(token);
+
+        // UX-05 — page-level permission flags. Inherited from SecurePageModel.
+        CanRecord = HasPermission(permissions, PermissionKeys.InventoryWrite);
+        // Deletion of an existing wastage row is more sensitive than recording
+        // a new one — restrict to Admin only. InventoryWrite would let a manager
+        // add noise to the audit trail.
+        CanDelete = HasPermission(permissions, PermissionKeys.AdminUsers);
 
         Metrics = await _wastageManager.GetMetricsAsync(ct);
 
@@ -102,7 +117,7 @@ public class WastageModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: Failed to record wastage entry - {ex.Message}";
+            StatusMessage = $"Error: Failed to record wastage entry - {SafeErrorMessage.From(ex, NullLogger<WastageModel>.Instance, "Wastage operation")}";
         }
 
         return RedirectToPage(new { Search, WastageTypeFilter, PageNumber });
@@ -122,7 +137,7 @@ public class WastageModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: Failed to delete wastage entry - {ex.Message}";
+            StatusMessage = $"Error: Failed to delete wastage entry - {SafeErrorMessage.From(ex, NullLogger<WastageModel>.Instance, "Wastage operation")}";
         }
 
         return RedirectToPage(new { Search, WastageTypeFilter, PageNumber });

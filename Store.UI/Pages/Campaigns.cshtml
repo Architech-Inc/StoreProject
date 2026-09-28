@@ -538,7 +538,10 @@
                 <input type="hidden" name="campaignId" id="delCampId" />
                 <input type="hidden" name="ViewMode" value="@Model.ViewMode" />
                 <button type="button" class="button-command" style="flex:1;" onclick="closeDelete()">Cancel</button>
-                <button type="submit" class="btn-primary" style="flex:1; background:#dc2626; border-color:#dc2626; color:white;">Delete</button>
+                @if (Model.CanDelete)
+                {
+                    <button type="submit" class="btn-primary" style="flex:1; background:#dc2626; border-color:#dc2626; color:white;">Delete</button>
+                }
             </form>
         </div>
     </div>

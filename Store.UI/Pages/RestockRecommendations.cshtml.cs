@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Store.Models.Entities.Inventory;
+using Store.Models.DTOs.Common;
+using Store.Models.DTOs.Operations;
 using StoreUI.Services;
 
 namespace StoreUI.Pages;
@@ -16,70 +17,141 @@ public class RestockRecommendationsModel : SecurePageModel
         _logger = logger;
     }
 
-    public List<RestockRecommendation> Recommendations { get; set; } = new();
+    public List<RestockRecommendationDto> Recommendations { get; set; } = new();
+    public RestockSummaryDto? Summary { get; set; }
+    public BulkOrderResultDto? LastBulkResult { get; set; }
+
+    public string? StatusMessage { get; set; }
+    public bool StatusIsError { get; set; }
 
     public async Task<IActionResult> OnGetAsync()
     {
-        _apiClient.SetToken(HttpContext.Session.GetString("access_token"));
-        
+        var token = HttpContext.Session.GetString("access_token");
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return GoToLogin();
+        }
+        _apiClient.SetToken(token);
+
         try
         {
-            var result = await _apiClient.GetAsync<List<RestockRecommendation>>("api/Restock/pending");
-            if (result != null)
+            var recsTask = _apiClient.GetAsync<List<RestockRecommendationDto>>("api/Restock/pending");
+            var summaryTask = _apiClient.GetAsync<RestockSummaryDto>("api/Restock/summary");
+            await Task.WhenAll(recsTask, summaryTask);
+
+            if (recsTask.Result is not null) Recommendations = recsTask.Result;
+            Summary = summaryTask.Result;
+
+            if (TempData.TryGetValue("BulkOrderResult", out var raw) && raw is string json)
             {
-                Recommendations = result;
+                try
+                {
+                    LastBulkResult = System.Text.Json.JsonSerializer.Deserialize<BulkOrderResultDto>(json);
+                }
+                catch (Exception parseEx)
+                {
+                    _logger.LogWarning(parseEx, "Failed to deserialize stored bulk-order result.");
+                }
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to load restock recommendations.");
-            TempData["StatusMessage"] = "Error: Failed to load recommendations.";
+            StatusMessage = "Failed to load restock recommendations.";
+            StatusIsError = true;
         }
-        
+
         return Page();
     }
 
     public async Task<IActionResult> OnPostConvertToTransferAsync(Guid id)
     {
-        _apiClient.SetToken(HttpContext.Session.GetString("access_token"));
-        var success = await _apiClient.PostAsync($"api/Restock/{id}/convert-to-transfer", null);
-        if (success)
+        var token = HttpContext.Session.GetString("access_token");
+        if (string.IsNullOrWhiteSpace(token)) return GoToLogin();
+        _apiClient.SetToken(token);
+        try
         {
-            TempData["StatusMessage"] = "Successfully generated stock transfer request.";
+            var result = await _apiClient.PostAsync<RestockConversionResultDto>($"api/Restock/{id}/convert-to-transfer", null);
+            StatusMessage = result?.Message ?? "Transfer request submitted.";
+            StatusIsError = !(result?.Success ?? false);
         }
-        else
+        catch (Exception ex)
         {
-            TempData["StatusMessage"] = "Error: Failed to generate stock transfer.";
+            _logger.LogError(ex, "Failed to convert recommendation {Id} to transfer.", id);
+            StatusMessage = "Failed to submit transfer request.";
+            StatusIsError = true;
         }
         return RedirectToPage();
     }
 
     public async Task<IActionResult> OnPostConvertToPurchaseOrderAsync(Guid id)
     {
-        _apiClient.SetToken(HttpContext.Session.GetString("access_token"));
-        var success = await _apiClient.PostAsync($"api/Restock/{id}/convert-to-po", null);
-        if (success)
+        var token = HttpContext.Session.GetString("access_token");
+        if (string.IsNullOrWhiteSpace(token)) return GoToLogin();
+        _apiClient.SetToken(token);
+        try
         {
-            TempData["StatusMessage"] = "Successfully generated purchase order.";
+            var result = await _apiClient.PostAsync<RestockConversionResultDto>($"api/Restock/{id}/convert-to-po", null);
+            StatusMessage = result?.Message ?? "Purchase order submitted.";
+            StatusIsError = !(result?.Success ?? false);
         }
-        else
+        catch (Exception ex)
         {
-            TempData["StatusMessage"] = "Error: Failed to generate purchase order.";
+            _logger.LogError(ex, "Failed to convert recommendation {Id} to PO.", id);
+            StatusMessage = "Failed to submit purchase order.";
+            StatusIsError = true;
         }
         return RedirectToPage();
     }
 
     public async Task<IActionResult> OnPostDismissAsync(Guid id)
     {
-        _apiClient.SetToken(HttpContext.Session.GetString("access_token"));
-        var success = await _apiClient.PostAsync($"api/Restock/{id}/dismiss", null);
-        if (success)
+        var token = HttpContext.Session.GetString("access_token");
+        if (string.IsNullOrWhiteSpace(token)) return GoToLogin();
+        _apiClient.SetToken(token);
+        try
         {
-            TempData["StatusMessage"] = "Recommendation dismissed.";
+            var result = await _apiClient.PostAsync<RestockConversionResultDto>($"api/Restock/{id}/dismiss", null);
+            StatusMessage = result?.Message ?? "Recommendation dismissed.";
+            StatusIsError = !(result?.Success ?? false);
         }
-        else
+        catch (Exception ex)
         {
-            TempData["StatusMessage"] = "Error: Failed to dismiss recommendation.";
+            _logger.LogError(ex, "Failed to dismiss recommendation {Id}.", id);
+            StatusMessage = "Failed to dismiss recommendation.";
+            StatusIsError = true;
+        }
+        return RedirectToPage();
+    }
+
+    public async Task<IActionResult> OnPostBulkOrderCriticalAsync()
+    {
+        var token = HttpContext.Session.GetString("access_token");
+        if (string.IsNullOrWhiteSpace(token)) return GoToLogin();
+        _apiClient.SetToken(token);
+        try
+        {
+            var result = await _apiClient.PostAsync<BulkOrderResultDto>("api/Restock/bulk-order-critical", null);
+            if (result is null)
+            {
+                StatusMessage = "Bulk-order failed: server returned no result.";
+                StatusIsError = true;
+            }
+            else
+            {
+                LastBulkResult = result;
+                TempData["BulkOrderResult"] = System.Text.Json.JsonSerializer.Serialize(result);
+                StatusMessage = result.Success
+                    ? $"{result.PurchaseOrdersCreated} purchase order(s) created; {result.Skipped} skipped."
+                    : result.Message;
+                StatusIsError = !result.Success;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Bulk-order critical failed.");
+            StatusMessage = "Bulk-order failed; see server logs for details.";
+            StatusIsError = true;
         }
         return RedirectToPage();
     }

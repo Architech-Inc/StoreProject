@@ -120,13 +120,17 @@
 
             @if (!Model.RecentInvoices.Any())
             {
-                <div class="dash-empty-state">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    <h4>No Invoices Recorded</h4>
-                    <p>No recent billing activity found in system.</p>
-                </div>
+                // UX-06 — guide the operator to action.
+                var empty = new Store.UI.Pages.Shared.EmptyStateModel
+                {
+                    Icon = "🧾",
+                    Title = "No invoices yet",
+                    Message = "Once a sale is completed at the POS terminal, the invoice will appear here. Run your first sale to populate this list.",
+                    CtaText = "Open POS Terminal",
+                    CtaHref = "/Pos",
+                    Variant = "muted"
+                };
+                <partial name="_EmptyState" model="empty" />
             }
             else
             {

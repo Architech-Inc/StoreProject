@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Store.API.Contracts;
 using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Operations;
 using Store.Models.DTOs.Procurement;
@@ -56,7 +55,7 @@ public class PurchaseOrdersController : ControllerBase
     {
         var dto = await _poService.GetByIdAsync(id);
         if (dto is null)
-            return NotFound(ApiErrorResponse.From("not_found", "Purchase order not found",
+            return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "Purchase order not found",
                 traceId: HttpContext.TraceIdentifier));
         return Ok(ApiResponse<PurchaseOrderDto>.Ok(dto));
     }
@@ -84,7 +83,7 @@ public class PurchaseOrdersController : ControllerBase
 
         var dto = await _poService.SubmitAsync(id, userId);
         if (dto is null)
-            return BadRequest(ApiErrorResponse.From("bad_request",
+            return BadRequest(ApiErrorResponse.From(ErrorCode.BadRequest,
                 "Purchase order must be in Draft status to submit",
                 traceId: HttpContext.TraceIdentifier));
 
@@ -101,7 +100,7 @@ public class PurchaseOrdersController : ControllerBase
 
         var dto = await _poService.ApproveAsync(id, userId);
         if (dto is null)
-            return BadRequest(ApiErrorResponse.From("bad_request",
+            return BadRequest(ApiErrorResponse.From(ErrorCode.BadRequest,
                 "Purchase order must be in Submitted status to approve",
                 traceId: HttpContext.TraceIdentifier));
 
@@ -118,7 +117,7 @@ public class PurchaseOrdersController : ControllerBase
 
         var dto = await _poService.ReceiveAsync(id, request, userId);
         if (dto is null)
-            return BadRequest(ApiErrorResponse.From("bad_request",
+            return BadRequest(ApiErrorResponse.From(ErrorCode.BadRequest,
                 "Purchase order must be Approved or PartiallyReceived to receive goods",
                 traceId: HttpContext.TraceIdentifier));
 
@@ -135,7 +134,7 @@ public class PurchaseOrdersController : ControllerBase
 
         var dto = await _poService.CancelAsync(id, userId);
         if (dto is null)
-            return BadRequest(ApiErrorResponse.From("bad_request",
+            return BadRequest(ApiErrorResponse.From(ErrorCode.BadRequest,
                 "Only Draft or Submitted purchase orders can be cancelled",
                 traceId: HttpContext.TraceIdentifier));
 
@@ -152,7 +151,7 @@ public class PurchaseOrdersController : ControllerBase
 
         var dto = await _poService.PayAsync(id, userId);
         if (dto is null)
-            return BadRequest(ApiErrorResponse.From("bad_request",
+            return BadRequest(ApiErrorResponse.From(ErrorCode.BadRequest,
                 "Purchase order must be received to be paid, or it is already paid.",
                 traceId: HttpContext.TraceIdentifier));
 

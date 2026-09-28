@@ -6,6 +6,7 @@ using Store.Models.DTOs.Invoices;
 using Store.Models.DTOs.Items;
 using Store.Models.Enums;
 using Store.Models.Interfaces.Services;
+using Store.Models.Common;
 using StoreUI.Services;
 
 namespace StoreUI.Pages;
@@ -62,7 +63,11 @@ public class PosModel : PageModel
             return RedirectToPage("/Login");
         }
 
-        if (HttpContext.Session.GetString("force_password_reset") == "true")
+        // GAP-04 — short-circuit to /ForceResetPassword if the JWT carries
+        // the flag (admin-issued temp password since last login), or if a
+        // first-login password reset is pending.
+        if (SessionClaims.IsForcePasswordChangeRequired(HttpContext.Session)
+            || !string.IsNullOrEmpty(HttpContext.Session.GetString("force_password_reset")))
         {
             return RedirectToPage("/ForceResetPassword", new { returnUrl = "/Pos" });
         }
@@ -177,7 +182,7 @@ public class PosModel : PageModel
         catch (InvalidOperationException ex)
         {
             _logger.LogWarning(ex, "POS checkout failed due to business rule");
-            return BadRequest(new { success = false, message = ex.Message });
+            return BadRequest(new { success = false, message = SafeErrorMessage.From(ex, _logger, "Pos.cs operation") });
         }
         catch (Exception ex)
         {
@@ -299,7 +304,7 @@ public class PosModel : PageModel
                     ClientTxId = entry.ClientTxId,
                     OfflineReceiptNumber = entry.OfflineReceiptNumber,
                     Success = false,
-                    ErrorMessage = ex.Message
+                    ErrorMessage = SafeErrorMessage.From(ex, _logger, "Pos operation")
                 });
             }
         }

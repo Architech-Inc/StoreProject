@@ -2,7 +2,9 @@ using Microsoft.AspNetCore.Mvc;
 using Store.Models.DTOs.Operations;
 using Store.Models.DTOs.Users;
 using StoreUI.Services;
+using Store.Models.Common;
 
+using Microsoft.Extensions.Logging.Abstractions;
 namespace StoreUI.Pages;
 
 public class ContactRequestsModel : SecurePageModel
@@ -13,6 +15,9 @@ public class ContactRequestsModel : SecurePageModel
     public IReadOnlyCollection<ContactChangeRequestDto> PendingContactChanges { get; private set; } = Array.Empty<ContactChangeRequestDto>();
     public IReadOnlyCollection<ContactChangeRequestDto> HistoricalContactChanges { get; private set; } = Array.Empty<ContactChangeRequestDto>();
     public ContactRequestMetricsDto Metrics { get; private set; } = new();
+
+    // UX-05 — secondary affordance gate. Approve / Reject are admin actions.
+    public bool CanApprove { get; private set; }
 
     [TempData] public string? StatusMessage { get; set; }
 
@@ -25,14 +30,16 @@ public class ContactRequestsModel : SecurePageModel
     public async Task<IActionResult> OnGetAsync(CancellationToken ct = default)
     {
         if (!TryGetSecurityContext(out var token, out var perms)) return GoToLogin();
-        
+
         var canAdminUsers = perms.Contains(PermissionKeys.AdminUsers) || perms.Contains(PermissionKeys.AdminRoleMatrix);
         if (!canAdminUsers)
         {
-            var role = JwtPermissionReader.GetClaim(token, "role") 
+            var role = JwtPermissionReader.GetClaim(token, "role")
                        ?? JwtPermissionReader.GetClaim(token, "http://schemas.microsoft.com/ws/2008/06/identity/claims/role");
             if (role != "Admin" && role != "Manager") return RedirectToPage("/AccessDenied");
         }
+
+        CanApprove = canAdminUsers;
 
         _apiClient.SetToken(token);
 
@@ -45,7 +52,19 @@ public class ContactRequestsModel : SecurePageModel
 
     public async Task<IActionResult> OnPostApproveAsync(Guid requestId, CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        if (!TryGetSecurityContext(out var token, out var permissions)) return GoToLogin();
+
+        // UX-05 — server-side gate (mirrors OnGet's canAdminUsers check).
+        // Approving / rejecting a contact-change request mutates another
+        // user's credentials, so it must require an admin permission.
+        var canAdminUsers = permissions.Contains(PermissionKeys.AdminUsers)
+            || permissions.Contains(PermissionKeys.AdminRoleMatrix);
+        if (!canAdminUsers)
+        {
+            StatusMessage = "Error: approving a contact change requires administrator privileges.";
+            return RedirectToPage();
+        }
+
         _apiClient.SetToken(token);
 
         var userIdStr = JwtPermissionReader.GetClaim(token, "uid");
@@ -58,7 +77,7 @@ public class ContactRequestsModel : SecurePageModel
             }
             catch (Exception ex)
             {
-                StatusMessage = $"Error: {ex.Message}";
+                StatusMessage = $"Error: {SafeErrorMessage.From(ex, NullLogger<ContactRequestsModel>.Instance, "Contact Requests operation")}";
             }
         }
         return RedirectToPage();
@@ -79,7 +98,7 @@ public class ContactRequestsModel : SecurePageModel
             }
             catch (Exception ex)
             {
-                StatusMessage = $"Error: {ex.Message}";
+                StatusMessage = $"Error: {SafeErrorMessage.From(ex, NullLogger<ContactRequestsModel>.Instance, "Contact Requests operation")}";
             }
         }
         return RedirectToPage();

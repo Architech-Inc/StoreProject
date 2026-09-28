@@ -15,8 +15,8 @@ public class AuditLogManager : IAuditLogManager
         _auditLogService = auditLogService;
     }
 
-    public async Task<AuditLogMetricsDto> GetMetricsAsync(CancellationToken ct = default)
-        => await _auditLogService.GetMetricsAsync(ct);
+    public async Task<AuditLogMetricsDto> GetMetricsAsync(Guid? tenantId = null, CancellationToken ct = default)
+        => await _auditLogService.GetMetricsAsync(tenantId, ct);
 
     public async Task<PagedResult<AuditLogDto>> GetAuditLogsPagedAsync(AuditLogFilterRequest request, CancellationToken ct = default)
         => await _auditLogService.GetAuditLogsPagedAsync(request, ct);

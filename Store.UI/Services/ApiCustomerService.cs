@@ -43,7 +43,7 @@ public class ApiCustomerService : ICustomerService
         return await _client.PutAsync<CustomerDto>($"/api/customers/{customerId}", request, ct);
     }
 
-    public async Task<bool> DeleteAsync(Guid customerId, CancellationToken ct = default)
+    public async Task<bool> DeleteAsync(Guid customerId, Guid? deletedById = null, CancellationToken ct = default)
     {
         return await _client.DeleteAsync($"/api/customers/{customerId}", ct);
     }

@@ -5,7 +5,9 @@ using Store.Models.DTOs.Customers;
 using Store.Models.DTOs.Loyalty;
 using Store.Models.Interfaces.Services;
 using StoreUI.Services;
+using Store.Models.Common;
 
+using Microsoft.Extensions.Logging.Abstractions;
 namespace StoreUI.Pages;
 
 public class LoyaltyModel : SecurePageModel
@@ -175,15 +177,15 @@ public class LoyaltyModel : SecurePageModel
         }
         catch (InvalidOperationException ex)
         {
-            StatusMessage = $"Error: {ex.Message}";
+            StatusMessage = $"Error: {SafeErrorMessage.From(ex, NullLogger<LoyaltyModel>.Instance, "Loyalty operation")}";
         }
         catch (ArgumentOutOfRangeException ex)
         {
-            StatusMessage = $"Error: {ex.Message}";
+            StatusMessage = $"Error: {SafeErrorMessage.From(ex, NullLogger<LoyaltyModel>.Instance, "Loyalty operation")}";
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: An unexpected error occurred ({ex.Message}).";
+            StatusMessage = $"Error: An unexpected error occurred ({SafeErrorMessage.From(ex, NullLogger<LoyaltyModel>.Instance, "Loyalty operation")}).";
         }
 
         return RedirectToPage("/Loyalty", new { search = Search, tier = Tier, sortBy = SortBy, viewMode = ViewMode, customerId = ManageForm.CustomerId });

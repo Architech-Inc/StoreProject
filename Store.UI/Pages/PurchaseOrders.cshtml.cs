@@ -1,9 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
 using Store.Models.DTOs.Common;
+using Store.Models.DTOs.Operations;
 using Store.Models.DTOs.Procurement;
 using Store.Models.Enums;
 using StoreUI.Services;
+using Store.Models.Common;
 
+using Microsoft.Extensions.Logging.Abstractions;
 namespace StoreUI.Pages;
 
 public class PurchaseOrdersModel : SecurePageModel
@@ -46,6 +49,11 @@ public class PurchaseOrdersModel : SecurePageModel
 
     public IEnumerable<PurchaseOrderStatus> Statuses { get; } = Enum.GetValues<PurchaseOrderStatus>();
 
+    // UX-05 — PO approval is more sensitive than PO write; gated on
+    // AdminBranches. Mirrors the server-side check in OnPostApprove.
+    public bool CanApprove { get; private set; }
+    public bool CanRead { get; private set; }
+
     public PurchaseOrdersModel(IPurchaseOrderManager poManager, IApiClientService apiClient)
     {
         _poManager = poManager;
@@ -54,8 +62,14 @@ public class PurchaseOrdersModel : SecurePageModel
 
     public async Task<IActionResult> OnGetAsync(CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out var token, out _))
+        if (!TryGetSecurityContext(out var token, out var permissions))
             return GoToLogin();
+
+        CanRead = HasPermission(permissions, PermissionKeys.PurchaseOrderRead);
+        CanApprove = HasPermission(permissions, PermissionKeys.AdminBranches);
+
+        if (!CanRead)
+            return AccessDenied();
 
         _apiClient.SetToken(token);
 
@@ -188,7 +202,7 @@ public class PurchaseOrdersModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: Failed to create purchase order - {ex.Message}";
+            StatusMessage = $"Error: Failed to create purchase order - {SafeErrorMessage.From(ex, NullLogger<PurchaseOrdersModel>.Instance, "Purchase Orders operation")}";
         }
 
         return RedirectToPage(new { Search, StatusFilter, SupplierFilter, PageNumber });
@@ -208,7 +222,7 @@ public class PurchaseOrdersModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: Failed to submit purchase order - {ex.Message}";
+            StatusMessage = $"Error: Failed to submit purchase order - {SafeErrorMessage.From(ex, NullLogger<PurchaseOrdersModel>.Instance, "Purchase Orders operation")}";
         }
 
         return RedirectToPage(new { Search, StatusFilter, SupplierFilter, PageNumber });
@@ -216,8 +230,17 @@ public class PurchaseOrdersModel : SecurePageModel
 
     public async Task<IActionResult> OnPostApproveAsync(CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out var token, out _))
+        if (!TryGetSecurityContext(out var token, out var permissions))
             return GoToLogin();
+
+        // UX-05 — server-side gate (UI hides via CanApprove but never
+        // trust the client). Approving a PO moves money / locks in a
+        // supplier; that's a branch-admin action, not a write action.
+        if (!HasPermission(permissions, PermissionKeys.AdminBranches))
+        {
+            StatusMessage = "Error: approving a purchase order requires branch-administrator privileges.";
+            return RedirectToPage(new { Search, StatusFilter, SupplierFilter, PageNumber });
+        }
 
         _apiClient.SetToken(token);
 
@@ -228,7 +251,7 @@ public class PurchaseOrdersModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: Failed to approve purchase order - {ex.Message}";
+            StatusMessage = $"Error: Failed to approve purchase order - {SafeErrorMessage.From(ex, NullLogger<PurchaseOrdersModel>.Instance, "Purchase Orders operation")}";
         }
 
         return RedirectToPage(new { Search, StatusFilter, SupplierFilter, PageNumber });
@@ -254,7 +277,7 @@ public class PurchaseOrdersModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: Failed to receive purchase order - {ex.Message}";
+            StatusMessage = $"Error: Failed to receive purchase order - {SafeErrorMessage.From(ex, NullLogger<PurchaseOrdersModel>.Instance, "Purchase Orders operation")}";
         }
 
         return RedirectToPage(new { Search, StatusFilter, SupplierFilter, PageNumber });
@@ -274,7 +297,7 @@ public class PurchaseOrdersModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: Failed to cancel purchase order - {ex.Message}";
+            StatusMessage = $"Error: Failed to cancel purchase order - {SafeErrorMessage.From(ex, NullLogger<PurchaseOrdersModel>.Instance, "Purchase Orders operation")}";
         }
 
         return RedirectToPage(new { Search, StatusFilter, SupplierFilter, PageNumber });

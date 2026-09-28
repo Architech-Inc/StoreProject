@@ -3,6 +3,8 @@ using Store.ControlPlane.Models.DTOs;
 using Store.ControlPlane.Services;
 using Store.Models.DTOs.Common;
 
+using Microsoft.Extensions.Logging;
+using Store.Models.Common;
 namespace Store.ControlPlane.Controllers;
 
 [ApiController]
@@ -53,7 +55,7 @@ public class EnvironmentController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(ApiResponse<object>.Fail(ex.Message));
+            return BadRequest(ApiResponse<object>.Fail(SafeErrorMessage.From(ex, _logger, "Environment operation")));
         }
         catch (Exception ex)
         {

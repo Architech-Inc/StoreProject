@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Store.Models.DTOs.Operations;
 using StoreUI.Services;
+using Store.Models.Common;
 
+using Microsoft.Extensions.Logging.Abstractions;
 namespace StoreUI.Pages;
 
 public class RoleMatrixModel : SecurePageModel
@@ -123,7 +125,7 @@ public class RoleMatrixModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { success = false, message = ex.Message });
+            return StatusCode(500, new { success = false, message = SafeErrorMessage.From(ex, NullLogger<RoleMatrixModel>.Instance, "Role Matrix.cs operation") });
         }
     }
 }

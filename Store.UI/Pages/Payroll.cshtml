@@ -112,7 +112,7 @@
                             <td class="num font-bold">@run.TotalNet.ToString("N0") XAF</td>
                             <td style="text-align: right;">
                                 <div style="display:flex; gap:8px; justify-content:flex-end;">
-                                    @if (run.Status == PayrollRunStatus.Draft)
+                                    @if (run.Status == PayrollRunStatus.Draft && Model.CanApprove)
                                     {
                                         <form method="post" asp-page-handler="Approve" style="display:inline;">
                                             <input type="hidden" name="runId" value="@run.PayrollRunId" />
@@ -250,13 +250,16 @@
                                                     style="padding:3px 8px; font-size:0.78rem;">
                                                 Edit
                                             </button>
-                                            <form method="post" asp-page-handler="DeleteTaxBracket" style="margin:0; display:inline;">
-                                                @Html.AntiForgeryToken()
-                                                <input type="hidden" name="id" value="@tb.TaxBracketId" />
-                                                <button type="submit" class="btn-table-action danger" data-confirm="Delete tax bracket @rangeStr?" data-confirm-type="danger" data-confirm-title="Delete Tax Bracket" style="padding:3px 8px; font-size:0.78rem;">
-                                                    Delete
-                                                </button>
-                                            </form>
+                                            @if (Model.CanDelete)
+                                            {
+                                                <form method="post" asp-page-handler="DeleteTaxBracket" style="margin:0; display:inline;">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="id" value="@tb.TaxBracketId" />
+                                                    <button type="submit" class="btn-table-action danger" data-confirm="Delete tax bracket @rangeStr?" data-confirm-type="danger" data-confirm-title="Delete Tax Bracket" style="padding:3px 8px; font-size:0.78rem;">
+                                                        Delete
+                                                    </button>
+                                                </form>
+                                            }
                                         </div>
                                     </td>
                                 </tr>

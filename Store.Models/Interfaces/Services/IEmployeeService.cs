@@ -11,5 +11,5 @@ public interface IEmployeeService
     Task<EmployeeMetricsDto> GetMetricsAsync(CancellationToken ct = default);
     Task<EmployeeDto> CreateAsync(CreateEmployeeRequest request, CancellationToken ct = default);
     Task<EmployeeDto?> UpdateAsync(Guid employeeId, UpdateEmployeeRequest request, CancellationToken ct = default);
-    Task<bool> DeleteAsync(Guid employeeId, CancellationToken ct = default);
+    Task<bool> DeleteAsync(Guid employeeId, Guid? deletedById = null, CancellationToken ct = default);
 }

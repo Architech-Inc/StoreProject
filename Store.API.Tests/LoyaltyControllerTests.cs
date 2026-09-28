@@ -1,10 +1,11 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using Store.API.Contracts;
+using Store.Models.DTOs.Common;
 using Store.API.Controllers;
 using Store.DbServices.Services;
-using Store.Models.DTOs.Common;
+
 using Store.Models.DTOs.Loyalty;
 using Store.Models.Entities;
 using Store.Models.Enums;
@@ -17,7 +18,7 @@ public class LoyaltyControllerTests
 {
     private static LoyaltyController CreateController(ILoyaltyService loyaltyService)
     {
-        var controller = new LoyaltyController(loyaltyService)
+        var controller = new LoyaltyController(loyaltyService, NullLogger<LoyaltyController>.Instance)
         {
             ControllerContext = new ControllerContext
             {

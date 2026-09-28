@@ -2,11 +2,14 @@ using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Employees;
+using Store.Models.DTOs.Operations;
 using Store.Models.Entities;
 using Store.Models.Enums;
 using Store.Models.Interfaces.Services;
 using StoreUI.Services;
+using Store.Models.Common;
 
+using Microsoft.Extensions.Logging.Abstractions;
 namespace StoreUI.Pages;
 
 public class EmployeesModel : SecurePageModel
@@ -16,6 +19,9 @@ public class EmployeesModel : SecurePageModel
     private readonly IEmployeeManager _employeeManager;
 
     public IReadOnlyList<EmployeeDto> Employees { get; private set; } = Array.Empty<EmployeeDto>();
+
+    // UX-05 — terminate / reinstate is admin-level.
+    public bool CanTerminate { get; private set; }
     public EmployeeMetricsDto Metrics { get; private set; } = new();
     public IReadOnlyList<Department> Departments { get; private set; } = Array.Empty<Department>();
     public IReadOnlyList<Salary> Salaries { get; private set; } = Array.Empty<Salary>();
@@ -65,7 +71,8 @@ public class EmployeesModel : SecurePageModel
 
     public async Task<IActionResult> OnGetAsync(int page = 1, CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        if (!TryGetSecurityContext(out var token, out var permissions)) return GoToLogin();
+        CanTerminate = HasPermission(permissions, PermissionKeys.AdminUsers);
         _apiClient.SetToken(token);
 
         PageNumber = Math.Max(1, page);
@@ -131,7 +138,7 @@ public class EmployeesModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: {ex.Message}";
+            StatusMessage = $"Error: {SafeErrorMessage.From(ex, NullLogger<EmployeesModel>.Instance, "Employees operation")}";
         }
 
         return RedirectToPage();
@@ -154,13 +161,18 @@ public class EmployeesModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            return new JsonResult(new { success = false, message = ex.Message }) { StatusCode = 500 };
+            return new JsonResult(new { success = false, message = SafeErrorMessage.From(ex, NullLogger<EmployeesModel>.Instance, "Employees.cs operation") }) { StatusCode = 500 };
         }
     }
 
     public async Task<IActionResult> OnPostTerminateAsync(Guid employeeId, CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        if (!TryGetSecurityContext(out var token, out var permissions)) return GoToLogin();
+        if (!HasPermission(permissions, PermissionKeys.AdminUsers))
+        {
+            StatusMessage = "Error: terminating an employee requires administrator privileges.";
+            return RedirectToPage();
+        }
         _apiClient.SetToken(token);
 
         try
@@ -170,7 +182,7 @@ public class EmployeesModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: {ex.Message}";
+            StatusMessage = $"Error: {SafeErrorMessage.From(ex, NullLogger<EmployeesModel>.Instance, "Employees operation")}";
         }
 
         return RedirectToPage();
@@ -178,7 +190,12 @@ public class EmployeesModel : SecurePageModel
 
     public async Task<IActionResult> OnPostReinstateAsync(Guid employeeId, CancellationToken ct = default)
     {
-        if (!TryGetSecurityContext(out var token, out _)) return GoToLogin();
+        if (!TryGetSecurityContext(out var token, out var permissions)) return GoToLogin();
+        if (!HasPermission(permissions, PermissionKeys.AdminUsers))
+        {
+            StatusMessage = "Error: reinstating an employee requires administrator privileges.";
+            return RedirectToPage();
+        }
         _apiClient.SetToken(token);
 
         try
@@ -188,7 +205,7 @@ public class EmployeesModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: {ex.Message}";
+            StatusMessage = $"Error: {SafeErrorMessage.From(ex, NullLogger<EmployeesModel>.Instance, "Employees operation")}";
         }
 
         return RedirectToPage();

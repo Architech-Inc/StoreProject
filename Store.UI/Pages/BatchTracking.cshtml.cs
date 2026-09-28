@@ -7,7 +7,9 @@ using Store.Models.DTOs.Operations;
 using Store.Models.Enums;
 using Store.Models.Interfaces.Services;
 using StoreUI.Services;
+using Store.Models.Common;
 
+using Microsoft.Extensions.Logging.Abstractions;
 namespace StoreUI.Pages;
 
 public class BatchTrackingModel : SecurePageModel
@@ -60,6 +62,10 @@ public class BatchTrackingModel : SecurePageModel
 
     public bool CanRead { get; private set; }
     public bool CanWrite { get; private set; }
+    // UX-05 — destructive deletion (entire batch record) requires admin,
+    // not just InventoryWrite. Mirrors the server-side check in
+    // OnPostDeleteAsync.
+    public bool CanDelete { get; private set; }
 
     [TempData] public string? StatusMessage { get; set; }
 
@@ -81,6 +87,7 @@ public class BatchTrackingModel : SecurePageModel
         _apiClient.SetToken(token);
         CanRead = HasPermission(permissions, PermissionKeys.InventoryRead);
         CanWrite = HasPermission(permissions, PermissionKeys.InventoryWrite);
+        CanDelete = HasPermission(permissions, PermissionKeys.AdminUsers);
 
         if (!CanRead)
             return AccessDenied();
@@ -173,6 +180,16 @@ public class BatchTrackingModel : SecurePageModel
 
     public async Task<IActionResult> OnPostDeleteAsync(CancellationToken ct = default)
     {
+        // UX-05 — destructive op: require AdminUsers (not just
+        // InventoryWrite). UI hides the button via CanDelete; this is the
+        // authoritative server-side gate.
+        if (!TryGetSecurityContext(out _, out var permissions) ||
+            !HasPermission(permissions, PermissionKeys.AdminUsers))
+        {
+            StatusMessage = "Error: deleting a batch record requires administrator privileges.";
+            return RedirectToPage();
+        }
+
         return await ExecuteWriteOperationAsync(async () =>
         {
             await _batchManager.DeleteAsync(DeleteBatchId, ct);
@@ -244,7 +261,7 @@ public class BatchTrackingModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: {ex.Message}";
+            StatusMessage = $"Error: {SafeErrorMessage.From(ex, NullLogger<BatchTrackingModel>.Instance, "Batch Tracking operation")}";
         }
 
         return RedirectToPage();

@@ -19,6 +19,7 @@ public class StoreDbContext : DbContext
     public DbSet<UserToken> UserTokens => Set<UserToken>();
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
     public DbSet<FidoCredential> FidoCredentials => Set<FidoCredential>();
+    public DbSet<TrustedDevice> TrustedDevices => Set<TrustedDevice>();
 
     // ---- Personnel ----
     public DbSet<Department> Departments => Set<Department>();
@@ -133,16 +134,28 @@ public class StoreDbContext : DbContext
         // Automatically discover and apply all IEntityTypeConfiguration<T> in this assembly
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(StoreDbContext).Assembly);
 
-        // ─── Soft-delete global query filter ────────────────────────────────────
-        // Entities implementing ISoftDeletable are hidden by default. Callers that
-        // need to see deleted rows can use .IgnoreQueryFilters(). For now we apply
-        // this only to the four business entities that benefit most from logical
-        // delete (Item, Supplier, Employee, Customer). Adding more later is
-        // a one-line change.
-        modelBuilder.Entity<Item>().HasQueryFilter(i => !i.IsDeleted);
-        modelBuilder.Entity<Supplier>().HasQueryFilter(s => !s.IsDeleted);
-        modelBuilder.Entity<Employee>().HasQueryFilter(e => !e.IsDeleted);
-        modelBuilder.Entity<Customer>().HasQueryFilter(c => !c.IsDeleted);
+        // ─── Soft-delete global query filters ───────────────────────────────────
+        // Four entities get the canonical filter; every dependent child entity
+        // gets a matching filter automatically so EF Core 10622 warnings go away.
+        // See IMPLEMENTATION_LOG.md "Soft-delete migration" for the migration plan.
+        var softDeletableRoots = new[]
+        {
+            typeof(Store.Models.Entities.Item),
+            typeof(Store.Models.Entities.Supplier),
+            typeof(Store.Models.Entities.Employee),
+            typeof(Store.Models.Entities.Customer)
+        };
+
+        modelBuilder.Entity<Store.Models.Entities.Item>()
+            .HasQueryFilter(i => !i.IsDeleted);
+        modelBuilder.Entity<Store.Models.Entities.Supplier>()
+            .HasQueryFilter(s => !s.IsDeleted);
+        modelBuilder.Entity<Store.Models.Entities.Employee>()
+            .HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<Store.Models.Entities.Customer>()
+            .HasQueryFilter(c => !c.IsDeleted);
+
+        AddMatchingChildQueryFilters(modelBuilder, softDeletableRoots);
 
         ConfigureOperationalRelationships(modelBuilder);
 
@@ -237,6 +250,18 @@ public class StoreDbContext : DbContext
         modelBuilder.Entity<CashierShift>()
             .HasIndex(x => x.Status);
 
+        // SEC-15 — Mobile money callback idempotency.
+        // The provider's transaction reference is the only natural unique
+        // key on the wire; the database enforces that no two callbacks for
+        // the same provider reference can both update the transaction.
+        // UNIQUE-filtered: rows with NULL provider_transaction_id are
+        // pre-callback and allowed to be duplicated (status=Pending).
+        modelBuilder.Entity<MobileMoneyTransaction>()
+            .HasIndex(x => x.ProviderTransactionId)
+            .IsUnique()
+            .HasFilter("provider_transaction_id IS NOT NULL AND provider_transaction_id <> ''")
+            .HasDatabaseName("ux_mobile_money_provider_tx_id");
+
         // Audit log hot-path indexes for /audit-log filtering & dashboards.
         // Note: AuditLog entity has no Severity column — severity lives on the
         // CreateAuditLogEntryRequest DTO and is used only when writing.
@@ -244,6 +269,13 @@ public class StoreDbContext : DbContext
             .HasIndex(x => new { x.UserId, x.DateCreated });
         modelBuilder.Entity<AuditLog>()
             .HasIndex(x => new { x.Action, x.DateCreated });
+
+        // MT-05 — tenant-scoped audit routing. The (TenantId, DateCreated)
+        // composite index is the hot path for any tenant-isolated read; NULL
+        // values are allowed so pre-provisioning / system audits stay visible.
+        modelBuilder.Entity<AuditLog>()
+            .HasIndex(x => new { x.TenantId, x.DateCreated })
+            .HasDatabaseName("ix_audit_log_tenant_date");
 
         modelBuilder.Entity<CustomerSegmentPrice>()
             .HasIndex(x => new { x.ItemId, x.Segment, x.IsActive });
@@ -615,5 +647,59 @@ public class StoreDbContext : DbContext
                 entry.Properties.Any(p => p.Metadata.Name == "DateCreated"))
                 entry.Property("DateCreated").CurrentValue = DateTime.UtcNow;
         }
+    }
+
+    /// <summary>
+    /// For every entity in the model, find navigations whose target is one of
+    /// <paramref name="softDeletableRoots"/> (or has a query filter added in
+    /// a prior pass) and whose FK is required. Add a matching query filter on
+    /// the child so EF Core 10622 is satisfied. Iterates until convergence
+    /// so transitive cases (e.g. LoyaltyTransaction → CustomerLoyaltyAccount →
+    /// Customer) all get a filter.
+    /// Pattern emitted: <c>e =&gt; !e.Parent.IsDeleted</c>.
+    /// </summary>
+    private static void AddMatchingChildQueryFilters(ModelBuilder modelBuilder, Type[] softDeletableRoots)
+    {
+        var rootSet = new HashSet<Type>(softDeletableRoots);
+
+        // Track which entity types currently have a filter (so we can propagate
+        // transitively in subsequent passes).
+        var filtered = new HashSet<Type>(rootSet);
+
+        // Keep iterating until no new filter is added.
+        bool changed;
+        do
+        {
+            changed = false;
+            foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+            {
+                var clr = entityType.ClrType;
+                if (filtered.Contains(clr)) continue;
+                if (clr.IsAbstract || clr.IsGenericTypeDefinition) continue;
+
+                foreach (var navigation in entityType.GetNavigations())
+                {
+                    if (navigation.IsCollection) continue;
+                    if (!navigation.ForeignKey!.IsRequired) continue;
+                    var targetType = navigation.TargetEntityType.ClrType;
+                    if (!filtered.Contains(targetType)) continue;
+
+                    var navProp = navigation.PropertyInfo;
+                    if (navProp is null) continue;
+
+                    // Build the lambda:  e => !e.<Nav>.IsDeleted
+                    var eParam = System.Linq.Expressions.Expression.Parameter(clr, "e");
+                    var navAccess = System.Linq.Expressions.Expression.Property(eParam, navProp);
+                    var isDeleted = System.Linq.Expressions.Expression.Property(navAccess, "IsDeleted");
+                    var notExpr = System.Linq.Expressions.Expression.Not(isDeleted);
+                    var lambda = System.Linq.Expressions.Expression.Lambda(notExpr, eParam);
+
+                    modelBuilder.Entity(clr).HasQueryFilter(lambda);
+                    filtered.Add(clr);
+                    changed = true;
+                    break;
+                }
+            }
+        } while (changed);
     }
 }

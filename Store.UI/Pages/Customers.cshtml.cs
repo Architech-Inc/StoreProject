@@ -2,10 +2,13 @@ using Microsoft.AspNetCore.Mvc;
 using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Customers;
 using Store.Models.DTOs.Loyalty;
+using Store.Models.DTOs.Operations;
 using Store.Models.Enums;
 using Store.Models.Interfaces.Services;
 using StoreUI.Services;
+using Store.Models.Common;
 
+using Microsoft.Extensions.Logging.Abstractions;
 namespace StoreUI.Pages;
 
 public class CustomersModel : SecurePageModel
@@ -15,6 +18,9 @@ public class CustomersModel : SecurePageModel
     private readonly IFileService _fileService;
 
     public IReadOnlyList<CustomerDto> Customers { get; private set; } = Array.Empty<CustomerDto>();
+
+    // UX-05 — customer PII deletion is admin-level.
+    public bool CanDelete { get; private set; }
     public int TotalCustomers { get; private set; }
     public int PageNumber { get; private set; } = 1;
     public int PageSize { get; private set; } = 24;
@@ -75,10 +81,11 @@ public class CustomersModel : SecurePageModel
     public async Task<IActionResult> OnGetAsync(int page = 1, CancellationToken ct = default)
     {
         CustomerId ??= Id;
-        if (!TryGetSecurityContext(out var token, out _))
+        if (!TryGetSecurityContext(out var token, out var permissions))
         {
             return GoToLogin();
         }
+        CanDelete = HasPermission(permissions, PermissionKeys.AdminUsers);
 
         _apiClient.SetToken(token);
         PageNumber = Math.Max(1, page);
@@ -182,7 +189,7 @@ public class CustomersModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            return new JsonResult(new { success = false, message = ex.Message }) { StatusCode = 400 };
+            return new JsonResult(new { success = false, message = SafeErrorMessage.From(ex, NullLogger<CustomersModel>.Instance, "Customers.cs operation") }) { StatusCode = 400 };
         }
     }
 
@@ -226,13 +233,17 @@ public class CustomersModel : SecurePageModel
 
     public async Task<IActionResult> OnPostDeleteAsync(Guid customerId, CancellationToken ct)
     {
-        if (!TryGetSecurityContext(out var token, out _))
-        {
+        if (!TryGetSecurityContext(out var token, out var permissions))
             return GoToLogin();
+
+        if (!HasPermission(permissions, PermissionKeys.AdminUsers))
+        {
+            StatusMessage = "Error: deleting a customer requires administrator privileges.";
+            return RedirectToPage();
         }
 
         _apiClient.SetToken(token);
-        await _customerService.DeleteAsync(customerId, ct);
+        await _customerService.DeleteAsync(customerId, null, ct);
         StatusMessage = "Customer profile removed.";
         return RedirectToPage();
     }

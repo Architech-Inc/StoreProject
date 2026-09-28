@@ -2,9 +2,8 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Store.API.Contracts;
-using Store.Models.DTOs.Audit;
 using Store.Models.DTOs.Common;
+using Store.Models.DTOs.Audit;
 using Store.Models.DTOs.Operations;
 using Store.Models.Interfaces.Services;
 
@@ -24,9 +23,12 @@ public class AuditLogsController : ControllerBase
 
     [HttpGet("metrics")]
     [Authorize(Policy = PermissionKeys.AdminRoleMatrix)]
-    public async Task<IActionResult> GetMetrics(CancellationToken ct)
+    public async Task<IActionResult> GetMetrics([FromQuery] Guid? tenantId, CancellationToken ct)
     {
-        var metrics = await _auditLogService.GetMetricsAsync(ct);
+        // MT-05 — tenant-scoped metrics. Pass `?tenantId=<guid>` to scope
+        // the metric rollup to a single tenant. System admins may omit the
+        // parameter to see cross-tenant totals.
+        var metrics = await _auditLogService.GetMetricsAsync(tenantId, ct);
         return Ok(ApiResponse<AuditLogMetricsDto>.Ok(metrics));
     }
 
@@ -45,7 +47,7 @@ public class AuditLogsController : ControllerBase
         var log = await _auditLogService.GetByIdAsync(id, ct);
         if (log is null)
         {
-            return NotFound(ApiErrorResponse.From("not_found", "Audit log entry not found",
+            return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "Audit log entry not found",
                 traceId: HttpContext.TraceIdentifier));
         }
 

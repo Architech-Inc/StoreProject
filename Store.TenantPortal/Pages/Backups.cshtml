@@ -142,7 +142,57 @@
     <!-- Schedule & Policy Card -->
     <div class="portal-card" style="margin-bottom: 32px;">
         <h3 style="font-size: 1.2rem; margin-bottom: 16px;">Automated Backup Schedule & Retention</h3>
-        
+
+        @* MT-06 — live schedule status panel so operators can see last / next run without
+            opening the dashboard's audit log. Renders empty when the schedule is disabled. *@
+        @if (schedule is not null)
+        {
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 20px;">
+                <div style="background: var(--p-surface-alt); border: 1px solid var(--p-border); border-radius: 8px; padding: 12px 14px;">
+                    <div style="font-size: 11px; color: var(--p-text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Next Run</div>
+                    <div style="font-size: 15px; font-weight: 600; color: var(--p-text);">
+                        @(schedule.NextRunAt?.ToString("yyyy-MM-dd HH:mm") ?? "—")
+                        <span style="font-size: 11px; color: var(--p-text-muted); font-weight: 400; margin-left: 4px;">UTC</span>
+                    </div>
+                </div>
+                <div style="background: var(--p-surface-alt); border: 1px solid var(--p-border); border-radius: 8px; padding: 12px 14px;">
+                    <div style="font-size: 11px; color: var(--p-text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Last Run</div>
+                    <div style="font-size: 15px; font-weight: 600; color: var(--p-text);">
+                        @(schedule.LastRunAt?.ToString("yyyy-MM-dd HH:mm") ?? "Never")
+                        <span style="font-size: 11px; color: var(--p-text-muted); font-weight: 400; margin-left: 4px;">
+                            @(schedule.LastRunAt.HasValue ? "UTC" : "")
+                        </span>
+                    </div>
+                </div>
+                <div style="background: var(--p-surface-alt); border: 1px solid var(--p-border); border-radius: 8px; padding: 12px 14px;">
+                    <div style="font-size: 11px; color: var(--p-text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Last Status</div>
+                    <div style="font-size: 15px; font-weight: 600;">
+                        @if (string.IsNullOrEmpty(schedule.LastRunStatus))
+                        {
+                            <span style="color: var(--p-text-muted);">—</span>
+                        }
+                        else if (schedule.LastRunStatus.StartsWith("Failed"))
+                        {
+                            <span style="color: #f87171;">@schedule.LastRunStatus</span>
+                        }
+                        else
+                        {
+                            <span style="color: #4ade80;">@schedule.LastRunStatus</span>
+                        }
+                    </div>
+                </div>
+                <div style="background: var(--p-surface-alt); border: 1px solid var(--p-border); border-radius: 8px; padding: 12px 14px;">
+                    <div style="font-size: 11px; color: var(--p-text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Schedule</div>
+                    <div style="font-size: 15px; font-weight: 600; color: var(--p-text);">
+                        @(schedule.Frequency)
+                        <span style="font-size: 12px; color: var(--p-text-muted); font-weight: 400; margin-left: 4px;">
+                            · @(schedule.IsEnabled ? "Enabled" : "Paused")
+                        </span>
+                    </div>
+                </div>
+            </div>
+        }
+
         <form method="post" asp-page-handler="UpdateSchedule" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) auto; gap: 16px; align-items: flex-end;">
             <div class="form-group" style="margin-bottom: 0;">
                 <label class="form-label">Backup Frequency</label>

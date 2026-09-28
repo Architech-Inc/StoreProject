@@ -35,4 +35,10 @@ public interface ITenantOrchestrator
     Task<TenantSnapshotDto> CreateSnapshotAsync(Guid tenantId, SnapshotType type, CancellationToken ct = default);
     Task<bool> RestoreSnapshotAsync(Guid tenantId, Guid snapshotId, CancellationToken ct = default);
     Task<TenantDto> ProvisionSandboxAsync(Guid parentTenantId, Guid targetReleaseId, bool maskData, CancellationToken ct = default);
+
+    // MT-07 — public tenant status + maintenance windows
+    Task<TenantStatusDto?> GetPublicStatusAsync(string slug, CancellationToken ct = default);
+    Task<MaintenanceWindowDto> AddMaintenanceWindowAsync(Guid tenantId, CreateMaintenanceWindowRequest request, string createdBy, CancellationToken ct = default);
+    Task<bool> RemoveMaintenanceWindowAsync(Guid tenantId, Guid windowId, CancellationToken ct = default);
+    Task<bool> ResolveMaintenanceWindowAsync(Guid tenantId, Guid windowId, CancellationToken ct = default);
 }

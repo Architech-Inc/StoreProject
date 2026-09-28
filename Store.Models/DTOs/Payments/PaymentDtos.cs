@@ -91,3 +91,75 @@ public class SettlementReportDto
     public List<ChannelSettlementDto> ByChannel { get; set; } = new();
     public List<MobileMoneyTransactionDto> PendingMobileMoneyTransactions { get; set; } = new();
 }
+
+// ─── MT-02 — PayDunya / aggregator DTOs ─────────────────────────────────────
+
+public class CreateInvoiceRequest
+{
+    /// <summary>Human-readable description of what's being billed.</summary>
+    public string Description { get; set; } = string.Empty;
+
+    /// <summary>Amount in the smallest currency unit (XAF: whole numbers).</summary>
+    public int TotalAmount { get; set; }
+
+    /// <summary>Currency code — XAF by default.</summary>
+    public string Currency { get; set; } = "XAF";
+
+    /// <summary>Internal tenant ID — echoed back on the IPN.</summary>
+    public Guid TenantId { get; set; }
+
+    /// <summary>Internal plan tier identifier — echoed back on the IPN.</summary>
+    public string PlanId { get; set; } = string.Empty;
+
+    /// <summary>Optional payment-method filter (mtn-ci, orange-money-ci, wave, card).</summary>
+    public string? Channel { get; set; }
+
+    /// <summary>URL PayDunya redirects to after the user completes or cancels.</summary>
+    public string ReturnUrl { get; set; } = string.Empty;
+
+    /// <summary>URL PayDunya posts the IPN to.</summary>
+    public string CallbackUrl { get; set; } = string.Empty;
+}
+
+public class CreateInvoiceResponse
+{
+    /// <summary>PayDunya's invoice token. Required for confirm + IPN correlation.</summary>
+    public string Token { get; set; } = string.Empty;
+
+    /// <summary>Hosted-checkout URL the user should be redirected to.</summary>
+    public string CheckoutUrl { get; set; } = string.Empty;
+
+    /// <summary>Provider response code — "00" is success in PayDunya parlance.</summary>
+    public string ResponseCode { get; set; } = string.Empty;
+
+    /// <summary>Provider description, useful for surfacing failures to ops.</summary>
+    public string? Description { get; set; }
+}
+
+public class ConfirmPaymentResponse
+{
+    public string Token { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty; // completed | pending | cancelled | failed
+    public string ResponseCode { get; set; } = string.Empty;
+    public int? Amount { get; set; }
+    public string? Currency { get; set; }
+    public string? Channel { get; set; }
+    public string? CustomerEmail { get; set; }
+    public string? CustomerPhone { get; set; }
+    public Guid? TenantId { get; set; }
+    public string? PlanId { get; set; }
+    public DateTime? CompletedAtUtc { get; set; }
+}
+
+public class PayDunyaIpnPayload
+{
+    public string? Token { get; set; }
+    public string? Status { get; set; }
+    public string? ResponseCode { get; set; }
+    public int? Amount { get; set; }
+    public string? Currency { get; set; }
+    public string? Channel { get; set; }
+    public Guid? TenantId { get; set; }
+    public string? PlanId { get; set; }
+    public DateTime? CompletedAt { get; set; }
+}

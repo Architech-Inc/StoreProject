@@ -1194,4 +1194,162 @@ SET FOREIGN_KEY_CHECKS=1;
         
         return sandboxDto;
     }
+
+    // ─── MT-07 — public tenant status + maintenance window CRUD ─────────────
+
+    public async Task<TenantStatusDto?> GetPublicStatusAsync(string slug, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(slug)) return null;
+
+        var tenant = await _tenantRepo.GetBySlugAsync(slug, ct);
+        if (tenant is null) return null;
+
+        var now = DateTime.UtcNow;
+        var thirtyDaysAgo = now.AddDays(-30);
+
+        // Build the public payload. ONLY safe fields are copied — never
+        // include AdminEmail, Secrets, BackupProviders, ApiUrl tokens, etc.
+        var dto = new TenantStatusDto
+        {
+            TenantId = tenant.TenantId,
+            Name = tenant.Name,
+            Slug = tenant.Slug,
+            Status = tenant.Status.ToString(),
+            IsHealthy = tenant.IsHealthy,
+            LastHealthCheckUtc = tenant.LastHealthCheck,
+            LastHealthMessage = tenant.LastHealthMessage,
+            GeneratedAtUtc = now
+        };
+
+        foreach (var w in tenant.MaintenanceWindows)
+        {
+            var winDto = MapMaintenanceWindow(w);
+
+            if (w.IsResolved)
+            {
+                if (w.EndUtc >= thirtyDaysAgo) dto.RecentMaintenance.Add(winDto);
+                continue;
+            }
+
+            // Active: now is between StartUtc and EndUtc
+            if (w.StartUtc <= now && now <= w.EndUtc)
+            {
+                dto.ActiveMaintenance.Add(winDto);
+                if (w.Severity == MaintenanceSeverity.Critical)
+                {
+                    dto.IsAcceptingTraffic = false;
+                }
+            }
+            // Upcoming: window starts in the future
+            else if (w.StartUtc > now)
+            {
+                dto.UpcomingMaintenance.Add(winDto);
+            }
+            // Past un-resolved: include in recent for visibility
+            else if (w.EndUtc >= thirtyDaysAgo)
+            {
+                dto.RecentMaintenance.Add(winDto);
+            }
+        }
+
+        // Sort windows by start time ascending so the UI can render in order
+        dto.ActiveMaintenance = dto.ActiveMaintenance.OrderBy(w => w.StartUtc).ToList();
+        dto.UpcomingMaintenance = dto.UpcomingMaintenance.OrderBy(w => w.StartUtc).ToList();
+        dto.RecentMaintenance = dto.RecentMaintenance.OrderByDescending(w => w.EndUtc).ToList();
+
+        return dto;
+    }
+
+    public async Task<MaintenanceWindowDto> AddMaintenanceWindowAsync(
+        Guid tenantId,
+        CreateMaintenanceWindowRequest request,
+        string createdBy,
+        CancellationToken ct = default)
+    {
+        if (request.EndUtc <= request.StartUtc)
+        {
+            throw new ArgumentException("EndUtc must be greater than StartUtc.", nameof(request));
+        }
+
+        var tenant = await _tenantRepo.GetByIdAsync(tenantId, ct)
+            ?? throw new InvalidOperationException($"Tenant {tenantId} not found.");
+
+        var window = new MaintenanceWindow
+        {
+            Title = request.Title.Trim(),
+            Description = request.Description?.Trim(),
+            StartUtc = DateTime.SpecifyKind(request.StartUtc, DateTimeKind.Utc),
+            EndUtc = DateTime.SpecifyKind(request.EndUtc, DateTimeKind.Utc),
+            Severity = request.Severity,
+            CreatedBy = string.IsNullOrWhiteSpace(createdBy) ? "operator" : createdBy.Trim(),
+            DateCreated = DateTime.UtcNow
+        };
+
+        tenant.MaintenanceWindows.Add(window);
+        tenant.LastAccessedAt = DateTime.UtcNow;
+        await _tenantRepo.SaveAsync(tenant, ct);
+
+        // Append an audit-trail entry so we can answer "who scheduled what?"
+        tenant.AuditTrail.Add(new TenantAuditRecord
+        {
+            TenantId = tenant.TenantId,
+            ActionType = "MaintenanceScheduled",
+            Details = $"Scheduled '{window.Title}' ({window.Severity}) from {window.StartUtc:O} to {window.EndUtc:O}"
+        });
+        await _tenantRepo.SaveAsync(tenant, ct);
+
+        return MapMaintenanceWindow(window);
+    }
+
+    public async Task<bool> RemoveMaintenanceWindowAsync(Guid tenantId, Guid windowId, CancellationToken ct = default)
+    {
+        var tenant = await _tenantRepo.GetByIdAsync(tenantId, ct);
+        if (tenant is null) return false;
+
+        var existing = tenant.MaintenanceWindows.FirstOrDefault(w => w.MaintenanceWindowId == windowId);
+        if (existing is null) return false;
+
+        tenant.MaintenanceWindows.Remove(existing);
+
+        tenant.AuditTrail.Add(new TenantAuditRecord
+        {
+            TenantId = tenant.TenantId,
+            ActionType = "MaintenanceRemoved",
+            Details = $"Removed maintenance window '{existing.Title}' ({windowId})"
+        });
+        await _tenantRepo.SaveAsync(tenant, ct);
+        return true;
+    }
+
+    public async Task<bool> ResolveMaintenanceWindowAsync(Guid tenantId, Guid windowId, CancellationToken ct = default)
+    {
+        var tenant = await _tenantRepo.GetByIdAsync(tenantId, ct);
+        if (tenant is null) return false;
+
+        var existing = tenant.MaintenanceWindows.FirstOrDefault(w => w.MaintenanceWindowId == windowId);
+        if (existing is null) return false;
+
+        existing.IsResolved = true;
+
+        tenant.AuditTrail.Add(new TenantAuditRecord
+        {
+            TenantId = tenant.TenantId,
+            ActionType = "MaintenanceResolved",
+            Details = $"Resolved maintenance window '{existing.Title}' ({windowId})"
+        });
+        await _tenantRepo.SaveAsync(tenant, ct);
+        return true;
+    }
+
+    private static MaintenanceWindowDto MapMaintenanceWindow(MaintenanceWindow w) => new()
+    {
+        MaintenanceWindowId = w.MaintenanceWindowId,
+        Title = w.Title,
+        Description = w.Description,
+        StartUtc = w.StartUtc,
+        EndUtc = w.EndUtc,
+        Severity = w.Severity.ToString(),
+        IsResolved = w.IsResolved,
+        DateCreated = w.DateCreated
+    };
 }

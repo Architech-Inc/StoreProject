@@ -4,18 +4,52 @@
     ViewData["Title"] = "Restock & Warehouse Orchestration";
     ViewData["ActivePage"] = "Restock";
     ViewData["PageDescription"] = "Velocity-based restock recommendations and supply chain orchestration.";
+
+    var criticalCount = Model.Summary?.CriticalCount ?? Model.Recommendations.Count(r => r.Severity == "Critical");
 }
 
 <div class="ops-page">
-    @if (TempData["StatusMessage"] != null)
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
     {
-        var msg = TempData["StatusMessage"]?.ToString() ?? "";
-        <div class="status @(msg.StartsWith("Error") ? "error" : "ok")" style="margin-bottom: 20px;">
-            @msg
+        <div class="status @(Model.StatusIsError ? "error" : "ok")" style="margin-bottom: 20px;">
+            @Model.StatusMessage
         </div>
     }
 
-    <!-- ── Top KPI Metric Summary Cards ──────────────────────── -->
+    @* ── Bulk-order result panel (skipped recommendations, etc.) ────────── *@
+    @if (Model.LastBulkResult is not null && Model.LastBulkResult.SkippedRecommendations.Count > 0)
+    {
+        <section class="bulk-result-panel" style="background: var(--surface); border: 1px solid var(--warning); border-radius: var(--radius-lg); padding: 16px; margin-bottom: 20px;">
+            <h3 style="margin-top:0; color: var(--warning); font-size: 1.05rem;">
+                Bulk-order skipped @Model.LastBulkResult.Skipped recommendation(s) — set PreferredSupplierId on these items:
+            </h3>
+            <ul style="margin: 0; padding-left: 18px; color: var(--text-secondary);">
+                @foreach (var skip in Model.LastBulkResult.SkippedRecommendations)
+                {
+                    <li>
+                        <strong>@skip.ItemName</strong> — @skip.Reason
+                    </li>
+                }
+            </ul>
+            @if (Model.LastBulkResult.CreatedPurchaseOrders.Count > 0)
+            {
+                <h4 style="margin: 12px 0 6px; font-size: 0.95rem; color: var(--success);">Created Purchase Orders:</h4>
+                <ul style="margin: 0; padding-left: 18px; color: var(--text-secondary);">
+                    @foreach (var po in Model.LastBulkResult.CreatedPurchaseOrders)
+                    {
+                        <li>
+                            PO #@po.PurchaseOrderId — supplier
+                            <strong>@(po.SupplierName ?? po.SupplierId.ToString())</strong>,
+                            branch <strong>@(po.BranchName ?? po.BranchId.ToString())</strong>,
+                            @po.ItemCount item(s), total qty @po.TotalQuantity
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+    }
+
+    <!-- ── Top KPI Metric Summary Cards ─────────────────────── -->
     <section class="catalog-kpi-grid">
         <div class="catalog-kpi-card" style="cursor:default;">
             <div class="catalog-kpi-icon kpi-icon-brand">
@@ -23,7 +57,7 @@
             </div>
             <div class="catalog-kpi-info">
                 <span class="catalog-kpi-label">Pending Recommendations</span>
-                <span class="catalog-kpi-val">@Model.Recommendations.Count()</span>
+                <span class="catalog-kpi-val">@(Model.Summary?.PendingCount ?? Model.Recommendations.Count)</span>
                 <span class="catalog-kpi-sub">Total active recommendations</span>
             </div>
         </div>
@@ -34,71 +68,104 @@
             </div>
             <div class="catalog-kpi-info">
                 <span class="catalog-kpi-label">Critical Shortages</span>
-                <span class="catalog-kpi-val" style="color:#d97706;">@(Model.Recommendations.Count(r => r.Reason.Contains("Out of stock") || r.Reason.Contains("Urgent")))</span>
+                <span class="catalog-kpi-val" style="color:#d97706;">@criticalCount</span>
                 <span class="catalog-kpi-sub">Requires immediate action</span>
             </div>
         </div>
 
         <div class="catalog-kpi-card" style="cursor:default;">
             <div class="catalog-kpi-icon kpi-icon-green">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h20"/><path d="M5 20v-5a5 5 0 0 1 10 0v5"/><path d="M9 20v-3"/><path d="M15 20v-3"/><path d="M12 15V8"/><path d="M9 11l3-3 3 3"/></svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="2 20h20"/><path d="M5 20v-5a5 5 0 0 1 10 0v5"/><path d="M9 20v-3"/><path d="M15 20v-3"/><path d="M12 15V8"/><path d="M9 11l3-3 3 3"/></svg>
             </div>
             <div class="catalog-kpi-info">
                 <span class="catalog-kpi-label">Projected Restock Value</span>
-                <span class="catalog-kpi-val">@(Model.Recommendations.Sum(r => (r.Item?.CostPrice ?? 0) * r.RecommendedQuantity).ToString("N0")) <small style="font-size:0.75rem;">XAF</small></span>
+                <span class="catalog-kpi-val">@(Model.Summary is not null ? Model.Summary.ProjectedValue.ToString("N0") : Model.Recommendations.Sum(r => r.ProjectedValue).ToString("N0")) <small style="font-size:0.75rem;">XAF</small></span>
                 <span class="catalog-kpi-sub">Total PO estimates</span>
             </div>
         </div>
     </section>
 
-    <!-- ── Filter Dock ─────────────────────────────── -->
+    <!-- ── Filter / Actions Dock ─────────────────────────────── -->
     <section class="catalog-filter-dock">
         <form method="get" class="filter-dock-top">
             <div class="filter-search-box">
                 <svg class="filter-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 <input type="text" name="search" placeholder="Search item name or barcode..." autocomplete="off" />
             </div>
+        </form>
 
-            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-                <button type="button" class="btn-brand-primary" style="padding:9px 16px;font-weight:600;display:flex;align-items:center;gap:6px;">
+        <div style="display:flex; gap:10px; margin-top: 12px; flex-wrap: wrap; align-items: center;">
+            <form method="post" asp-page-handler="SyncForecast" style="display:inline;">
+                <button type="submit" class="btn-brand-primary" style="padding:9px 16px;font-weight:600;display:flex;align-items:center;gap:6px;">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v6h6"/><path d="M3 13a9 9 0 1 0 3-7.7L3 8"/></svg> Sync AI Forecast
                 </button>
-            </div>
-        </form>
+            </form>
+
+            @if (criticalCount > 0)
+            {
+                <form method="post" asp-page-handler="BulkOrderCritical" style="display:inline;"
+                      onsubmit="return confirm(@($"'Bulk-order all {criticalCount} critical recommendation(s)? Each supplier will get one PO with multiple line items.'"));">
+                    <button type="submit" class="btn-warning-primary" style="padding:9px 16px;font-weight:600;display:flex;align-items:center;gap:6px; background:#dc2626; color:white; border:none; border-radius:var(--radius-md); cursor:pointer;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3z"/><path d="M3 9h18"/><path d="M9 21V9"/></svg> Bulk Order All Critical (@criticalCount)
+                    </button>
+                </form>
+            }
+        </div>
     </section>
 
     <div class="table-responsive" style="background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); border: 1px solid var(--border-soft);">
-        <table class="data-table" style="width: 100%; border-collapse: collapse;">
+        <table class="data-table" id="restock-table" style="width: 100%; border-collapse: collapse;">
             <thead>
                 <tr>
                     <th>Item Details</th>
                     <th>Branch</th>
+                    <th>Stock</th>
                     <th>AI Forecast / Reason</th>
                     <th class="num">Rec. Qty</th>
+                    <th class="num">Projected</th>
                     <th style="text-align: right;">Actions</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="restock-tbody">
+                @* ── Rows are populated server-side; live updates add a single new row on top ── *@
                 @if (Model.Recommendations.Any())
                 {
                     foreach (var rec in Model.Recommendations)
                     {
-                        <tr style="border-bottom: 1px solid var(--border-soft);">
+                        var sevColor = rec.Severity == "Critical" ? "#dc2626"
+                                     : rec.Severity == "High" ? "#d97706"
+                                     : "#3b82f6";
+                        var sevBg = rec.Severity == "Critical" ? "rgba(220,38,38,0.12)"
+                                  : rec.Severity == "High" ? "rgba(217,119,6,0.12)"
+                                  : "rgba(59,130,246,0.10)";
+                        <tr data-restock-id="@rec.RecommendationId" style="border-bottom: 1px solid var(--border-soft);">
                             <td>
-                                <strong>@rec.Item?.Name</strong>
-                                <div class="text-sm text-gray" style="color: var(--text-muted);">SKU: @rec.Item?.Barcode</div>
+                                <strong>@rec.ItemName</strong>
+                                <div class="text-sm text-gray" style="color: var(--text-muted);">SKU: @(rec.ItemBarcode ?? "—")</div>
                             </td>
                             <td>
-                                <span style="font-weight: 500;">@rec.Branch?.Name</span>
+                                <span style="font-weight: 500;">@rec.BranchName</span>
                             </td>
                             <td>
-                                <span class="badge" style="background: rgba(139, 92, 246, 0.15); color: #6d28d9; border: 1px solid rgba(139, 92, 246, 0.3);">
+                                <div style="font-weight:600; color:@(rec.CurrentStock == 0 ? "#dc2626" : "var(--text-main)");">@rec.CurrentStock</div>
+                                @if (rec.DaysOfStock.HasValue)
+                                {
+                                    <div class="text-sm" style="color: var(--text-muted);">~@rec.DaysOfStock.Value.ToString("0.#") d left</div>
+                                }
+                                @if (rec.ReorderLevel.HasValue)
+                                {
+                                    <div class="text-sm" style="color: var(--text-muted);">ROL: @rec.ReorderLevel</div>
+                                }
+                            </td>
+                            <td>
+                                <span class="badge" style="background: @sevBg; color: @sevColor; border: 1px solid @sevColor;">
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px; vertical-align: middle;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                                    AI Forecast
+                                    @rec.Severity
                                 </span>
                                 <div class="text-sm mt-1" style="color: var(--text-secondary); margin-top: 4px;">@rec.Reason</div>
                             </td>
                             <td class="num font-bold" style="font-size: 1.1rem;">@rec.RecommendedQuantity</td>
+                            <td class="num">@rec.ProjectedValue.ToString("N0") <small style="color: var(--text-muted);">XAF</small></td>
                             <td style="text-align: right;">
                                 <div style="display:flex; gap:8px; justify-content:flex-end;">
                                     <form method="post" asp-page-handler="ConvertToTransfer" style="display:inline;">
@@ -126,8 +193,8 @@
                 }
                 else
                 {
-                    <tr>
-                        <td colspan="5" style="text-align:center; padding: 4rem 1rem; color: var(--text-muted);">
+                    <tr id="restock-empty-row">
+                        <td colspan="7" style="text-align:center; padding: 4rem 1rem; color: var(--text-muted);">
                             <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="margin-bottom: 1.5rem; opacity: 0.3;">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
@@ -140,3 +207,96 @@
         </table>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        // Live SignalR subscription: when a new recommendation arrives, inject a row
+        // at the top of the table and update the KPI tile counter without a full reload.
+        (function () {
+            'use strict';
+            const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g,
+                (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+            const formatXaf = (n) => new Intl.NumberFormat('en-US').format(n || 0);
+
+            window.addEventListener('restock-recommendation-arrived', (event) => {
+                const dto = event.detail;
+                if (!dto) return;
+
+                const tbody = document.getElementById('restock-tbody');
+                const emptyRow = document.getElementById('restock-empty-row');
+                if (emptyRow && emptyRow.parentNode === tbody) tbody.removeChild(emptyRow);
+
+                // Skip if the row already exists (broadcast may be replayed).
+                if (document.querySelector('tr[data-restock-id="' + dto.recommendationId + '"]')) return;
+
+                const sevColor = dto.severity === 'Critical' ? '#dc2626'
+                              : dto.severity === 'High' ? '#d97706'
+                              : '#3b82f6';
+                const sevBg = dto.severity === 'Critical' ? 'rgba(220,38,38,0.12)'
+                            : dto.severity === 'High' ? 'rgba(217,119,6,0.12)'
+                            : 'rgba(59,130,246,0.10)';
+                const stockColor = (dto.currentStock === 0) ? '#dc2626' : 'var(--text-main)';
+                const daysCell = dto.daysOfStock
+                    ? `<div class="text-sm" style="color: var(--text-muted);">~${dto.daysOfStock.toFixed(1)} d left</div>`
+                    : '';
+                const rowHtml = `
+                    <tr data-restock-id="${dto.recommendationId}" style="border-bottom: 1px solid var(--border-soft); background: rgba(34,197,94,0.06); animation: restock-fadein 0.6s ease-out;">
+                        <td>
+                            <strong>${escapeHtml(dto.itemName)}</strong>
+                            <div class="text-sm text-gray" style="color: var(--text-muted);">SKU: ${escapeHtml(dto.itemBarcode || '—')}</div>
+                        </td>
+                        <td><span style="font-weight: 500;">${escapeHtml(dto.branchName)}</span></td>
+                        <td>
+                            <div style="font-weight:600; color:${stockColor};">${dto.currentStock}</div>
+                            ${daysCell}
+                        </td>
+                        <td>
+                            <span class="badge" style="background: ${sevBg}; color: ${sevColor}; border: 1px solid ${sevColor};">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px; vertical-align: middle;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                                ${escapeHtml(dto.severity)}
+                            </span>
+                            <div class="text-sm mt-1" style="color: var(--text-secondary); margin-top: 4px;">${escapeHtml(dto.reason)}</div>
+                        </td>
+                        <td class="num font-bold" style="font-size: 1.1rem;">${dto.recommendedQuantity}</td>
+                        <td class="num">${formatXaf(dto.projectedValue)} <small style="color: var(--text-muted);">XAF</small></td>
+                        <td style="text-align: right;">
+                            <button class="btn-outline btn-sm" disabled title="Refresh page to action">Transfer</button>
+                            <button class="btn-brand-primary btn-sm" disabled title="Refresh page to action">Order PO</button>
+                            <button class="btn-outline-danger btn-sm" disabled title="Refresh page to action" style="padding: 4px 8px; border: none; background: transparent; color: var(--danger);">×</button>
+                        </td>
+                    </tr>`;
+                tbody.insertAdjacentHTML('afterbegin', rowHtml);
+
+                // Increment the KPI tile counters and the bulk-order button.
+                document.querySelectorAll('.catalog-kpi-val').forEach((el) => {
+                    const label = el.parentElement.querySelector('.catalog-kpi-label')?.textContent ?? '';
+                    if (label.includes('Pending')) {
+                        el.textContent = (parseInt(el.textContent, 10) || 0) + 1;
+                    }
+                    if (label.includes('Critical')) {
+                        if (dto.severity === 'Critical') {
+                            el.textContent = (parseInt(el.textContent, 10) || 0) + 1;
+                        }
+                    }
+                    if (label.includes('Projected')) {
+                        // Bump the XAF figure by the new projected value.
+                        const html = el.innerHTML;
+                        const m = html.match(/>([\d,\.]+)\s*</);
+                        if (m) {
+                            const current = parseFloat(m[1].replace(/,/g, ''));
+                            el.innerHTML = formatXaf(current + (dto.projectedValue || 0)) + ' <small style="font-size:0.75rem;">XAF</small>';
+                        }
+                    }
+                });
+            });
+        })();
+    </script>
+
+    <style>
+        @@keyframes restock-fadein {
+            from { background: rgba(34,197,94,0.18); }
+            to   { background: rgba(34,197,94,0.06); }
+        }
+    </style>
+}

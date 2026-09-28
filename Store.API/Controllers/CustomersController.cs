@@ -98,7 +98,10 @@ public class CustomersController : ControllerBase
     [Authorize(Policy = PermissionKeys.CustomerDelete)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
-        var deleted = await _customerService.DeleteAsync(id, ct);
+        var userIdClaim = User.FindFirst("uid")?.Value;
+        Guid.TryParse(userIdClaim, out var deletedById);
+
+        var deleted = await _customerService.DeleteAsync(id, deletedById == Guid.Empty ? null : deletedById, ct);
         if (!deleted) return NotFound(ApiResponse<object>.Fail("Customer not found."));
         return Ok(ApiResponse<object>.Ok(null!, "Customer deleted."));
     }

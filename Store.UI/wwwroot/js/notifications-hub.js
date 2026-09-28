@@ -296,6 +296,27 @@
                 });
             });
 
+            connection.on('ReceiveRestockRecommendation', (dto) => {
+                // 1) Push into the global notification bell so users not on the
+                //    restock page still see something happened.
+                const severity = dto.severity === 'Critical' ? 'Danger'
+                              : dto.severity === 'High'     ? 'Warning'
+                              : 'Info';
+                addNotification({
+                    title: `Restock alert · ${dto.itemName}`,
+                    message: `${dto.branchName} needs ${dto.recommendedQuantity}× more` +
+                             (dto.daysOfStock ? ` (~${dto.daysOfStock} d left).` : '.'),
+                    category: 'RestockRecommendation',
+                    severity: severity,
+                    targetUrl: '/Restock',
+                    actionLabel: 'Open restock'
+                });
+
+                // 2) Dispatch a CustomEvent so the /Restock page can refresh
+                //    its table live without reloading the whole page.
+                window.dispatchEvent(new CustomEvent('restock-recommendation-arrived', { detail: dto }));
+            });
+
             connection.onreconnecting(() => {
                 if (statusIndicator) {
                     statusIndicator.classList.add('offline');

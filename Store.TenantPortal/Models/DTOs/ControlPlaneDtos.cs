@@ -35,6 +35,19 @@ public record ProvisionTenantDto(
     string? CustomDomain = null
 );
 
+/// <summary>MT-01 — async provisioning wire format. The portal polls this until Status is Completed/Failed.</summary>
+public record ProvisioningJobResponse(
+    Guid JobId,
+    string Status,
+    string? StatusDetail,
+    string? FailureReason,
+    Guid? TenantId,
+    string? TenantSlug,
+    DateTime DateCreated,
+    DateTime? StartedAt,
+    DateTime? CompletedAt
+);
+
 public record TenantSummaryDto(
     Guid TenantId,
     string Name,
@@ -174,7 +187,9 @@ public record BackupScheduleDto(
     string Frequency,
     int RetentionCount,
     bool IsEnabled,
-    DateTime? NextRunAt
+    DateTime? NextRunAt,
+    DateTime? LastRunAt,    // MT-06
+    string? LastRunStatus   // MT-06
 );
 
 public record BackupJobDto(
@@ -274,4 +289,81 @@ public record TenantSdlcStatusDto(
     List<TenantSnapshotDto> Snapshots,
     List<SandboxSummaryDto> Sandboxes
 );
+
+// ─── MT-07 — public tenant status + maintenance schedule ───────────────────
+
+public record MaintenanceWindowDto(
+    Guid MaintenanceWindowId,
+    string Title,
+    string? Description,
+    DateTime StartUtc,
+    DateTime EndUtc,
+    string Severity,
+    bool IsResolved,
+    DateTime DateCreated
+);
+
+public record TenantStatusDto(
+    Guid TenantId,
+    string Name,
+    string Slug,
+    string Status,
+    bool IsHealthy,
+    DateTime? LastHealthCheckUtc,
+    string? LastHealthMessage,
+    List<MaintenanceWindowDto> ActiveMaintenance,
+    List<MaintenanceWindowDto> UpcomingMaintenance,
+    List<MaintenanceWindowDto> RecentMaintenance,
+    bool IsAcceptingTraffic,
+    DateTime GeneratedAtUtc
+);
+
+public record CreateMaintenanceWindowRequest(
+    string Title,
+    string? Description,
+    DateTime StartUtc,
+    DateTime EndUtc,
+    string Severity
+);
+
+// ─── MT-02 — billing surface ────────────────────────────────────────────────
+
+public record CreateBillingInvoiceRequest(
+    Guid TenantId,
+    string PlanId,
+    int TotalAmount,
+    string Currency,
+    string Description,
+    string ReturnUrl,
+    string CallbackUrl
+);
+
+/// <summary>
+/// Wave 19 — invoice history surface. Mirrors
+/// <c>Store.ControlPlane.Controllers.TenantPaymentHistoryDto</c> so the
+/// portal doesn't have to depend on the ControlPlane assembly.
+/// </summary>
+public record TenantPaymentHistoryDto(
+    Guid TenantId,
+    string Slug,
+    string PlanTier,
+    string SubscriptionStatus,
+    DateTime? SubscriptionStartUtc,
+    DateTime? SubscriptionEndUtc,
+    DateTime? NextBillingAtUtc,
+    DateTime? GracePeriodUntilUtc,
+    List<TenantPaymentDto> Payments);
+
+public record TenantPaymentDto(
+    Guid PaymentId,
+    string Provider,
+    string ProviderToken,
+    string? Channel,
+    int Amount,
+    string Currency,
+    string Status,
+    string? PlanId,
+    DateTime CreatedAtUtc,
+    DateTime? CompletedAtUtc,
+    string? FailureReason);
 

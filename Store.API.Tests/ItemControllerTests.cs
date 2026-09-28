@@ -85,7 +85,7 @@ public class ItemControllerTests
     public async Task Delete_ReturnsNotFound_WhenItemNotFound()
     {
         var svc = new Mock<IItemService>();
-        svc.Setup(s => s.DeleteAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+        svc.Setup(s => s.DeleteAsync(It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
         var controller = CreateController(svc.Object);
@@ -98,7 +98,7 @@ public class ItemControllerTests
     public async Task Delete_ReturnsOk_WhenItemDeletedSuccessfully()
     {
         var svc = new Mock<IItemService>();
-        svc.Setup(s => s.DeleteAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+        svc.Setup(s => s.DeleteAsync(It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
         var controller = CreateController(svc.Object);

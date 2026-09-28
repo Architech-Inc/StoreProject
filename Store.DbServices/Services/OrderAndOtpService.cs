@@ -6,6 +6,8 @@ using Store.Models.Enums;
 using Store.Models.Interfaces;
 using Store.Models.Interfaces.Repositories;
 using Store.Models.Interfaces.Services;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Store.DbServices.Services;
 
@@ -168,7 +170,24 @@ public class OrderService : IOrderService
 public class OtpService : IOtpService
 {
     private readonly IUnitOfWork _uow;
-    public OtpService(IUnitOfWork uow) => _uow = uow;
+    private readonly byte[] _otpPepper;
+
+    public OtpService(IUnitOfWork uow, OtpPepperOptions pepperOptions)
+    {
+        _uow = uow;
+        _otpPepper = pepperOptions.GetPepperBytes();
+    }
+
+    /// <summary>
+    /// SEC-06 — HMAC-SHA256 hash of the OTP code, keyed by the deploy pepper.
+    /// Plaintext never touches the DB.
+    /// </summary>
+    private string HashOtpCode(string rawCode)
+    {
+        var codeBytes = Encoding.UTF8.GetBytes(rawCode);
+        var hash = HMACSHA256.HashData(_otpPepper, codeBytes);
+        return Convert.ToBase64String(hash);
+    }
 
     public async Task<string> GenerateAsync(Guid userId, OtpPurpose purpose, CancellationToken ct = default)
     {
@@ -179,11 +198,12 @@ public class OtpService : IOtpService
 
         foreach (var o in existing) { o.IsUsed = true; _uow.Repository<Otp>().Update(o); }
 
-        var code = Random.Shared.Next(100000, 999999).ToString();
+        // SEC-06 — Cryptographic RNG instead of Random.Shared.
+        var code = RandomNumberGenerator.GetInt32(100000, 1_000_000).ToString("D6");
         var otp = new Otp
         {
             UserId = userId,
-            Code = code,
+            CodeHash = HashOtpCode(code),
             Purpose = purpose,
             ExpiresAt = DateTime.UtcNow.AddMinutes(15),
             IsUsed = false
@@ -196,16 +216,33 @@ public class OtpService : IOtpService
 
     public async Task<bool> ValidateAsync(Guid userId, string code, OtpPurpose purpose, CancellationToken ct = default)
     {
-        var otp = await _uow.Repository<Otp>().Query()
+        if (string.IsNullOrWhiteSpace(code) || code.Length != 6) return false;
+
+        var candidates = await _uow.Repository<Otp>().Query()
             .Where(o => o.UserId == userId && o.Purpose == purpose && !o.IsUsed)
             .OrderByDescending(o => o.DateCreated)
-            .FirstOrDefaultAsync(ct);
+            .Take(8) // cap so the constant-time walk is bounded
+            .ToListAsync(ct);
 
-        if (otp is null || otp.ExpiresAt < DateTime.UtcNow) return false;
-        if (otp.Code != code) return false;
+        var submittedHash = Encoding.UTF8.GetBytes(HashOtpCode(code));
 
-        otp.IsUsed = true;
-        _uow.Repository<Otp>().Update(otp);
+        Otp? match = null;
+        foreach (var otp in candidates)
+        {
+            if (otp.ExpiresAt < DateTime.UtcNow) continue;
+            var stored = Convert.FromBase64String(otp.CodeHash);
+            if (stored.Length == submittedHash.Length &&
+                CryptographicOperations.FixedTimeEquals(stored, submittedHash))
+            {
+                match = otp;
+                break;
+            }
+        }
+
+        if (match == null) return false;
+
+        match.IsUsed = true;
+        _uow.Repository<Otp>().Update(match);
         await _uow.SaveChangesAsync(ct);
         return true;
     }

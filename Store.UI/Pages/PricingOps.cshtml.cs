@@ -2,7 +2,9 @@ using Microsoft.AspNetCore.Mvc;
 using Store.Models.DTOs.Operations;
 using Store.Models.Enums;
 using StoreUI.Services;
+using Store.Models.Common;
 
+using Microsoft.Extensions.Logging.Abstractions;
 namespace StoreUI.Pages;
 
 public class PricingOpsModel : SecurePageModel
@@ -189,7 +191,7 @@ public class PricingOpsModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: Failed to save pricing rule - {ex.Message}";
+            StatusMessage = $"Error: Failed to save pricing rule - {SafeErrorMessage.From(ex, NullLogger<PricingOpsModel>.Instance, "Pricing Ops operation")}";
         }
 
         return RedirectToPage(new { ActiveTab = tab });

@@ -453,6 +453,113 @@ div.stackPanel {
     }
 }
 
+/* GAP-23 / UX-02 — mobile-first responsive _AppLayout. Hides the sidebar
+   on narrow viewports, exposes a hamburger toggle, makes tables scroll
+   horizontally, and bumps touch-target sizes for tablet POS use. */
+@media (max-width: 900px) {
+    .app-sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        z-index: 1000;
+        transform: translateX(-100%);
+        transition: transform 0.2s ease;
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.18);
+    }
+
+    .app-sidebar.is-open {
+        transform: translateX(0);
+    }
+
+    .app-main {
+        margin-left: 0 !important;
+        padding: 12px !important;
+    }
+
+    .app-content {
+        padding: 12px !important;
+    }
+
+    /* Hamburger toggle only visible on mobile. */
+    .mobile-sidebar-toggle {
+        display: inline-flex !important;
+    }
+
+    /* Compact top bar on mobile. */
+    .page-title,
+    .page-header h1 {
+        font-size: 1.15rem !important;
+    }
+}
+
+@media (min-width: 901px) {
+    /* Desktop: hide the hamburger toggle — sidebar is always visible. */
+    .mobile-sidebar-toggle {
+        display: none !important;
+    }
+}
+
+/* Hamburger toggle — hidden on desktop, shown on mobile. */
+.mobile-sidebar-toggle {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: var(--surface, #fff);
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--text-primary, #111827);
+    padding: 0;
+    transition: background 0.1s ease;
+}
+
+.mobile-sidebar-toggle:hover {
+    background: var(--surface-alt, #f3f4f6);
+}
+
+/* Backdrop dimmer when sidebar is open on mobile. */
+.mobile-sidebar-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 999;
+}
+
+.mobile-sidebar-backdrop.is-visible {
+    display: block;
+}
+
+/* Tablet-friendly touch targets for buttons on inventory + POS pages. */
+@media (max-width: 900px) {
+    .btn-table-action,
+    .btn-glass,
+    .btn-primary-glow,
+    .btn-brand-primary,
+    .btn-brand-secondary {
+        min-height: 36px;
+        min-width: 36px;
+    }
+
+    /* Scrollable tables on narrow viewports — keep the data, lose the
+       horizontal squeeze. */
+    .table-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .dash-card {
+        padding: 16px !important;
+    }
+
+    .kpi-tile {
+        padding: 12px !important;
+    }
+}
+
 .panel_list li:not(.browser-default) {
     width: 100%;
     height: 40px;

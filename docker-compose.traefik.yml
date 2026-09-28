@@ -1,3 +1,24 @@
+# ════════════════════════════════════════════════════════════════════════════════
+# Traefik v3 — local-dev reverse proxy
+#
+# ⚠️  PRODUCTION GUARD — OPS-03 (Wave 12)
+# ─────────────────────────────────────────────────────────────────────────────
+# This file is for local development. The Traefik API + dashboard are protected
+# by the `TRAEFIK_API_ENABLED` env var (defaults to `false` in production).
+#
+# To enable the dashboard locally, set `TRAEFIK_API_ENABLED=true` in `.env`
+# before `docker compose up`. Never enable this on a public-facing VPS — the
+# dashboard exposes every router rule, every TLS cert subject, and lets an
+# attacker MITM or rewrite any tenant traffic.
+#
+# Exposed ports are also non-prod:
+#   - 8080 → Traefik dashboard (dev only)
+#   - 18080 / 18443 → plain HTTP / HTTPS entrypoints for local-fronted apps
+# Production uses `docker-compose.prod.yml` + `provision-docker-vps.ps1` instead,
+# where Traefik is configured with ACME-01 DNS-01 and the API is firewalled
+# off at the VPS firewall layer (`ufw allow 80,443/tcp` and nothing else).
+# ════════════════════════════════════════════════════════════════════════════════
+
 version: '3.8'
 
 services:
@@ -8,16 +29,26 @@ services:
     ports:
       - "18080:80"
       - "18443:443"
-      - "8080:8080"
+      # Dashboard port — never published in production; the line below is gated by
+      # TRAEFIK_API_ENABLED via the command-line interpolation.
+      - "${TRAEFIK_DASHBOARD_PORT:-8080}:8080"
     volumes:
       - "./Store.ControlPlane/traefik/dynamic:/etc/traefik/dynamic:ro"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
     command:
-      - "--api.insecure=true"
-      - "--api.dashboard=true"
+      # Dashboard + insecure API are off by default. Set TRAEFIK_API_ENABLED=true
+      # in `.env` to enable them on a local laptop (never on production).
+      - "--api.insecure=${TRAEFIK_API_ENABLED:-false}"
+      - "--api.dashboard=${TRAEFIK_API_ENABLED:-false}"
       - "--providers.file.directory=/etc/traefik/dynamic"
       - "--providers.file.watch=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
+      # SEC-21 — Traefik's dashboard should also be served on TLS in dev. If you
+      # enable TRAEFIK_API_ENABLED=true, expose it via websecure + a TLS cert.
+      - "--entrypoints.traefik.address=:8080"
     networks:
       - proxy-network
 

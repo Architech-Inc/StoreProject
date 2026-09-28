@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Store.API.Application.DependencyInjection;
-using Store.API.Contracts;
+using Store.Models.DTOs.Common;
 using Store.API.Middleware;
 using Store.DbServices.Extensions;
 using Store.DbServices.Seeding;
@@ -17,6 +17,7 @@ using System.IO;
 using Fido2NetLib;
 using Microsoft.EntityFrameworkCore;
 using Store.API.Hubs;
+using Store.DbServices.Context;
 using Store.API.Services;
 using Store.Models.Interfaces.Services;
 using Hangfire;
@@ -47,6 +48,39 @@ else
 }
 builder.Services.AddScoped<Store.Models.Interfaces.Services.IWebAuthnService, Store.API.Services.WebAuthnService>();
 builder.Services.AddMemoryCache();
+
+// SEC-26 — server-side password policy. Bound from config with secure defaults
+// baked in so a missing config block still produces a hard policy.
+builder.Services.Configure<Store.Models.DTOs.Auth.PasswordPolicyOptions>(
+    builder.Configuration.GetSection(Store.Models.DTOs.Auth.PasswordPolicyOptions.SectionName));
+builder.Services.AddSingleton(sp =>
+{
+    var opts = builder.Configuration.GetSection(Store.Models.DTOs.Auth.PasswordPolicyOptions.SectionName)
+        .Get<Store.Models.DTOs.Auth.PasswordPolicyOptions>() ?? Store.Models.DTOs.Auth.PasswordPolicyOptions.WithSecureDefaults();
+    // Ensure the embedded blocklist is always present, even if config doesn't supply one.
+    if (opts.CommonPasswords.Count == 0)
+    {
+        opts.CommonPasswords = Store.Models.DTOs.Auth.PasswordPolicyOptions.DefaultCommonPasswords.ToList();
+    }
+    return new Store.Models.DTOs.Auth.PasswordPolicyHolder(opts);
+});
+
+// SEC-27 — HIBP k-anonymity breach checker. Registered as a typed HttpClient
+// so the framework owns its lifecycle + DNS rotation. Fails open on any
+// network error — see PwnedPasswordsBreachChecker for the contract.
+builder.Services.AddHttpClient<Store.Models.Interfaces.Services.IBreachChecker,
+    Store.DbServices.Services.PwnedPasswordsBreachChecker>(client =>
+    {
+        client.Timeout = TimeSpan.FromSeconds(3);
+        if (client.DefaultRequestHeaders.UserAgent.Count == 0)
+        {
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("StoreProject/1.0 (HIBP-Auditor)");
+        }
+    });
+
+// MT-02 — PayDunya aggregator is registered in ControlPlane since the
+// billing surface (IPN + invoice creation) lives there. Store.API doesn't
+// depend on the payment flow.
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddFido2(options =>
@@ -126,6 +160,20 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 {
                     context.Token = accessToken;
                 }
+
+                // SEC-19 — accept the access token from the HttpOnly cookie if the
+                // Authorization header is missing. The cookie name is owned by
+                // Store.API.Auth.AuthCookieHelper; if it changes there, change here.
+                if (string.IsNullOrEmpty(context.Token))
+                {
+                    var cookieToken = context.HttpContext.Request.Cookies
+                        .TryGetValue(Store.API.Auth.AuthCookieHelper.AccessTokenCookieName, out var v) ? v : null;
+                    if (!string.IsNullOrEmpty(cookieToken))
+                    {
+                        context.Token = cookieToken;
+                    }
+                }
+
                 return Task.CompletedTask;
             },
             OnTokenValidated = async context =>
@@ -188,6 +236,18 @@ builder.Services.AddRateLimiter(options =>
         limiter.QueueLimit = 0;
     });
 
+    // SEC-23 — WebAuthn assertion + registration endpoints. Same shape
+    // as password-recovery: 5 attempts per 15 minutes per IP. FIDO2
+    // itself is computationally infeasible to brute-force, but this
+    // caps DoS / replay volume against the assertion callback.
+    options.AddFixedWindowLimiter("webauthn-assertion", limiter =>
+    {
+        limiter.PermitLimit = 10;
+        limiter.Window = TimeSpan.FromMinutes(15);
+        limiter.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        limiter.QueueLimit = 0;
+    });
+
     // General API limit
     options.AddFixedWindowLimiter("general", limiter =>
     {
@@ -238,6 +298,24 @@ builder.Services.AddCors(options =>
                   .AllowCredentials();
         }
     });
+});
+
+// ─── API Versioning — GAP-15 ─────────────────────────────────────────────────
+// Defaults every existing route to v1 without requiring per-controller attributes;
+// future v2 endpoints can opt in with `[ApiVersion("2.0")]` + `MapToApiVersion`.
+// The `X-Api-Version` response header is emitted on every response, plus
+// `?api-version=` query string and `X-Version` header are honored for callers
+// that want to opt into a specific version. This is non-breaking: no existing
+// route moves, and the wire format is unchanged.
+builder.Services.AddApiVersioning(options =>
+{
+    options.DefaultApiVersion = new Microsoft.AspNetCore.Mvc.ApiVersion(1, 0);
+    options.AssumeDefaultVersionWhenUnspecified = true;
+    options.ReportApiVersions = true;
+    options.ApiVersionReader =
+        Microsoft.AspNetCore.Mvc.Versioning.ApiVersionReader.Combine(
+            new Microsoft.AspNetCore.Mvc.Versioning.QueryStringApiVersionReader(),
+            new Microsoft.AspNetCore.Mvc.Versioning.HeaderApiVersionReader("X-Version"));
 });
 
 // ─── Controllers ─────────────────────────────────────────────────────────────
@@ -295,7 +373,12 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 // ─── Health Checks ────────────────────────────────────────────────────────────
-builder.Services.AddHealthChecks();
+// Deep readiness probe: the API must be able to actually reach MySQL.
+// Without this, the docker-compose healthcheck `curl /health` returns 200
+// even when the DB is unreachable, and Traefik routes traffic to a broken
+// instance.
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<StoreDbContext>("mysql", tags: new[] { "ready" });
 
 // ─── Background Jobs (Hangfire) ───────────────────────────────────────────────
 builder.Services.AddHangfireServices(builder.Configuration);
@@ -352,6 +435,12 @@ app.UseCors("StorePolicy");
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
+
+// GAP-16 — ETag middleware for GET responses. Placed AFTER auth so the
+// response stream is captured post-authz, and BEFORE MapControllers so
+// controller handlers can still emit their own Cache-Control headers if
+// they need to (the middleware only sets ETag if the controller didn't).
+app.UseETag();
 
 app.MapControllers();
 app.MapHub<Store.API.Hubs.StoreNotificationHub>("/hubs/notifications");

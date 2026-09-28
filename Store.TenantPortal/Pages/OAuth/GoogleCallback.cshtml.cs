@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Store.TenantPortal.Models.DTOs;
 using Store.TenantPortal.Services;
 
+using Store.Models.Common;
 namespace Store.TenantPortal.Pages.OAuth;
 
 [Authorize]
@@ -80,7 +81,7 @@ public class GoogleCallbackModel : PageModel
         {
             _logger.LogError(ex, "Failed to complete Google OAuth exchange.");
             IsSuccess = false;
-            Message = $"Failed to connect Google Drive: {ex.Message}";
+            Message = $"Failed to connect Google Drive: {SafeErrorMessage.From(ex, _logger, "Google Callback operation")}";
             return Page();
         }
     }

@@ -240,7 +240,7 @@
                                             </form>
                                         }
 
-                                        @if (po.Status == "Submitted")
+                                        @if (po.Status == "Submitted" && Model.CanApprove)
                                         {
                                             <form method="post" asp-page-handler="Approve" style="margin:0;">
                                                 @Html.AntiForgeryToken()

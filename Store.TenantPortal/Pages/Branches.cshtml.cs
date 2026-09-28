@@ -5,19 +5,22 @@ using Store.TenantPortal.Models;
 using Store.TenantPortal.Models.DTOs;
 using Store.TenantPortal.Services;
 
+using Store.Models.Common;
 namespace Store.TenantPortal.Pages;
 
 [Authorize]
 public class BranchesModel : PageModel
 {
+    private readonly ILogger<BranchesModel> _logger;
     private readonly IControlPlaneClient _cpClient;
     private readonly IPortalSessionService _sessionService;
 
-    public BranchesModel(IControlPlaneClient cpClient, IPortalSessionService sessionService)
+    public BranchesModel(IControlPlaneClient cpClient, IPortalSessionService sessionService, ILogger<BranchesModel> logger)
     {
         _cpClient = cpClient;
         _sessionService = sessionService;
-    }
+    
+        _logger = logger;}
 
     public IReadOnlyList<BranchDto> Branches { get; set; } = Array.Empty<BranchDto>();
     public PortalSession? Session { get; set; }
@@ -53,7 +56,7 @@ public class BranchesModel : PageModel
         }
         catch (Exception ex)
         {
-            FeedbackMessage = ex.Message;
+            FeedbackMessage = SafeErrorMessage.From(ex, _logger, "Branches operation");
             IsError = true;
         }
 

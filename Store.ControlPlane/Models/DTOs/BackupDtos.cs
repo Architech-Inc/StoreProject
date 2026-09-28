@@ -25,7 +25,9 @@ public record BackupScheduleDto(
     string Frequency, // Manual, Hourly, Daily, Weekly
     int RetentionCount,
     bool IsEnabled,
-    DateTime? NextRunAt
+    DateTime? NextRunAt,
+    DateTime? LastRunAt,    // MT-06 — when the schedule last fired
+    string? LastRunStatus   // MT-06 — Success / Failed: ...
 );
 
 public record BackupJobDto(

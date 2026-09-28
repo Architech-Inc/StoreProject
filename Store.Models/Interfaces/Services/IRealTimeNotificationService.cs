@@ -10,4 +10,5 @@ public interface IRealTimeNotificationService
     Task SendToBranchAsync(int branchId, StoreNotificationDto notification, CancellationToken ct = default);
     Task NotifyDiscountOverrideAsync(DiscountOverrideNotificationDto dto, CancellationToken ct = default);
     Task NotifyLowStockAsync(LowStockAlertDto dto, CancellationToken ct = default);
+    Task NotifyRestockRecommendationAsync(RestockRecommendationNotificationDto dto, CancellationToken ct = default);
 }

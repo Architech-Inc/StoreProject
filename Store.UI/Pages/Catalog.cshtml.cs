@@ -227,7 +227,7 @@ public class CatalogModel : SecurePageModel
             return GoToLogin();
 
         _apiClient.SetToken(token);
-        await _itemService.DeleteAsync(itemId, ct);
+        await _itemService.DeleteAsync(itemId, null, ct);
         StatusMessage = "Item deleted.";
         return RedirectToPage("/Catalog", new { page = PageNumber, search = Search, categoryId = CategoryId, stockStatus = StockStatus, sortBy = SortBy, viewMode = ViewMode });
     }

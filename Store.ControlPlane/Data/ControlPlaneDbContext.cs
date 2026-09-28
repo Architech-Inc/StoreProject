@@ -23,6 +23,9 @@ public class ControlPlaneDbContext : DbContext
     public DbSet<SystemRelease> SystemReleases => Set<SystemRelease>();
     public DbSet<TenantSnapshot> TenantSnapshots => Set<TenantSnapshot>();
 
+    /// <summary>MT-01 — async provisioning job tracker.</summary>
+    public DbSet<TenantProvisioningJob> TenantProvisioningJobs => Set<TenantProvisioningJob>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -95,6 +98,25 @@ public class ControlPlaneDbContext : DbContext
                     v => JsonSerializer.Serialize(v, JsonOptions),
                     v => JsonSerializer.Deserialize<List<TenantProvisioningLog>>(v, JsonOptions) ?? new())
                 .HasColumnType("longtext");
+
+            // MT-07 — maintenance windows surfaced to the public status page.
+            entity.Property(t => t.MaintenanceWindows)
+                .HasConversion(
+                    v => JsonSerializer.Serialize(v, JsonOptions),
+                    v => JsonSerializer.Deserialize<List<MaintenanceWindow>>(v, JsonOptions) ?? new())
+                .HasColumnType("longtext");
+
+            // Wave 18 — payment history surfaced on the Billing page.
+            entity.Property(t => t.Payments)
+                .HasConversion(
+                    v => JsonSerializer.Serialize(v, JsonOptions),
+                    v => JsonSerializer.Deserialize<List<TenantPayment>>(v, JsonOptions) ?? new())
+                .HasColumnType("longtext");
+
+            // Wave 18 — subscription lifecycle scalar columns.
+            entity.Property(t => t.SubscriptionPlanId).HasMaxLength(64);
+            entity.Property(t => t.SubscriptionStatus).HasConversion<int>();
+            entity.Property(t => t.LastPaymentToken).HasMaxLength(128);
         });
 
         // PortalAccount Configuration
@@ -127,6 +149,27 @@ public class ControlPlaneDbContext : DbContext
             entity.HasKey(s => s.SnapshotId);
             entity.HasIndex(s => s.TenantId);
             entity.Property(s => s.SqlDumpPath).HasMaxLength(1000).IsRequired();
+        });
+
+        // MT-01 — TenantProvisioningJob
+        modelBuilder.Entity<TenantProvisioningJob>(entity =>
+        {
+            entity.ToTable("tenant_provisioning_jobs");
+            entity.HasKey(j => j.JobId);
+            entity.HasIndex(j => j.AccountId);
+            // The hosted service polls Status=Pending ORDER BY DateCreated ASC.
+            entity.HasIndex(j => new { j.Status, j.DateCreated })
+                  .HasDatabaseName("ix_provisioning_jobs_status_date");
+            entity.Property(j => j.StoreName).HasMaxLength(200).IsRequired();
+            entity.Property(j => j.Slug).HasMaxLength(80).IsRequired();
+            entity.Property(j => j.AdminEmail).HasMaxLength(255).IsRequired();
+            entity.Property(j => j.AdminUsername).HasMaxLength(100).IsRequired();
+            entity.Property(j => j.Currency).HasMaxLength(8);
+            entity.Property(j => j.PlanTier).HasConversion<string>().HasMaxLength(40);
+            entity.Property(j => j.Status).HasConversion<string>().HasMaxLength(20);
+            entity.Property(j => j.AdminPasswordCipher).HasMaxLength(512);
+            entity.Property(j => j.StatusDetail).HasMaxLength(1000);
+            entity.Property(j => j.FailureReason).HasMaxLength(2000);
         });
     }
 

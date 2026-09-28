@@ -54,6 +54,12 @@ public class SupplierConfiguration : IEntityTypeConfiguration<Supplier>
         builder.Property(s => s.RegistrationNumber).HasMaxLength(100);
         builder.Property(s => s.Notes).HasMaxLength(1000);
         builder.Property(s => s.ThumbnailUrl).HasMaxLength(500);
+
+        // GAP-19 — lookup index for scanner / supplier-search endpoints.
+        builder.HasIndex(s => s.RegistrationNumber)
+               .IsUnique()
+               .HasFilter("registration_number IS NOT NULL AND registration_number <> ''")
+               .HasDatabaseName("ix_supplier_registration_number");
     }
 }
 
@@ -124,8 +130,17 @@ public class OtpConfiguration : IEntityTypeConfiguration<Otp>
     public void Configure(EntityTypeBuilder<Otp> builder)
     {
         builder.HasKey(o => o.OtpId);
-        builder.Property(o => o.Code).IsRequired().HasMaxLength(10);
+
+        // SEC-06 — HMAC-SHA256(pepper, code) base64-encoded. 32-byte digest → 44-char base64.
+        // We use 64 chars in the column to leave headroom for future algorithm changes.
+        builder.Property(o => o.CodeHash).IsRequired().HasMaxLength(64);
+
         builder.Property(o => o.Purpose).HasConversion<string>().HasMaxLength(30);
+
+        // Index supports the verify-OTP lookup: WHERE UserId=? AND Purpose=? AND IsUsed=false AND ExpiresAt>now
+        builder.HasIndex(o => new { o.UserId, o.Purpose, o.IsUsed, o.ExpiresAt })
+               .HasDatabaseName("IX_Otp_UserPurpose_Used_ExpiresAt");
+
         builder.HasOne(o => o.User).WithMany(u => u.Otps)
             .HasForeignKey(o => o.UserId).OnDelete(DeleteBehavior.Cascade);
     }

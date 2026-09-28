@@ -7,6 +7,10 @@
 > Every change made in this effort is appended below in execution order. **No item is
 > considered done until it has its log entry, its code/doc change, and (where applicable)
 > its tests passing.**
+>
+> **Companion file:** `docs/audit-tracker.md` is the forward-looking view — every open
+> finding with severity, status, and recommended fix, plus the recommended Wave-12 priority
+> order. The Pointer table at the top of that file shows which Wave closed which items.
 
 ---
 
@@ -143,7 +147,319 @@ Every commit-equivalent change is appended below. Format: `[WAVE.ID] <files> —
 ### 2026-09-13 — Wave 3 (Functional completion)
 
 - `[3.2]` `Store.DbServices/Services/UserService.cs` → email + SMS notifications wired into `ApproveContactChangeAsync` and `RejectContactChangeAsync`. Requests already had notifications; approve/reject did not.
-- `[3.7-3.8]` `Store.Models/Entities/Base/BaseEntity.cs`, `Store.Models/Interfaces/ISoftDeletable.cs` → added `IsDeleted`, `DeletedAt`, `DeletedById` to base entity. `StoreDbContext.OnModelCreating` registers `HasQueryFilter(e => !e.IsDeleted)` for `Item`, `Supplier`, `Employee`, `Customer`. Service-layer hard-delete still in place — migration to soft-delete is a follow-up.
+- `[3.7-3.8]` **ROLLED BACK** → **COMPLETED** (see "Soft-delete migration" below). Adding `IsDeleted` to `BaseEntity` without a database migration caused every entity table to be queried for `is_deleted` at runtime and broke the API. After the proper migration was generated and the transitive child filters were added, this wave is fully landed.
+
+---
+
+## Soft-delete rollback (2026-09-13, same session)
+
+**What happened:**
+Adding `IsDeleted` / `DeletedAt` / `DeletedById` to `BaseEntity` and registering
+`HasQueryFilter(e => !e.IsDeleted)` on `Item` / `Supplier` / `Employee` / `Customer`
+triggered two runtime failures:
+
+1. **`Unknown column 'i.is_deleted' in 'where clause'`** — EF Core generated a
+   query that included `is_deleted` for every entity table that derives from
+   `BaseEntity`. None of those tables have the column because no migration was
+   generated.
+2. **`Model.Validation[10622]`** — the four entities with the global filter
+   have required navigation properties to ~20 child entities (Batch,
+   BranchItemStock, BundleRule, …). EF Core correctly warned that filtering
+   the parent without filtering the child could orphan the child rows.
+
+**What was done next (same session):** Rolled forward, properly, with a coordinated migration. GAP-18 is now CLOSED — see the bottom of this file for the full "Soft-delete migration — completed" change-log entry.
+
+**What's needed for soft-delete to land safely:**
+
+1. Generate a migration via `dotnet ef migrations add AddSoftDeleteColumns --project
+   Store.DbServices --startup-project Store.API` that adds:
+   - `is_deleted TINYINT(1) NOT NULL DEFAULT 0`
+   - `deleted_at DATETIME(6) NULL`
+   - `deleted_by_id CHAR(36) NULL`
+   to every BaseEntity-derived table.
+2. Either:
+   (a) Apply the filter only to entities whose `DeleteAsync` is being converted
+       in the same change, **or**
+   (b) Add the filter to a separate `SoftDeletableEntity` base class so other
+       entities are unaffected.
+3. Add matching `HasQueryFilter` to every child entity that has a required
+   navigation to a soft-deletable parent (Batch → Item, etc.) to satisfy
+   EF Core 10622. Easiest pattern: `b => !b.Item.IsDeleted` where applicable.
+4. Convert service-layer `DeleteAsync` to set `IsDeleted = true, DeletedAt =
+   utcNow, DeletedById = currentUser` instead of `Remove(entity)`.
+
+**GAP-18 — CLOSED.** Soft-delete is in place end-to-end: schema columns, global
+query filter (with transitive child coverage), service-layer deletes that set
+the columns instead of removing the row, and audit columns populated from the
+JWT user-id at the controller boundary.
+
+### 2026-09-13 — Wave 8 (Restock Recommendations — completed)
+
+The "Restock & Warehouse Orchestration" page (`/Restock`) was failing with
+`Error: Failed to generate purchase order` because the UI was calling API
+endpoints that didn't exist. The forecasting service (`IDemandForecastingService`)
+was already implemented but had no controller surface.
+
+**Files added / changed:**
+
+1. **`Store.Models/DTOs/Operations/RestockDtos.cs`** (new) —
+   `RestockRecommendationDto`, `RestockConversionResultDto`, `RestockSummaryDto`.
+
+2. **`Store.API/Controllers/RestockController.cs`** (new) — `[Route("api/Restock")]`
+   with five endpoints:
+   - `GET api/Restock/pending?branchId=`
+   - `GET api/Restock/summary`
+   - `POST api/Restock/{id}/convert-to-transfer`
+   - `POST api/Restock/{id}/convert-to-po`
+   - `POST api/Restock/{id}/dismiss`
+   - `POST api/Restock/run-forecast`
+   
+   Permission keys: `InventoryRead` for GET, `PurchaseOrderWrite` for PO/transfer,
+   `InventoryWrite` for dismiss/forecast. JWT `uid` populates `requested_by_user_id`.
+
+3. **`Store.UI/Pages/RestockRecommendations.cshtml.cs`** — uses the new DTOs;
+   each conversion handler now reads the `Success` flag from the API response
+   and shows the matching message (e.g. "Could not generate a purchase order —
+   register a supplier first."). `OnPostSyncForecastAsync` wires the previously
+   dead "Sync AI Forecast" button.
+
+4. **`Store.UI/Pages/RestockRecommendations.cshtml`** — three new columns:
+   - **Stock** — current on-hand qty (red if 0), days-of-stock at current
+     velocity, reorder level
+   - **AI Forecast / Reason** — severity badge (Critical / High / Medium) +
+     reason text
+   - **Projected** — PO value in XAF
+   
+   Empty-state colspan updated from 5 to 7.
+
+### Severity mapping (in controller)
+
+```
+if current_stock == 0                          → "Critical"
+elif days_of_stock < 3                          → "Critical"
+elif days_of_stock < 7                          → "High"
+else                                           → "Medium"
+```
+
+`days_of_stock` is parsed from the velocity engine's `Reason` string
+(`"Velocity: 0.8/day"`) and combined with the stock figure also in the
+same string (`"In stock (N)"`).
+
+### What this fixes
+
+| Symptom | Now |
+|---|---|
+| `Error: Failed to generate purchase order` | API endpoint exists; UI shows real reason if supplier missing. |
+| `Sync AI Forecast` button is a no-op | `POST api/Restock/run-forecast` wired; response shows `before`, `after`, `generated`. |
+| Critical shortages all count as one bucket | Severity bucketed Critical/High/Medium. |
+| KPI cards show flat numbers | Summary endpoint returns authoritative counts. |
+
+### 2026-09-14 — Wave 9 (Restock live updates, preferred-supplier, bulk-order — completed)
+
+Three things the restock page was still missing:
+
+1. **SignalR live updates** — connected managers/admins didn't see new
+   recommendations until they refreshed the page.
+2. **Preferred-supplier heuristic** — `ConvertToPurchaseOrderAsync` was
+   blindly picking the first supplier in the DB. Production-unsafe.
+3. **Bulk Order All Critical** — no way to convert every critical row into
+   POs in one click.
+
+**Files added / changed:**
+
+1. **`Store.Models/DTOs/Notifications/StoreNotificationDtos.cs`** — new
+   `RestockRecommendationNotificationDto` (denormalised payload for the
+   hub broadcast) and new `NotificationCategory.RestockRecommendation`
+   enum value.
+
+2. **`Store.Models/DTOs/Operations/RestockDtos.cs`** — new DTOs:
+   `BulkOrderPurchaseOrderDto`, `BulkOrderSkippedRecommendationDto`,
+   `BulkOrderResultDto`.
+
+3. **`Store.API/Hubs/IStoreNotificationClient.cs`** — new hub method
+   `ReceiveRestockRecommendation(RestockRecommendationNotificationDto)`.
+
+4. **`Store.Models/Interfaces/Services/IRealTimeNotificationService.cs`** —
+   new method `NotifyRestockRecommendationAsync(...)`.
+
+5. **`Store.API/Services/RealTimeNotificationService.cs`** — implementation:
+   broadcasts the structured payload to `All` + `branch_{id}` groups, and
+   also surfaces a generic toast (NotificationCategory = RestockRecommendation,
+   Severity mapped from Critical/High/Medium) to the Manager + Admin role
+   groups so the notification bell rings even on pages that aren't the
+   restock UI.
+
+6. **`Store.DbServices/Services/IDemandForecastingService.cs`** — new methods
+   `PickSupplierForItemAsync(itemId)` and `BulkOrderCriticalAsync(branchId, userId)`.
+
+7. **`Store.DbServices/Services/DemandForecastingService.cs`** —
+   - Injects `IRealTimeNotificationService` so the forecasting cycle can
+     broadcast each new recommendation.
+   - **Preferred-supplier lookup** in `PickSupplierForItemAsync`:
+     1. `Item.PreferredSupplierId` (if set and supplier not deleted)
+     2. Fallback: any supplier that has previously supplied this item
+        (via `OrderItem → ItemsOrder.SupplierId`)
+     3. Else `null` with an actionable reason
+   - `ConvertToPurchaseOrderAsync` now uses `PickSupplierForItemAsync` and
+     stores the pick reason in the PO's `Notes`.
+   - **`BulkOrderCriticalAsync`**: groups pending critical recommendations by
+     supplier, creates one multi-item PO per supplier, marks every
+     recommendation `ConvertedToPurchaseOrder`, returns per-supplier summary
+     plus a list of skipped rows (so the UI can prompt the operator to set
+     `PreferredSupplierId`).
+   - Extracted `ExtractDaysOfStock` / `ComputeSeverity` to `internal static`
+     so the controller and service compute the same severity bucket.
+
+8. **`Store.API/Controllers/RestockController.cs`** —
+   - Injects `StoreDbContext` to hydrate supplier/branch names in the
+     bulk-order response.
+   - `convert-to-po` now reads `PickSupplierForItemAsync` and surfaces its
+     reason to the UI on failure (no more generic "failed" message).
+   - New endpoint `POST /api/Restock/bulk-order-critical?branchId=`.
+
+9. **`Store.UI/wwwroot/js/notifications-hub.js`** — new `connection.on('ReceiveRestockRecommendation', ...)`
+   handler. Pushes a generic toast via `addNotification(...)` and dispatches
+   the structured payload as a `CustomEvent('restock-recommendation-arrived')`
+   so the page can update without a reload.
+
+10. **`Store.UI/Pages/RestockRecommendations.cshtml(.cs)`** —
+    - Page model: new `LastBulkResult` property (preserved across the
+      post-redirect via `TempData["BulkResult"]`); new
+      `OnPostBulkOrderCriticalAsync` handler.
+    - Razor: new "Bulk Order All Critical" button (red, only renders when
+      `criticalCount > 0`); bulk-result panel listing skipped recommendations
+      with their actionable reason and the created POs.
+    - Razor: `data-restock-id` attribute on each row so the SignalR handler
+      can dedupe inserts.
+    - Razor: inline JS in `@section Scripts` subscribes to the
+      `restock-recommendation-arrived` event — injects a green-flash row at
+      the top, increments KPI tiles, updates the bulk-order button counter.
+
+### Operator runbook — verify locally
+
+```bash
+# 1. Trigger the AI forecast cycle
+curl -X POST -H "Authorization: Bearer $TOKEN" http://localhost:5135/api/Restock/run-forecast
+
+# 2. Confirm SignalR broadcasts (open the page in a browser, watch the network tab for /hubs/notifications)
+# Every new recommendation should push to all connected clients within ~1s.
+
+# 3. Set Item.PreferredSupplierId on a Chin-chin item, then click Bulk Order All Critical.
+UPDATE item SET preferred_supplier_id = (SELECT supplier_id FROM supplier LIMIT 1)
+WHERE name = 'Chin-chin';
+# Refresh /Restock, click the red button. You should see one new PO with the supplier you picked.
+
+# 4. Verify the new PO has the supplier-pick reason embedded in Notes.
+SELECT purchase_order_id, supplier_id, branch_id, status, notes
+FROM purchase_order
+WHERE notes LIKE 'Bulk generated from Restock Recommendations%'
+ORDER BY date_created DESC LIMIT 3;
+```
+
+### Why this matters
+
+- **Preferred-supplier lookup** turns a brittle "first row wins" hack into a
+  deterministic, audit-traceable choice. Every PO generated now embeds the
+  pick reason in its `Notes` column, so you can always tell why a particular
+  supplier was selected.
+- **Bulk Order All Critical** turns a multi-minute workflow (click 5+
+  "Order PO" buttons, each picking a supplier, each waiting for a round-trip)
+  into a single click. The result panel surfaces skipped rows so the
+  operator knows exactly which items need their catalog fixed.
+- **Live SignalR** turns a polling UX (refresh every minute to see new
+  recommendations) into a push UX — critical for stores where stockouts
+  cost real money per minute.
+
+### 2026-09-14 — Wave 10 (Failed-message triage)
+
+Triaged all 336 `failed`/`Failed` occurrences across the codebase:
+
+| Category | Count | Status |
+|---|---|---|
+| A. Legitimate log + user-friendly error surface | ~250 | Kept |
+| B. Log-only "failed" (notification hub, file storage) | 8 | Kept — correct semantics (swallow so call flow continues) |
+| C. Hard-coded error codes (`disable_2fa_failed`, etc.) | 6 | Kept — machine-readable API codes |
+| D. JS front-end failures (`pos-offline.js`, etc.) | 12 | Kept — offline queue state machine |
+| E. Documentation / conversation history | ~50 | Kept |
+| F. **Half-baked generic "Failed to" messages** | 3 | **Fixed** |
+
+**Files changed:**
+
+1. **`Store.API/Contracts/ApiErrorResponse.cs`** — default `Message` changed from
+   `"Request failed."` (zero info) to
+   `"The request could not be completed. See server logs for details."` — actionable,
+   tells the operator where to look, doesn't leak internals. Callers that
+   already set a specific message continue to work.
+
+2. **`Store.Models/Interfaces/Services/ISystemSettingService.cs`** — replaced the
+   silent `bool` return type with `SystemSettingUpdateResult(Success, FailureReason)`,
+   a record. The service surfaces SQL constraint errors (`DbUpdateException`)
+   via `FailureReason` so the controller can tell the operator *which*
+   constraint fired instead of "Failed to update setting."
+
+3. **`Store.DbServices/Services/SystemSettingService.cs`** — implementation
+   catches `DbUpdateException` separately and embeds `InnerException.Message`
+   (which carries the actual MySQL error like "Duplicate entry", "Data
+   truncation", etc.). Generic `Exception` falls back to `ex.Message`.
+
+4. **`Store.API/Controllers/SystemSettingsController.cs`** — controller maps
+   `!result.Success` to
+   `Failed to update setting '<key>': <reason>`
+   with HTTP 400 and error code `"update_failed"`. TraceId included for log
+   correlation.
+
+**Files NOT changed (verified OK):**
+
+- `PaymentsController.cs:153` "Failed to compute HMAC" — caller already
+  returns `Unauthorized()` on false; the internal `return false` is the
+  correct way to fail signature validation. TraceId on the response lets
+  the operator grep logs.
+- `PaymentsController.cs:181` "Failed to deserialize MoMo callback" —
+  caller already returns `BadRequest("Invalid payload")`. Logged with
+  full exception for post-mortem.
+- `RealTimeNotificationService.cs` (7× "Failed to send …") — these are
+  intentional; a failed SignalR push must not break the request flow.
+- All `UsersController.cs` "failed" codes (`disable_2fa_failed`, etc.) —
+  these are API error codes for machine consumers, not generic messages.
+- All `Profile.cshtml.cs` / `Pos.cshtml.cs` / `Lookup.cshtml.cs` catch
+  blocks — they log the exception and surface a `StatusMessage` to the
+  user. The `ex.Message` surface is a separate security concern (raw
+  exception leak) tracked in the audit but kept for now since the
+  exception messages don't carry credentials or sensitive schema info
+  in this codebase.
+
+### Operator runbook — verify in your local DB
+
+```sql
+-- 1. Confirm there are pending recommendations
+SELECT COUNT(*) FROM restock_recommendation WHERE status = 0;  -- 0 = Pending
+
+-- 2. Confirm the API exposes the endpoints
+curl -H "Authorization: Bearer $TOKEN" http://localhost:5135/api/Restock/pending
+curl -H "Authorization: Bearer $TOKEN" http://localhost:5135/api/Restock/summary
+curl -X POST -H "Authorization: Bearer $TOKEN" http://localhost:5135/api/Restock/run-forecast
+
+-- 3. Confirm a conversion creates a real PO with the right supplier
+SELECT po.purchase_order_id, po.status, s.name AS supplier, poi.ordered_quantity
+FROM purchase_order po
+JOIN supplier s ON s.supplier_id = po.supplier_id
+LEFT JOIN purchase_order_item poi ON poi.purchase_order_id = po.purchase_order_id
+WHERE po.notes LIKE 'Generated from Restock Recommendation%'
+ORDER BY po.date_created DESC LIMIT 5;
+```
+
+If step 1 returns 0 and the table is empty, the `AutomatedReorderWorker` has
+not run yet (it's a hosted service; it kicks off shortly after startup). You
+can manually trigger it via step 2's `run-forecast` endpoint.
+query filter (with transitive child coverage), service-layer deletes that set
+the columns instead of removing the row, and audit columns populated from the
+JWT user-id at the controller boundary.
+
+To apply the migration against your DB:
+
+```
+dotnet ef database update --project Store.DbServices --startup-project Store.API
+```
 
 ### 2026-09-13 — Wave 5 (Operational maturity)
 
@@ -159,6 +475,212 @@ Every commit-equivalent change is appended below. Format: `[WAVE.ID] <files> —
 
 - `[6.1]` `AGENTS.md` (new) → 12-section onboarding for any agent/human touching the repo
 - `[6.4]` `docs/security_runbook.md` (new) → 8-section operator playbook for incidents
+
+### 2026-09-14 — Wave 11 (Error surface hardening + structured codes)
+
+**Goal** — Three asks in one wave, all done completely, with dev environment showing
+full diagnostic detail while prod stays opaque. The original SafeErrorMessage patch
+attempt damaged 41 page-model constructors; the cleanest repair was `git checkout` to
+HEAD for those files and re-attempt with a strict text-substitution pipeline.
+
+- `[11.1]` `Store.Models/DTOs/Common/ErrorCode.cs` (new) → canonical error-code taxonomy
+  (HTTP-status-family grouping: 4xx validation/notfound/conflict/unauthorized/forbidden,
+  5xx external/internal). Includes the `CategoryFor(code)` helper that returns one of
+  `validation | notfound | unauthorized | forbidden | conflict | ratelimited | external | internal`
+  for UI category-aware toasts.
+- `[11.1]` `Store.UI/Services/SafeErrorMessage.cs` (new) → env-aware static helper:
+  - **Dev** (`ASPNETCORE_ENVIRONMENT=Development`): returns
+    `"<ExceptionType>: <ex.Message>"` so developers see the full diagnostic.
+  - **Prod**: returns just `"<ExceptionType>"`. Full exception is logged server-side via
+    `ILogger.LogError` with the structured operation context. Schema names, SQL fragments,
+    and any future PII in the message never leak to the UI.
+  - Usage: `StatusMessage = SafeErrorMessage.From(ex, _logger, "Operation Name")` —
+    pass `NullLogger<TModel>.Instance` from page-models that don't yet have a logger.
+- `[11.1]` **Patch pipeline** — 28 `.cshtml.cs` files now route their `ex.Message` surface
+  through `SafeErrorMessage.From(...)`:
+  - `ErrorMessage = ex.Message` → `ErrorMessage = SafeErrorMessage.From(ex, _logger, "Op")`
+  - `{ex.Message}` inside interpolation → `{SafeErrorMessage.From(ex, _logger, "Op")}`
+  - `error = ex.Message` / `message = ex.Message` inside `StatusCode`/`BadRequest`/`JsonResult`
+    return paths → `SafeErrorMessage.From(...)`.
+  - For files without a `_logger` field, `NullLogger<TModel>.Instance` is used (logging
+    benefit restored later when the field is injected).
+  - Pure text substitution — no constructor injection, no field manipulation — so the
+    pipeline cannot corrupt constructors like the previous attempt did.
+- `[11.1]` `Store.UI/Pages/Catalog.cshtml.cs`, `Customers.cshtml.cs` → re-applied
+  Wave 7 soft-delete signature changes (`DeleteAsync(itemId, null, ct)` /
+  `DeleteAsync(customerId, null, ct)`) after the page-model reset.
+- `[11.1]` `Store.UI/Pages/RestockRecommendations.cshtml.cs` → Wave 8 page-model rewritten
+  from scratch (constructor, properties `Summary`/`LastBulkResult`/`StatusMessage`/`StatusIsError`,
+  `OnPostBulkOrderCriticalAsync`, TempData round-trip). The original was lost in the
+  page-model reset; this restores it. Builds clean.
+- `[11.2]` **PII audit complete** — `grep ex\.Message Store.UI/Pages` returns zero hits.
+  Every exception message produced for a UI consumer now goes through `SafeErrorMessage.From`,
+  so dev sees the full text and prod sees only the exception type. No further action.
+- `[11.3]` **Structured error codes** — 15 API controllers now use `ErrorCode.*`
+  constants in their `ApiErrorResponse.From(...)` calls:
+  - `AdminRoleMatrixController.cs`, `AuditLogsController.cs`, `AuthController.cs`,
+    `BatchesController.cs`, `CashVarianceController.cs`, `DiscountOverridesController.cs`,
+    `DiscountsController.cs`, `LoyaltyCampaignsController.cs`, `LoyaltyController.cs`,
+    `PurchaseOrdersController.cs`, `StockTransfersController.cs`, `SuppliersController.cs`,
+    `SystemSettingsController.cs`, `UsersController.cs`, `WastageController.cs`.
+  - Added `InvalidCredentials`, `InvalidTwoFactorCode`, `InvalidRefreshToken` constants
+    for the auth flow; extended `CategoryFor` to map them to `"unauthorized"`.
+  - Wire format is unchanged (`ErrorCode.NotFound` → `"not_found"` JSON). The benefit is
+    compile-time safety and a single source of truth — typos are caught at build, and
+    UI code can switch on `ErrorCode.*` constants rather than fragile strings.
+- `[11.4]` **HttpClientFactory log spam fix** — `appsettings.json` for all four projects
+  (Store.API, Store.UI, Store.ControlPlane, Store.TenantPortal) now silence
+  `Microsoft.Extensions.Http.DefaultHttpClientFactory` to `Warning`. The
+  HttpMessageHandler cleanup cycle was emitting a Debug log every 10s per
+  `IHttpClientFactory`-registered client (ClamAV scanner in particular), drowning the
+  actual application logs. Dev environment (`appsettings.Development.json`) keeps
+  `Microsoft.Extensions.Http.DefaultHttpClientFactory: Information` so startup events
+  are visible without the cleanup-cycle noise.
+- `[11.5]` **Final build** — `dotnet build StoreProject.sln --nologo` → 0 warnings, 0 errors.
+  `dotnet test Store.API.Tests --nologo` → Passed: 64, Failed: 0, Skipped: 0.
+
+### 2026-09-14 — Wave 11 follow-up (API + ControlPlane + TenantPortal PII coverage)
+
+- `[11.6]` `Store.Models/Common/SafeErrorMessage.cs` (new, consolidated) → moved out of
+  `Store.UI.Services` and `Store.API.Common` into `Store.Models.Common` so all four
+  projects (Store.API, Store.UI, Store.ControlPlane, Store.TenantPortal) share one
+  source of truth. Old in-project duplicates replaced with stub comments so the
+  namespace lookup doesn't accidentally resolve to a stale copy.
+- `[11.7]` `Store.TenantPortal/Store.TenantPortal.csproj` → added `<ProjectReference>` to
+  `Store.Models` (was missing — only referenced `Microsoft.Extensions.Http.Polly`).
+  Without it, the TenantPortal couldn't resolve `Store.Models.Common.SafeErrorMessage`.
+- `[11.8]` **API-side ex.Message coverage** — 7 API controllers + the central
+  `ExceptionHandlingMiddleware` now route every user-facing exception through
+  `SafeErrorMessage.From(ex, _logger, "<op>")`. The middleware (the central gateway for
+  all unhandled errors) was rewritten to use `ErrorCode.*` constants and the helper.
+  Controllers updated: `UsersController.cs`, `LoyaltyController.cs`, `LookupControllers.cs`,
+  `InvoicesController.cs`, `PayrollController.cs`, `BranchController.cs`,
+  `WebAuthnController.cs`. `LookupControllers.cs` and `InvoicesController.cs` were
+  reverted to HEAD and patched with text-substitution only (they use single-line
+  expression-bodied constructors that can't be safely extended by the script).
+- `[11.9]` **ControlPlane coverage** — 6 controllers and 4 TenantPortal pages +
+  `Program.cs` updated. Each ControlPlane controller got `_logger` injected via
+  constructor (where the constructor was multi-line) or `NullLogger<T>.Instance`
+  (for single-line expression-bodied ctors). `TenantPortal` page-models and
+  `Program.cs` use `NullLogger` since they're Razor Pages where constructor
+  injection isn't viable without rewriting.
+- `[11.10]` `Store.API.Tests/LoyaltyControllerTests.cs` → updated `new LoyaltyController(...)`
+  to pass `NullLogger<LoyaltyController>.Instance` for the new constructor parameter.
+- `[11.11]` **Final PII audit** — `grep ex\.Message` across all production source
+  returns only:
+  - `Store.Models/Common/SafeErrorMessage.cs` (intentional — it's the helper).
+  - Internal DbServices (`ClamAvVirusScanner`, `SystemSettingService`,
+    `NotificationService`, `OfflineLogSyncWorker`) — these store `ex.Message` in
+    internal `Result.Failed(message)` / DB columns, never returned to the browser
+    directly. Their caller controllers use `SafeErrorMessage.From` for user-facing
+    responses.
+  - ControlPlane `TenantOrchestrator.LogStep` and `DomainVerificationService.Message` —
+    provisioning-log entries and DNS verification status, surfaced only via the
+    internal admin audit log.
+  - `Store.API.Tests/TenantOrchestratorTests.cs` — `Assert.Contains(..., ex.Message)`
+    assertions on intentionally-thrown test exceptions.
+  - `IMPLEMENTATION_LOG.md` and `docs/` — documentation references to the OLD pattern.
+  No user-facing response in any controller, page-model, or middleware returns
+  raw `ex.Message` anymore. Schema names, SQL fragments, file paths, and any future
+  PII in the exception message can no longer leak to the browser.
+
+---
+
+## Wave 12 — End-to-end security & architectural hardening
+
+This is the **end-to-end** wave: complete features (no half-baked), strict security hardening, RBAC + design consistency, Dennis Ritchie / Uncle Bob Clean Architecture, micro-interactions preserved. Every entry below landed in code, builds green, and (where applicable) has tests passing.
+
+### 12.1 Security — SEC-04 (FIDO2 origins), SEC-06 (HMAC OTP), SEC-11 (constant-time avatar), SEC-14 (refresh-token rotation), SEC-15 (MoMo idempotency), SEC-18 (CDN SRI)
+
+**SEC-04** — FIDO2 localhost origins already gated by `IsDevelopment()` in `Store.API/Program.cs:66-70` (Wave 1). Verified HEAD; no change required.
+
+**SEC-06** — HMAC OTP at rest.
+- `Store.Models/Entities/Otp.cs` — `Code` column removed; new `CodeHash : string` (max length 64).
+- `Store.DbServices/Configurations/MiscConfiguration.cs:OtpConfiguration` — `CodeHash` configured + composite index `IX_Otp_User_Purpose_Used_ExpiresAt`.
+- `Store.DbServices/Services/PasswordRecoveryService.cs` — `HashOtpCode(rawCode)` keys HMAC-SHA256 with `Auth:OtpPepper`; verify via `CryptographicOperations.FixedTimeEquals`. Temp password generation switched from `Guid.NewGuid().ToString("N")` to `RandomNumberGenerator.GetString` over a 12-char alphabet (no `0/O/1/l` confusion). Reset token issued via `Convert.ToHexString(RandomNumberGenerator.GetBytes(32))`.
+- `Store.DbServices/Services/OrderAndOtpService.cs:OtpService` — refactored alongside `PasswordRecoveryService` to use the same HMAC + fixed-time path.
+- `Store.Models/Common/SafeErrorMessage.cs` — new consolidated helper (replaces the UI/API duplicates from Wave 11).
+- `Store.DbServices/Extensions/ServiceCollectionExtensions.cs` — `OtpPepperOptions` bound + `ValidateOnStart()` with min-32-byte requirement.
+- `Store.DbServices/Migrations/20260915120000_OtpHashAtRest_SEC06.cs` (and `.Designer.cs`) — drops `code`, adds `code_hash`, creates composite index. Pre-existing OTPs are purged in `Up` (plaintext codes can't be hashed after the fact; 15-min expiry means very few users affected).
+
+**SEC-11** — Constant-time avatar endpoint.
+- `Store.API/Controllers/AuthController.cs:GetAvatar` — Stopwatch + `WaitConstantAsync(sw, TargetLatencyMs, ct)` enforces 80 ms minimum wall-clock on every code path (hit, miss, error, malformed). The endpoint stays `[AllowAnonymous]` because the login page needs to display avatars before login; the constant-time is the substitute for auth-required.
+
+**SEC-14** — Refresh-token rotation race fix.
+- `Store.DbServices/Services/AuthenticationService.cs:RefreshTokenAsync` — replaced EF-tracked `Update + SaveChanges` with `ExecuteUpdateAsync(... WHERE Token = @old AND IsRevoked = false)`. The race loser observes `rowsAffected == 0` and returns `null` (caller re-authenticates). AuditLoggingMiddleware logs the resulting 401 with the traceId so operators can detect a flood.
+
+**SEC-15** — Mobile-money callback idempotency.
+- `Store.Models/Entities/MobileMoneyTransaction.cs` already had `ProviderTransactionId`; new UNIQUE filtered index enforces dedup at the DB layer.
+- `Store.DbServices/Context/StoreDbContext.cs:OnModelCreating` — `HasIndex(x => x.ProviderTransactionId).IsUnique().HasFilter("provider_transaction_id IS NOT NULL AND provider_transaction_id <> ''")`.
+- `Store.DbServices/Migrations/20260916110000_MobileMoneyCallbackIdempotency_SEC15.cs` (and `.Designer.cs`) — pre-existing duplicate rows are revoked (`status = Failed`) before the index is created, so deploys on a tenant with legacy dupes still succeed.
+
+**SEC-18** — CDN script SRI.
+- `Store.UI/Pages/_Host.cshtml` — Bootstrap 5.3.0 CSS + JS now loaded with `integrity="sha384-..."` + `crossorigin="anonymous"` + `referrerpolicy="no-referrer"`. SHA-384 hashes computed from the upstream CDN files at Wave 12 prep time. The `browser-image-compression` and `microsoft-signalr` CDN tags in `_AppLayout.cshtml` already had SRI from earlier waves (verified, no change).
+
+### 12.2 Architecture — GAP-15 (API versioning), GAP-16 (ETag middleware)
+
+**GAP-15** — API versioning (non-breaking foundation).
+- `Store.API/Store.API.csproj` — added `Microsoft.AspNetCore.Mvc.Versioning 5.1.0`.
+- `Store.API/Program.cs` — `AddApiVersioning(...)` with `DefaultApiVersion = 1.0`, `AssumeDefaultVersionWhenUnspecified = true`, `ReportApiVersions = true`, and a combined query + header reader. Every response now carries `X-Api-Version: 1.0`. No controller route changes; future v2 endpoints can opt in with `[ApiVersion("2.0")]`.
+
+**GAP-16** — ETag middleware for catalog GETs.
+- `Store.API/Middleware/ETagMiddleware.cs` (new) — buffers the response body, computes SHA-256, emits a weak ETag (`W/"hex"`), and short-circuits to 304 if `If-None-Match` matches. Cache-Control set to `private, max-age=0, must-revalidate` (correct for multi-tenant SaaS where prices change frequently). Skipped for non-GET/HEAD and for controllers that already emit their own ETag.
+- `Store.API/Program.cs` — `app.UseETag()` registered after `UseAuthorization`, before `MapControllers`.
+
+### 12.3 Half-baked features — GAP-04 (POS ForcePasswordChange), GAP-09 (CashVariance dates), GAP-19 (DB lookup indexes)
+
+**GAP-04** — POS now honors `force_password_change`.
+- `Store.DbServices/Services/AuthenticationService.cs` — added `force_password_change=true` JWT claim whenever `user.Password.ForcePasswordChange` is true.
+- `Store.UI/Services/SessionClaims.cs` (new) — base64url-claim reader that doesn't pull in `System.IdentityModel.Tokens.Jwt`. Exposes `IsForcePasswordChangeRequired(ISession)` and `Get(ISession, claimType)`.
+- `Store.UI/Pages/Pos.cshtml.cs:OnGetAsync` — uses `SessionClaims.IsForcePasswordChangeRequired(HttpContext.Session)` to short-circuit to `/ForceResetPassword`.
+
+**GAP-09** — CashVarianceController date range.
+- Already had `fromDate`/`toDate` parameters on `GetAll`. Now also plumbed through `ExportCsv` so a year-end CSV export doesn't dump the entire history.
+
+**GAP-19** — DB lookup indexes.
+- `Store.DbServices/Configurations/MiscConfiguration.cs:SupplierConfiguration` — UNIQUE filtered index `ix_supplier_registration_number`.
+- `Store.DbServices/Configurations/ItemConfiguration.cs:BatchConfiguration` — UNIQUE index `ix_batch_batch_number`.
+- `Store.DbServices/Migrations/20260916103000_LookupIndexes_GAP19.cs` (and `.Designer.cs`) — creates both indexes. `CashierShift` already had its composite indexes from Wave 1.
+
+### 12.4 Operational — OPS-02 (deep healthcheck), OPS-03 (Traefik dashboard gate)
+
+**OPS-02** — `/health` now actually tests MySQL.
+- `Store.API/Store.API.csproj` — added `Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore 8.0.4`.
+- `Store.API/Program.cs` — `AddHealthChecks().AddDbContextCheck<StoreDbContext>("mysql", tags: new[] { "ready" })`. The docker-compose `curl /health` will now fail readiness when MySQL is unreachable, so Traefik stops routing traffic to the broken instance.
+- `docker-compose.prod.yml` already had MySQL, MongoDB, API, and UI healthchecks wired; verified HEAD.
+
+**OPS-03** — Traefik dashboard is no longer exposed by default.
+- `docker-compose.traefik.yml` — added a top-of-file warning banner + replaced hard-coded `--api.insecure=true --api.dashboard=true` with `--api.insecure=${TRAEFIK_API_ENABLED:-false}` + `--api.dashboard=${TRAEFIK_API_ENABLED:-false}`. Production deployments leave the env unset and never expose the dashboard.
+- `.env.example` (new) — documents `TRAEFIK_API_ENABLED=false` and `TRAEFIK_DASHBOARD_PORT=8080`. Production should never set this to true.
+
+### 12.5 UX polish — UX-03 (toast bus), UX-07 (aria-live)
+
+**UX-03 / UX-07** — `Store.UI/wwwroot/js/toast-bus.js` from Wave 4 already provides:
+- `ToastBus.publish(channel, level, message, opts)` canonical API with channel-aware containers.
+- Per-container `aria-live="polite"` + `aria-atomic="false"` for screen readers.
+- Auto-surfaces server-rendered TempData banners.
+- Backward-compat: existing `window.showToast(type, msg)` calls still work via the legacy bridge.
+
+No code changes needed; verified HEAD.
+
+### 12.6 Process hygiene — PROC-03 (CODEOWNERS), PROC-04 (PR template)
+
+**PROC-03** — `.github/CODEOWNERS` (new) — directory-based ownership:
+- Default rule + team-specific (api-team, web-team, tenant-portal-team, platform-team).
+- Security-sensitive files require `@store-lead` + `@security` review (auth, payments, webauthn, mobile money, SafeErrorMessage, ErrorCode).
+- Migrations require `@store-lead` + `@api-team` (these run on every deploy).
+
+**PROC-04** — `.github/pull_request_template.md` (new) — checklist:
+- Type of change, tracker ID, migration impact, env-var impact.
+- Security checklist (no `ex.Message` leak, no committed secret, ErrorCode usage, no `Task.Delay` outside SafeErrorMessage path).
+- Build + test confirmation, smoke test scenarios, doc updates (IMPLEMENTATION_LOG + audit-tracker + AGENTS.md).
+- Operator rollout notes.
+
+### 12.7 Verification — Build + tests + migrations
+
+- `dotnet build StoreProject.sln --nologo` → **0 warnings, 0 errors**.
+- `dotnet test Store.API.Tests --nologo` → **64 passed, 0 failed, 0 skipped**.
+- Three EF migrations added in this wave: `OtpHashAtRest_SEC06`, `LookupIndexes_GAP19`, `MobileMoneyCallbackIdempotency_SEC15`. All reversible via `Down()` for safe rollback.
 
 ---
 
@@ -178,3 +700,986 @@ them:
 - **SEC-17** — CORS already rejects `*` outside dev.
 - **SEC-06** — JWT key length validation already throws on startup.
 - **GAP-19** — Item.Code, Item.Barcode, Country.IsoCode indexes already present in migrations; this wave ADDED `Supplier.RegistrationNumber`, `CashierShift.ShiftId`, `AuditLog.{UserId,DateCreated}`, `AuditLog.{Action,DateCreated}`, `AuditLog.{Severity,DateCreated}` composite indexes.
+
+---
+
+## Wave 13 — Multi-tenant production readiness
+
+Goal: close every remaining gap that stops StoreProject from running as a true
+multi-tenant SaaS on a single Traefik front, with anonymous public surfaces
+(status / maintenance) and audited, tenant-scoped audit routing.
+
+Scope selected over cookie-JWT-only so SEC-19 lands alongside MT-01/03/05/07
+on the same wave, keeping multi-tenant foundations coherent.
+
+### 13.A — SEC-19: HttpOnly Secure SameSite=Strict cookie JWT
+- `Store.API/Auth/AuthCookieHelper.cs` (new) — `SetAuthCookies(secureContext)` /
+  `ClearAuthCookies()` extension methods on `HttpResponse`. Cookie names:
+  `store_at` (access token) + `store_rt` (refresh token). Secure flag is
+  driven by `IsSecureContext` (X-Forwarded-Proto aware so it works behind
+  Traefik).
+- Wired into `AuthController` — every login path (password + 2FA + recovery +
+  initial), `RefreshTokenAsync`, and `LogoutAsync` now sets/clears cookies.
+- JWT `OnMessageReceived` middleware now reads the `store_at` cookie when the
+  `Authorization` header is missing — clients that don't ship a header
+  (server-rendered Razor pages, SSR fetch helpers) still authenticate.
+- LocalStorage fallback kept intact for clients that explicitly want a Bearer
+  header (e.g. Postman, the Scanner SPA).
+
+### 13.B — MT-01: async provisioning + status polling UI
+- `Store.ControlPlane/Models/TenantProvisioningJob.cs` (new) — entity
+  tracking job lifecycle with `AdminPasswordCipher` (AES-GCM at rest, decrypted
+  in-memory only when the worker runs the pipeline).
+- `Store.ControlPlane/Services/TenantProvisioningHostedService.cs` (new) —
+  `BackgroundService` polls every 3s, atomically claims pending jobs via
+  `ExecuteUpdateAsync(... WHERE Status = Pending)`, runs the full
+  `ProvisionTenantAsync` pipeline, and on success links the tenant → user
+  account via `PortalAuthService.CreateAccountForAsync`. 3-attempt retry with
+  exponential backoff before giving up.
+- `Store.ControlPlane/Controllers/TenantsController.cs` — three new
+  endpoints: `POST /api/control/tenants/provision-async`,
+  `GET /api/control/tenants/provisioning/{jobId:guid}` (for the polling UI),
+  `POST /api/control/tenants/provisioning/{jobId:guid}/retry` (operator can
+  force retry after manual fix).
+- DB migration `20260916133000_AsyncProvisioningJobs_MT01` + Designer +
+  snapshot update.
+- `Store.TenantPortal/Services/ControlPlaneClient.cs` — 3 new MT-01 methods.
+- `Store.TenantPortal/Pages/Onboarding.cshtml.cs` — switched from sync
+  `ProvisionTenantAsync` to async `ProvisionTenantAsyncJobAsync`; sets
+  `TempData["ProvisioningJobId"]` + `["ProvisioningSlug"]`; redirects to
+  `/OnboardingStatus`.
+- `Store.TenantPortal/Pages/OnboardingStatus.cshtml(.cs)` (new) — status
+  pill + ARIA-live + JS auto-poll every 3s + indeterminate progress bar +
+  retry button on failure.
+
+### 13.C — MT-03: verified already in place
+- `DomainVerificationService.VerifyTxtRecordAsync` + `TraefikConfigWriter.
+  WriteTenantRoutingConfigAsync` + `TenantOrchestrator.VerifyCustomDomainAsync`
+  already write Traefik dynamic config on DNS match + audit entry.
+- `Domains.cshtml` shows TXT-record hint with copy-to-clipboard buttons.
+- Closed in tracker without code changes.
+
+### 13.D — MT-05: tenant-aware audit routing
+- `Store.Models/Entities/AuditLog.cs` — added `TenantId : Guid?` with
+  docstring documenting the tenant-isolation contract (NULL for
+  system-level / pre-provisioning audits).
+- `Store.DbServices/Context/StoreDbContext.cs` — composite index
+  `ix_audit_log_tenant_date` on `(TenantId, DateCreated)`.
+- DB migration `20260916150000_AuditLogTenantId_MT05` + Designer +
+  snapshot update (new column + new index).
+- `Store.Models/DTOs/Audit/AuditLogDtos.cs` — `AuditLogDto.TenantId`,
+  `AuditLogFilterRequest.TenantId` (read filter), `CreateAuditLogEntryRequest.
+  TenantId` (write field).
+- `Store.Models/Interfaces/Services/IAuditLogService.cs` — `GetMetricsAsync`
+  gains `Guid? tenantId` parameter.
+- `Store.DbServices/Services/AuditLogService.cs` — `LogAsync` writes
+  `TenantId`, `GetAuditLogsPagedAsync` and `GetMetricsAsync` honor
+  `request.TenantId` / parameter. NULL preserved for system audits.
+- `Store.API/Controllers/AuditLogsController.cs` — `GET /metrics` accepts
+  `?tenantId=`. Razor UI updated (`AuditLog.cshtml.cs` calls the new
+  signature).
+- `Store.API/Middleware/AuditLoggingMiddleware.cs` — resolves tenant from
+  JWT `tenant` claim OR `X-Tenant-Id` header (X-Tenant-Id used by Traefik
+  forwardAuth or by the Razor UI when calling tenant-scoped endpoints).
+- `Store.UI/Services/ApiAuditLogService.cs` + `IAuditLogManager` + UI page
+  all updated to the new signatures.
+- Build green, 64/64 tests pass.
+
+### 13.E — MT-07: tenant status / maintenance page (public-facing)
+- `Store.ControlPlane/Models/TenantMaintenanceWindow.cs` (new) —
+  `MaintenanceWindow` entity with title, description, StartUtc/EndUtc,
+  Severity (Info / Warning / Critical), IsResolved, createdBy, timestamp.
+- `Store.ControlPlane/Models/Tenant.cs` — added
+  `List<MaintenanceWindow> MaintenanceWindows`.
+- `Store.ControlPlane/Data/ControlPlaneDbContext.cs` — JSON-converted column
+  on `tenants.maintenance_windows` (longtext).
+- DB migration `20260916170000_TenantMaintenanceWindows_MT07` + Designer +
+  snapshot update.
+- `Store.ControlPlane/Models/DTOs/TenantDtos.cs` — `MaintenanceWindowDto`,
+  `TenantStatusDto` (public payload), `CreateMaintenanceWindowRequest`.
+- `Store.ControlPlane/Services/ITenantOrchestrator.cs` + `TenantOrchestrator.cs`
+  — `GetPublicStatusAsync` (anonymous), `AddMaintenanceWindowAsync` (operator,
+  validates `EndUtc > StartUtc`, writes audit-trail entry), `RemoveMaintenance
+  WindowAsync`, `ResolveMaintenanceWindowAsync`. Public payload is sanitized —
+  never leaks secrets, internal IDs, or operator notes.
+- `Store.ControlPlane/Controllers/TenantsController.cs` — 3 new operator
+  endpoints.
+- `Store.ControlPlane/Controllers/PublicStatusController.cs` (new) — anonymous
+  controller at `/api/public/tenants/{slug}/status` with 30s `ResponseCache`.
+- `Store.TenantPortal/Services/ControlPlaneClient.cs` + interface + DTO
+  records — public + CRUD wiring.
+- `Store.TenantPortal/Pages/Status.cshtml(.cs)` (new) — `/Status/{slug}` Razor
+  page with `[AllowAnonymous]`, severity badges, ARIA-labelled sections,
+  maintenance-in-progress banner, footer with generation timestamp.
+
+### 13.F — PROC-11: CI matrix
+- `.github/workflows/ci-cd.yml` — refactored into:
+  - `secret-scan` (unchanged)
+  - `build-matrix` (NEW) — 6-leg parallel matrix:
+    `Store.Models`, `Store.DbServices`, `Store.API`, `Store.UI`,
+    `Store.ControlPlane`, `Store.TenantPortal`. Each leg restores + builds
+    only its own csproj with project-scoped cache key.
+  - `build-and-test` (existing) — now waits for the matrix, then runs the
+    full solution-wide build + tests + coverage.
+  - `docker-build-and-push` — `needs: [build-matrix, build-and-test]`.
+- Fixed pre-existing YAML indent bug in `deploy-production` heredoc body
+  (was at column 1, broke YAML parser — the `<<ENV` lines are now indented
+  correctly so YAML treats the whole `run: |` block as one scalar).
+- YAML validated via Python `yaml.load`.
+
+### 13.G — docs + verification
+- `docs/audit-tracker.md` — SEC-19, MT-01, MT-03, MT-05, MT-07, PROC-11
+  flipped to `[x]` with implementation notes.
+- `IMPLEMENTATION_LOG.md` — this entry.
+- Final build green: 0 warnings, 0 errors.
+- Final tests: 64/64 passing.
+
+### Build & test verification
+```
+$ dotnet build StoreProject.sln --configuration Release
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+Time Elapsed 00:01:13.91
+
+$ dotnet test Store.API.Tests --configuration Release --no-build
+Passed!  - Failed: 0, Passed: 64, Skipped: 0, Total: 64, Duration: 2 s
+```
+
+---
+
+## Wave 14 — Tenant-aware backup automation (MT-06)
+
+Goal: turn the per-tenant `BackupScheduleConfig` into a real automated
+scheduler that fires `TriggerBackupNowAsync` on each tenant's configured
+cadence. Until this wave, every backup was manual — operators had to call
+the API by hand. Now the ControlPlane runs it on its own.
+
+### 14.A — Schedule model + cron evaluator
+- `Store.ControlPlane/Models/Tenant.cs` — added `BackupScheduleConfig.LastRunAt`
+  and `LastRunStatus` (UTC timestamp + outcome string). Stored as part of the
+  existing JSON-serialized `BackupSchedule` column on `tenants` — no schema
+  migration required.
+- `Store.ControlPlane/Services/BackupScheduleEvaluator.cs` (new) — pure
+  static class with two methods:
+  - `ShouldRunNow(schedule, nowUtc)` — returns true when the schedule is
+    enabled, frequency is not Manual, and `NextRunAt <= now`.
+  - `ComputeNextRunAt(schedule, lastRunAtUtc, nowUtc)` — for Hourly:
+    anchor + 1h. For Daily/Weekly: snap to 02:00 UTC, skip past both anchor
+    and now. Returns `DateTime.MaxValue` for Manual.
+- 14 unit tests in `Store.API.Tests/BackupScheduleEvaluatorTests.cs` cover:
+  manual never-fires, disabled never-fires, hourly past/future, daily
+  same-day 02:00 snap when last was later in the day, weekly 7-day math,
+  never-schedule-in-the-past guarantee, first-run-without-last, sentinel
+  for Manual.
+
+### 14.B — Hosted service + retention + UI
+- `Store.ControlPlane/Workers/TenantBackupHostedService.cs` (new) —
+  `BackgroundService` polling every 30s. Creates a DI scope per tick,
+  evaluates every active tenant, fires `IBackupService.TriggerBackupNowAsync`
+  for each due schedule, persists `LastRunAt` / `LastRunStatus` /
+  `NextRunAt`, and appends a `ProvisioningLog` entry (so operators see the
+  schedule firing in the audit trail). Failures are caught + persisted so
+  one tenant's problem never kills the worker.
+- `Store.ControlPlane/Program.cs` — registered as the third hosted
+  service alongside `TenantHealthMonitorWorker` and
+  `TenantProvisioningHostedService`.
+- `Store.ControlPlane/Services/BackupService.cs` — `GetBackupSummaryAsync`
+  and `UpdateScheduleAsync` now populate `BackupScheduleDto.LastRunAt` /
+  `LastRunStatus`. `UpdateScheduleAsync` preserves the existing
+  `LastRunAt` / `LastRunStatus` when operators change frequency or
+  retention — without this, every schedule edit would silently wipe the
+  audit trail of past runs.
+- `Store.ControlPlane/Models/DTOs/BackupDtos.cs` + `Store.TenantPortal/
+  Models/DTOs/ControlPlaneDtos.cs` — `BackupScheduleDto` extended with
+  `LastRunAt` + `LastRunStatus`.
+- `Store.TenantPortal/Pages/Backups.cshtml` — new MT-06 status card
+  showing **Next Run**, **Last Run**, **Last Status**, and **Schedule**
+  pills above the existing schedule form. Failed statuses render in red,
+  successful in green, missing in muted gray.
+- Retention cleanup was already inline in `TriggerBackupNowAsync` (the
+  schedule's `RetentionCount` prunes the JSON `BackupHistory` list after
+  each run). Verified — no separate worker needed.
+
+### 14.C — OPS-09 deferred
+- The audit-tracker entry `OPS-09` references `scripts/provision-docker-vps.ps1`,
+  which does not exist in the repo. The existing `provision-tenant.ps1` is
+  an HTTP client wrapper (no root needed). Creating a real VPS bootstrap
+  script is its own project — deferred to a later wave. OPS-12 is the
+  same item as MT-06 (per-tenant scheduled backup) and is closed here.
+
+### Build & test verification
+```
+$ dotnet build StoreProject.sln --configuration Release
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+$ dotnet test Store.API.Tests --configuration Release --no-build
+Passed!  - Failed: 0, Passed: 78, Skipped: 0, Total: 78, Duration: 1 s
+```
+
+---
+
+## Wave 15 — Auth hardening (SEC-26 / SEC-27 / SEC-28)
+
+Goal: tighten the authentication surface against credential-stuffing and
+XSS-driven token exfiltration. Three of the four items I planned landed in
+this wave — SEC-23 (WebAuthn enrolled-device binding) is its own project
+(device fingerprinting + per-device row + IP-change reauth middleware)
+and is deferred to a dedicated wave.
+
+### 15.A — SEC-26 server-side password complexity
+- `Store.Models/DTOs/Auth/PasswordPolicyOptions.cs` (new) — config-driven
+  policy: `MinLength=12`, `MaxLength=128`, `MinClassCount=3` (upper / lower
+  / digit / symbol), `CommonPasswords` (90-entry embedded blocklist seeded
+  by default), `EnableBreachCheck` (off by default). `WithSecureDefaults()`
+  ensures a missing config block still produces a hard policy.
+- `PasswordComplexityAttribute` (ValidationAttribute) — runs length + class
+  + blocklist (case-insensitive) checks; resolves `IBreachChecker` and the
+  policy holder via `ValidationContext.GetService` so DI is preserved.
+  Fail-open when the holder is unbound so a missing config never breaks
+  the pipeline.
+- Applied to `CreateUserRequest.Password` and
+  `ChangePasswordRequest.NewPassword`. `StringLength(MinimumLength = 12)`
+  stays as a hard ceiling so misconfigured policies can't widen the door.
+- `Store.API.Tests/PasswordComplexityTests.cs` — 13 unit tests covering
+  null/empty passthrough, length boundaries, class-count edge cases,
+  blocklist match (lowercase / mixed / uppercase), and the fail-open
+  contract. All use a stub `IServiceProvider` so no HIBP network call is
+  required during CI.
+
+### 15.B — SEC-27 HIBP k-anonymity breach checker
+- `Store.Models/Interfaces/Services/IBreachChecker.cs` (new) — interface
+  with `IsBreachedAsync(password, ct)` returning `bool`. Documents the
+  k-anonymity contract.
+- `Store.DbServices/Services/PwnedPasswordsBreachChecker.cs` (new) —
+  SHA-1 hashes the password, sends only the first 5 hex chars to
+  `https://api.pwnedpasswords.com/range/{first5}`, parses the response,
+  matches the remaining 35 chars. Adds `Add-Padding: true` per HIBP ToS.
+  3-second timeout via `CancellationTokenSource.CreateLinkedTokenSource`.
+  Fails open on every error path (network / non-2xx / malformed / timeout)
+  — breach check is defense in depth, not the sole gate.
+- Registered as a typed `HttpClient<IBreachChecker>` in `Program.cs` so
+  the framework owns DNS rotation and connection pooling. Timeout enforced
+  at the HttpClient level (3s) and re-checked in the implementation.
+
+### 15.C — SEC-28 refresh-token-in-cookie-only
+- `Store.Models/DTOs/Auth/AuthRequests.cs` — `RefreshTokenRequest.Token`
+  and `RefreshToken` are now both nullable. `Token` is still useful for
+  audit / user identification; `RefreshToken` is now optional in the body.
+- `Store.API/Controllers/AuthController.cs` — `Refresh` reads the `store_rt`
+  HttpOnly cookie as the primary source. Falls back to body only when the
+  cookie is missing (CLI / Postman / mobile). Returns a clear 401 with
+  guidance when both are absent. The `SetAuthCookies(...)` rotation
+  (SEC-19) still runs on every successful refresh so the cookie value is
+  updated in flight.
+- `Store.DbServices/Services/AuthenticationService.cs` — `RefreshTokenAsync`
+  null-checks the body fields at the top and returns 401 cleanly when the
+  refresh token is empty.
+
+### 15.D — SEC-23 deferred
+- Enrolled-device binding needs:
+  - new `WebAuthnDevice` entity + EF migration
+  - per-device last-IP + last-used-at tracking
+  - reauth middleware that compares the request IP to the last-seen IP and
+    forces a WebAuthn assertion on mismatch
+  - rate limiter for WebAuthn assertion attempts
+- This is its own multi-day wave. Deferred rather than crammed in here.
+
+### Build & test verification
+```
+$ dotnet build StoreProject.sln --configuration Release
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+$ dotnet test Store.API.Tests --configuration Release --no-build
+Passed!  - Failed: 0, Passed: 100, Skipped: 0, Total: 100, Duration: 2 s
+```
+
+---
+
+## Wave 16 — UX consistency pass (UX-06 / UX-05 / GAP-23 / UX-04 / UX-01)
+
+Goal: per-page polish to make the operator UI feel coherent and tablet-ready.
+Five sub-items shipped in one wave — each was small enough that splitting
+would have been paperwork.
+
+### 16.A — UX-06 reusable empty-state partial
+- `Store.UI/Pages/Shared/_EmptyState.cshtml` (new) + `EmptyStateModel.cs` —
+  strongly-typed DTO with `Icon / Title / Message / CtaText / CtaHref /
+  SecondaryText / SecondaryHref / Variant`. The partial renders a
+  border-dashed card with an icon + headline + body + primary CTA + (opt)
+  secondary link. Variants: `info` / `warning` / `muted`.
+- Applied to **Catalog** (filter-miss vs cold-start), **Suppliers**,
+  **Customers**, **Employees**, **Dashboard** (recent invoices). Each page
+  distinguishes cold-start ("No suppliers yet — add your first") from
+  filter-miss ("No suppliers match these filters — clear filters") so the
+  CTA stays meaningful.
+- Pattern: declared `var empty = new EmptyStateModel { ... }` then
+  `<partial name="_EmptyState" model="empty" />`. Anonymous object
+  initializers don't survive Razor's parser cleanly, so the strongly-typed
+  model is the contract going forward.
+
+### 16.B — UX-05 permission-gated affordances
+- `Store.UI/Pages/Wastage.cshtml.cs` — added `CanRecord` (InventoryWrite)
+  and `CanDelete` (AdminUsers) properties populated in `OnGetAsync`. Used
+  `out var permissions` instead of `out _` so the permissions reach the
+  flag setters.
+- `Store.UI/Pages/Wastage.cshtml` — Record Wastage button gated on
+  `Model.CanRecord`; row-level Delete button gated on `Model.CanDelete`.
+  Server-side `[Authorize]` policies remain in force; the UI gating is a
+  friendliness layer (less confusing buttons = fewer support tickets).
+- Most other pages already had gating (`InventoryOps.CanWrite` etc.).
+  Remaining per-page audit is tracked in the audit tracker as `UX-05 [~]`.
+
+### 16.C — GAP-23 / UX-02 mobile-first responsive
+- `Store.UI/wwwroot/css/site.css` — added `@media (max-width: 900px)` block:
+  sidebar collapses into a fixed drawer with `translateX(-100%)` and
+  `.is-open` toggle, backdrop overlay, `.mobile-sidebar-toggle` button
+  shown only on mobile, `.app-main` and `.app-content` lose their left
+  margin and padding shrinks. Touch-target sizing bumped to 36px min on
+  `.btn-*` classes. `.table-wrap` gets horizontal scroll on narrow
+  viewports.
+- `Store.UI/Pages/Shared/_AppLayout.cshtml` — added the hamburger toggle
+  button + backdrop overlay at the top of `<body>`. The toggle is a 40×40
+  button with `aria-controls`/`aria-expanded` for screen readers.
+- `Store.UI/wwwroot/js/site.js` — `window.toggleMobileSidebar(force?)` plus
+  Escape-to-close listener. Clicking the backdrop also closes.
+
+### 16.D — UX-04 keyboard shortcut help
+- `Store.UI/Pages/Shared/_KeyboardHelp.cshtml` (new) — dialog with full
+  shortcut table (Ctrl+K, ?, Esc, G→D, G→P, G→C, G→M, G→I, G→S, G→O).
+  ARIA roles (`role="dialog"`, `aria-modal`, `aria-labelledby`).
+- Wired in `_AppLayout.cshtml` after `_CommandPalette`. Backdrop click +
+  Escape both close.
+- `Store.UI/wwwroot/js/site.js` — added `openKbdHelp` / `closeKbdHelp` and
+  a keydown listener that fires on `?` (with input-target suppression so
+  typing in a text field doesn't open the dialog).
+
+### 16.E — UX-01 PWA service worker
+- `Store.UI/wwwroot/sw.js` (new) — offline shell + stale-while-revalidate
+  for static assets + network-first for `/api/*` + cache-then-network for
+  HTML navigations with `/Pos` as the offline fallback. `CACHE_VERSION`
+  baked in so a `skipWaiting()` invalidates old entries.
+- `Store.UI/wwwroot/js/pwa-install.js` — registers `navigator.serviceWorker
+  .register('/sw.js')` on `window.load`. Works in any display mode
+  (standalone or browser), in dev (localhost is exempt from HTTPS) and
+  production.
+- `manifest.json` was already in place with shortcuts for POS / Invoices /
+  Catalog / Dashboard. Now backed by a real offline-capable SW.
+
+### Build & test verification
+```
+$ dotnet build StoreProject.sln --configuration Release
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+$ dotnet test Store.API.Tests --configuration Release --no-build
+Passed!  - Failed: 0, Passed: 100, Skipped: 0, Total: 100, Duration: 1 s
+```
+
+---
+
+## Wave 17 — PayDunya / MoMo / Orange Money billing integration (MT-02)
+
+Goal: replace "documented but unimplemented" with a real, switch-on-able
+billing integration that aggregates MoMo, Orange Money, Wave, and cards
+behind PayDunya's hosted checkout. Tier enforcement and the portal billing
+page ship in the same wave so the page actually has something to render.
+
+### 17.A — Survey
+- `IMobileMoneyService` already exists with provider-specific callbacks
+  (MoMo + Orange) using HMAC-SHA256 over the raw body (SEC-15 idempotency
+  migration is in place). PayDunya is added on top of this surface as the
+  aggregator — it accepts the same payment methods and adds a hosted
+  checkout flow that doesn't require custom MoMo + Orange integrations
+  per operator.
+- `TenantTier` enum already exists in `Store.ControlPlane.Models` but
+  isn't referenced anywhere downstream. Mirrored to
+  `Store.Models.Billing.TenantTier` so library code (PlanCatalog, DTOs)
+  doesn't have to depend on ControlPlane.
+
+### 17.B — PayDunya client + service
+- `Store.Models/Interfaces/Services/IPayDunyaPaymentService.cs` (new) —
+  `CreateInvoiceAsync` + `ConfirmPaymentAsync` + `VerifyIpnSignature`.
+- `Store.DbServices/Services/PayDunyaPaymentService.cs` (new) — typed
+  HttpClient bound to `Payments:PayDunya` config. Sandbox URL
+  (`https://app.paydunya.com/sandbox/api/v1`) by default; flip `UseSandbox`
+  to `false` for production. Sets `PAYDUNYA-MASTER-KEY` /
+  `PAYDUNYA-PRIVATE-KEY` / `PAYDUNYA-PUBLIC-KEY` / `PAYDUNYA-TOKEN`
+  headers per the PayDunya docs.
+- `PayDunyaOptions` — strongly-typed config record.
+- `IPN signature verification` uses HMAC-SHA256 over the raw body with
+  `CryptographicOperations.FixedTimeEquals` so we don't leak timing info.
+- `Store.API.Tests/PayDunyaPaymentServiceTests.cs` — 10 tests: missing
+  secret / payload / signature rejected, correct signature accepted (lowercase
+  + uppercase hex), tampered payload rejected, wrong secret rejected,
+  case-insensitive signature, garbage chars rejected, wrong-length rejected.
+
+### 17.C — Plan tier + feature gates
+- `Store.Models/Billing/PlanFeature.cs` — enum of all gated features
+  (`SingleBranch`, `MultiBranch`, `AutomatedBackups`, `CustomSmtp`,
+  `SandboxEnvironments`, `AdvancedReports`, `ExternalApiAccess`,
+  `PrioritySupport`).
+- `Store.Models/Billing/PlanGate.cs` — `PlanCatalog` static map +
+  `IsFeatureEnabled(tier, feature)` + `GetLimits(tier)` returning
+  `PlanLimits(MaxBranches, MaxUsers, BackupRetentionDays, MonthlyInvoices)`.
+  Every tier's affordance list is explicit so adding a feature forces
+  every tier to opt in or out.
+- `Store.Models/Billing/TenantTier.cs` — the canonical enum (mirrors
+  `Store.ControlPlane.Models.TenantTier`).
+- `Store.API.Tests/PlanCatalogTests.cs` — 10 tests: per-feature matrix,
+  monotonic branch / user limits, Enterprise unlimited invoices,
+  feature-set uniqueness, unknown-tier fallback.
+
+### 17.D — Billing controller
+- `Store.API/Controllers/BillingController.cs` (new) at
+  `/api/billing/paydunya`:
+  - `POST /invoice` — `[Authorize]`, validates `TotalAmount > 0` and
+    `PlanId` present, calls `CreateInvoiceAsync`, returns 503
+    (`PaymentProviderUnavailable`) when PayDunya isn't configured.
+  - `GET /confirm/{token}` — `[Authorize]`, status polling for the
+    portal's "is my payment done yet?" surface.
+  - `POST /ipn` — `[AllowAnonymous]`, HMAC-SHA256 over raw body, 401 on
+    bad signature, logs the payload for reconciliation. Status-sync
+    (writing back to `Tenant.PlanTier`) is a follow-up.
+- `Store.Models/DTOs/Common/ErrorCode.cs` — added
+  `PaymentProviderUnavailable = "payment_provider_unavailable"`.
+
+### 17.E — Tenant Portal Billing page
+- `Store.TenantPortal/Pages/Billing.cshtml(.cs)` (new) at `/Billing/{slug}` —
+  current plan + feature chips + 3 plan cards (Starter / Professional /
+  Enterprise) with Recommended badge on Professional. Subscribe button
+  posts back to `OnPostSubscribeAsync` which hits
+  `IControlPlaneClient.CreateBillingInvoiceAsync` and redirects to the
+  PayDunya checkout URL. Enterprise plan shows "Contact sales" instead.
+- `Store.TenantPortal/Services/IControlPlaneClient.cs` + `ControlPlaneClient.cs`
+  extended with `GetTenantAsync(slug)` + `CreateBillingInvoiceAsync(slug,
+  request)`.
+- `Store.TenantPortal/Models/DTOs/ControlPlaneDtos.cs` — added
+  `CreateBillingInvoiceRequest` record.
+
+### 17.F — final verification
+```
+$ dotnet build StoreProject.sln --configuration Release
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+$ dotnet test Store.API.Tests --configuration Release --no-build
+Passed!  - Failed: 0, Passed: 128, Skipped: 0, Total: 128, Duration: 1 s
+```
+
+20 new tests across PayDunya IPN + plan catalog. The follow-up wave needs
+to (a) persist `Tenant.PlanTier` writes from the IPN handler and (b)
+implement quota enforcement at API endpoints using `PlanCatalog.GetLimits`.
+
+---
+
+## Wave 18 — Plan tier persistence + IPN reconciliation (MT-02 follow-up)
+
+Goal: close the loop between PayDunya's webhook and the tenant's actual
+plan state. Wave 17 wired the client + controller; this wave makes the
+IPN handler the source of truth for `Tenant.PlanTier`, surfaces the
+payment history to the portal, and adds graceful degradation when
+payments fail.
+
+### 18.A — Tenant subscription lifecycle + payment records
+- `Store.ControlPlane/Models/Tenant.cs` — added scalar columns:
+  `SubscriptionPlanId`, `SubscriptionStatus`, `SubscriptionStartUtc`,
+  `SubscriptionEndUtc`, `NextBillingAtUtc`, `GracePeriodUntilUtc`,
+  `LastPaymentToken`. Added a `List<TenantPayment> Payments` collection
+  (JSON-serialized, consistent with AuditTrail / BackupHistory).
+- `Store.ControlPlane/Models/TenantPayment.cs` (new) — `TenantPayment`
+  entity + `SubscriptionStatus` enum (Active / GracePeriod / Expired /
+  Cancelled).
+- `Store.ControlPlane/Data/ControlPlaneDbContext.cs` — registered the
+  new JSON column + scalar property mappings.
+- EF migration `20260916180000_TenantSubscription_MT02` (hand-written) +
+  Designer + snapshot update — adds 7 columns to the `tenants` table.
+
+### 18.B — IPN → plan tier reconciliation
+- `Store.ControlPlane/Services/SubscriptionReconciler.cs` (new) — handles
+  a PayDunya IPN: appends a `TenantPayment` row, upgrades `PlanTier` when
+  status == "completed" + planId is recognised, falls into
+  `GracePeriod` on failed / cancelled with a window sized to the tier's
+  `GracePeriodDays`. Idempotent on the provider token + status — repeated
+  IPNs don't double-write. Audit trail entries for every state change.
+- `Store.Models/Billing/PlanGate.cs` — added `FromPlanId(planId)` mapping
+  helper, `ComputeNextBillingAtUtc(paidAt)` (30 days), and per-tier
+  `GracePeriodDays` (Starter 3 / Professional 7 / Enterprise 14).
+- Moved `ApiErrorResponse` from `Store.API.Contracts` into
+  `Store.Models.DTOs.Common` so library code (ControlPlane + TenantPortal)
+  can build error envelopes without circular project references. Updated
+  21 files to use the new namespace.
+- `Store.ControlPlane/Controllers/BillingController.cs` (new) — moved
+  from Store.API. Now exposes `POST /invoice`, `GET /confirm/{token}`,
+  `POST /ipn`, and `GET /payments/{slug}` for the portal's invoice history.
+- `Store.ControlPlane/Program.cs` — registered PayDunya typed HttpClient
+  + SubscriptionReconciler (was previously in Store.API).
+- `Store.API/Program.cs` — removed PayDunya registration (no longer
+  needed at the API edge).
+- `Store.API.Tests/PlanCatalogTests.cs` — added 13 tests covering
+  `FromPlanId` (known + case-insensitive + unknown), `ComputeNextBillingAtUtc`,
+  `GracePeriodDays` positivity + monotonicity.
+- `Store.DbServices/Services/PayDunyaPaymentService.cs` — switched to
+  `IOptions<PayDunyaOptions>` so DI can configure it cleanly.
+
+### 18.C + 18.D — DEFERRED
+- **Quota enforcement middleware** (block branch / user creation when
+  over limit) is its own multi-day wave — needs a middleware that
+  resolves the tenant's `PlanTier` from the JWT or X-Tenant-Id header,
+  reads `PlanCatalog.GetLimits(tier)`, and rejects with HTTP 402
+  Payment Required when over quota.
+- **/Billing page** invoice history table — extends the Wave 17 page to
+  render the `TenantPaymentHistoryDto` from `/api/billing/paydunya/payments/{slug}`.
+
+### Build & test verification
+```
+$ dotnet build StoreProject.sln --configuration Release
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+$ dotnet test Store.API.Tests --configuration Release --no-build
+Passed!  - Failed: 0, Passed: 141, Skipped: 0, Total: 141, Duration: 4 s
+```
+
+---
+
+## Wave 19 — Quota enforcement gate + portal usage panel (MT-02 follow-up)
+
+Goal: surface per-tier usage + limits to the operator and wire the
+quota gate so over-quota mutations can be rejected. The middleware
+that intercepts every POST/PUT lives in a follow-up wave — this wave
+ships the gate, the portal UI, and the Enterprise = unlimited reset.
+
+### 19.A — IQuotaGate + PlanQuotaGate
+- `Store.Models/Billing/QuotaGate.cs` (new) — `IQuotaGate` interface with
+  `GetCurrentTier()` + `CheckBranchCreation` / `CheckUserSeat` /
+  `CheckMonthlyInvoice` / `CheckFeature`. `QuotaCheck` record carrying
+  `Allowed / Quota / Current / Limit / UpgradeTo / Reason`.
+- `Store.DbServices/Services/PlanQuotaGate.cs` (new) — pure-function
+  implementation. Resolves the active tier via a `Func<TenantTier?>`
+  (so the gate stays testable without HttpContext mocking) and
+  delegates limits to `PlanCatalog.GetLimits`. When a request exceeds
+  the limit the verdict names the next tier up (Starter →
+  Professional → Enterprise). Empty resolver falls back to Starter
+  safely — system callers skip the gate.
+- `Store.API.Tests/PlanQuotaGateTests.cs` — 28 pure-function tests
+  covering every quota + tier matrix, unknown-tier fallback,
+  Enterprise = unlimited, and upgrade-target recommendation.
+- `Store.Models/Billing/PlanGate.cs` — Enterprise limits bumped to
+  `int.MaxValue` (was 100 / 500) so the unlimited tier actually is.
+
+### 19.B — DEFERRED
+- Middleware-level enforcement: needs JWT/header tenant-context
+  resolution + per-endpoint usage query + HTTP 402 response shape.
+  Scoped to a dedicated wave so the work isn't stuffed in here.
+
+### 19.C — /Billing page usage + invoice history
+- `Store.TenantPortal/Pages/Billing.cshtml.cs` — now fetches
+  `BillingHistory` + populates `CurrentTier` / `SubscriptionStatus` /
+  `NextBillingAtUtc`. Mirrors `PlanCatalog.GetLimits` locally so the
+  numbers stay in sync with the gate.
+- `Store.TenantPortal/Pages/Billing.cshtml` — added:
+  - **Usage panel** with three progress bars (Branches / Users /
+    Invoices this month). Bars turn amber past 80 % so operators can
+    see "running out of headroom" at a glance. Unlimited tiers show
+    "Unlimited" instead of a bar.
+  - **Recent payments** table — last 10 payments with date, plan,
+    channel, amount + currency, status pill (green / amber / red),
+    provider token reference, failure reason if any.
+  - **Subscription status pill** in the header (`Active` / `GracePeriod`)
+    with next-billing date.
+- `Store.TenantPortal/Services/IControlPlaneClient.cs` +
+  `ControlPlaneClient.cs` — added `GetBillingHistoryAsync(slug)` calling
+  `/api/billing/paydunya/payments/{slug}`.
+- `Store.TenantPortal/Models/DTOs/ControlPlaneDtos.cs` — mirrored
+  `TenantPaymentHistoryDto` + `TenantPaymentDto` locally so the portal
+  doesn't have to depend on the ControlPlane assembly.
+
+### 19.D — Tests + final verification
+```
+$ dotnet build StoreProject.sln --configuration Release
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+$ dotnet test Store.API.Tests --configuration Release --no-build
+Passed!  - Failed: 0, Passed: 169, Skipped: 0, Total: 169, Duration: 2 s
+```
+
+28 new tests across `PlanQuotaGate`. The portal UI is fully driven by
+existing endpoints — no new server-side code paths needed.
+
+
+## Wave 20 - Quota enforcement filter (closes Wave 19.B)
+
+Goal: ship the deferred middleware-level quota gate from Wave 19.B as an
+ASP.NET Core action filter so ControlPlane mutations short-circuit with
+HTTP 402 when a tenant would exceed its plan-tier limit. Today only
+branch creation has a real backing count - users / monthly-invoices
+placeholders stay placeholders until per-tenant counters exist.
+
+### 20.A - EnforceTenantQuotaAttribute + IQuotaEnforcementHandler
+- `Store.Models/Billing/QuotaEnforcementFilter.cs` (new) - action filter
+  attribute:
+  - `[EnforceTenantQuota(TenantQuota.X, QuotaUsageSource.CurrentPlusOne)]`
+    on a controller action.
+  - Resolves the tenant id from route values (`id` / `tenantId` /
+    `TenantId`) then falls back to action arguments (Guid or string
+    slug).
+  - Resolves `IQuotaEnforcementHandler` from `RequestServices`. If the
+    handler is not registered, the filter fails open (calls `next()`).
+    This keeps the attribute usable in tests + dev hosts without
+    forcing every host to wire the handler.
+  - On block: returns HTTP 402 Payment Required with
+    `ApiErrorResponse { Code = ErrorCode.QuotaExceeded, Message =
+    Reason, TraceId = TraceIdentifier }`.
+- `TenantQuota` enum: `Branches`, `Users`, `MonthlyInvoices`.
+- `QuotaUsageSource` enum: `CurrentPlusOne` (post-mutation count).
+- `IQuotaEnforcementHandler` interface - library-agnostic in
+  `Store.Models.Billing` so the attribute ships without a ControlPlane
+  reference.
+- `Store.Models/Store.Models.csproj` - added
+  `<FrameworkReference Include="Microsoft.AspNetCore.App" />` so the
+  domain layer can host ASP.NET Core hosting primitives (action
+  filters, error contracts). EF Core intentionally stays out.
+
+### 20.B - ControlPlaneQuotaHandler + DI
+- `Store.ControlPlane/Services/ControlPlaneQuotaHandler.cs` (new) -
+  resolves the tenant via `ITenantRepository`, then defers to the pure
+  `PlanQuotaGate` (per-tier, per-tenant via `Func<TenantTier?>`).
+  Today only `Branches` has a real count
+  (`tenant.Branches.Count`); `Users` / `MonthlyInvoices` return
+  `QuotaCheck.Ok` until a per-tenant counter exists.
+- `Store.ControlPlane/Program.cs` - registered the handler as a
+  singleton next to the existing `SubscriptionReconciler` registration.
+  Singleton matches `ITenantRepository`'s lifetime.
+- `using Store.DbServices.Services;` added (lives in
+  `Store.DbServices.Services.PlanQuotaGate`).
+
+### 20.C - Wire filter onto BranchesController
+- `Store.ControlPlane/Controllers/BranchesController.cs` - added
+  `[EnforceTenantQuota(TenantQuota.Branches,
+  QuotaUsageSource.CurrentPlusOne)]` to `AddBranch`. This is the only
+  HTTP-POST mutation in the ControlPlane API surface (SDLC sandbox
+  provisioning lives elsewhere and uses different quotas); the other
+  ControlPlane controllers (Backups / Domains / Billing / Audit /
+  PortalAuth / Environment / PublicStatus / Tenants / Sdlc) expose
+  read / admin endpoints not gated by plan tiers.
+- Doc comment on the action explicitly says HTTP 402 + upgrade reason.
+
+### 20.D - Tests + final verification
+- `Store.API.Tests/ControlPlaneQuotaHandlerTests.cs` (new) - 12 tests
+  covering branches-under/at/over limit across tiers, placeholder
+  quotas, missing tenant (no block), unknown quota (no block), and
+  post-mutation-count semantics.
+- `Store.API.Tests/QuotaEnforcementFilterTests.cs` (new) - 10 tests
+  covering route-value resolution (`id` / `tenantId`), action-argument
+  fallback, fail-open when handler not registered, fail-open when no
+  tenant id, allow path (calls `next`), block path (HTTP 402 +
+  `ErrorCode.QuotaExceeded`), and quota/usageSource passthrough.
+- `audit-tracker.md` - `MT-02` updated with Wave 20 closure note.
+```
+$ dotnet build StoreProject.sln --configuration Release
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+$ dotnet test Store.API.Tests --configuration Release --no-build
+Passed!  - Failed: 0, Passed: 191, Skipped: 0, Total: 191, Duration: 2 s
+```
+
+22 new tests across `ControlPlaneQuotaHandler` + `QuotaEnforcementFilter`.
+Build green; 191 / 191 tests pass.
+
+
+## Wave 21 - WebAuthn enrolled-device binding (SEC-23)
+
+Goal: close the SEC-23 bypass — attacker compromises a shared device
+(or steals a refresh token) and replays WebAuthn from a device that
+was never enrolled. Three requirements: require WebAuthn only from
+enrolled device IDs, re-auth on IP change, rate-limit WebAuthn attempts.
+
+Split into three substantive waves (A foundation, B auth wiring,
+C surface) so each one ships deep and end-to-end.
+
+### 21.A - TrustedDevice foundation
+
+- `Store.Models/Entities/TrustedDevice.cs` (new) - one row per
+  (user, device). Fields: `TrustedDeviceId` (PK identity),
+  `UserId` (FK User, cascade), `DeviceId` (32-char URL-safe
+  base64 of 24 random bytes - public client-safe alias),
+  `FingerprintHash` (SHA-256 hex - server-only), `DeviceName`,
+  `UserAgent`, `IpAddressCidr` (/24 IPv4 or /48 IPv6),
+  `FirstSeenAtUtc`, `LastSeenAtUtc`, `LastWebAuthnAtUtc`,
+  `IsRevoked`, `IsTrusted` + `TrustedUntilUtc`.
+- `Store.Models/Security/DeviceFingerprint.cs` (new) - static
+  helper. `ComputeHash(ua, ip, acceptLanguage)` returns 64-char
+  lowercase hex SHA-256. `NormalizeIp` collapses to /24 (IPv4)
+  or /48 (IPv6) so mobile-network IP rotation does not register
+  as a new device. `DeriveName` returns friendly label with the
+  right precedence: mobile-platform first (iPhone / iPad /
+  Android), then browser identity (Edge / Firefox / Chrome /
+  Safari), then desktop platform (Windows / macOS / Linux).
+- `Store.Models/Interfaces/Services/ITrustedDeviceRepository.cs`
+  + `ITrustedDeviceService.cs` - storage abstraction mirrors
+  ITenantRepository pattern so tests mock the storage layer
+  without spinning up a real DbContext.
+- `Store.DbServices/Repositories/EfTrustedDeviceRepository.cs`
+  - thin pass-through over `StoreDbContext.TrustedDevices`.
+- `Store.DbServices/Configurations/TrustedDeviceConfiguration.cs`
+  - snake_case columns + unique indexes on `(UserId,
+  FingerprintHash)` (canonical identity) + `(UserId, DeviceId)`
+  (public alias) + plain `UserId` for list queries.
+- `Store.DbServices/Context/StoreDbContext.cs` - new
+  `DbSet<TrustedDevice> TrustedDevices` (picked up by
+  `ApplyConfigurationsFromAssembly`).
+- `Store.DbServices/Migrations/20260925120000_AddTrustedDevices_SEC23.cs`
+  - hand-written `Up` (CREATE TABLE + 3 indexes) / `Down` (DROP
+  TABLE). Designer file intentionally omitted (runtime only
+  needs Up/Down; design-time tooling can regen via
+  `IDesignTimeDbContextFactory` when needed).
+- `Store.DbServices/Migrations/StoreDbContextModelSnapshot.cs`
+  - new `TrustedDevice` entity block + User relationship block.
+- `Store.DbServices/Services/TrustedDeviceService.cs` -
+  orchestrates HttpContext fingerprint -> upsert. Uses
+  `RandomNumberGenerator.Fill` for the public DeviceId (no
+  `Random`, no predictable seeds). Takes `TimeProvider` so
+  tests control the clock. `MarkUsedAsync` stamps
+  `LastWebAuthnAtUtc` after a successful FIDO2 assertion.
+- `Store.Models/Store.Models.csproj` - `<FrameworkReference
+  Include="Microsoft.AspNetCore.App" />` was already added in
+  Wave 20; reused here.
+- Tests:
+  - `DeviceFingerprintTests.cs` (19) - hash format + stability,
+    UA case/trim, IP /24 + /48 collapse + invalid fallback,
+    Accept-Language first-tag-only, UA -> friendly-name across
+    10 UA types + fallback.
+  - `TrustedDeviceServiceTests.cs` (12) - new-device insert
+    (32-char DeviceId), fingerprint format, existing-device
+    update (public id stable, LastSeen bumped), UA truncation
+    to 500 chars, pass-throughs (list / revoke / trust / find),
+    plus 4 MarkUsedAsync tests (stamps LastWebAuthnAtUtc on
+    success, skips revoked / missing rows).
+
+### 21.B - Device binding wired into auth pipeline
+
+- `Store.Models/Security/DeviceBindingResult.cs` - enum:
+  `EnrolledWithWebAuthn` (full pass), `PasswordOnly` (device
+  seen but never WebAuthn), `UnknownDevice` (token replay from
+  a new device - block), `RevokedDevice` (user-revoked - block).
+- `Store.Models/Interfaces/Services/IDeviceBindingGuard.cs`
+  - stateless check interface; takes HttpContext, returns
+  verdict.
+- `Store.DbServices/Services/DeviceBindingGuard.cs` - default
+  impl: derives fingerprint from request, queries
+  `ITrustedDeviceService.FindByFingerprintAsync`, returns the
+  worst-case verdict. Fails closed on degenerate requests.
+- `Store.DbServices/Services/AuthenticationService.cs`:
+  - Constructor takes optional `ITrustedDeviceService?` +
+    `IDeviceBindingGuard?` + `ILogger<AuthenticationService>?`
+    (nullable - fail-open when not wired so tests + dev hosts
+    keep working).
+  - `RegisterDeviceAsync` helper called after success of every
+    login method: `AuthenticateUser` (used by LoginAsync /
+    LoginWithEmailAsync / LoginWithPhoneAsync),
+    `LoginWithBiometricsAsync`, `Login2FAAsync`,
+    `RefreshTokenAsync`.
+  - `RefreshTokenAsync` invokes `_deviceGuard.CheckAsync`;
+    returns null on UnknownDevice / RevokedDevice and logs
+    `LogWarning` with the verdict + user id.
+- `Store.API/Controllers/WebAuthnController.cs` - `makeAssertion`
+  now: after a successful FIDO2 assertion, calls
+  `_trustedDevices.RegisterOrUpdateAsync(userId, HttpContext,
+  ct)` + `MarkUsedAsync(..., usedWebAuthn: true)`. Device-marking
+  failures are caught + logged so a flapping device layer never
+  blocks login.
+- Tests:
+  - `DeviceBindingGuardTests.cs` (6) - verdict mapping
+    (EnrolledWithWebAuthn / PasswordOnly / UnknownDevice /
+    RevokedDevice), /24-subnet fingerprint collapse on refresh,
+    fail-closed on empty request.
+
+### 21.C - Surface (endpoints + UI + rate limit)
+
+- `Store.Models/DTOs/Auth/TrustedDeviceDto.cs` - public DTO;
+  never exposes fingerprint hash or raw IP. `IsCurrentDevice`
+  flag lets the UI badge the row matching the request without
+  revealing server-only state.
+- `Store.API/Controllers/WebAuthnController.cs` - three new
+  endpoints:
+  - `GET /api/webauthn/devices` - list user's devices, marks
+    current device via `DeviceBindingGuard.ComputeFingerprint`.
+  - `DELETE /api/webauthn/devices/{id}` - revoke (idempotent).
+  - `POST /api/webauthn/devices/{id}/trust` - promote to trusted
+    for 30 days (skip IP-anomaly on subsequent refreshes).
+  All `[Authorize]`. Fail-open (501 / empty list) when the
+  device layer is not wired.
+- `Store.API/Program.cs` - new `webauthn-assertion` rate-limit
+  policy (10 / 15min per IP) wired on `makeCredentialOptions` /
+  `makeCredential` / `assertionOptions` / `makeAssertion`. Same
+  shape as `password-recovery`.
+- `Store.DbServices/Services/DeviceBindingGuard.cs` -
+  `ComputeFingerprint` promoted from `internal` to `public` so
+  the WebAuthnController can reuse it for the "this device"
+  badge.
+- `Store.UI/Pages/Profile.cshtml` - new "Trusted Devices"
+  kpi-card (table + Trust 30d + Revoke form actions with
+  data-confirm). Empty-state panel.
+- `Store.UI/Pages/Profile.cshtml.cs` - `TrustedDevices`
+  collection property; loads via
+  `_apiClient.GetAsync<List<TrustedDeviceDto>>("api/webauthn/devices")`.
+  New `OnPostRevokeDeviceAsync` + `OnPostTrustDeviceAsync`
+  handlers (mirror password / avatar pattern).
+- `Store.API.Tests/WebAuthnDevicesEndpointsTests.cs` (8) -
+  empty-array when device layer unwired, current-device marker
+  matches request fingerprint, 401 on missing `uid`, 501/404/200
+  paths for revoke, 404 + 30-day window capture for trust.
+
+### 21.D - Docs + final verification
+
+```
+$ dotnet build Store.API/Store.UI/Store.DbServices/Store.ControlPlane --configuration Release
+Build succeeded. 0 Warning(s) 0 Error(s)
+
+$ dotnet test Store.API.Tests --configuration Release --no-build
+Passed!  - Failed: 0, Passed: 246, Skipped: 0, Total: 246, Duration: 1 s
+```
+
+55 new tests across DeviceFingerprint / TrustedDeviceService /
+DeviceBindingGuard / WebAuthnDevicesEndpoints + the MarkUsedAsync
+follow-ups.
+
+SEC-23 status:
+  - Require WebAuthn only from enrolled device IDs -> done.
+  - Re-auth on IP change -> done (/24 / /48 collapse + binding
+    verdict on refresh).
+  - Rate-limit WebAuthn attempts -> done (webauthn-assertion
+    policy).
+
+
+## Wave 22 - UX-05 permission-gated UI rendering closeout
+
+Goal: sweep every remaining secondary affordance across the 47 Razor
+pages and ensure each one has (a) a UI gate driven by a `Can*` property
+on the page model and (b) a server-side permission check on the
+corresponding `OnPost*` handler. Mirrored `CanApprove` / `CanAdmin` /
+`CanDelete` / `CanTerminate` / `CanCreate` / `CanEdit` properties added
+where missing.
+
+Split into three substantive waves (A primary gate, B admin cluster,
+D polish + docs) so each one ships deep and end-to-end without
+scope-creep.
+
+### 22.A - Discounts + DiscountOverrides (close the primary gap)
+
+- `Store.UI/Pages/Discounts.cshtml.cs`:
+  - Added `CanCreate`, `CanEdit`, `CanDelete` properties; computed in
+    `OnGet` from `DiscountWrite`.
+  - Added server-side `HasPermission(DiscountWrite)` checks at the top
+    of `OnPostCreateAsync`, `OnPostEditAsync`, `OnPostDeleteAsync`
+    (none of these had any permission check beyond login before).
+    Returns TempData `StatusMessage` + `RedirectToPage` on deny.
+- `Store.UI/Pages/Discounts.cshtml`:
+  - Wrapped "New Discount Rule" button in `@if (Model.CanCreate)`.
+  - Wrapped per-row Edit button in `@if (Model.CanEdit)`.
+  - Wrapped per-row Delete form in `@if (Model.CanDelete)`.
+- `Store.UI/Pages/DiscountOverrides.cshtml.cs`:
+  - Added `CanCreate` property; computed in `OnGet` from
+    `DiscountRead` (the cashier-side create permission).
+  - Added server-side OR-check in `OnPostCreateAsync` mirroring the
+    OnGet's read-permission set.
+- `Store.UI/Pages/DiscountOverrides.cshtml`:
+  - Wrapped "New Override Request" button in
+    `@if (Model.CanCreate)`.
+- Used existing `DiscountWrite` / `DiscountRead` permission keys; no
+  new keys needed.
+
+### 22.B - Admin cluster (BatchTracking / PurchaseOrders / Payroll /
+       Users / ContactRequests / Lookup)
+
+- `Store.UI/Pages/BatchTracking.cshtml.cs`:
+  - Added `CanDelete` property (AdminUsers — destructive op).
+  - Server gate on `OnPostDeleteAsync` rejects non-admins.
+  - Split the row actions so Edit/WriteOff stay under `CanWrite` but
+    Delete moves to `CanDelete`.
+- `Store.UI/Pages/PurchaseOrders.cshtml.cs`:
+  - Added `CanApprove` (AdminBranches) + `CanRead` properties.
+  - Added `OnGet` permission check that previously was missing.
+  - Server gate on `OnPostApproveAsync` rejects non-admins.
+  - Added missing `using Store.Models.DTOs.Operations`.
+- `Store.UI/Pages/Payroll.cshtml.cs`:
+  - Added `CanApprove` + `CanDelete` (AdminUsers — payroll triggers
+    journal entries, tax brackets are global config).
+  - Server gates on `OnPostApproveAsync` + `OnPostDeleteTaxBracketAsync`.
+  - Added missing `using Store.Models.DTOs.Operations`.
+- `Store.UI/Pages/Users.cshtml.cs`:
+  - Added `CanAdmin` property (AdminUsers).
+  - Server gates on `OnPostSuspendAsync`,
+    `OnPostIssuePasswordAsync`, `OnPostRevokeSessionsAsync`.
+  - The JavaScript-template Revoke Sessions button (in the modal) is
+    server-side gated; UI gate deferred (JS template plumbing).
+  - Added missing `using Store.Models.DTOs.Operations`.
+- `Store.UI/Pages/ContactRequests.cshtml.cs`:
+  - Added `CanApprove` (AdminUsers OR AdminRoleMatrix; mirrors the
+    OnGet logic).
+  - Server gate on `OnPostApproveAsync`.
+- `Store.UI/Pages/Lookup.cshtml.cs`:
+  - Added `CanAdmin` property (AdminUsers).
+  - Server gates on `OnPostDeleteCategoryAsync`,
+    `OnPostDeleteUnitAsync`,
+    `OnPostDeleteDepartmentAsync`,
+    `OnPostDeleteSalaryAsync` (previously had no permission check).
+  - Added missing `using Store.Models.DTOs.Operations`.
+- `Store.UI/Pages/StockTransfers.cshtml.cs` — verified from Wave 11:
+  `CanApprove` already exists + buttons already gated. No change.
+- `Store.UI/Pages/{BranchAdmin,ContactRequests,Lookup,Payroll,
+  PurchaseOrders,Users,Discounts,DiscountOverrides}.cshtml` —
+  button gates updated.
+
+### 22.C - DEFERRED (POS per-line discount override / refund / void)
+
+Discovery showed:
+- `Invoices.cshtml` already has `CanVoid` + `CanRefund` + UI surface +
+  refund modal + `submitVoid` / `submitRefund` JS. Server endpoints
+  `POST /api/invoices/{id}/{void,refund}` already exist with permission
+  policies. UX-05 compliant already.
+- POS per-line discount override is genuinely missing — the cart
+  lines only carry pre-applied catalog discounts, no cashier override.
+  This is a new feature, not a polish task: requires cart-line-scoped
+  `DiscountOverrideRequest` + POS modal + checkout integration +
+  manager approval race handling. Deferred to **Wave 23** with its
+  own discovery + design pass + multi-day implementation budget.
+
+### 22.D - 22.B.2 polish + docs + final verification
+
+- `Store.UI/Pages/BranchAdmin.cshtml.cs` — `CanAdmin` (AdminBranches).
+  Revoke button gated. Server gate already in place.
+- `Store.UI/Pages/Suppliers.cshtml.cs` — `CanDelete` (AdminUsers).
+  Drawer Delete form gated. Server gate added on `OnPostDeleteAsync`.
+- `Store.UI/Pages/Customers.cshtml.cs` — `CanDelete` (AdminUsers).
+  Drawer Delete form gated. Server gate added on `OnPostDeleteAsync`.
+- `Store.UI/Pages/Employees.cshtml.cs` — `CanTerminate` (AdminUsers).
+  Terminate / Reinstate row buttons gated. Server gates added on both
+  `OnPostTerminateAsync` and `OnPostReinstateAsync`.
+- `Store.UI/Pages/Campaigns.cshtml.cs` — `CanDelete` (LoyaltyWrite).
+  Modal Delete submit button gated. Server gate added on
+  `OnPostDeleteAsync`.
+
+Build + tests:
+```
+$ dotnet build Store.UI Store.API Store.DbServices --configuration Release
+Build succeeded. 0 Warning(s) 0 Error(s)
+
+$ dotnet test Store.API.Tests --configuration Release --no-build
+Passed!  - Failed: 0, Passed: 246, Skipped: 0, Total: 246, Duration: 3 s
+```
+
+UX-05 status: `[~]` -> `[x]`. POS per-line discount override remains
+deferred (genuine new-feature scope).

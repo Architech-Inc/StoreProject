@@ -6,7 +6,9 @@ using Store.Models.DTOs.Transfers;
 using Store.Models.DTOs.Items;
 using Store.Models.Interfaces.Services;
 using StoreUI.Services;
+using Store.Models.Common;
 
+using Microsoft.Extensions.Logging.Abstractions;
 namespace StoreUI.Pages;
 
 public class StockTransfersModel : SecurePageModel
@@ -295,7 +297,7 @@ public class StockTransfersModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: {ex.Message}";
+            StatusMessage = $"Error: {SafeErrorMessage.From(ex, NullLogger<StockTransfersModel>.Instance, "Stock Transfers operation")}";
         }
 
         return RedirectToPage();

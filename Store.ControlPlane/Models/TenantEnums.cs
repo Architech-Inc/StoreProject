@@ -9,10 +9,3 @@ public enum TenantStatus
     Failed,
     Terminated
 }
-
-public enum TenantTier
-{
-    Starter,
-    Professional,
-    Enterprise
-}

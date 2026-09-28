@@ -7,7 +7,9 @@ using Store.Models.DTOs.Procurement;
 using Store.Models.Enums;
 using Store.Models.Interfaces.Services;
 using StoreUI.Services;
+using Store.Models.Common;
 
+using Microsoft.Extensions.Logging.Abstractions;
 namespace StoreUI.Pages;
 
 public class InventoryOpsModel : SecurePageModel
@@ -262,7 +264,7 @@ public class InventoryOpsModel : SecurePageModel
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: {ex.Message}";
+            StatusMessage = $"Error: {SafeErrorMessage.From(ex, NullLogger<InventoryOpsModel>.Instance, "Inventory Ops operation")}";
         }
 
         return RedirectToPage();

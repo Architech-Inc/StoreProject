@@ -67,7 +67,10 @@ public class EmployeesController : ControllerBase
     [Authorize(Policy = PermissionKeys.EmployeeDelete)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
-        var deleted = await _employeeService.DeleteAsync(id, ct);
+        var userIdClaim = User.FindFirst("uid")?.Value;
+        Guid.TryParse(userIdClaim, out var deletedById);
+
+        var deleted = await _employeeService.DeleteAsync(id, deletedById == Guid.Empty ? null : deletedById, ct);
         if (!deleted) return NotFound(ApiResponse<object>.Fail("Employee not found."));
         return Ok(ApiResponse<object>.Ok(null!, "Employee removed."));
     }
