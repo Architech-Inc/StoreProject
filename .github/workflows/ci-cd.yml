@@ -250,42 +250,41 @@ jobs:
           CONTROLPLANE_WEBHOOK_SIGNING_SECRET: ${{ secrets.CONTROLPLANE_WEBHOOK_SIGNING_SECRET }}
           ROOT_DOMAIN: ${{ secrets.ROOT_DOMAIN }}
           IMAGE_PREFIX: ${{ env.IMAGE_PREFIX }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "==> Ensuring target directories exist on VPS..."
           ssh -i ~/.ssh/deploy_key -p $VPS_PORT -o StrictHostKeyChecking=yes \
               $VPS_USER@$VPS_HOST \
               "sudo mkdir -p /opt/projects/platform/tenants /opt/projects/proxy/dynamic && sudo chown -R \$USER:\$USER /opt/projects/platform"
 
-          echo "==> Copying docker-compose.platform.yml to VPS..."
+          echo "==> Writing .env.production on runner..."
+          printf 'CONTROLPLANE_DB_CONNECTION_STRING=%s\nCONTROLPLANE_MASTER_KEY=%s\nCONTROLPLANE_WEBHOOK_SIGNING_SECRET=%s\nROOT_DOMAIN=%s\nIMAGE_PREFIX=%s\nGITHUB_TOKEN=%s\n' \
+            "$CONTROLPLANE_DB_CONNECTION_STRING" \
+            "$CONTROLPLANE_MASTER_KEY" \
+            "$CONTROLPLANE_WEBHOOK_SIGNING_SECRET" \
+            "$ROOT_DOMAIN" \
+            "$IMAGE_PREFIX" \
+            "$GITHUB_TOKEN" > /tmp/.env.production
+
+          echo "==> Copying config files to VPS..."
           scp -i ~/.ssh/deploy_key -P $VPS_PORT -o StrictHostKeyChecking=yes \
               docker-compose.platform.yml \
               $VPS_USER@$VPS_HOST:/opt/projects/platform/docker-compose.platform.yml
+          scp -i ~/.ssh/deploy_key -P $VPS_PORT -o StrictHostKeyChecking=yes \
+              /tmp/.env.production \
+              $VPS_USER@$VPS_HOST:/tmp/.env.production
+          ssh -i ~/.ssh/deploy_key -p $VPS_PORT -o StrictHostKeyChecking=yes $VPS_USER@$VPS_HOST \
+              "sudo install -m 0600 /tmp/.env.production /opt/projects/platform/.env.production && \
+               sudo chown deploy:deploy /opt/projects/platform/.env.production"
 
           echo "==> Deploying Control Plane and Tenant Portal..."
-          ssh -i ~/.ssh/deploy_key -p $VPS_PORT -o StrictHostKeyChecking=yes \
-              -o BatchMode=yes \
-              $VPS_USER@$VPS_HOST "bash -s" << 'EOF'
-            set -euo pipefail
-
-            # Materialise secrets as an env file readable only by deploy user.
-            sudo install -m 0600 /dev/null /opt/projects/platform/.env.production
-            cat <<EOF_ENV | sudo tee /opt/projects/platform/.env.production > /dev/null
-CONTROLPLANE_DB_CONNECTION_STRING=${{ secrets.CONTROLPLANE_DB_CONNECTION_STRING }}
-CONTROLPLANE_MASTER_KEY=${{ secrets.CONTROLPLANE_MASTER_KEY }}
-CONTROLPLANE_WEBHOOK_SIGNING_SECRET=${{ secrets.CONTROLPLANE_WEBHOOK_SIGNING_SECRET }}
-ROOT_DOMAIN=${{ secrets.ROOT_DOMAIN }}
-IMAGE_PREFIX=${{ env.IMAGE_PREFIX }}
-GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
-EOF_ENV
-            sudo chown deploy:deploy /opt/projects/platform/.env.production
-
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-
-            cd /opt/projects/platform
-            docker compose --env-file .env.production -f docker-compose.platform.yml pull
-            docker compose --env-file .env.production -f docker-compose.platform.yml up -d --remove-orphans
-            docker compose --env-file .env.production -f docker-compose.platform.yml ps
-          EOF
+          ssh -i ~/.ssh/deploy_key -p $VPS_PORT -o StrictHostKeyChecking=yes -o BatchMode=yes \
+              $VPS_USER@$VPS_HOST \
+              "echo '$GITHUB_TOKEN' | docker login ghcr.io -u Rodern --password-stdin && \
+               cd /opt/projects/platform && \
+               docker compose --env-file .env.production -f docker-compose.platform.yml pull && \
+               docker compose --env-file .env.production -f docker-compose.platform.yml up -d --remove-orphans && \
+               docker compose --env-file .env.production -f docker-compose.platform.yml ps"
 
       - name: Post-deploy health-check
         if: steps.check-secrets.outputs.has_secrets == 'true'
