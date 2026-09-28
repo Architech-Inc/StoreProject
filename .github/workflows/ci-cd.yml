@@ -9,7 +9,7 @@ on:
 env:
   DOTNET_VERSION: '8.0.x'
   REGISTRY: ghcr.io
-  IMAGE_PREFIX: ghcr.io/${{ github.repository }}
+  IMAGE_PREFIX: ghcr.io/architech-inc/storeproject
 
 jobs:
   # ═══════════════════════════════════════════════════════════════════════════
@@ -31,11 +31,52 @@ jobs:
           GITLEAKS_ENABLE_SUMMARY: true
 
   # ═══════════════════════════════════════════════════════════════════════════
-  # Stage 1: Continuous Integration (Lint, Build, Test)
+  # Stage 1a: Continuous Integration (Per-Service Build Matrix)
+  # PROC-11 — each service builds in parallel with its own log + cache key.
+  # ═══════════════════════════════════════════════════════════════════════════
+  build-matrix:
+    name: Build ${{ matrix.service.label }} (${{ matrix.service.project }})
+    needs: secret-scan
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - { label: "Store.Models (shared library)", project: "Store.Models",            dockerfile: null }
+          - { label: "Store.DbServices (data layer)",   project: "Store.DbServices",        dockerfile: null }
+          - { label: "Store.API (backend)",            project: "Store.API",               dockerfile: "Store.API/Dockerfile" }
+          - { label: "Store.UI (admin/cashier UI)",    project: "Store.UI",                dockerfile: "Store.UI/Dockerfile" }
+          - { label: "Store.ControlPlane (orchestrator)", project: "Store.ControlPlane",  dockerfile: "Store.ControlPlane/Dockerfile" }
+          - { label: "Store.TenantPortal (public site)",  project: "Store.TenantPortal", dockerfile: "Store.TenantPortal/Dockerfile" }
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore Dependencies (project-scoped)
+        run: dotnet restore ${{ matrix.service.project }}/${{ matrix.service.project }}.csproj
+
+      - name: Build ${{ matrix.service.project }} (Release)
+        run: dotnet build ${{ matrix.service.project }}/${{ matrix.service.project }}.csproj --configuration Release --no-restore --no-dependencies
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Stage 1b: Test Suite — runs once after every matrix leg is green.
   # ═══════════════════════════════════════════════════════════════════════════
   build-and-test:
     name: Build & Test Suite
-    needs: secret-scan
+    needs: build-matrix
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -63,7 +104,7 @@ jobs:
   # ═══════════════════════════════════════════════════════════════════════════
   docker-build-and-push:
     name: Build & Push Docker Images
-    needs: build-and-test
+    needs: [build-matrix, build-and-test]
     if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
@@ -246,13 +287,13 @@ jobs:
             # Materialise secrets as an env file readable only by deploy user.
             sudo install -m 0600 /dev/null /opt/projects/platform/.env.production
             cat <<ENV | sudo tee /opt/projects/platform/.env.production > /dev/null
-CONTROLPLANE_DB_CONNECTION_STRING=${CONTROLPLANE_DB_CONNECTION_STRING}
-CONTROLPLANE_MASTER_KEY=${CONTROLPLANE_MASTER_KEY}
-CONTROLPLANE_WEBHOOK_SIGNING_SECRET=${CONTROLPLANE_WEBHOOK_SIGNING_SECRET}
-ROOT_DOMAIN=${ROOT_DOMAIN}
-IMAGE_PREFIX=${IMAGE_PREFIX}
-GITHUB_TOKEN=${GITHUB_TOKEN}
-ENV
+              CONTROLPLANE_DB_CONNECTION_STRING=${CONTROLPLANE_DB_CONNECTION_STRING}
+              CONTROLPLANE_MASTER_KEY=${CONTROLPLANE_MASTER_KEY}
+              CONTROLPLANE_WEBHOOK_SIGNING_SECRET=${CONTROLPLANE_WEBHOOK_SIGNING_SECRET}
+              ROOT_DOMAIN=${ROOT_DOMAIN}
+              IMAGE_PREFIX=${IMAGE_PREFIX}
+              GITHUB_TOKEN=${GITHUB_TOKEN}
+            ENV
             sudo chown deploy:deploy /opt/projects/platform/.env.production
 
             echo "$GITHUB_TOKEN" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
