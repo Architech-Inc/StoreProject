@@ -260,8 +260,8 @@ jobs:
           echo "==> Writing .env.production on runner..."
           # Extract the password from the connection string secret
           DB_PWD=$(echo "$CONTROLPLANE_DB_CONNECTION_STRING" | grep -oP -i '(?<=Pwd=)[^;]+' || echo "U2BUg2Jd4szfvSPUBy1fB9hNpgclkxXa")
-          # Replace the Server IP with the internal docker container name
-          DB_CONN_FIXED=$(echo "$CONTROLPLANE_DB_CONNECTION_STRING" | sed -E 's/Server=[^;]+/Server=store-controlplane-db/i')
+          # Replace the Server IP with the internal docker container name and strip any accidental secret name prefixes
+          DB_CONN_FIXED=$(echo "$CONTROLPLANE_DB_CONNECTION_STRING" | sed -E 's/.*(Server=)/\1/i' | sed -E 's/Server=[^;]+/Server=store-controlplane-db/i')
 
           printf 'CONTROLPLANE_DB_CONNECTION_STRING=%s\nCONTROLPLANE_DB_ROOT_PASSWORD=%s\nCONTROLPLANE_MASTER_KEY=%s\nCONTROLPLANE_WEBHOOK_SIGNING_SECRET=%s\nROOT_DOMAIN=%s\nIMAGE_PREFIX=%s\nGITHUB_TOKEN=%s\n' \
             "$DB_CONN_FIXED" \
