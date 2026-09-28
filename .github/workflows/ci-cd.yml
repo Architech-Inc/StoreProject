@@ -269,17 +269,17 @@ jobs:
 
             # Materialise secrets as an env file readable only by deploy user.
             sudo install -m 0600 /dev/null /opt/projects/platform/.env.production
-            cat <<ENV | sudo tee /opt/projects/platform/.env.production > /dev/null
-              CONTROLPLANE_DB_CONNECTION_STRING=${CONTROLPLANE_DB_CONNECTION_STRING}
-              CONTROLPLANE_MASTER_KEY=${CONTROLPLANE_MASTER_KEY}
-              CONTROLPLANE_WEBHOOK_SIGNING_SECRET=${CONTROLPLANE_WEBHOOK_SIGNING_SECRET}
-              ROOT_DOMAIN=${ROOT_DOMAIN}
-              IMAGE_PREFIX=${IMAGE_PREFIX}
-              GITHUB_TOKEN=${GITHUB_TOKEN}
-            ENV
+            cat <<EOF_ENV | sudo tee /opt/projects/platform/.env.production > /dev/null
+CONTROLPLANE_DB_CONNECTION_STRING=${{ secrets.CONTROLPLANE_DB_CONNECTION_STRING }}
+CONTROLPLANE_MASTER_KEY=${{ secrets.CONTROLPLANE_MASTER_KEY }}
+CONTROLPLANE_WEBHOOK_SIGNING_SECRET=${{ secrets.CONTROLPLANE_WEBHOOK_SIGNING_SECRET }}
+ROOT_DOMAIN=${{ secrets.ROOT_DOMAIN }}
+IMAGE_PREFIX=${{ env.IMAGE_PREFIX }}
+GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+EOF_ENV
             sudo chown deploy:deploy /opt/projects/platform/.env.production
 
-            echo "$GITHUB_TOKEN" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
             cd /opt/projects/platform
             docker compose --env-file .env.production -f docker-compose.platform.yml pull
