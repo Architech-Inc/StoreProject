@@ -62,11 +62,7 @@ services:
       - store-dataprotection-keys:/root/.aspnet/DataProtection-Keys
       - store-uploads:/app/Uploads
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 15s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
+      disable: true
     networks:
       - store-network
       - proxy-network
@@ -77,6 +73,7 @@ services:
       - "traefik.http.services.storeproject-storeapi.loadbalancer.server.port=8080"
       - "traefik.http.routers.storeproject-storeapi-files.rule=Host(`${STORE_DOMAIN:-store.157.173.112.19.nip.io}`) && PathPrefix(`/files`)"
       - "traefik.http.routers.storeproject-storeapi-files.service=storeproject-storeapi"
+      - "traefik.http.routers.storeproject-storeapi-files.priority=100"
 
   store-ui:
     build:
@@ -90,15 +87,11 @@ services:
       - ApiSettings__ExternalBaseUrl=http://${API_DOMAIN:-api.store.157.173.112.19.nip.io}:18080
     depends_on:
       store-api:
-        condition: service_healthy
+        condition: service_started
     volumes:
       - store-dataprotection-keys:/root/.aspnet/DataProtection-Keys
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
-      interval: 20s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
+      disable: true
     networks:
       - store-network
       - proxy-network
@@ -106,6 +99,7 @@ services:
       - "traefik.enable=true"
       - "traefik.docker.network=proxy-network"
       - "traefik.http.routers.storeproject-storeui.rule=Host(`${STORE_DOMAIN:-store.157.173.112.19.nip.io}`)"
+      - "traefik.http.routers.storeproject-storeui.priority=10"
       - "traefik.http.services.storeproject-storeui.loadbalancer.server.port=8080"
 
   store-backup-mysql:

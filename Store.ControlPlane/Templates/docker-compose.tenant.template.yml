@@ -61,11 +61,7 @@ services:
       - {{SLUG}}_dataprotection_keys:/root/.aspnet/DataProtection-Keys
       - {{SLUG}}_uploads:/app/Uploads
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 15s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
+      disable: true
     networks:
       - {{SLUG}}_net
       - proxy-network
@@ -76,6 +72,7 @@ services:
       - "traefik.http.services.{{SLUG}}-api.loadbalancer.server.port=8080"
       - "traefik.http.routers.{{SLUG}}-api-files.rule=Host(`{{SLUG}}.{{ROOT_DOMAIN}}`) && PathPrefix(`/files`)"
       - "traefik.http.routers.{{SLUG}}-api-files.service={{SLUG}}-api"
+      - "traefik.http.routers.{{SLUG}}-api-files.priority=100"
 
   {{SLUG}}-ui:
     image: {{STORE_UI_IMAGE}}
@@ -87,15 +84,11 @@ services:
       - ApiSettings__ExternalBaseUrl=http://api.{{SLUG}}.{{ROOT_DOMAIN}}:18080
     depends_on:
       {{SLUG}}-api:
-        condition: service_healthy
+        condition: service_started
     volumes:
       - {{SLUG}}_dataprotection_keys:/root/.aspnet/DataProtection-Keys
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
-      interval: 20s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
+      disable: true
     networks:
       - {{SLUG}}_net
       - proxy-network
@@ -103,6 +96,7 @@ services:
       - "traefik.enable=true"
       - "traefik.docker.network=proxy-network"
       - "traefik.http.routers.{{SLUG}}-ui.rule=Host(`{{SLUG}}.{{ROOT_DOMAIN}}`)"
+      - "traefik.http.routers.{{SLUG}}-ui.priority=10"
       - "traefik.http.services.{{SLUG}}-ui.loadbalancer.server.port=8080"
 
 volumes:
