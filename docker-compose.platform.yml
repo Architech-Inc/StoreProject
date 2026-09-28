@@ -26,6 +26,8 @@ services:
       - ControlPlane__AutoDeployDocker=true
       - ControlPlane__StoreApiImage=${IMAGE_PREFIX:-ghcr.io/architech-inc/storeproject}/store-api:latest
       - ControlPlane__StoreUiImage=${IMAGE_PREFIX:-ghcr.io/architech-inc/storeproject}/store-ui:latest
+      - ControlPlaneCors__AllowedOrigins__0=https://portal.${ROOT_DOMAIN}
+      - ControlPlaneCors__AllowedOrigins__1=http://portal.${ROOT_DOMAIN}
     volumes:
       # docker socket — proxied via docker-socket-proxy in real production
       # (we keep it here for development; remove or proxy in prod compose).
