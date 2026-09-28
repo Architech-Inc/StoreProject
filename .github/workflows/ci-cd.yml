@@ -302,7 +302,7 @@ jobs:
         run: |
           for i in {1..12}; do
             if ssh -i ~/.ssh/deploy_key -p $VPS_PORT -o StrictHostKeyChecking=yes \
-                $VPS_USER@$VPS_HOST "curl -fsS http://cp.${ROOT_DOMAIN}/health > /dev/null"; then
+                $VPS_USER@$VPS_HOST "curl -fsS http://cp.${ROOT_DOMAIN}:18080/health > /dev/null"; then
               echo "Control plane healthy after ${i}x5s"; exit 0
             fi
             sleep 5
