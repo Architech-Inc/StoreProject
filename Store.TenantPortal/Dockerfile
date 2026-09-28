@@ -1,8 +1,10 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 COPY ["Store.TenantPortal/Store.TenantPortal.csproj", "Store.TenantPortal/"]
+COPY ["Store.Models/Store.Models.csproj", "Store.Models/"]
 RUN dotnet restore "Store.TenantPortal/Store.TenantPortal.csproj"
 COPY Store.TenantPortal/ Store.TenantPortal/
+COPY Store.Models/ Store.Models/
 WORKDIR "/src/Store.TenantPortal"
 RUN dotnet build "Store.TenantPortal.csproj" -c Release -o /app/build
 
