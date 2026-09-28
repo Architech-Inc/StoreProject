@@ -74,6 +74,8 @@ services:
       - "traefik.docker.network=proxy-network"
       - "traefik.http.routers.{{SLUG}}-api.rule=Host(`api.{{SLUG}}.{{ROOT_DOMAIN}}`)"
       - "traefik.http.services.{{SLUG}}-api.loadbalancer.server.port=8080"
+      - "traefik.http.routers.{{SLUG}}-api-files.rule=Host(`{{SLUG}}.{{ROOT_DOMAIN}}`) && PathPrefix(`/files`)"
+      - "traefik.http.routers.{{SLUG}}-api-files.service={{SLUG}}-api"
 
   {{SLUG}}-ui:
     image: {{STORE_UI_IMAGE}}

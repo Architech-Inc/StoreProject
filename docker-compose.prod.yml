@@ -75,6 +75,8 @@ services:
       - "traefik.docker.network=proxy-network"
       - "traefik.http.routers.storeproject-storeapi.rule=Host(`${API_DOMAIN:-api.store.157.173.112.19.nip.io}`)"
       - "traefik.http.services.storeproject-storeapi.loadbalancer.server.port=8080"
+      - "traefik.http.routers.storeproject-storeapi-files.rule=Host(`${STORE_DOMAIN:-store.157.173.112.19.nip.io}`) && PathPrefix(`/files`)"
+      - "traefik.http.routers.storeproject-storeapi-files.service=storeproject-storeapi"
 
   store-ui:
     build:
