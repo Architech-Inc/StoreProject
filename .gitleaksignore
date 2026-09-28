@@ -1,0 +1,5 @@
+[allowlist]
+paths = [
+    '''Database/migrations/000_full_schema_and_data\.sql''',
+    '''Store\.ControlPlane/App_Data/tenants\.json'''
+]
