@@ -22,7 +22,7 @@ services:
     image: ${IMAGE_PREFIX:-ghcr.io/architech-inc/storeproject}/store-controlplane:${IMAGE_TAG:-latest}
     container_name: store-controlplane
     restart: always
-    user: "1000:1000"  # non-root; required because we mount the docker socket
+    # Removed user mapping so it defaults to root; required to access docker.sock and mapped tenant volumes
     read_only: true
     tmpfs:
       - /tmp:size=64M
