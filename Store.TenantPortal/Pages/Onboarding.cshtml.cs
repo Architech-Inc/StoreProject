@@ -98,12 +98,7 @@ public class OnboardingModel : PageModel
             // /Onboarding/Status page every 3 seconds until Completed/Failed.
             var job = await _cpClient.ProvisionTenantAsyncJobAsync(provisionReq, session.AccountId, ct);
 
-            // Stash the JobId in TempData so the Status page can read it
-            // without us needing a server-side session for the request.
-            TempData["ProvisioningJobId"] = job.JobId.ToString();
-            TempData["ProvisioningSlug"] = provisionReq.Slug;
-
-            return RedirectToPage("/OnboardingStatus");
+            return RedirectToPage("/OnboardingStatus", new { JobId = job.JobId, Slug = provisionReq.Slug });
         }
         catch (InvalidOperationException ex)
         {
