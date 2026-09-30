@@ -1995,6 +1995,47 @@ Startup crashed in `Store.API` with `InvalidOperationException: Unable to resolv
 - Test suite passes: `dotnet test Store.API.Tests` -> 282 passed, 0 failed.
 - Audit tracker updated: `GAP-20` -> `[x]`.
 
+---
+
+## 2026-10-01 — Wave 29 (Notification Bell UI & SignalR Pipeline: GAP-25 — completed)
+
+### 29.A — Backend SignalR Notification Triggers for Contact Requests & Low Stock
+- **Issue**: `GAP-25` audit finding noted that while Wave 9 added SignalR channels for restock and bulk order events, the UI surface and notification pipeline were missing real-time triggers for contact-request approvals and low-stock threshold crossings.
+- **Changes**:
+  - `Store.API/Controllers/UsersController.cs`: Injected optional `IRealTimeNotificationService`.
+    - In `VerifyContactChange`: Dispatches `StoreNotificationDto` with `Category = NotificationCategory.ContactRequest`, `Severity = "Info"`, `TargetUrl = "/ContactRequests"` to `Manager` and `Admin` role groups.
+    - In `ApproveContactChange`: Dispatches `StoreNotificationDto` (`Category = NotificationCategory.ContactRequest`, `Severity = "Success"`, `TargetUrl = "/ContactRequests"`) to `Manager` and `Admin` role groups.
+    - In `RejectContactChange`: Dispatches `StoreNotificationDto` (`Category = NotificationCategory.ContactRequest`, `Severity = "Warning"`, `TargetUrl = "/ContactRequests"`) to `Manager` and `Admin` role groups.
+  - `Store.DbServices/Services/InvoiceService.cs`: Injected optional `IRealTimeNotificationService`.
+    - During sales line stock deduction (`item.InStock -= line.Quantity`), detects if `item.ReorderLevel.HasValue && item.InStock <= item.ReorderLevel.Value`.
+    - Following transaction commit, dispatches `NotifyLowStockAsync` with `LowStockAlertDto` across all subscribers, `Manager`/`Admin` role groups, and branch groups.
+
+### 29.B — Activity Center & Notification Bell UI Modernization
+- **Changes**:
+  - `Store.UI/Pages/Shared/_NotificationCenter.cshtml`: Updated tab filter identifiers to normalized channels: `all`, `approvals`, `inventory`, `security`.
+  - `Store.UI/wwwroot/js/notifications-hub.js`:
+    - Updated `matchesFilter` logic supporting multi-category groupings (Approvals: `DiscountApproval` + `ContactRequest`; Inventory: `LowStock` + `RestockRecommendation` + `PurchaseOrder`).
+    - Added `getCategoryMeta` formatting scoped category tags on each card (`Contact Request`, `Discount Approval`, `Low Stock`, `Restock Alert`, `Purchase Order`, `Security`).
+    - Enhanced card interaction: clicking anywhere on a notification card automatically marks it as read and navigates to the target action URL (`data-url`).
+    - Routed incoming notification toasts through appropriate ToastBus channels (`inventory` for low stock / restock, `admin` for approvals, `app` for general).
+  - `Store.UI/wwwroot/css/notification-center.css`:
+    - Added badge styling `.notif-category-badge` with themed color palettes for `.category-contact` (cyan), `.category-approval` (purple), `.category-inventory` (amber), and `.category-security` (rose).
+
+### 29.C — Unit Tests & Verification
+- `Store.API.Tests/RealTimeNotificationServiceTests.cs`:
+  - Added `NotifyLowStockAsync_SendsToAllAndRoleGroups`: Verifies dispatch to `All`, `role_manager`, `role_admin`, and `branch_{id}` groups.
+  - Added `SendToRoleAsync_SendsNotificationToTargetGroup`: Verifies targeting role groups.
+- `Store.API.Tests/ContactChangeNotificationTests.cs` (3 new unit tests):
+  - `VerifyContactChange_DispatchesNotificationToManagerAndAdmin_WhenTokenValid`
+  - `ApproveContactChange_DispatchesSuccessNotificationToRoles`
+  - `RejectContactChange_DispatchesWarningNotificationToRoles`
+
+### Verification
+- Solution build clean: `dotnet build StoreProject.sln --configuration Release` (0 warnings in code, 0 errors).
+- Test suite passes: `dotnet test Store.API.Tests` -> 287 passed, 0 failed.
+- Audit tracker updated: `GAP-25` -> `[x]`.
+
+
 
 
 

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Discounts;
 using Store.Models.DTOs.Invoices;
+using Store.Models.DTOs.Notifications;
 using Store.Models.Entities;
 using Store.Models.Enums;
 using Store.Models.Interfaces;
@@ -16,12 +17,18 @@ public class InvoiceService : IInvoiceService
     private readonly IUnitOfWork _uow;
     private readonly IDiscountService _discountService;
     private readonly IFinanceService _financeService;
+    private readonly IRealTimeNotificationService? _notificationService;
 
-    public InvoiceService(IUnitOfWork uow, IDiscountService discountService, IFinanceService financeService)
+    public InvoiceService(
+        IUnitOfWork uow,
+        IDiscountService discountService,
+        IFinanceService financeService,
+        IRealTimeNotificationService? notificationService = null)
     {
         _uow = uow;
         _discountService = discountService;
         _financeService = financeService;
+        _notificationService = notificationService;
     }
 
     public async Task<InvoiceDto?> GetByIdAsync(Guid invoiceId, CancellationToken ct = default)
@@ -338,6 +345,7 @@ public class InvoiceService : IInvoiceService
                 decimal total = 0m;
                 decimal totalCogs = 0m;
                 var sales = new List<Sale>();
+                var lowStockAlerts = new List<LowStockAlertDto>();
 
                 foreach (var line in request.Lines)
                 {
@@ -367,6 +375,19 @@ public class InvoiceService : IInvoiceService
 
                     item.InStock -= line.Quantity;
                     _uow.Repository<Item>().Update(item);
+
+                    if (_notificationService != null && item.ReorderLevel.HasValue && item.InStock <= item.ReorderLevel.Value)
+                    {
+                        lowStockAlerts.Add(new LowStockAlertDto
+                        {
+                            ItemId = item.ItemId,
+                            ItemName = item.Name,
+                            Barcode = item.Barcode,
+                            CurrentStock = item.InStock,
+                            ReorderLevel = item.ReorderLevel.Value,
+                            BranchId = invoice.BranchId
+                        });
+                    }
 
                     if (invoice.BranchId.HasValue)
                     {
@@ -523,6 +544,21 @@ public class InvoiceService : IInvoiceService
 
                 await _uow.SaveChangesAsync(ct);
                 await _uow.CommitTransactionAsync(ct);
+
+                if (_notificationService != null && lowStockAlerts.Count > 0)
+                {
+                    foreach (var alert in lowStockAlerts)
+                    {
+                        try
+                        {
+                            await _notificationService.NotifyLowStockAsync(alert, ct);
+                        }
+                        catch
+                        {
+                            // Low-stock notification dispatch is best-effort and must not abort invoice retrieval
+                        }
+                    }
+                }
 
                 return await GetByIdAsync(invoice.InvoiceId, ct)
                     ?? throw new InvalidOperationException("Failed to retrieve created invoice.");

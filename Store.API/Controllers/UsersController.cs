@@ -7,8 +7,8 @@ using Store.Models.DTOs.Operations;
 using Store.Models.DTOs.Users;
 using Store.Models.Interfaces.Services;
 
-using Microsoft.Extensions.Logging;
 using Store.Models.Common;
+using Store.Models.DTOs.Notifications;
 namespace Store.API.Controllers;
 
 [ApiController]
@@ -20,14 +20,21 @@ public class UsersController : ControllerBase
     private readonly IRequestDispatcher _dispatcher;
     private readonly ISystemSettingService _systemSettings;
     private readonly IUserService _userService;
+    private readonly IRealTimeNotificationService? _notifications;
 
-    public UsersController(IRequestDispatcher dispatcher, ISystemSettingService systemSettings, IUserService userService, ILogger<UsersController> logger)
+    public UsersController(
+        IRequestDispatcher dispatcher,
+        ISystemSettingService systemSettings,
+        IUserService userService,
+        ILogger<UsersController> logger,
+        IRealTimeNotificationService? notifications = null)
     {
         _dispatcher = dispatcher;
         _systemSettings = systemSettings;
         _userService = userService;
-    
-        _logger = logger;}
+        _logger = logger;
+        _notifications = notifications;
+    }
 
     [HttpGet]
     [Authorize(Policy = PermissionKeys.AdminUsers)]
@@ -284,6 +291,21 @@ public class UsersController : ControllerBase
         if (!success)
             return BadRequest(ApiErrorResponse.From("verification_failed", "Invalid or expired verification token."));
 
+        if (_notifications != null)
+        {
+            var notif = new StoreNotificationDto
+            {
+                Title = "New Contact Change Request",
+                Message = "A user verified a contact change request awaiting admin approval.",
+                Category = NotificationCategory.ContactRequest,
+                Severity = "Info",
+                TargetUrl = "/ContactRequests",
+                ActionLabel = "Review Request"
+            };
+            await _notifications.SendToRoleAsync("Manager", notif, ct);
+            await _notifications.SendToRoleAsync("Admin", notif, ct);
+        }
+
         return Ok(ApiResponse<object>.Ok(null!, "Contact information verified. Waiting for administrator approval."));
     }
 
@@ -307,6 +329,21 @@ public class UsersController : ControllerBase
         if (!success)
             return BadRequest(ApiErrorResponse.From("approve_failed", "Failed to approve request or request not found."));
 
+        if (_notifications != null)
+        {
+            var notif = new StoreNotificationDto
+            {
+                Title = "Contact Request Approved",
+                Message = $"Contact change request #{id.ToString()[..8]} was approved.",
+                Category = NotificationCategory.ContactRequest,
+                Severity = "Success",
+                TargetUrl = "/ContactRequests",
+                ActionLabel = "View Requests"
+            };
+            await _notifications.SendToRoleAsync("Manager", notif, ct);
+            await _notifications.SendToRoleAsync("Admin", notif, ct);
+        }
+
         return Ok(ApiResponse<object>.Ok(null!, "Contact change approved successfully."));
     }
 
@@ -321,6 +358,21 @@ public class UsersController : ControllerBase
         var success = await _userService.RejectContactChangeAsync(id, adminId, ct);
         if (!success)
             return BadRequest(ApiErrorResponse.From("reject_failed", "Failed to reject request or request not found."));
+
+        if (_notifications != null)
+        {
+            var notif = new StoreNotificationDto
+            {
+                Title = "Contact Request Rejected",
+                Message = $"Contact change request #{id.ToString()[..8]} was rejected.",
+                Category = NotificationCategory.ContactRequest,
+                Severity = "Warning",
+                TargetUrl = "/ContactRequests",
+                ActionLabel = "View Requests"
+            };
+            await _notifications.SendToRoleAsync("Manager", notif, ct);
+            await _notifications.SendToRoleAsync("Admin", notif, ct);
+        }
 
         return Ok(ApiResponse<object>.Ok(null!, "Contact change rejected successfully."));
     }

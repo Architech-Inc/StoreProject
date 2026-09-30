@@ -25,6 +25,7 @@ public class RealTimeNotificationServiceTests
 
         _mockHubContext.Setup(h => h.Clients).Returns(_mockClients.Object);
         _mockClients.Setup(c => c.Group(It.IsAny<string>())).Returns(_mockClientProxy.Object);
+        _mockClients.Setup(c => c.All).Returns(_mockClientProxy.Object);
 
         _service = new RealTimeNotificationService(_mockHubContext.Object, _mockLogger.Object);
     }
@@ -110,5 +111,47 @@ public class RealTimeNotificationServiceTests
 
         // Must not throw
         await _service.NotifyDiscountOverrideAsync(dto);
+    }
+
+    [Fact]
+    public async Task NotifyLowStockAsync_SendsToAllAndRoleGroups()
+    {
+        var alert = new LowStockAlertDto
+        {
+            ItemId = Guid.NewGuid(),
+            ItemName = "Organic Jasmine Rice 5kg",
+            Barcode = "200000000001",
+            CurrentStock = 3,
+            ReorderLevel = 10,
+            BranchId = 2
+        };
+
+        await _service.NotifyLowStockAsync(alert);
+
+        _mockClientProxy.Verify(p => p.ReceiveLowStockAlert(alert), Times.Once);
+        _mockClients.Verify(c => c.Group("role_manager"), Times.Once);
+        _mockClients.Verify(c => c.Group("role_admin"), Times.Once);
+        _mockClients.Verify(c => c.Group("branch_2"), Times.Once);
+        _mockClientProxy.Verify(p => p.ReceiveNotification(It.Is<StoreNotificationDto>(n =>
+            n.Category == NotificationCategory.LowStock &&
+            n.Severity == "Warning" &&
+            n.Title == "Low Stock Alert")), Times.Exactly(3));
+    }
+
+    [Fact]
+    public async Task SendToRoleAsync_SendsNotificationToTargetGroup()
+    {
+        var notif = new StoreNotificationDto
+        {
+            Title = "Contact Request Approved",
+            Message = "Request approved by admin.",
+            Category = NotificationCategory.ContactRequest,
+            Severity = "Success"
+        };
+
+        await _service.SendToRoleAsync("Manager", notif);
+
+        _mockClients.Verify(c => c.Group("role_manager"), Times.Once);
+        _mockClientProxy.Verify(p => p.ReceiveNotification(notif), Times.Once);
     }
 }

@@ -91,12 +91,48 @@
         }
     }
 
+    function matchesFilter(n, filter) {
+        if (!filter || filter === 'all') return true;
+        const cat = String(n.category || '').toLowerCase();
+        if (filter === 'approvals') {
+            return cat === 'discountapproval' || cat === 'contactrequest' || cat === '1' || cat === '4';
+        }
+        if (filter === 'inventory') {
+            return cat === 'lowstock' || cat === 'restockrecommendation' || cat === 'purchaseorder' || cat === '2' || cat === '3' || cat === '7';
+        }
+        if (filter === 'security') {
+            return cat === 'security' || cat === '5';
+        }
+        return cat === filter.toLowerCase();
+    }
+
+    function getCategoryMeta(category) {
+        const cat = String(category || '').toLowerCase();
+        if (cat === 'contactrequest' || cat === '4') {
+            return { label: 'Contact Request', cls: 'category-contact' };
+        }
+        if (cat === 'discountapproval' || cat === '1') {
+            return { label: 'Discount Approval', cls: 'category-approval' };
+        }
+        if (cat === 'lowstock' || cat === '2') {
+            return { label: 'Low Stock', cls: 'category-inventory' };
+        }
+        if (cat === 'restockrecommendation' || cat === '7') {
+            return { label: 'Restock Alert', cls: 'category-inventory' };
+        }
+        if (cat === 'purchaseorder' || cat === '3') {
+            return { label: 'Purchase Order', cls: 'category-inventory' };
+        }
+        if (cat === 'security' || cat === '5') {
+            return { label: 'Security', cls: 'category-security' };
+        }
+        return { label: category || 'General', cls: 'category-general' };
+    }
+
     function renderNotifications() {
         if (!notifList || !emptyState) return;
 
-        const filtered = activeFilter === 'all'
-            ? notifications
-            : notifications.filter(n => n.category === activeFilter || String(n.category) === activeFilter);
+        const filtered = notifications.filter(n => matchesFilter(n, activeFilter));
 
         if (filtered.length === 0) {
             notifList.innerHTML = '';
@@ -108,14 +144,18 @@
         notifList.innerHTML = filtered.map(n => {
             const timeAgo = formatTimeAgo(new Date(n.dateCreated));
             const unreadCls = n.read ? '' : 'unread';
+            const catMeta = getCategoryMeta(n.category);
             const actionHtml = n.targetUrl
-                ? `<a href="${n.targetUrl}" class="notif-card-action">${n.actionLabel || 'View Details'} &rarr;</a>`
+                ? `<a href="${n.targetUrl}" class="notif-card-action" onclick="event.stopPropagation();">${escapeHtml(n.actionLabel || 'View Details')} &rarr;</a>`
                 : '';
 
             return `
-                <div class="notif-card severity-${n.severity || 'Info'} ${unreadCls}" data-id="${n.id}">
+                <div class="notif-card severity-${n.severity || 'Info'} ${unreadCls}" data-id="${n.id}" data-url="${escapeHtml(n.targetUrl || '')}">
                     <div class="notif-card-header">
-                        <h5 class="notif-card-title">${escapeHtml(n.title)}</h5>
+                        <div class="notif-card-title-group">
+                            <span class="notif-category-badge ${catMeta.cls}">${escapeHtml(catMeta.label)}</span>
+                            <h5 class="notif-card-title">${escapeHtml(n.title)}</h5>
+                        </div>
                         <span class="notif-card-time">${timeAgo}</span>
                     </div>
                     <p class="notif-card-msg">${escapeHtml(n.message)}</p>
@@ -124,11 +164,18 @@
             `;
         }).join('');
 
-        // Attach click to mark as read
+        // Attach click to mark as read and navigate
         notifList.querySelectorAll('.notif-card').forEach(card => {
-            card.addEventListener('click', () => {
+            card.addEventListener('click', (e) => {
                 const id = card.getAttribute('data-id');
                 markAsRead(id);
+
+                if (!e.target.closest('a')) {
+                    const url = card.getAttribute('data-url');
+                    if (url) {
+                        window.location.href = url;
+                    }
+                }
             });
         });
     }
@@ -189,10 +236,19 @@
         renderNotifications();
         playChime();
 
+        // Determine ToastBus channel based on category
+        let channel = 'app';
+        const cat = String(item.category || '').toLowerCase();
+        if (cat === 'lowstock' || cat === 'restockrecommendation' || cat === 'purchaseorder' || cat === '2' || cat === '3' || cat === '7') {
+            channel = 'inventory';
+        } else if (cat === 'discountapproval' || cat === 'contactrequest' || cat === '1' || cat === '4') {
+            channel = 'admin';
+        }
+
         // Trigger in-app toast via ToastBus
-        const toastLevel = item.severity === 'Danger' ? 'error' : (item.severity === 'Success' ? 'success' : 'info');
+        const toastLevel = item.severity === 'Danger' ? 'error' : (item.severity === 'Success' ? 'success' : (item.severity === 'Warning' ? 'warning' : 'info'));
         if (window.ToastBus) {
-            window.ToastBus.publish('app', toastLevel, item.message);
+            window.ToastBus.publish(channel, toastLevel, item.message);
         } else if (window.showToast) {
             window.showToast(toastLevel, item.message);
         }
@@ -272,6 +328,10 @@
                 .build();
 
             connection.on('ReceiveNotification', (notif) => {
+                if ((notif.category === 'ContactRequest' || notif.category === 4) && !notif.targetUrl) {
+                    notif.targetUrl = '/ContactRequests';
+                    notif.actionLabel = notif.actionLabel || 'Review Request';
+                }
                 addNotification(notif);
             });
 
