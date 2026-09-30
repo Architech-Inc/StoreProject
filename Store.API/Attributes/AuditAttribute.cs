@@ -13,6 +13,11 @@ namespace Store.API.Attributes;
 [AttributeUsage(AttributeTargets.Method | AttributeTargets.Class, AllowMultiple = false)]
 public sealed class AuditAttribute : Attribute, IAsyncActionFilter
 {
+    public AuditAttribute(string? summary = null)
+    {
+        Summary = summary;
+    }
+
     /// <summary>The category stored in <c>AuditLog.Category</c>. Default: "Application".</summary>
     public string Category { get; set; } = "Application";
 

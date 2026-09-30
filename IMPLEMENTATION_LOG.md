@@ -1932,10 +1932,29 @@ Startup crashed in `Store.API` with `InvalidOperationException: Unable to resolv
   - `Store.API/Controllers/SuppliersController.cs`: Wrapped `Delete` in a try-catch catching `Microsoft.EntityFrameworkCore.DbUpdateException` and returning HTTP 409 Conflict with `ErrorCode.Conflict` and descriptive message.
   - `Store.API.Tests/SupplierControllerTests.cs`: Added unit test `Delete_ReturnsConflict_WhenDbUpdateExceptionOccurs` verifying HTTP 409 and `ErrorCode.Conflict`.
 
+---
+
+## 2026-09-30 — Wave 27 (Commercial Intelligence & Cash Ops Audit Sweep: GAP-05, GAP-07, GAP-17 — completed)
+
+### 27.A — GAP-05: Branch Performance Dashboard Verified & Closed
+- **Audit Finding**: `BranchDashboard.cshtml.cs` page-model was originally tracked as empty.
+- **Verification**: Verified that `BranchDashboard.cshtml.cs` is fully wired with `IBranchManager.GetBranchesAsync` and `IBranchManager.GetPerformanceAsync(SelectedBranchId.Value, fromUtc, toUtc, ct)` querying `/api/admin/branches/{id}/performance`. The frontend in `BranchDashboard.cshtml` renders a 6-card KPI grid (Gross Revenue, AOV, Transactions Count, Units Sold, Discrepancies, Net Profit), comparative branch selector, date range filters, and performance metrics.
+
+### 27.B — GAP-07: Barcode/QR Scanner Targeted Queries Verified & Closed
+- **Audit Finding**: Scanner controller originally executed full-table queries when resolving barcodes.
+- **Verification**: Verified that `ScannerController.cs` performs targeted queries across all entity domains: `_itemService.GetAllAsync(SearchTerm = trimmedCode, PageSize = 10)`, `_invoiceService.GetAllAsync`, `_employeeService.GetAllAsync`, `_customerService.GetAllAsync`, and uses dedicated single-record index lookups `_supplierService.GetByCodeOrNameAsync(trimmedCode, ct)` and `_batchService.GetByBatchNumberAsync(trimmedCode, ct)` avoiding table scans.
+
+### 27.C — GAP-17: Cash Management Auditing & Action Filters
+- **Issue**: `CashManagementController` actions lacked `[Audit]` attribute decorations, meaning critical cash operations and financial reconciliation reads were not consistently tracked via the action filter audit pipeline.
+- **Changes**:
+  - `Store.API/Attributes/AuditAttribute.cs`: Added `public AuditAttribute(string? summary = null)` constructor allowing direct concise attribute application with custom action summaries.
+  - `Store.API/Controllers/CashManagementController.cs`: Applied `[Audit("cash.shift.open", Category = "Financial")]` on `OpenShift`, `[Audit("cash.shift.close", Category = "Financial")]` on `CloseShift`, `[Audit("cash.report.z", Category = "Financial")]` on `DailyZReport`, and `[Audit("cash.reconciliation", Category = "Financial")]` on `DayEndReconciliation`.
+  - `Store.API.Tests/AuditAttributeTests.cs`: Added unit tests verifying `AuditAttribute` constructor property assignments, `CashManagementController` endpoint attribute presence, and successful audit entry dispatch during action filter execution.
+
 ### Verification
 - Solution build clean: `dotnet build StoreProject.sln --configuration Release` (0 warnings in code, 0 errors).
-- Test suite passes: `dotnet test Store.API.Tests` -> 276 passed, 0 failed.
-- Audit tracker updated: `GAP-02` -> `[x]`, `GAP-06` -> `[x]`, `GAP-08` -> `[x]`, `GAP-11` -> `[x]`.
+- Test suite passes: `dotnet test Store.API.Tests` -> 282 passed, 0 failed.
+- Audit tracker updated: `GAP-05` -> `[x]`, `GAP-07` -> `[x]`, `GAP-17` -> `[x]`.
 
 
 

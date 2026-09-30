@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Store.API.Attributes;
 using Store.Models.DTOs.Audit;
 using Store.Models.DTOs.Operations;
 using Store.Models.Interfaces.Services;
@@ -35,6 +36,7 @@ public class CashManagementController : ControllerBase
 
     [HttpPost("shift/open")]
     [Authorize(Policy = PermissionKeys.CashWrite)]
+    [Audit("cash.shift.open", Category = "Financial")]
     public async Task<IActionResult> OpenShift([FromBody] ShiftOpenRequest request, CancellationToken ct)
     {
         if (!TryGetUserId(out var uid))
@@ -63,6 +65,7 @@ public class CashManagementController : ControllerBase
 
     [HttpPost("shift/close")]
     [Authorize(Policy = PermissionKeys.CashWrite)]
+    [Audit("cash.shift.close", Category = "Financial")]
     public async Task<IActionResult> CloseShift([FromBody] ShiftCloseRequest request, CancellationToken ct)
     {
         if (!TryGetUserId(out var uid))
@@ -101,6 +104,7 @@ public class CashManagementController : ControllerBase
 
     [HttpGet("report/z")]
     [Authorize(Policy = PermissionKeys.ReportsRead)]
+    [Audit("cash.report.z", Category = "Financial")]
     public async Task<IActionResult> DailyZReport([FromQuery] DateTime? dateUtc, CancellationToken ct)
     {
         var report = await _ops.GetDailyZReportAsync(dateUtc ?? DateTime.UtcNow, ct);
@@ -109,6 +113,7 @@ public class CashManagementController : ControllerBase
 
     [HttpGet("reconciliation")]
     [Authorize(Policy = PermissionKeys.ReportsRead)]
+    [Audit("cash.reconciliation", Category = "Financial")]
     public async Task<IActionResult> DayEndReconciliation([FromQuery] DateOnly? date, CancellationToken ct)
     {
         var reconciliation = await _ops.GetDayEndReconciliationAsync(date ?? DateOnly.FromDateTime(DateTime.UtcNow), ct);
