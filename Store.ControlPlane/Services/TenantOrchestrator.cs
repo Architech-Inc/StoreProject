@@ -101,7 +101,8 @@ public class TenantOrchestrator : ITenantOrchestrator
                 MySqlUserPassword = GenerateSecureSecret(24),
                 MongoDbRootPassword = GenerateSecureSecret(24),
                 JwtSecret = GenerateSecureSecret(48),
-                MoMoCallbackKey = GenerateSecureSecret(32)
+                MoMoCallbackKey = GenerateSecureSecret(32),
+                OtpPepper = GenerateSecureSecret(32)
             }
         };
 
@@ -730,6 +731,7 @@ public class TenantOrchestrator : ITenantOrchestrator
             .Replace("{{MONGO_PASSWORD}}", t.Secrets.MongoDbRootPassword)
             .Replace("{{MONGO_ROOT_PASS}}", t.Secrets.MongoDbRootPassword)
             .Replace("{{JWT_SECRET}}", t.Secrets.JwtSecret)
+            .Replace("{{OTP_PEPPER}}", string.IsNullOrEmpty(t.Secrets.OtpPepper) ? GenerateSecureSecret(32) : t.Secrets.OtpPepper)
             .Replace("{{MOMO_CALLBACK_KEY}}", t.Secrets.MoMoCallbackKey)
             .Replace("{{MOMO_KEY}}", t.Secrets.MoMoCallbackKey)
             .Replace("{{ADMIN_USER}}", t.AdminUsername)

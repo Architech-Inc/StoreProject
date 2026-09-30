@@ -384,6 +384,17 @@ public class StoreDbContext : DbContext
         modelBuilder.Entity<DiscountOverrideRequest>()
             .HasIndex(r => new { r.Status, r.DateCreated });
 
+        // Wave 23.A — POS session + cart fingerprint columns + index.
+        // Lookups: "is there an approved override for this POS session?" +
+        // the cleanup job's "find Approved overrides older than 15min".
+        modelBuilder.Entity<DiscountOverrideRequest>()
+            .HasIndex(r => new { r.PosSessionId, r.Status });
+
+        modelBuilder.Entity<DiscountOverrideRequest>()
+            .Property(r => r.PosSessionId).HasMaxLength(64);
+        modelBuilder.Entity<DiscountOverrideRequest>()
+            .Property(r => r.CartFingerprint).HasMaxLength(64);
+
         // PurchaseOrder relationships
         modelBuilder.Entity<PurchaseOrder>()
             .HasOne(p => p.Supplier)

@@ -122,6 +122,17 @@ if (!builder.Environment.IsDevelopment())
             "Production JWT key is invalid. Configure Jwt:Key with a strong secret (at least 32 characters)."
         );
     }
+
+    var otpPepper = builder.Configuration["Auth:OtpPepper"];
+    if (string.IsNullOrWhiteSpace(otpPepper)
+        || otpPepper.Contains("REPLACE", StringComparison.OrdinalIgnoreCase)
+        || otpPepper.Contains("OVERRIDE_ME", StringComparison.OrdinalIgnoreCase)
+        || Encoding.UTF8.GetByteCount(otpPepper) < 32)
+    {
+        throw new InvalidOperationException(
+            "Production Auth:OtpPepper is invalid. Configure Auth:OtpPepper (env var Auth__OtpPepper) with a strong secret (at least 32 bytes)."
+        );
+    }
 }
 
 // ─── Connection String guard (fail-fast on empty password in non-dev) ──────────
@@ -383,6 +394,11 @@ builder.Services.AddHealthChecks()
 // ─── Background Jobs (Hangfire) ───────────────────────────────────────────────
 builder.Services.AddHangfireServices(builder.Configuration);
 
+// Wave 23.C — demote stale Approved discount overrides to Expired
+// after a 15-min TTL so the approval window can't outlive a POS
+// session. Polls every 60s; one indexed UPDATE per tick.
+builder.Services.AddHostedService<Store.DbServices.Workers.DiscountOverrideExpiryHostedService>();
+
 // ═════════════════════════════════════════════════════════════════════════════
 var app = builder.Build();
 // ═════════════════════════════════════════════════════════════════════════════
@@ -411,6 +427,16 @@ if (app.Environment.IsDevelopment() || app.Environment.IsStaging())
     app.UseSwagger();
     app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Store API v1"));
 }
+
+// SEC-21 — Forwarded headers for reverse-proxy (Traefik / Docker) TLS termination.
+// Ensures Request.IsHttps and Request.Scheme reflect client-facing protocol.
+var forwardedHeadersOptions = new ForwardedHeadersOptions
+{
+    ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto
+};
+forwardedHeadersOptions.KnownNetworks.Clear();
+forwardedHeadersOptions.KnownProxies.Clear();
+app.UseForwardedHeaders(forwardedHeadersOptions);
 
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseHttpsRedirection();

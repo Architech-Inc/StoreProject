@@ -26,6 +26,12 @@ public class DiscountOverrideDto
     public DateTime? ReviewedAt { get; set; }
     public DateTime DateCreated { get; set; }
 
+    // Wave 23.A — POS-side fields. Null for the legacy invoice-scoped
+    // override flow (controller fills them when the request came from POS).
+    public string? PosSessionId { get; set; }
+    public string? CartFingerprint { get; set; }
+    public DateTime? AppliedAt { get; set; }
+
     public string ScopeType => ItemId.HasValue ? "Item" : "Invoice";
     public string ScopeLabel => ItemId.HasValue
         ? $"Product: {ItemName}"
@@ -83,6 +89,15 @@ public class CreateDiscountOverrideRequest
 
     [StringLength(1000)]
     public string? Justification { get; set; }
+
+    // Wave 23.A — POS-side binding. Both fields are optional: when null,
+    // the request is treated as the legacy invoice-scoped override. When
+    // set, the server verifies PosSessionId + CartFingerprint on checkout.
+    [StringLength(64)]
+    public string? PosSessionId { get; set; }
+
+    [StringLength(64)]
+    public string? CartFingerprint { get; set; }
 }
 
 public class ReviewDiscountOverrideRequest

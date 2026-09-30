@@ -278,6 +278,46 @@ public class InvoiceService : IInvoiceService
             branchId = userRole?.BranchId;
         }
 
+        // Wave 23.C — POS per-line override validation. We do this BEFORE
+        // the transaction so a mismatch fails fast without leaving any
+        // side-effects. Validation reads + recomputes the fingerprint
+        // against the live cart. On success, the validated rows are
+        // transitioned to Applied after the invoice commits.
+        var overrideIds = request.Lines
+            .Where(l => l.PendingDiscountOverrideRequestIds != null && l.PendingDiscountOverrideRequestIds.Count > 0)
+            .SelectMany(l => l.PendingDiscountOverrideRequestIds)
+            .Distinct()
+            .ToList();
+
+        IReadOnlyList<Store.Models.Entities.DiscountOverrideRequest> validatedOverrides
+            = Array.Empty<Store.Models.Entities.DiscountOverrideRequest>();
+
+        if (overrideIds.Count > 0)
+        {
+            if (!actingUserId.HasValue)
+            {
+                throw new InvalidOperationException(
+                    "POS overrides can only be applied by an authenticated cashier.");
+            }
+
+            var rows = await _uow.Repository<Store.Models.Entities.DiscountOverrideRequest>().Query()
+                .Where(r => overrideIds.Contains(r.DiscountOverrideRequestId))
+                .ToListAsync(ct);
+
+            var validation = PosOverrideValidator.Validate(request, actingUserId.Value, rows);
+            if (!validation.Allowed)
+            {
+                // The controller catches this and returns HTTP 422 with
+                // the failure detail; callers (POS UI) can show the
+                // specific reason on the offending line.
+                var reasons = string.Join("; ", validation.Failure!.Reasons);
+                throw new Store.Models.Exceptions.PosOverrideValidationException(
+                    validation.Failure,
+                    $"POS override validation failed: {reasons}");
+            }
+            validatedOverrides = validation.Validated;
+        }
+
         return await _uow.ExecuteStrategyAsync(async () =>
         {
             await _uow.BeginTransactionAsync(ct);
@@ -465,6 +505,19 @@ public class InvoiceService : IInvoiceService
                         }
 
                         await _financeService.PostJournalEntryAsync(journalEntry, ct);
+                    }
+                }
+
+                // Wave 23.C — transition validated overrides to Applied.
+                // Done inside the same transaction so a rollback (e.g.,
+                // finance service failure) also reverts the overrides to
+                // their Approved state, keeping the retry path clean.
+                if (validatedOverrides.Count > 0)
+                {
+                    PosOverrideValidator.MarkApplied(validatedOverrides, invoice.DateCreated);
+                    foreach (var row in validatedOverrides)
+                    {
+                        _uow.Repository<Store.Models.Entities.DiscountOverrideRequest>().Update(row);
                     }
                 }
 

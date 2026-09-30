@@ -142,7 +142,13 @@ public class DiscountOverrideService : IDiscountOverrideService
             OverrideValue = request.OverrideValue,
             Justification = request.Justification?.Trim(),
             Status = DiscountOverrideStatus.Pending,
-            RequestedByUserId = requestedByUserId
+            RequestedByUserId = requestedByUserId,
+            // Wave 23.A — POS binding. The fields stay null for the legacy
+            // invoice-scoped flow; when the cashier submits from POS we
+            // copy the session id + cart fingerprint for checkout-time
+            // verification.
+            PosSessionId = request.PosSessionId?.Trim(),
+            CartFingerprint = request.CartFingerprint?.Trim(),
         };
 
         await _uow.Repository<DiscountOverrideRequest>().AddAsync(row);
@@ -216,6 +222,11 @@ public class DiscountOverrideService : IDiscountOverrideService
         ReviewedByFullName = r.ReviewedByUser?.Employee != null ? $"{r.ReviewedByUser.Employee.FirstName} {r.ReviewedByUser.Employee.LastName}".Trim() : null,
         ReviewNotes = r.ReviewNotes,
         ReviewedAt = r.ReviewedAt,
+        // Wave 23.A — surface the POS-side binding fields so the manager
+        // approval queue + the cashier's POS UI can show / verify them.
+        PosSessionId = r.PosSessionId,
+        CartFingerprint = r.CartFingerprint,
+        AppliedAt = r.AppliedAt,
         DateCreated = r.DateCreated
     };
 }

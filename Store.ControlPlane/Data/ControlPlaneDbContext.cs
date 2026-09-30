@@ -187,7 +187,8 @@ public class ControlPlaneDbContext : DbContext
             MySqlUserPassword = encryption.Encrypt(secrets.MySqlUserPassword),
             MongoDbRootPassword = encryption.Encrypt(secrets.MongoDbRootPassword),
             JwtSecret = encryption.Encrypt(secrets.JwtSecret),
-            MoMoCallbackKey = encryption.Encrypt(secrets.MoMoCallbackKey)
+            MoMoCallbackKey = encryption.Encrypt(secrets.MoMoCallbackKey),
+            OtpPepper = string.IsNullOrEmpty(secrets.OtpPepper) ? string.Empty : encryption.Encrypt(secrets.OtpPepper)
         };
 
         return JsonSerializer.Serialize(encryptedSecrets, JsonOptions);
@@ -206,7 +207,8 @@ public class ControlPlaneDbContext : DbContext
             MySqlUserPassword = encryption.Decrypt(secrets.MySqlUserPassword),
             MongoDbRootPassword = encryption.Decrypt(secrets.MongoDbRootPassword),
             JwtSecret = encryption.Decrypt(secrets.JwtSecret),
-            MoMoCallbackKey = encryption.Decrypt(secrets.MoMoCallbackKey)
+            MoMoCallbackKey = encryption.Decrypt(secrets.MoMoCallbackKey),
+            OtpPepper = string.IsNullOrEmpty(secrets.OtpPepper) ? string.Empty : encryption.Decrypt(secrets.OtpPepper)
         };
     }
 }

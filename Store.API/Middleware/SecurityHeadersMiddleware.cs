@@ -19,7 +19,10 @@ public class SecurityHeadersMiddleware
         headers.TryAdd("Content-Security-Policy", "default-src 'self'; frame-ancestors 'none';");
         headers.TryAdd("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
 
-        if (context.Request.IsHttps)
+        var isHttps = context.Request.IsHttps ||
+                      string.Equals(context.Request.Headers["X-Forwarded-Proto"], "https", StringComparison.OrdinalIgnoreCase);
+
+        if (isHttps)
         {
             headers.TryAdd("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
         }

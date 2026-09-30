@@ -21,12 +21,36 @@
     {
         customerId = c.CustomerId,
         fullName = c.FullName,
-        primaryPhone = c.PrimaryPhone
+        primaryPhone = c.PrimaryPhone,
+        loyaltyTier = c.LoyaltyTier.ToString(),
+        loyaltyPoints = c.LoyaltyPoints
     }));
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/pos.css" asp-append-version="true" />
+    <style>
+        .pos-tier-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.15rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+        .pos-tier-gold { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+        .pos-tier-silver { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+        .pos-tier-bronze { background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; }
+        .customer-loyalty-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.35rem;
+            font-size: 0.85rem;
+        }
+    </style>
 }
 
 <div class="pos-shell">
@@ -115,6 +139,11 @@
                     <select id="customerSelect">
                         <option value="">Walk-in Customer</option>
                     </select>
+                    <div id="customerLoyaltyInfo" class="customer-loyalty-info" hidden>
+                        <span id="customerLoyaltyBadge" class="pos-tier-badge"></span>
+                        <span id="customerLoyaltyPoints"></span>
+                        <span id="customerLoyaltyRefreshing" style="font-size:0.75rem; color:var(--pos-muted,#9ca3af);" hidden>(checking tier...)</span>
+                    </div>
                 </div>
 
                 <div class="field-row">
@@ -184,6 +213,44 @@
     </div>
 </div>
 
+<!-- Wave 23.B — per-line discount override modal. The cashier picks
+     Percentage or FixedAmount, sets the value + justification, and
+     submits to /api/discount-overrides with PosSessionId + CartFingerprint.
+     The request appears on the cart line as a Pending badge. -->
+<div class="modal-overlay" id="overrideModalOverlay" hidden>
+    <div class="modal-dialog" role="dialog" aria-labelledby="overrideModalTitle">
+        <div class="modal-header">
+            <h3 id="overrideModalTitle">Request Discount Override</h3>
+            <button type="button" class="btn-close" id="overrideCloseBtn" aria-label="Close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p id="overrideItemLabel" style="margin:0 0 1rem; font-weight:600"></p>
+            <div class="field-row">
+                <label for="overrideType">Type</label>
+                <select id="overrideType">
+                    <option value="Percentage">Percentage (%)</option>
+                    <option value="FixedAmount">Fixed Amount (XAF)</option>
+                </select>
+            </div>
+            <div class="field-row">
+                <label for="overrideValue">Value</label>
+                <input type="number" id="overrideValue" min="0.01" step="0.01" />
+            </div>
+            <div class="field-row">
+                <label for="overrideJustification">Justification (visible to manager)</label>
+                <textarea id="overrideJustification" rows="3" maxlength="1000" placeholder="e.g. loyal customer, damaged packaging, price-match"></textarea>
+            </div>
+            <p style="font-size:0.8rem;color:var(--text-secondary);margin-top:0.5rem">
+                A manager must approve this request before the discount applies at checkout.
+            </p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="button-secondary" id="overrideCancelBtn">Cancel</button>
+            <button type="button" class="button-primary" id="overrideSubmitBtn">Submit for Approval</button>
+        </div>
+    </div>
+</div>
+
 <div id="offlineLedgerBladeOverlay" class="blade-overlay" data-blade-id="offlineLedgerBlade"></div>
 <div id="offlineLedgerBlade" class="blade" data-overlay-id="offlineLedgerBladeOverlay">
     <div class="blade-header">
@@ -224,6 +291,31 @@
     let customers = @Html.Raw(customersJson);
 
     const cart = new Map();
+
+    // Wave 23.B — POS per-line discount override session. Generated once on
+    // page load (random 24 bytes URL-safe base64, mirrors the server-side
+    // DeviceId generator) and sent on every override creation + checkout.
+    // The server verifies every Approved override was approved for THIS
+    // exact session id (anti-replay on a different session).
+    const clientSessionId = (function () {
+        const bytes = new Uint8Array(24);
+        crypto.getRandomValues(bytes);
+        return btoa(String.fromCharCode(...bytes))
+            .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    })();
+
+    // Wave 23.B — SHA-256 hex of the (itemId|quantity) pairs sorted. The
+    // server recomputes this on checkout + compares against the value
+    // stored at override-approval time. A mismatch means the cart drifted
+    // after the override was approved → reject the checkout (HTTP 422).
+    async function computeCartFingerprint() {
+        const entries = Array.from(cart.values())
+            .map(v => `${v.itemId}|${v.quantity}`)
+            .sort();
+        const joined = entries.join(';');
+        const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(joined));
+        return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
     const catalogList = document.getElementById('catalogList');
     const catalogSearch = document.getElementById('catalogSearch');
     const cartBody = document.getElementById('cartBody');
@@ -451,15 +543,28 @@
         cartBody.innerHTML = '';
 
         for (const line of cart.values()) {
+            // Wave 23.B — per-line override badge: shown only when the
+            // cashier has submitted an override request for this line.
+            const ovr = line.overrideRequestId;
+            const ovrStatus = line.overrideStatus; // 'Pending' | 'Approved' | 'Rejected'
+            const badge = ovr
+                ? `<span class="badge badge-${ovrStatus === 'Approved' ? 'success' : (ovrStatus === 'Rejected' ? 'danger' : 'warning')}" title="Override #${ovr}: ${ovrStatus}">${ovrStatus === 'Approved' ? '✓' : (ovrStatus === 'Rejected' ? '✗' : '⏳')} ${ovrStatus || 'Pending'}</span>`
+                : '';
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td><strong>${line.name}</strong></td>
+                <td>
+                    <strong>${line.name}</strong>
+                    ${badge ? `<div style="margin-top:0.25rem">${badge}</div>` : ''}
+                </td>
                 <td>${xaf(line.unitPrice)}</td>
                 <td>
                     <input type="number" min="1" max="${line.maxStock}" value="${line.quantity}" data-qty="${line.itemId}" style="width:60px;padding:0.25rem" />
                 </td>
                 <td><strong>${xaf(line.unitPrice * line.quantity)}</strong></td>
-                <td><button type="button" class="danger" data-del="${line.itemId}" style="padding:0.2rem 0.45rem">&times;</button></td>
+                <td style="white-space:nowrap">
+                    <button type="button" class="button-secondary" data-override="${line.itemId}" style="padding:0.2rem 0.45rem;font-size:0.75rem" title="Request discount override">Override</button>
+                    <button type="button" class="danger" data-del="${line.itemId}" style="padding:0.2rem 0.45rem">&times;</button>
+                </td>
             `;
             cartBody.appendChild(row);
         }
@@ -481,6 +586,15 @@
                 const target = e.target;
                 cart.delete(target.dataset.del);
                 renderCart();
+            });
+        }
+
+        // Wave 23.B — per-line Override button click → opens the modal
+        // pre-filled with the line's current price as a context anchor.
+        for (const btn of cartBody.querySelectorAll('[data-override]')) {
+            btn.addEventListener('click', (e) => {
+                const itemId = e.target.dataset.override;
+                openOverrideModal(itemId);
             });
         }
 
@@ -575,6 +689,7 @@
         saleNotes.value = '';
         couponCodeInput.value = '';
         customerSelect.value = '';
+        handleCustomerSelectionChange();
         renderCart();
         setMessage('Sale suspended. You can resume it from the list.');
     }
@@ -616,6 +731,7 @@
         }
 
         customerSelect.value = snapshot.customerId || '';
+        handleCustomerSelectionChange();
         tenderLinesContainer.innerHTML = '';
         const savedLines = snapshot.tenderLines ?? [];
         if (savedLines.length > 0) {
@@ -694,7 +810,20 @@
             paymentType: getDominantPaymentType(),
             amountTendered: tendered,
             notes: saleNotes.value || null,
-            lines: Array.from(cart.values()).map(v => ({ itemId: v.itemId, quantity: v.quantity }))
+            // Wave 23.B — POS per-line override binding. Server validates
+            // each PendingDiscountOverrideRequestIds entry is Approved,
+            // belongs to this cashier, matches ClientSessionId, and the
+            // current cart fingerprint still matches the approval-time
+            // fingerprint.
+            clientSessionId: clientSessionId,
+            lines: Array.from(cart.values()).map(v => ({
+                itemId: v.itemId,
+                quantity: v.quantity,
+                pendingDiscountOverrideRequestIds:
+                    v.overrideStatus === 'Approved' && v.overrideRequestId
+                        ? [v.overrideRequestId]
+                        : [],
+            })),
         };
         const saleLines = Array.from(cart.values());
         const antiforgery = checkoutForm.querySelector('input[name="__RequestVerificationToken"]')?.value;
@@ -772,6 +901,75 @@
             option.value = c.customerId;
             option.textContent = c.primaryPhone ? `${c.fullName} (${c.primaryPhone})` : c.fullName;
             customerSelect.appendChild(option);
+        }
+    }
+
+    // GAP-29 — Re-fetch customer loyalty tier fresh from server on customer attach
+    function renderCustomerLoyalty(tier, points) {
+        const info = document.getElementById('customerLoyaltyInfo');
+        const badge = document.getElementById('customerLoyaltyBadge');
+        const pts = document.getElementById('customerLoyaltyPoints');
+        if (!info || !badge || !pts) return;
+
+        const tierName = tier || 'Bronze';
+        badge.textContent = tierName;
+        badge.className = `pos-tier-badge pos-tier-${tierName.toLowerCase()}`;
+        pts.textContent = `${(points || 0).toLocaleString()} pts`;
+        info.hidden = false;
+    }
+
+    async function handleCustomerSelectionChange() {
+        const customerId = customerSelect.value;
+        const info = document.getElementById('customerLoyaltyInfo');
+        const refreshing = document.getElementById('customerLoyaltyRefreshing');
+
+        if (!customerId) {
+            if (info) info.hidden = true;
+            return;
+        }
+
+        // 1. Render immediately from local cache if known
+        const localCustomer = customers.find(c => String(c.customerId).toLowerCase() === String(customerId).toLowerCase());
+        if (localCustomer) {
+            renderCustomerLoyalty(localCustomer.loyaltyTier, localCustomer.loyaltyPoints);
+        }
+
+        // 2. GAP-29: Re-fetch fresh from server to detect demotion/promotion without stale cache
+        if (navigator.onLine) {
+            if (refreshing) refreshing.hidden = false;
+            try {
+                const resp = await fetch(`?handler=CustomerLoyalty&customerId=${encodeURIComponent(customerId)}`);
+                if (resp.ok) {
+                    const data = await resp.json();
+                    if (data.success) {
+                        const prevTier = localCustomer ? localCustomer.loyaltyTier : null;
+
+                        if (localCustomer) {
+                            localCustomer.loyaltyTier = data.loyaltyTier;
+                            localCustomer.loyaltyPoints = data.loyaltyPoints;
+                            localCustomer.fullName = data.fullName;
+                            localCustomer.primaryPhone = data.primaryPhone;
+                        }
+
+                        // If still the active selection, refresh badge
+                        if (customerSelect.value === customerId) {
+                            renderCustomerLoyalty(data.loyaltyTier, data.loyaltyPoints);
+
+                            // Notify if tier changed from cached version (e.g. demotion)
+                            if (prevTier && prevTier.toLowerCase() !== data.loyaltyTier.toLowerCase()) {
+                                setMessage(`Customer tier refreshed: ${prevTier} → ${data.loyaltyTier} (${data.loyaltyPoints.toLocaleString()} pts)`);
+                            }
+                        }
+
+                        // Update offline IndexedDB cache with fresh details
+                        StorePosOfflineDB.cacheCustomers(customers);
+                    }
+                }
+            } catch (err) {
+                console.warn('[POS] Could not refresh customer loyalty tier:', err);
+            } finally {
+                if (refreshing) refreshing.hidden = true;
+            }
         }
     }
 
@@ -957,6 +1155,75 @@
     receiptPrintBtn.addEventListener('click', () => window.print());
     receiptBlade.addEventListener('click', (e) => {
         if (e.target.dataset.close === 'receipt') closeReceipt();
+
+    // Wave 23.B — override modal handlers. Stored on a module-scope
+    // variable so the open function can stamp the line on submit.
+    let overrideTargetItemId = null;
+    function openOverrideModal(itemId) {
+        const line = cart.get(itemId);
+        if (!line) return;
+        overrideTargetItemId = itemId;
+        document.getElementById('overrideItemLabel').textContent =
+            `${line.name} — list price ${xaf(line.unitPrice)} XAF`;
+        document.getElementById('overrideType').value = 'Percentage';
+        document.getElementById('overrideValue').value = '';
+        document.getElementById('overrideJustification').value = '';
+        document.getElementById('overrideModalOverlay').hidden = false;
+    }
+    function closeOverrideModal() {
+        document.getElementById('overrideModalOverlay').hidden = true;
+        overrideTargetItemId = null;
+    }
+    document.getElementById('overrideCloseBtn').addEventListener('click', closeOverrideModal);
+    document.getElementById('overrideCancelBtn').addEventListener('click', closeOverrideModal);
+    document.getElementById('overrideSubmitBtn').addEventListener('click', async () => {
+        if (!overrideTargetItemId) return;
+        const line = cart.get(overrideTargetItemId);
+        if (!line) return;
+        const type = document.getElementById('overrideType').value;
+        const value = parseFloat(document.getElementById('overrideValue').value);
+        const justification = document.getElementById('overrideJustification').value.trim();
+        if (!value || value <= 0) {
+            setMessage('Override value must be positive.', true);
+            return;
+        }
+        if (!justification) {
+            setMessage('Justification is required.', true);
+            return;
+        }
+        const fingerprint = await computeCartFingerprint();
+        const submitBtn = document.getElementById('overrideSubmitBtn');
+        submitBtn.disabled = true;
+        try {
+            const resp = await fetch('/api/discount-overrides', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    itemId: overrideTargetItemId,
+                    overrideType: type,
+                    overrideValue: value,
+                    justification,
+                    posSessionId: clientSessionId,
+                    cartFingerprint: fingerprint,
+                }),
+            });
+            if (!resp.ok) {
+                const msg = (await resp.json().catch(() => null))?.message ?? `Failed (${resp.status})`;
+                throw new Error(msg);
+            }
+            const body = await resp.json();
+            const dto = body.data ?? body;
+            line.overrideRequestId = dto.discountOverrideRequestId;
+            line.overrideStatus = dto.status ?? 'Pending';
+            closeOverrideModal();
+            renderCart();
+            setMessage(`Override #${dto.discountOverrideRequestId} submitted (${line.overrideStatus}). A manager must approve it before checkout.`);
+        } catch (err) {
+            setMessage(`Override request failed: ${err.message}`, true);
+        } finally {
+            submitBtn.disabled = false;
+        }
     });
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
@@ -966,8 +1233,11 @@
     });
     clearCartBtn.addEventListener('click', () => {
         cart.clear();
+        customerSelect.value = '';
+        handleCustomerSelectionChange();
         renderCart();
     });
+    customerSelect.addEventListener('change', handleCustomerSelectionChange);
     checkoutForm.addEventListener('submit', (e) => {
         e.preventDefault();
         checkoutAsync();
@@ -997,6 +1267,7 @@
         if (selectedOption && selectedOption.value === paramCustomerId) {
             setMessage(`Customer selected: ${selectedOption.text}`);
         }
+        handleCustomerSelectionChange();
     }
 
     if (paramBarcode) {

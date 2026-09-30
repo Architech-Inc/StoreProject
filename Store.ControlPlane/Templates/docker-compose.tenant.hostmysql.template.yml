@@ -28,6 +28,7 @@ services:
       - ConnectionStrings__Default=Server={{MYSQL_SERVER}};Port={{MYSQL_PORT}};Database={{MYSQL_DATABASE}};User Id={{MYSQL_USER}};Password={{MYSQL_PASSWORD}};AllowPublicKeyRetrieval=True;
       - MongoDB__ConnectionString=mongodb://{{MONGO_USER}}:{{MONGO_PASSWORD}}@{{SLUG}}-mongodb:27017/?authSource=admin
       - Jwt__Key={{JWT_SECRET}}
+      - Auth__OtpPepper={{OTP_PEPPER}}
       - Payments__MoMoCallbackKey={{MOMO_CALLBACK_KEY}}
       - Cors__AllowedOrigins__0=http://{{SLUG}}.{{ROOT_DOMAIN}}:18080
       - Cors__AllowedOrigins__1=https://{{SLUG}}.{{ROOT_DOMAIN}}:18443

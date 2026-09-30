@@ -28,44 +28,20 @@
             trigger.addEventListener('click', openPalette);
         }
 
-        // Global Keydown Listener for Ctrl+K, ?, and G <Key> sequences
-        let gKeyPending = false;
-        let gKeyTimer = null;
+        // Expose helpers globally for site.js unified shortcut dispatcher
+        window.openCommandPalette = openPalette;
+        window.closeCommandPalette = closePalette;
+        window.toggleCommandPalette = togglePalette;
+        window.isCommandPaletteVisible = isVisible;
 
+        // Local fallback keydown listener for Ctrl+K and Escape
         window.addEventListener('keydown', (e) => {
-            const isTyping = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName) || document.activeElement?.isContentEditable;
-
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
                 e.preventDefault();
                 togglePalette();
             } else if (e.key === 'Escape' && isVisible()) {
                 e.preventDefault();
                 closePalette();
-            } else if (e.key === '?' && !isTyping && !isVisible()) {
-                e.preventDefault();
-                openPalette();
-            } else if (!isTyping && !isVisible() && !e.ctrlKey && !e.altKey && !e.metaKey) {
-                if (e.key.toLowerCase() === 'g' && !gKeyPending) {
-                    gKeyPending = true;
-                    clearTimeout(gKeyTimer);
-                    gKeyTimer = setTimeout(() => { gKeyPending = false; }, 1200);
-                } else if (gKeyPending) {
-                    gKeyPending = false;
-                    const key = e.key.toLowerCase();
-                    const jumps = {
-                        'p': '/Pos',
-                        'i': '/Invoices',
-                        'c': '/Catalog',
-                        'm': '/Customers',
-                        'o': '/PurchaseOrders',
-                        's': '/Suppliers',
-                        'd': '/Dashboard'
-                    };
-                    if (jumps[key]) {
-                        e.preventDefault();
-                        window.location.href = jumps[key];
-                    }
-                }
             }
         });
 

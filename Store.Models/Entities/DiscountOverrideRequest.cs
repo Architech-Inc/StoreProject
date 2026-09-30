@@ -42,6 +42,32 @@ public class DiscountOverrideRequest : BaseEntity
 
     public DateTime? ReviewedAt { get; set; }
 
+    // Wave 23.A — POS per-line override binding.
+
+    /// <summary>
+    /// Opaque client-side session id (32-char URL-safe base64) tying the
+    /// override to a specific POS checkout attempt. Surfaced back to the
+    /// client as <c>ClientSessionId</c> on <c>PosCheckoutRequest</c>; the
+    /// checkout handler verifies the override was approved for this
+    /// exact session (anti-replay on a different session).
+    /// Null for the legacy invoice-scoped override flow.
+    /// </summary>
+    [MaxLength(64)]
+    public string? PosSessionId { get; set; }
+
+    /// <summary>
+    /// SHA-256 hex of <c>(itemId, quantity)</c> pairs sorted, computed at
+    /// approval time and re-verified at checkout. If the cart drifts between
+    /// approval and checkout (cashier adds / removes items), the fingerprint
+    /// mismatches and the override is rejected (server-side, HTTP 422).
+    /// Null for the legacy invoice-scoped override flow.
+    /// </summary>
+    [MaxLength(64)]
+    public string? CartFingerprint { get; set; }
+
+    /// <summary>When the override transitioned to <c>Applied</c> via a successful checkout.</summary>
+    public DateTime? AppliedAt { get; set; }
+
     // Navigation
     public User RequestedByUser { get; set; } = null!;
     public User? ReviewedByUser { get; set; }

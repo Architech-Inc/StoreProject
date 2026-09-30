@@ -73,6 +73,7 @@ var. Startup guards in `Store.API/Program.cs` and
 
 - empty MySQL password (non-dev only)
 - placeholder JWT key (non-dev only)
+- placeholder Auth OtpPepper (non-dev only)
 - placeholder master encryption key
 - placeholder MoMo callback key on HMAC verification
 
@@ -87,6 +88,7 @@ Required env vars in production:
 | `ConnectionStrings__Default` | Store.API | `Server=...;User Id=...;Password=...` |
 | `ConnectionStrings__ControlPlane` | Store.ControlPlane | same shape |
 | `Jwt__Key` | Store.API | ≥32 chars, no placeholder |
+| `Auth__OtpPepper` | Store.API | HMAC secret for OTP hashing, ≥32 chars/bytes |
 | `Payments__MoMoCallbackKey` | Store.API | HMAC secret, ≥32 chars |
 | `MongoDB__ConnectionString` | Store.API | per-tenant Atlas URI |
 | `ControlPlane__MasterEncryptionKey` | Store.ControlPlane | ≥32 chars, no placeholder |

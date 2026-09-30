@@ -7,6 +7,7 @@ public class TenantSecrets
     public string MongoDbRootPassword { get; set; } = string.Empty;
     public string JwtSecret { get; set; } = string.Empty;
     public string MoMoCallbackKey { get; set; } = string.Empty;
+    public string OtpPepper { get; set; } = string.Empty;
 }
 
 public class TenantProvisioningLog

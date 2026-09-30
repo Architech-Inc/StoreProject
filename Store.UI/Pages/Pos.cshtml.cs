@@ -244,6 +244,46 @@ public class PosModel : PageModel
         }
     }
 
+    /// <summary>
+    /// GAP-29 — Re-fetch customer loyalty status fresh from server on attach/selection
+    /// so demotions or promotions are immediately reflected without stale client cache.
+    /// </summary>
+    public async Task<IActionResult> OnGetCustomerLoyaltyAsync(Guid customerId, CancellationToken ct)
+    {
+        var token = HttpContext.Session.GetString("access_token");
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return Unauthorized();
+        }
+
+        _apiClient.SetToken(token);
+
+        try
+        {
+            var customer = await _customerService.GetByIdAsync(customerId, ct);
+            if (customer == null)
+            {
+                return NotFound(new { success = false, message = "Customer not found." });
+            }
+
+            return new JsonResult(new
+            {
+                success = true,
+                customerId = customer.CustomerId,
+                fullName = customer.FullName,
+                primaryPhone = customer.PrimaryPhone,
+                loyaltyTier = customer.LoyaltyTier.ToString(),
+                loyaltyPoints = customer.LoyaltyPoints,
+                segment = customer.Segment.ToString()
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch fresh loyalty data for customer {CustomerId}", customerId);
+            return StatusCode(500, new { success = false, message = "Could not fetch fresh customer loyalty details." });
+        }
+    }
+
     public async Task<IActionResult> OnPostOfflineBatchSyncAsync([FromBody] List<PosOfflineBatchEntry> batch, CancellationToken ct)
     {
         var token = HttpContext.Session.GetString("access_token");
@@ -332,12 +372,25 @@ public class PosModel : PageModel
         public decimal AmountTendered { get; set; }
         public string? Notes { get; set; }
         public List<PosCheckoutLine> Lines { get; set; } = new();
+
+        // Wave 23.B — POS per-line discount override binding. The client
+        // generates one ClientSessionId per checkout attempt (random 24
+        // bytes URL-safe base64, kept stable across cart mutations). The
+        // server uses it to verify every Approved override in
+        // PendingDiscountOverrideRequestIds was approved for THIS session.
+        public string? ClientSessionId { get; set; }
     }
 
     public sealed class PosCheckoutLine
     {
         public Guid ItemId { get; set; }
         public int Quantity { get; set; }
+
+        // Wave 23.B — IDs of approved per-line override requests that the
+        // cashier wants applied to this line at checkout. Server validates
+        // each (status=Approved, requested by same cashier, matches
+        // ClientSessionId, cart fingerprint matches).
+        public List<int> PendingDiscountOverrideRequestIds { get; set; } = new();
     }
 
     public sealed class PosOfflineBatchEntry

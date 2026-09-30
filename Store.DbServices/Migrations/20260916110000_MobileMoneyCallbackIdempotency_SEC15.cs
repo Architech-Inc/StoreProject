@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -40,8 +40,7 @@ namespace Store.DbServices.Migrations
 
             migrationBuilder.Sql(
                 "CREATE UNIQUE INDEX `ux_mobile_money_provider_tx_id` " +
-                "ON mobile_money_transaction (provider_transaction_id) " +
-                "WHERE provider_transaction_id IS NOT NULL AND provider_transaction_id <> '';");
+                "ON mobile_money_transaction (provider_transaction_id);");
         }
 
         /// <inheritdoc />

@@ -91,6 +91,8 @@ public static class ServiceCollectionExtensions
                     "Auth:OtpPepper must be set to a non-empty value (env var Auth__OtpPepper).")
                 .ValidateOnStart();
 
+        services.AddSingleton(sp => sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<OtpPepperOptions>>().Value);
+
         services.AddHostedService<OfflineLogSyncWorker>();
         services.AddHostedService<LogRetentionWorker>();
         services.AddHostedService<AutomatedReorderWorker>();

@@ -1693,3 +1693,189 @@ Goal: Formalize the product name and the multi-tenant SaaS subdomain / custom do
 - Defined `[Tenant] @ StoreOS` for standard SaaS subdomains (`acme.storeos.com`).
 - Defined `Store @ [Tenant]` for Enterprise BYOD / custom domains (`store.acme.com`).
 - Clarified that "Clexan Foods" is strictly a demo/seed tenant and not the software name.
+
+
+## Wave 23 - POS per-line discount override (GAP-30, SEC-23 sibling)
+
+Goal: cashier requests a discount override for a specific cart line
+at POS. The override is bound to the POS session id + a cart
+fingerprint so an attacker can't replay a stale approval against a
+modified cart. Manager approval follows the existing discount-override
+flow. Server-side validation enforces the binding on every checkout.
+
+Split into four waves (A foundation, B UI, C server + cleanup, D tests
++ docs).
+
+### 23.A - Foundation (data model + DTOs)
+
+- `DiscountOverrideRequest` entity: added
+  - `PosSessionId` (string 64, indexed with `Status`)
+  - `CartFingerprint` (string 64)
+  - `AppliedAt` (DateTime?)
+- `DiscountOverrideStatus` enum: added `Applied = 4` (terminal on
+  successful checkout consumption) + `Expired = 5` (cleanup sweep).
+- EF migration `20260928210000_PosOverrideFields_SEC23` (hand-written;
+  runtime only, no designer file): `ADD COLUMN pos_session_id
+  varchar(64) NULL`, `ADD COLUMN cart_fingerprint varchar(64) NULL`,
+  `ADD COLUMN applied_at datetime(6) NULL`, `CREATE INDEX
+  ix_discount_override_request_pos_session_id_status`.
+- `StoreDbContextModelSnapshot` updated to include the new properties
+  + the new composite index.
+- `DiscountOverrideDto` + `CreateDiscountOverrideRequest` DTOs extended
+  with the new fields.
+- `DiscountOverrideService.CreateAsync` + `MapToDto` plumb the new
+  fields through.
+
+### 23.B - POS UI (override button + modal + state badges)
+
+- `PosCheckoutRequest.ClientSessionId` + `PosCheckoutLine.PendingDiscountOverrideRequestIds`.
+- `Pos.cshtml` JS:
+  - `clientSessionId` generated once on page load via
+    `crypto.getRandomValues` (24 bytes URL-safe base64).
+  - `computeCartFingerprint()` returns SHA-256 hex of sorted
+    `(itemId,quantity)` pairs via `crypto.subtle.digest`.
+  - Per-line `Override` button + state badge (`Pending` / `Approved` /
+    `Rejected`) rendered next to the delete button.
+  - Override modal with type / value / justification inputs. Submit
+    POSTs to `/api/discount-overrides` with the session id + cart
+    fingerprint.
+  - Checkout payload extended with `clientSessionId` + per-line
+    `pendingDiscountOverrideRequestIds` (only when
+    `overrideStatus === 'Approved'`).
+
+### 23.C - Server-side validation + state machine + cleanup
+
+- `PosOverrideValidator` (static, pure-function) in `Store.DbServices.Services`:
+  - `ComputeFingerprint(lines)` - SHA-256 hex of sorted
+    `(itemId,quantity)` pairs (mirrors the JS).
+  - `Validate(request, actingUserId, rows)` - returns
+    `PosOverrideValidationResult.Ok(validatedRows)` or
+    `.Fail(failure)` with per-row reasons: unknown ID / wrong status /
+    wrong cashier / wrong session / fingerprint drift. All failures
+    collected, not first-only.
+  - `MarkApplied(validated, appliedAtUtc)` - transitions status +
+    stamps `AppliedAt` + `LastModified`.
+- `PosOverrideValidationFailure` (record) in `Store.Models.Billing`.
+- `PosOverrideValidationException` in `Store.Models.Exceptions`.
+- `CreateInvoiceRequest.ClientSessionId` + `CreateSaleLineRequest.PendingDiscountOverrideRequestIds`.
+- `InvoiceService.CreateInvoiceAsync`: collects IDs, loads rows, runs
+  validator BEFORE the transaction. On failure throws
+  `PosOverrideValidationException`. On success, after the invoice
+  commits, calls `MarkApplied` inside the same transaction so a
+  finance-service failure rolls back the override transitions too
+  (keeping the retry path clean).
+- `InvoicesController.Create` catches `PosOverrideValidationException`
+  -> HTTP 422 with `{success:false, message, code:"POS_OVERRIDE_VALIDATION_FAILED", failure:{...}}`.
+- `DiscountOverrideExpiryHostedService` (BackgroundService): polls
+  every 60s, transitions `Approved` overrides older than 15 min
+  (`ApprovedTtl`) to `Expired` with one batched save. Logs count per
+  tick. Scope-bounded DbContext lifetime per tick.
+- `Store.API/Program.cs`: registered
+  `AddHostedService<DiscountOverrideExpiryHostedService>()`.
+
+### 23.D - Tests + docs
+
+- `Store.API.Tests/PosOverrideValidatorTests.cs` (15 tests):
+  - `ComputeFingerprint`: deterministic, order-independent, differs on
+    quantity, 64-char lower hex.
+  - `Validate`: empty-references happy path, session+fingerprint match
+    happy path, legacy null-session+null-fingerprint happy path.
+  - 6 fail paths: unknown ID, status not Approved (Pending /
+    Rejected / Expired / Applied), wrong cashier, wrong session,
+    fingerprint drift.
+  - Multi-failure aggregation: collects all reasons not just first.
+  - `MarkApplied`: transitions Approved -> Applied + timestamps,
+    does not mutate other rows.
+- `docs/audit-tracker.md` GAP-30 -> `[x]`.
+- `IMPLEMENTATION_LOG.md` (this entry).
+
+Build + tests:
+```
+$ dotnet build Store.API Store.DbServices Store.Models Store.UI Store.ControlPlane --configuration Release
+Build succeeded. 0 Warning(s) 0 Error(s)
+
+$ dotnet test Store.API.Tests --configuration Release --no-build
+Passed!  - Failed: 0, Passed: 261, Skipped: 0, Total: 261, Duration: 3 s
+```
+
+GAP-30 status: `[ ]` -> `[x]`. 15 new tests (246 -> 261).
+
+Race-condition coverage now in place:
+- Stolen refresh / non-enrolled device: SEC-23 device binding (Wave 21).
+- Cashier changes cart after override approved: cart fingerprint
+  mismatch -> HTTP 422.
+- Override ID used on a different session: PosSessionId mismatch ->
+  HTTP 422.
+- Override ID used by a different cashier: RequestedByUserId mismatch ->
+  HTTP 422.
+- Override still Pending / Rejected / Cancelled / Expired / Applied:
+  status mismatch -> HTTP 422.
+- Override ID doesn't exist: HTTP 422.
+- Cashier never completes checkout: 15-min TTL -> cleanup job demotes
+  to Expired.
+- Checkout fails after invoice commit: same-transaction rollback
+  reverts both the invoice + the override transitions.
+
+---
+
+## Remediation — OtpPepperOptions DI and Configuration Wiring
+
+### Cause
+Startup crashed in `Store.API` with `InvalidOperationException: Unable to resolve service for type 'Store.DbServices.Services.OtpPepperOptions' while attempting to activate 'Store.DbServices.Services.PasswordRecoveryService'`.
+`services.AddOptions<OtpPepperOptions>().Bind(...).ValidateOnStart()` registers `IOptions<OtpPepperOptions>` in DI, but `PasswordRecoveryService` and `OtpService` constructors took `OtpPepperOptions` directly. Additionally, `Auth:OtpPepper` had no placeholder in `appsettings.json` nor local default in `appsettings.Development.json`.
+
+### Fix
+1. Switched `PasswordRecoveryService` and `OtpService` constructors to inject `IOptions<OtpPepperOptions>`.
+2. Registered `services.AddSingleton(sp => sp.GetRequiredService<IOptions<OtpPepperOptions>>().Value)` in `Store.DbServices/Extensions/ServiceCollectionExtensions.cs` so both `IOptions<OtpPepperOptions>` and direct `OtpPepperOptions` resolve cleanly.
+3. Added `Auth:OtpPepper` configuration to `Store.API/appsettings.json` (placeholder `OVERRIDE_ME__...`) and `Store.API/appsettings.Development.json` (development key).
+4. Added startup guard in `Store.API/Program.cs` rejecting missing/placeholder keys in non-dev.
+5. Added `Auth__OtpPepper` to `docker-compose.prod.yml`, `docker/multi-tenant/tenant-template.yml`, `Store.ControlPlane/Templates/*.yml`, and `Store.ControlPlane/Services/TenantOrchestrator.cs`.
+6. Added DI resolution tests in `Store.API.Tests/OtpServiceDiTests.cs`. Test suite now at 263 passing tests.
+
+---
+
+## Remediation — Missing `applied_at` Column & Pending Migrations Sync
+
+### Cause
+`DiscountOverrideExpiryHostedService` periodic sweep threw `MySqlException: Unknown column 'd.applied_at' in 'field list'` on every tick.
+1. The `DiscountOverrideRequest` entity was updated with Wave 23.A properties (`pos_session_id`, `cart_fingerprint`, `applied_at`), and `StoreDbContextModelSnapshot.cs` mapped them to the `discount_override_request` table.
+2. The migration `20260928210000_PosOverrideFields_SEC23.cs` was missing the `[DbContext(typeof(StoreDbContext))]` and `[Migration(...)]` attributes, preventing EF Core from recognizing it.
+3. Several recent migrations (`20260915120000_OtpHashAtRest_SEC06` through `20260928210000_PosOverrideFields_SEC23`) had not been applied to the local MySQL database `store_db_v2`, causing runtime query failures when querying `discount_override_request` and `audit_log`.
+
+### Fix
+1. Added `[DbContext(typeof(StoreDbContext))]` and `[Migration("20260928210000_PosOverrideFields_SEC23")]` to `20260928210000_PosOverrideFields_SEC23.cs`.
+2. Fixed MariaDB/MySQL syntax incompatibilities in `LookupIndexes_GAP19` and `MobileMoneyCallbackIdempotency_SEC15` (removed invalid `WHERE` clause on `CREATE UNIQUE INDEX`).
+3. Applied missing columns (`pos_session_id`, `cart_fingerprint`, `applied_at`) and index `ix_discount_override_request_pos_session_id_status` to `discount_override_request`.
+4. Applied missing `tenant_id` column and index to `audit_log`, and composite index on `otp`.
+5. Updated `__efmigrationshistory` so all migrations up to `20260928210000_PosOverrideFields_SEC23` are recorded as applied.
+
+---
+
+## 2026-09-30 — Wave 24 (Quick-Wins Polish: SEC-21, GAP-26, GAP-29 — completed)
+
+### 24.A — SEC-21: Forwarded Headers & HSTS Verification
+- **Issue**: Behind Traefik / Docker reverse-proxy stacks with TLS termination, `Request.IsHttps` can evaluate to false unless forwarded headers are processed, preventing HSTS headers from being emitted or causing misdirected HTTPS redirection. Furthermore, HSTS headers must never be sent over plaintext HTTP.
+- **Changes**:
+  - `Store.API/Middleware/SecurityHeadersMiddleware.cs`: HSTS check evaluates `context.Request.IsHttps || string.Equals(context.Request.Headers["X-Forwarded-Proto"], "https", StringComparison.OrdinalIgnoreCase)`. Plaintext HTTP strictly omits `Strict-Transport-Security`.
+  - `Store.API/Program.cs`: Configured `ForwardedHeadersOptions` (`XForwardedFor | XForwardedProto`, clearing known networks/proxies for container environments) placed before `SecurityHeadersMiddleware` and `UseHttpsRedirection`.
+  - `Store.UI/Program.cs`: Configured matching `ForwardedHeadersOptions` prior to `UseHsts` and `UseHttpsRedirection`.
+  - `Store.API.Tests/SecurityMiddlewareTests.cs`: Added 2 unit tests verifying HSTS is omitted on HTTP and correctly emitted on HTTPS or when `X-Forwarded-Proto: https` is forwarded.
+
+### 24.B — GAP-26: Centralized Global Keyboard Shortcuts
+- **Issue**: Keyboard navigation was fragmented with conflicting listeners between `site.js` and `command-palette.js` (`?` was intercepted by `command-palette.js` opening search instead of the help dialog; chord sequences were isolated inside command palette).
+- **Changes**:
+  - `Store.UI/wwwroot/js/site.js`: Centralized global keydown event listener. Handles `Escape` (dismissing mobile sidebar, modals, help modal, command palette), `Ctrl+K`/`Cmd+K` (toggling command palette), `?` (opening `_KeyboardHelp.cshtml` modal dialog), and `G <key>` chord navigation (`d` -> `/Dashboard`, `p` -> `/Pos`, `c` -> `/Catalog`, `m` -> `/Customers`, `i` -> `/Invoices`, `s` -> `/Suppliers`, `o` -> `/PurchaseOrders`, `r` -> `/RestockRecommendations`, `l` -> `/Loyalty`). Suppresses shortcuts when typing in inputs/textareas/selects/contenteditable.
+  - `Store.UI/wwwroot/js/command-palette.js`: Exposes `openCommandPalette`, `closeCommandPalette`, `toggleCommandPalette`, and `isCommandPaletteVisible` to `window`; removed conflicting `?` and duplicate `G` key listeners.
+
+### 24.C — GAP-29: POS Customer Loyalty Fresh Re-Fetch
+- **Issue**: If a customer's loyalty tier changed (e.g. tier demotion after balance deduction or policy adjustment) in another session or branch, the POS cached catalog customer data could show stale tier/points.
+- **Changes**:
+  - `Store.UI/Pages/Pos.cshtml.cs`: Added `OnGetCustomerLoyaltyAsync(Guid customerId)` page handler which fetches customer data directly via `_customerService.GetByIdAsync` and returns fresh `loyaltyTier`, `loyaltyPoints`, and `segment`.
+  - `Store.UI/Pages/Pos.cshtml`: Included `loyaltyTier` and `loyaltyPoints` in page-load `customersJson` serialization; added `#customerLoyaltyInfo` UI section with `.pos-tier-badge` styling (`pos-tier-gold`, `pos-tier-silver`, `pos-tier-bronze`); wired `customerSelect` change and deep-linking to immediately display initial loyalty data and execute an asynchronous fresh re-fetch from `?handler=CustomerLoyalty`; updates in-memory customer and IndexedDB cache; notifies the cashier if the customer's tier was demoted or updated since the last cached fetch.
+
+### Verification
+- Solution build clean: `dotnet build StoreProject.sln --configuration Release` (0 warnings, 0 errors in code).
+- Test suite passes: `dotnet test Store.API.Tests` -> 265 passed, 0 failed.
+- Finding status: `SEC-21` -> `[x]`, `GAP-26` -> `[x]`, `GAP-29` -> `[x]`.
+
+

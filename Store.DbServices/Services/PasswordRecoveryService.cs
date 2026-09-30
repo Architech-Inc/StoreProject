@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Store.Models.DTOs.Auth;
 using Store.Models.Entities;
 using Store.Models.Interfaces.Repositories;
@@ -25,12 +26,12 @@ public class PasswordRecoveryService : IPasswordRecoveryService
         IUnitOfWork uow,
         INotificationService notificationService,
         ILogger<PasswordRecoveryService> logger,
-        OtpPepperOptions pepperOptions)
+        IOptions<OtpPepperOptions> pepperOptions)
     {
         _uow = uow;
         _notificationService = notificationService;
         _logger = logger;
-        _otpPepper = pepperOptions.GetPepperBytes();
+        _otpPepper = (pepperOptions?.Value ?? throw new ArgumentNullException(nameof(pepperOptions))).GetPepperBytes();
 
         if (_otpPepper.Length < 32)
         {

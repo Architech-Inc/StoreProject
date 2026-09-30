@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Orders;
 using Store.Models.Entities;
@@ -172,10 +173,10 @@ public class OtpService : IOtpService
     private readonly IUnitOfWork _uow;
     private readonly byte[] _otpPepper;
 
-    public OtpService(IUnitOfWork uow, OtpPepperOptions pepperOptions)
+    public OtpService(IUnitOfWork uow, IOptions<OtpPepperOptions> pepperOptions)
     {
         _uow = uow;
-        _otpPepper = pepperOptions.GetPepperBytes();
+        _otpPepper = (pepperOptions?.Value ?? throw new ArgumentNullException(nameof(pepperOptions))).GetPepperBytes();
     }
 
     /// <summary>

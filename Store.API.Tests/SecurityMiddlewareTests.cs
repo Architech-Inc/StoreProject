@@ -54,4 +54,41 @@ public class SecurityMiddlewareTests
         Assert.Equal("camera=(), microphone=(), geolocation=()", context.Response.Headers["Permissions-Policy"].ToString());
         Assert.Equal("max-age=31536000; includeSubDomains", context.Response.Headers["Strict-Transport-Security"].ToString());
     }
+
+    [Fact]
+    public async Task SecurityHeadersMiddleware_OmitsHsts_WhenHttp()
+    {
+        var middleware = new SecurityHeadersMiddleware(async ctx =>
+        {
+            await ctx.Response.WriteAsync("ok");
+        });
+
+        var context = new DefaultHttpContext();
+        context.Request.Scheme = "http";
+
+        await middleware.InvokeAsync(context);
+        await context.Response.StartAsync();
+
+        Assert.Equal("nosniff", context.Response.Headers["X-Content-Type-Options"].ToString());
+        Assert.False(context.Response.Headers.ContainsKey("Strict-Transport-Security"), "HSTS must NOT be sent over plaintext HTTP");
+    }
+
+    [Fact]
+    public async Task SecurityHeadersMiddleware_AddsHsts_WhenXForwardedProtoHttps()
+    {
+        var middleware = new SecurityHeadersMiddleware(async ctx =>
+        {
+            await ctx.Response.WriteAsync("ok");
+        });
+
+        var context = new DefaultHttpContext();
+        context.Request.Scheme = "http";
+        context.Request.Headers["X-Forwarded-Proto"] = "https";
+
+        await middleware.InvokeAsync(context);
+        await context.Response.StartAsync();
+
+        Assert.True(context.Response.Headers.ContainsKey("Strict-Transport-Security"));
+        Assert.Equal("max-age=31536000; includeSubDomains", context.Response.Headers["Strict-Transport-Security"].ToString());
+    }
 }

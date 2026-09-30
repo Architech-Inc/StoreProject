@@ -1778,23 +1778,11 @@
         toggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
     };
 
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            const sidebar = document.getElementById('appSidebar');
-            if (sidebar && sidebar.classList.contains('is-open')) {
-                window.toggleMobileSidebar(false);
-            }
-            // Close keyboard help dialog if open.
-            closeKbdHelp();
-        }
-    });
-
-    // UX-04 — keyboard shortcut help dialog. Bound to `?` (shift + /).
-    // Suppressed when the user is typing in an input / textarea / contenteditable.
+    // ── GAP-26 & UX-04 — Unified Global Keyboard Shortcut System ────────────────
     function isTypingTarget(el) {
         if (!el) return false;
-        const tag = (el.tagName || '').toLowerCase();
-        if (tag === 'input' || tag === 'textarea' || tag === 'select') return true;
+        const tag = (el.tagName || '').toUpperCase();
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
         if (el.isContentEditable) return true;
         return false;
     }
@@ -1815,13 +1803,85 @@
         }
     };
 
+    let gChordPending = false;
+    let gChordTimer = null;
+
+    const quickJumps = {
+        'd': '/Dashboard',
+        'p': '/Pos',
+        'c': '/Catalog',
+        'm': '/Customers',
+        'i': '/Invoices',
+        's': '/Suppliers',
+        'o': '/PurchaseOrders',
+        'r': '/RestockRecommendations',
+        'l': '/Loyalty'
+    };
+
     document.addEventListener('keydown', (e) => {
+        // 1. Escape: closes any open dialog, modal, drawer, sidebar, command palette, or help dialog
+        if (e.key === 'Escape') {
+            const sidebar = document.getElementById('appSidebar');
+            if (sidebar && sidebar.classList.contains('is-open')) {
+                window.toggleMobileSidebar(false);
+            }
+            closeKbdHelp();
+            if (typeof window.closeCommandPalette === 'function') {
+                window.closeCommandPalette();
+            }
+            if (typeof closeAllModals === 'function') {
+                closeAllModals();
+            }
+            return;
+        }
+
+        // 2. Ctrl+K / Cmd+K: Open Command Palette
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+            e.preventDefault();
+            if (typeof window.toggleCommandPalette === 'function') {
+                window.toggleCommandPalette();
+            } else {
+                const overlay = document.getElementById('commandPaletteOverlay');
+                if (overlay) {
+                    overlay.hidden = !overlay.hidden;
+                    overlay.style.display = overlay.hidden ? 'none' : 'flex';
+                    if (!overlay.hidden) {
+                        const input = document.getElementById('cmdPaletteInput');
+                        if (input) input.focus();
+                    }
+                }
+            }
+            return;
+        }
+
+        // Suppress non-control single keys if user is typing
         if (isTypingTarget(e.target)) return;
         if (e.ctrlKey || e.metaKey || e.altKey) return;
 
+        // 3. Question mark (?): open shortcut help dialog
         if (e.key === '?') {
             e.preventDefault();
             openKbdHelp();
+            return;
+        }
+
+        // 4. Two-key chord navigation: G then <key>
+        if (e.key.toLowerCase() === 'g' && !gChordPending) {
+            gChordPending = true;
+            clearTimeout(gChordTimer);
+            gChordTimer = setTimeout(() => { gChordPending = false; }, 1200);
+            return;
+        }
+
+        if (gChordPending) {
+            gChordPending = false;
+            clearTimeout(gChordTimer);
+            const targetKey = e.key.toLowerCase();
+            const destination = quickJumps[targetKey];
+            if (destination) {
+                e.preventDefault();
+                window.location.href = destination;
+            }
         }
     });
 

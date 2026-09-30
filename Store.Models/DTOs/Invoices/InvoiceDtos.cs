@@ -96,6 +96,12 @@ public class CreateInvoiceRequest
     public IEnumerable<CreateSaleLineRequest> Lines { get; set; } = Enumerable.Empty<CreateSaleLineRequest>();
 
     public string? CouponCode { get; set; }
+
+    // Wave 23.C — POS per-line override binding. Server validates each
+    // PendingDiscountOverrideRequestIds entry in each line against this
+    // ClientSessionId + the recomputed CartFingerprint. Mismatch → HTTP 422.
+    [StringLength(64)]
+    public string? ClientSessionId { get; set; }
 }
 
 public class CreateSaleLineRequest
@@ -107,6 +113,13 @@ public class CreateSaleLineRequest
     public int Quantity { get; set; }
 
     public decimal? OverrideUnitPrice { get; set; }
+
+    /// <summary>
+    /// IDs of approved per-line override requests the cashier wants applied
+    /// at checkout. Server validates each (status=Approved, requested by
+    /// same acting user, matches ClientSessionId, fingerprint still matches).
+    /// </summary>
+    public List<int> PendingDiscountOverrideRequestIds { get; set; } = new();
 }
 
 public class AddTenderRequest

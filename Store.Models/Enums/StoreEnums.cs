@@ -130,7 +130,14 @@ public enum DiscountOverrideStatus
     Pending = 0,
     Approved = 1,
     Rejected = 2,
-    Cancelled = 3
+    Cancelled = 3,
+    // Wave 23.A — terminal state set by the checkout handler after a
+    // successful POS checkout that consumed the approved override.
+    // Idempotent: if checkout fails, the override stays Approved for retry.
+    Applied = 4,
+    // Wave 23.C — set by the cleanup job on Approved overrides that
+    // exceeded the 15-minute TTL without being applied to a checkout.
+    Expired = 5,
 }
 
 /// <summary>Lifecycle status of a purchase order (EX-FR-1.2).</summary>

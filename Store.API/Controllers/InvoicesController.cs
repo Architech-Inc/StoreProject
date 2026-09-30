@@ -55,8 +55,28 @@ public class InvoicesController : ControllerBase
         var userIdClaim = User.FindFirst("uid")?.Value;
         Guid.TryParse(userIdClaim, out var userId);
 
-        var invoice = await _invoiceService.CreateInvoiceAsync(request, userId == Guid.Empty ? null : userId, ct);
-        return CreatedAtAction(nameof(GetById), new { id = invoice.InvoiceId }, ApiResponse<InvoiceDto>.Ok(invoice, "Invoice created."));
+        try
+        {
+            var invoice = await _invoiceService.CreateInvoiceAsync(request, userId == Guid.Empty ? null : userId, ct);
+            return CreatedAtAction(nameof(GetById), new { id = invoice.InvoiceId }, ApiResponse<InvoiceDto>.Ok(invoice, "Invoice created."));
+        }
+        catch (Store.Models.Exceptions.PosOverrideValidationException ex)
+        {
+            // Wave 23.C — POS override validation failed. Surface 422 with
+            // the failure detail so the POS UI can show the specific
+            // reason on the offending line.
+            return UnprocessableEntity(new
+            {
+                success = false,
+                message = ex.Message,
+                code = "POS_OVERRIDE_VALIDATION_FAILED",
+                failure = ex.Failure,
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ApiResponse<object>.Fail(SafeErrorMessage.From(ex, NullLogger<InvoicesController>.Instance, "Invoices operation")));
+        }
     }
 
     [HttpDelete("{id:guid}/void")]

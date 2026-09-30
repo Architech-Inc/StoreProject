@@ -2007,6 +2007,20 @@ namespace Store.DbServices.Migrations
                         .HasColumnType("decimal(65,30)")
                         .HasColumnName("override_value");
 
+                    b.Property<string>("PosSessionId")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)")
+                        .HasColumnName("pos_session_id");
+
+                    b.Property<string>("CartFingerprint")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)")
+                        .HasColumnName("cart_fingerprint");
+
+                    b.Property<DateTime?>("AppliedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("applied_at");
+
                     b.Property<Guid>("RequestedByUserId")
                         .HasColumnType("char(36)")
                         .HasColumnName("requested_by_user_id");
@@ -2045,6 +2059,9 @@ namespace Store.DbServices.Migrations
 
                     b.HasIndex("Status", "DateCreated")
                         .HasDatabaseName("ix_discount_override_request_status_date_created");
+
+                    b.HasIndex("PosSessionId", "Status")
+                        .HasDatabaseName("ix_discount_override_request_pos_session_id_status");
 
                     b.ToTable("discount_override_request");
                 });

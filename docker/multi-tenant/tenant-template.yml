@@ -50,6 +50,7 @@ services:
       - ConnectionStrings__Default=${STORE_CONNECTION_STRING}
       - MongoDB__ConnectionString=${STORE_MONGO_CONNECTION_STRING}
       - Jwt__Key=${STORE_JWT_SECRET}
+      - Auth__OtpPepper=${STORE_OTP_PEPPER:?STORE_OTP_PEPPER is required}
       - Payments__MoMoCallbackKey=${STORE_MOMO_CALLBACK_KEY}
       - Cors__AllowedOrigins__0=https://${STORE_DOMAIN}
       - Cors__AllowedOrigins__1=http://${STORE_DOMAIN}
