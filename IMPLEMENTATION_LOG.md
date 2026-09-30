@@ -1683,3 +1683,13 @@ Passed!  - Failed: 0, Passed: 246, Skipped: 0, Total: 246, Duration: 3 s
 
 UX-05 status: `[~]` -> `[x]`. POS per-line discount override remains
 deferred (genuine new-feature scope).
+
+## Wave 23 - Platform Branding and Tenancy Strategy
+
+Goal: Formalize the product name and the multi-tenant SaaS subdomain / custom domain branding logic.
+
+- Created `docs/platform_branding_and_tenancy.md`
+- Defined "StoreOS" as the official SaaS platform name.
+- Defined `[Tenant] @ StoreOS` for standard SaaS subdomains (`acme.storeos.com`).
+- Defined `Store @ [Tenant]` for Enterprise BYOD / custom domains (`store.acme.com`).
+- Clarified that "Clexan Foods" is strictly a demo/seed tenant and not the software name.
