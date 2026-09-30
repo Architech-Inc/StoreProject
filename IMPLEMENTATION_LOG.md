@@ -2035,6 +2035,28 @@ Startup crashed in `Store.API` with `InvalidOperationException: Unable to resolv
 - Test suite passes: `dotnet test Store.API.Tests` -> 287 passed, 0 failed.
 - Audit tracker updated: `GAP-25` -> `[x]`.
 
+---
+
+## 2026-10-01 — Wave 30 (POS PWA & Offline Service Worker Reconciliation: GAP-21 — completed)
+
+### 30.A — Audit & Reconciliation with UX-01
+- **Issue**: `GAP-21` ("No PWA / service worker for POS") was originally tracked as open, while `UX-01` had implemented initial service worker support in Wave 16.
+- **Verification & Enhancements**:
+  - `Store.UI/wwwroot/manifest.json`: Verified PWA manifest containing standalone display mode, orientation, app shortcuts (POS, Invoices, Catalog, Dashboard), SVG/PNG icons, and theme color `#3b82f6`.
+  - `Store.UI/wwwroot/sw.js`:
+    - Updated `CACHE_VERSION` to `clexan-v2` ensuring immediate cache busting and upgrade activation via `clients.claim()`.
+    - Added missing POS style bundles `/css/operations.css` and `/css/modules/sales.css` to `OFFLINE_SHELL` so cold offline launches render with 100% UI fidelity.
+    - Verified network-first API fetching with runtime caching for successful GETs, stale-while-revalidate for assets, and navigation fallback to `/Pos`.
+  - `Store.UI/wwwroot/js/pwa-install.js`: Verified automated `/sw.js` registration, `beforeinstallprompt` event interception, customizable floating install banner with 7-day cooldown dismissal, manual install context menu binding (`installClexAnApp()`), and `appinstalled` cleanup.
+  - `Store.UI/wwwroot/js/pos-offline.js` & `Store.UI/Pages/Pos.cshtml`: Verified `StorePosOfflineDB` IndexedDB catalog caching, customer caching, offline sale queuing, and synchronization orchestration.
+  - Layout integration: Verified `<link rel="manifest" href="~/manifest.json" />`, `<link rel="stylesheet" href="~/css/pwa.css" />`, and `pwa-install.js` inclusion in both `_AppLayout.cshtml` and `_Layout.cshtml`.
+
+### Verification
+- Solution build clean: `dotnet build StoreProject.sln --configuration Release` (0 warnings in code, 0 errors).
+- Test suite passes: `dotnet test Store.API.Tests` -> 287 passed, 0 failed.
+- Audit tracker updated: `GAP-21` -> `[x]`.
+
+
 
 
 
