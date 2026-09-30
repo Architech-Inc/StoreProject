@@ -107,16 +107,16 @@ Prefixes used across audits — `SEC-*` (security) · `GAP-*` (functional) · `U
 | ID | Finding | Where | Status | Recommended fix |
 |----|---------|-------|--------|-----------------|
 | `GAP-01` | `/Orders` orphan page | `Pages/Orders.cshtml(.cs)` + `OrdersController` | `[x]` | Wave 1 — page deleted (moved to `.deleted-orphan-pages/`). |
-| `GAP-02` | `/ContactRequests` page exists but not in nav | `Pages/ContactRequests.cshtml` + `_AppLayout.cshtml` | `[ ]` | Add to Admin nav (visible to Admin+Manager). |
+| `GAP-02` | `/ContactRequests` page exists but not in nav | `Pages/ContactRequests.cshtml` + `_AppLayout.cshtml` | `[x]` | Wave 26 — Added to Admin nav in `_AppLayout.cshtml` guarded by `canViewContactRequests` (Admin + Manager visibility). |
 | `GAP-03` | Contact-change flow has no email/SMS notify | `UsersController.cs:265` | `[x]` | Wave 3 — approval notification wired. |
 | `GAP-04` | `ForceResetPassword` not triggered by POS | `Pos.cshtml.cs` | `[x]` | Inject `IPasswordService`, short-circuit to `/ForceResetPassword` if flag set on the JWT. *(Wave 12: landed — `force_password_change` JWT claim + `SessionClaims` reader + `Pos.cshtml.cs` enforcement.)*|
 | `GAP-05` | `BranchDashboard` page-model empty | `Pages/BranchDashboard.cshtml.cs` | `[ ]` | Wire `IBranchManager.GetBranchPerformanceAsync` in PageModel. |
-| `GAP-06` | `Logout.cshtml.cs` doesn't call `/api/auth/logout` | `Pages/Logout.cshtml.cs` | `[ ]` | Add `await _authService.LogoutAsync()` to revoke server-side. |
+| `GAP-06` | `Logout.cshtml.cs` doesn't call `/api/auth/logout` | `Pages/Logout.cshtml.cs` | `[x]` | Wave 26 — Calls `/api/auth/logout` via `_apiClient` (checking session & `store_at` cookie token), clears session, and explicitly drops `store_at`, `store_rt`, and `storeui-session` cookies. |
 | `GAP-07` | Scanner full-table scans suppliers/batches | `ScannerController.cs:289,335` | `[ ]` | Add `search: trimmedCode` parameter to both `GetAllAsync` calls. |
-| `GAP-08` | `AdminRoleMatrixController.UpdatePermission` DTO missing `[Required]` | `AdminRoleMatrixController.cs:26-30` | `[ ]` | Add `[Required]` on the request DTO. |
+| `GAP-08` | `AdminRoleMatrixController.UpdatePermission` DTO missing `[Required]` | `AdminRoleMatrixController.cs:26-30` | `[x]` | Wave 26 — Added `[Required]`, `[Range(1, int.MaxValue)]`, `[StringLength(120, MinimumLength = 1)]` to `UpdateRolePermissionRequest`; null check + ModelState validation in controller; 5 unit tests in `AdminRoleMatrixControllerTests`. |
 | `GAP-09` | `CashVarianceController.GetAll` ignores date range | `CashVarianceController.cs:31-41` | `[x]` | Add `dateFrom`, `dateTo` query filters. *(Wave 12: `GetAll` already had them; `ExportCsv` now also honors them.)*|
 | `GAP-10` | `[Authorize(Roles="Admin")]` legacy attributes | `UsersController`, `SystemSettingsController` (others) | `[x]` | Wave 2 — migrated 7 controllers to `[Authorize(Policy = PermissionKeys.*)]`. |
-| `GAP-11` | `SupplierService.DeleteAsync` no FK pre-check | `SupplierService.cs` | `[ ]` | Add `ExistsAsync(p => p.SupplierId == id)` pre-check; surface `DbUpdateException` as 409 to UI. |
+| `GAP-11` | `SupplierService.DeleteAsync` no FK pre-check | `SupplierService.cs` | `[x]` | Wave 26 — Added `Item.PreferredSupplierId` pre-check in `SupplierService.DeleteAsync`; wrapped `SuppliersController.Delete` in try-catch to surface `DbUpdateException` as 409 Conflict with `ErrorCode.Conflict`; unit test added. |
 | `GAP-12` | `InvoiceService` 5-level `.Include().ThenInclude` | `InvoiceService.cs:27-36` | `[ ]` | Split with `.AsSplitQuery()` + separate line-item fetch. |
 | `GAP-13` | `OrderAndOtpService` / `ProcurementAutomationService` / `DemandForecastingService` — verify usage | `Services/` | `[ ]` | Add unit tests; surface via controller endpoints if valuable; delete if dead. |
 | `GAP-14` | Lookup endpoints — verify one service per concern | `Controllers/LookupControllers.cs`, `Services/LookupServices.cs` | `[ ]` | Audit pass; consolidate where appropriate. |

@@ -26,9 +26,9 @@ public class AdminRoleMatrixController : ControllerBase
     }
 
     [HttpPost("permission")]
-    public async Task<IActionResult> UpdatePermission([FromBody] UpdateRolePermissionRequest request, CancellationToken ct)
+    public async Task<IActionResult> UpdatePermission([FromBody] UpdateRolePermissionRequest? request, CancellationToken ct)
     {
-        if (request.RoleId <= 0 || string.IsNullOrWhiteSpace(request.PermissionKey))
+        if (request is null || !ModelState.IsValid || request.RoleId <= 0 || string.IsNullOrWhiteSpace(request.PermissionKey))
         {
             return BadRequest(ApiErrorResponse.From(ErrorCode.InvalidRequest, "RoleId and PermissionKey are required.", traceId: HttpContext.TraceIdentifier));
         }

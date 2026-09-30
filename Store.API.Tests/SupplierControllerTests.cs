@@ -102,4 +102,21 @@ public class SupplierControllerTests
         var response = Assert.IsType<ApiErrorResponse>(badRequestResult.Value);
         Assert.Contains("associated orders", response.Message);
     }
+
+    [Fact]
+    public async Task Delete_ReturnsConflict_WhenDbUpdateExceptionOccurs()
+    {
+        var supplierId = Guid.NewGuid();
+        var mockService = new Mock<ISupplierService>();
+        mockService.Setup(s => s.DeleteAsync(supplierId, null))
+            .ThrowsAsync(new Microsoft.EntityFrameworkCore.DbUpdateException("FK conflict", new Exception("foreign key violation")));
+
+        var controller = CreateController(mockService.Object);
+        var result = await controller.Delete(supplierId);
+
+        var conflictResult = Assert.IsType<ConflictObjectResult>(result);
+        var response = Assert.IsType<ApiErrorResponse>(conflictResult.Value);
+        Assert.Equal(ErrorCode.Conflict, response.Code);
+        Assert.Contains("cannot be deleted due to existing database references", response.Message);
+    }
 }

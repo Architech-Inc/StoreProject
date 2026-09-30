@@ -22,8 +22,9 @@
     var canAdminRoles    = perms.Contains(PermissionKeys.AdminRoleMatrix);
     var canAdminUsers    = perms.Contains(PermissionKeys.AdminUsers) || canAdminRoles;
     var canAdminSettings = perms.Contains(PermissionKeys.AdminSettings) || canAdminRoles;
+    var canViewContactRequests = canAdminUsers || userRole == "Manager" || userRole == "Admin";
     var hasOpsSection    = canInventoryRead || canPricingRead || canCashRead || canReportsRead || canPaymentsRead;
-    var hasAdminSection  = canAdminBranches || canAdminRoles || canAdminUsers || canAdminSettings;
+    var hasAdminSection  = canAdminBranches || canAdminRoles || canAdminUsers || canAdminSettings || canViewContactRequests;
 
     var userBranches = new List<BranchDto>();
     int? activeBranchId = Context.Session.GetInt32("active_branch_id");
@@ -198,7 +199,13 @@
                             @if (canAdminRoles || canAdminUsers || canAdminSettings)
                             {
                                 <a class="nav-link" href="/Users">Users</a>
+                            }
+                            @if (canViewContactRequests)
+                            {
                                 <a class="nav-link" href="/ContactRequests">Contact Requests</a>
+                            }
+                            @if (canAdminRoles || canAdminUsers || canAdminSettings)
+                            {
                                 <a class="nav-link" href="/Lookup">Lookup &amp; Settings</a>
                                 <a class="nav-link" href="/RoleMatrix">Role Matrix</a>
                                 <a class="nav-link" href="/CommunicationLogs">Comm Logs</a>

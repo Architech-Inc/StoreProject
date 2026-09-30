@@ -1902,8 +1902,40 @@ Startup crashed in `Store.API` with `InvalidOperationException: Unable to resolv
   - `NotifyDiscountOverrideAsync_SendsToCashierAndPosSession_WhenPosSessionIdProvided`: Verifies dispatch to cashier group and POS session group with payload, and manager notification.
   - `NotifyDiscountOverrideAsync_OmitsPosSessionGroup_WhenPosSessionIdMissing`: Verifies safety and no-op for session group when posSessionId is absent.
   - `NotifyDiscountOverrideAsync_HandlesHubExceptionGracefully`: Verifies fault-tolerance without unhandled exceptions.
-- Solution build: `dotnet build StoreProject.sln --configuration Release` (0 warnings, 0 errors in code).
-- Test suite: `dotnet test Store.API.Tests` -> 268 passed, 0 failed.
-- Finding status: `GAP-28` -> `[x]`.
+---
+
+## 2026-09-30 — Wave 26 (Audit Gap Sweep: GAP-02, GAP-06, GAP-08, GAP-11 — completed)
+
+### 26.A — GAP-02: Contact Requests Navigation Access
+- **Issue**: The `/ContactRequests` razor page existed and authorized Managers (`role == "Manager"`) and Admins, but the link in `_AppLayout.cshtml` was strictly nested under permission flags (`canAdminRoles || canAdminUsers || canAdminSettings`) that Store Managers typically do not possess, leaving the page orphaned in the UI for managers.
+- **Changes**:
+  - `Store.UI/Pages/Shared/_AppLayout.cshtml`: Defined `canViewContactRequests = canAdminUsers || userRole == "Manager" || userRole == "Admin";`.
+  - Added `canViewContactRequests` into `hasAdminSection` visibility calculation and isolated the `<a class="nav-link" href="/ContactRequests">Contact Requests</a>` link behind `@if (canViewContactRequests)`.
+
+### 26.B — GAP-06: Explicit Logout Cookie & Session Cleanup
+- **Issue**: `Logout.cshtml.cs` previously removed session keys but did not check cookie-based access tokens (`store_at`) when calling the server-side `/api/auth/logout` endpoint, and failed to explicitly drop the HttpOnly `store_at`, `store_rt`, and `storeui-session` cookies from the browser response.
+- **Changes**:
+  - `Store.UI/Pages/Logout.cshtml.cs`: Updated `PerformLogoutAsync` to fall back to `Request.Cookies["store_at"]` when calling `/api/auth/logout`.
+  - Added explicit cookie drops on `Response.Cookies.Delete` for `store_at`, `store_rt`, and `storeui-session` with `Path = "/"`.
+
+### 26.C — GAP-08: Admin Role Matrix DTO Validation
+- **Issue**: `UpdateRolePermissionRequest` lacked validation boundaries on `RoleId` (`int` default satisfied `[Required]`) and non-empty checks on `PermissionKey`. In `AdminRoleMatrixController`, incoming requests were passed without checking `ModelState.IsValid` or null bodies.
+- **Changes**:
+  - `Store.Models/DTOs/Operations/RolePermissionDtos.cs`: Added `[Range(1, int.MaxValue, ErrorMessage = "RoleId must be greater than 0.")]` on `RoleId` and `[Required(AllowEmptyStrings = false)]` + `[StringLength(120, MinimumLength = 1)]` on `PermissionKey`.
+  - `Store.API/Controllers/AdminRoleMatrixController.cs`: Guarded `UpdatePermission` with `request is null || !ModelState.IsValid || request.RoleId <= 0 || string.IsNullOrWhiteSpace(request.PermissionKey)` returning 400 Bad Request with `ErrorCode.InvalidRequest`.
+  - `Store.API.Tests/AdminRoleMatrixControllerTests.cs`: Added 5 unit tests covering null bodies, invalid IDs and keys, successful update dispatch, and DataAnnotations validation attributes.
+
+### 26.D — GAP-11: Supplier Deletion FK Pre-Check & Conflict Surfacing
+- **Issue**: Attempting to delete a supplier referenced by foreign keys or preferred items could cause an unhandled `DbUpdateException` resulting in a 500 error instead of a structured 409 Conflict.
+- **Changes**:
+  - `Store.DbServices/Services/SupplierService.cs`: Added pre-check in `DeleteAsync` for `Item.PreferredSupplierId` (`await _uow.Repository<Item>().ExistsAsync(i => i.PreferredSupplierId == id && !i.IsDeleted)`).
+  - `Store.API/Controllers/SuppliersController.cs`: Wrapped `Delete` in a try-catch catching `Microsoft.EntityFrameworkCore.DbUpdateException` and returning HTTP 409 Conflict with `ErrorCode.Conflict` and descriptive message.
+  - `Store.API.Tests/SupplierControllerTests.cs`: Added unit test `Delete_ReturnsConflict_WhenDbUpdateExceptionOccurs` verifying HTTP 409 and `ErrorCode.Conflict`.
+
+### Verification
+- Solution build clean: `dotnet build StoreProject.sln --configuration Release` (0 warnings in code, 0 errors).
+- Test suite passes: `dotnet test Store.API.Tests` -> 276 passed, 0 failed.
+- Audit tracker updated: `GAP-02` -> `[x]`, `GAP-06` -> `[x]`, `GAP-08` -> `[x]`, `GAP-11` -> `[x]`.
+
 
 

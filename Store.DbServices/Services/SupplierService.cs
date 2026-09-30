@@ -418,12 +418,15 @@ public class SupplierService : ISupplierService
         if (supplier is null) return false;
         if (supplier.IsDeleted) return true; // idempotent
 
-        // Guard against deleting suppliers with open purchase orders or items orders.
+        // Guard against deleting suppliers with open purchase orders, items orders, or preferred items.
         var hasItemsOrders = await _uow.Repository<ItemsOrder>().ExistsAsync(o => o.SupplierId == id && !o.IsDeleted);
         if (hasItemsOrders) return false;
 
         var hasPurchaseOrders = await _uow.Repository<PurchaseOrder>().ExistsAsync(p => p.SupplierId == id && !p.IsDeleted);
         if (hasPurchaseOrders) return false;
+
+        var hasPreferredItems = await _uow.Repository<Item>().ExistsAsync(i => i.PreferredSupplierId == id && !i.IsDeleted);
+        if (hasPreferredItems) return false;
 
         supplier.IsDeleted = true;
         supplier.DeletedAt = DateTime.UtcNow;

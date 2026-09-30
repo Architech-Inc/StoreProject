@@ -99,11 +99,21 @@ public class SuppliersController : ControllerBase
         var userIdClaim = User.FindFirst("uid")?.Value;
         Guid.TryParse(userIdClaim, out var deletedById);
 
-        var success = await _supplierService.DeleteAsync(id, deletedById == Guid.Empty ? null : deletedById);
-        if (!success)
-            return BadRequest(ApiErrorResponse.From(ErrorCode.BadRequest,
-                "Supplier not found or has associated orders",
+        try
+        {
+            var success = await _supplierService.DeleteAsync(id, deletedById == Guid.Empty ? null : deletedById);
+            if (!success)
+                return BadRequest(ApiErrorResponse.From(ErrorCode.BadRequest,
+                    "Supplier not found or has associated orders",
+                    traceId: HttpContext.TraceIdentifier));
+            return NoContent();
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
+        {
+            return Conflict(ApiErrorResponse.From(ErrorCode.Conflict,
+                "Supplier cannot be deleted due to existing database references.",
+                errors: new[] { ex.InnerException?.Message ?? ex.Message },
                 traceId: HttpContext.TraceIdentifier));
-        return NoContent();
+        }
     }
 }

@@ -21,9 +21,11 @@ public class RoleMatrixDto
 public class UpdateRolePermissionRequest
 {
     [Required]
+    [Range(1, int.MaxValue, ErrorMessage = "RoleId must be greater than 0.")]
     public int RoleId { get; set; }
 
-    [Required, StringLength(120)]
+    [Required(AllowEmptyStrings = false, ErrorMessage = "PermissionKey is required.")]
+    [StringLength(120, MinimumLength = 1)]
     public string PermissionKey { get; set; } = string.Empty;
 
     public bool IsAllowed { get; set; }

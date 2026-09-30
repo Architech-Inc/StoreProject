@@ -28,6 +28,11 @@ public class LogoutModel : PageModel
     private async Task PerformLogoutAsync(CancellationToken ct)
     {
         var token = HttpContext.Session.GetString("access_token");
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            token = Request.Cookies["store_at"];
+        }
+
         if (!string.IsNullOrWhiteSpace(token))
         {
             try
@@ -44,5 +49,10 @@ public class LogoutModel : PageModel
         HttpContext.Session.Remove("access_token");
         HttpContext.Session.Remove("refresh_token");
         HttpContext.Session.Clear();
+
+        // GAP-06 — Explicitly delete auth and session cookies from client browser
+        Response.Cookies.Delete("store_at", new CookieOptions { Path = "/" });
+        Response.Cookies.Delete("store_rt", new CookieOptions { Path = "/" });
+        Response.Cookies.Delete("storeui-session", new CookieOptions { Path = "/" });
     }
 }
