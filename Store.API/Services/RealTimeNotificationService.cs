@@ -70,14 +70,20 @@ public class RealTimeNotificationService : IRealTimeNotificationService
     {
         try
         {
-            // Send specifically to the cashier who requested it
+            // Send specifically to the cashier user who requested it
             await _hubContext.Clients.Group($"user_{dto.CashierUserId}").ReceiveDiscountOverrideUpdate(dto);
 
-            // Also broadcast general notification to Cashiers and Managers
+            // If an active POS terminal session was associated, also target that POS terminal directly
+            if (!string.IsNullOrWhiteSpace(dto.PosSessionId))
+            {
+                await _hubContext.Clients.Group($"pos_session_{dto.PosSessionId.Trim()}").ReceiveDiscountOverrideUpdate(dto);
+            }
+
+            // Also broadcast general notification to Managers and Admins
             var notif = new StoreNotificationDto
             {
                 Title = $"Discount Override {dto.Status}",
-                Message = $"Override request for {dto.RequestedDiscount:C} is {dto.Status.ToLowerInvariant()}.",
+                Message = $"Override #{dto.DiscountOverrideRequestId} ({dto.RequestedDiscount} discount) is {dto.Status.ToLowerInvariant()}.",
                 Category = NotificationCategory.DiscountApproval,
                 Severity = dto.Status.Equals("Approved", StringComparison.OrdinalIgnoreCase) ? "Success" : "Warning",
                 TargetUrl = "/DiscountOverrides"

@@ -1225,6 +1225,96 @@
             submitBtn.disabled = false;
         }
     });
+
+    // ── GAP-28 — Live Real-Time SignalR Listener for POS Discount Overrides ─────
+    let posHubConnection = null;
+
+    function handleDiscountOverrideUpdate(dto) {
+        if (!dto) return;
+
+        const reqId = dto.discountOverrideRequestId || dto.overrideId;
+        let matched = false;
+
+        for (const line of cart.values()) {
+            const matchesId = line.overrideRequestId && (line.overrideRequestId === reqId || String(line.overrideRequestId) === String(reqId));
+            const matchesItem = dto.itemId && String(line.itemId).toLowerCase() === String(dto.itemId).toLowerCase();
+
+            if (matchesId || (line.overrideStatus === 'Pending' && matchesItem)) {
+                matched = true;
+                const prevStatus = line.overrideStatus;
+                line.overrideStatus = dto.status; // 'Approved' | 'Rejected' | 'Expired'
+                if (reqId) line.overrideRequestId = reqId;
+
+                renderCart();
+
+                if (dto.status === 'Approved') {
+                    setMessage(`✓ Override #${reqId || ''} APPROVED for ${line.name}! Discount ready at checkout.`);
+                    if (window.ToastBus) {
+                        ToastBus.publish('pos.override', 'success', `Discount override #${reqId || ''} approved for ${line.name}`);
+                    }
+                } else if (dto.status === 'Rejected') {
+                    const reason = dto.reason ? `: ${dto.reason}` : '';
+                    setMessage(`✗ Override #${reqId || ''} REJECTED for ${line.name}${reason}`, true);
+                    if (window.ToastBus) {
+                        ToastBus.publish('pos.override', 'warning', `Discount override #${reqId || ''} rejected for ${line.name}${reason}`);
+                    }
+                } else if (dto.status === 'Expired') {
+                    setMessage(`⏳ Override #${reqId || ''} expired for ${line.name}.`, true);
+                }
+                break;
+            }
+        }
+
+        if (!matched && dto.status === 'Approved') {
+            setMessage(`Notice: Discount override #${reqId || ''} was approved by ${dto.supervisorName || 'supervisor'}.`);
+        }
+    }
+
+    function initPosSignalR() {
+        if (typeof signalR === 'undefined') return;
+
+        const token = (window.appConfig && window.appConfig.accessToken)
+            || sessionStorage.getItem('access_token')
+            || '';
+
+        if (!token) return;
+
+        const baseUrl = (window.appConfig && window.appConfig.apiBaseUrl) ? window.appConfig.apiBaseUrl : '';
+
+        try {
+            posHubConnection = new signalR.HubConnectionBuilder()
+                .withUrl(baseUrl + '/hubs/notifications', {
+                    accessTokenFactory: () => token
+                })
+                .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
+                .configureLogging(signalR.LogLevel.Warning)
+                .build();
+
+            posHubConnection.on('ReceiveDiscountOverrideUpdate', (dto) => {
+                handleDiscountOverrideUpdate(dto);
+            });
+
+            posHubConnection.start().then(() => {
+                if (clientSessionId) {
+                    posHubConnection.invoke('JoinPosSession', clientSessionId).catch(() => {});
+                }
+            }).catch(() => {
+                // SignalR optional fallback for offline / disconnected environments
+            });
+
+            posHubConnection.onreconnected(() => {
+                if (clientSessionId) {
+                    posHubConnection.invoke('JoinPosSession', clientSessionId).catch(() => {});
+                }
+            });
+        } catch (e) {
+            console.warn('[POS SignalR] Initialization failed:', e);
+        }
+    }
+
+    window.addEventListener('discount-override-approved', (e) => {
+        handleDiscountOverrideUpdate(e.detail);
+    });
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             if (receiptBlade.classList.contains('open')) closeReceipt();
@@ -1249,6 +1339,7 @@
     renderSuspendedSales();
     renderCatalog();
     renderCart();
+    initPosSignalR();
 
     // Cache initial data into IndexedDB
     StorePosOfflineDB.cacheCatalog(catalog);

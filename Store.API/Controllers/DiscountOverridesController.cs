@@ -98,6 +98,9 @@ public class DiscountOverridesController : ControllerBase
 
         _ = _notifications.NotifyDiscountOverrideAsync(new Store.Models.DTOs.Notifications.DiscountOverrideNotificationDto
         {
+            DiscountOverrideRequestId = dto.DiscountOverrideRequestId,
+            ItemId = dto.ItemId,
+            PosSessionId = dto.PosSessionId,
             CashierUserId = dto.RequestedByUserId,
             SupervisorUserId = userId,
             Status = dto.Status,

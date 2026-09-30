@@ -52,4 +52,22 @@ public class StoreNotificationHub : Hub<IStoreNotificationClient>
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"branch_{branchId}");
         _logger.LogInformation("Client {ConnectionId} left branch group branch_{BranchId}", Context.ConnectionId, branchId);
     }
+
+    public async Task JoinPosSession(string posSessionId)
+    {
+        if (!string.IsNullOrWhiteSpace(posSessionId))
+        {
+            await Groups.AddToGroupAsync(Context.ConnectionId, $"pos_session_{posSessionId.Trim()}");
+            _logger.LogInformation("Client {ConnectionId} joined POS session group pos_session_{PosSessionId}", Context.ConnectionId, posSessionId);
+        }
+    }
+
+    public async Task LeavePosSession(string posSessionId)
+    {
+        if (!string.IsNullOrWhiteSpace(posSessionId))
+        {
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"pos_session_{posSessionId.Trim()}");
+            _logger.LogInformation("Client {ConnectionId} left POS session group pos_session_{PosSessionId}", Context.ConnectionId, posSessionId);
+        }
+    }
 }

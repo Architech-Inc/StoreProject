@@ -28,9 +28,12 @@ public class StoreNotificationDto
 public class DiscountOverrideNotificationDto
 {
     public Guid OverrideId { get; set; }
+    public int DiscountOverrideRequestId { get; set; }
+    public Guid? ItemId { get; set; }
+    public string? PosSessionId { get; set; }
     public Guid CashierUserId { get; set; }
     public Guid? SupervisorUserId { get; set; }
-    public string Status { get; set; } = "Pending"; // Pending, Approved, Rejected
+    public string Status { get; set; } = "Pending"; // Pending, Approved, Rejected, Cancelled, Expired, Applied
     public decimal RequestedDiscount { get; set; }
     public string? Reason { get; set; }
     public string? SupervisorName { get; set; }

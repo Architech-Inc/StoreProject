@@ -1878,4 +1878,32 @@ Startup crashed in `Store.API` with `InvalidOperationException: Unable to resolv
 - Test suite passes: `dotnet test Store.API.Tests` -> 265 passed, 0 failed.
 - Finding status: `SEC-21` -> `[x]`, `GAP-26` -> `[x]`, `GAP-29` -> `[x]`.
 
+---
+
+## 2026-09-30 — Wave 25 (SignalR Live Push for POS Discount Overrides — GAP-28 — completed)
+
+### 25.A — SignalR Notification Payload & Hub Session Groups
+- **Issue**: When a store manager reviewed (approved or rejected) a discount override request, the event did not propagate in real-time to the requesting cashier's POS terminal cart. The DTO lacked identifiers linking the review to the cart line item and POS session, requiring a page reload or manual inspection.
+- **Changes**:
+  - `Store.Models/DTOs/Notifications/StoreNotificationDtos.cs`: Added `DiscountOverrideRequestId` (int), `ItemId` (Guid?), and `PosSessionId` (string?) to `DiscountOverrideNotificationDto`.
+  - `Store.API/Controllers/DiscountOverridesController.cs`: Populated `DiscountOverrideRequestId`, `ItemId`, and `PosSessionId` from the reviewed `DiscountOverrideDto` during `NotifyDiscountOverrideAsync` dispatch.
+  - `Store.API/Hubs/StoreNotificationHub.cs`: Added `JoinPosSession(string posSessionId)` and `LeavePosSession(string posSessionId)` methods allowing POS terminal clients to subscribe directly to real-time events for their specific active terminal session.
+  - `Store.API/Services/RealTimeNotificationService.cs`: In `NotifyDiscountOverrideAsync`, added targeted push to `pos_session_{PosSessionId}` group in addition to `user_{CashierUserId}` and manager role groups.
+
+### 25.B — POS Terminal Client SignalR Integration
+- **Issue**: POS terminal page used `_Layout.cshtml` which did not load the SignalR library or configure `window.appConfig`, leaving the POS disconnected from real-time events.
+- **Changes**:
+  - `Store.UI/Pages/Shared/_Layout.cshtml`: Injected `IConfiguration`, established `window.appConfig` (`apiBaseUrl` and `accessToken`), and loaded Microsoft SignalR client library (`signalr.min.js`).
+  - `Store.UI/Pages/Pos.cshtml`: Added `initPosSignalR()` connecting to `/hubs/notifications` with auto-reconnect; joins the terminal's `clientSessionId` group upon connect and re-connect; listens for `ReceiveDiscountOverrideUpdate(dto)`.
+  - `Store.UI/Pages/Pos.cshtml`: Added `handleDiscountOverrideUpdate(dto)` dynamically mapping the update to the matching cart line item, transitioning the badge from `⏳ Pending` to `✓ Approved` (or `✗ Rejected`) live, triggering ToastBus notification and status message.
+
+### 25.C — Unit Tests & Verification
+- `Store.API.Tests/RealTimeNotificationServiceTests.cs` (3 tests):
+  - `NotifyDiscountOverrideAsync_SendsToCashierAndPosSession_WhenPosSessionIdProvided`: Verifies dispatch to cashier group and POS session group with payload, and manager notification.
+  - `NotifyDiscountOverrideAsync_OmitsPosSessionGroup_WhenPosSessionIdMissing`: Verifies safety and no-op for session group when posSessionId is absent.
+  - `NotifyDiscountOverrideAsync_HandlesHubExceptionGracefully`: Verifies fault-tolerance without unhandled exceptions.
+- Solution build: `dotnet build StoreProject.sln --configuration Release` (0 warnings, 0 errors in code).
+- Test suite: `dotnet test Store.API.Tests` -> 268 passed, 0 failed.
+- Finding status: `GAP-28` -> `[x]`.
+
 
