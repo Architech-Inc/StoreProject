@@ -108,12 +108,13 @@
     <script src="~/js/cropper.min.js" asp-append-version="true"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js" integrity="sha512-7rhBJh1om/W5Ztx7WiYOR9h2wlSaTmPyQMoHFtbT/FVNIA12y6S6I8HY9mrBS1uJ3dSU/R3qaSAXsGYuRjMDxg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/toast-bus.js" asp-append-version="true"></script>
     <script src="~/js/pwa-install.js" asp-append-version="true"></script>
     @if (TempData["StatusMessage"] is string successMsg)
     {
         <script>
             document.addEventListener('DOMContentLoaded', () => {
-                window.showToast('success', '@Html.Raw(successMsg.Replace("'", "\\'").Replace("\n", "\\n").Replace("\r", ""))');
+                (window.ToastBus ? window.ToastBus.success('app', '@Html.Raw(successMsg.Replace("'", "\\'").Replace("\n", "\\n").Replace("\r", ""))') : window.showToast('success', '@Html.Raw(successMsg.Replace("'", "\\'").Replace("\n", "\\n").Replace("\r", ""))'));
             });
         </script>
     }
@@ -121,7 +122,7 @@
     {
         <script>
             document.addEventListener('DOMContentLoaded', () => {
-                window.showToast('error', '@Html.Raw(errorMsg.Replace("'", "\\'").Replace("\n", "\\n").Replace("\r", ""))');
+                (window.ToastBus ? window.ToastBus.error('app', '@Html.Raw(errorMsg.Replace("'", "\\'").Replace("\n", "\\n").Replace("\r", ""))') : window.showToast('error', '@Html.Raw(errorMsg.Replace("'", "\\'").Replace("\n", "\\n").Replace("\r", ""))'));
             });
         </script>
     }

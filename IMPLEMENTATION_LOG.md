@@ -1956,5 +1956,45 @@ Startup crashed in `Store.API` with `InvalidOperationException: Unable to resolv
 - Test suite passes: `dotnet test Store.API.Tests` -> 282 passed, 0 failed.
 - Audit tracker updated: `GAP-05` -> `[x]`, `GAP-07` -> `[x]`, `GAP-17` -> `[x]`.
 
+---
+
+## 2026-09-30 — Wave 28 (ToastBus Unification & UX Polish: GAP-20 — completed)
+
+### 28.A — Script Loading & Layout Unification
+- **Issue**: `toast-bus.js` was introduced in Wave 4 but was never referenced in `_AppLayout.cshtml` or `_Layout.cshtml`, meaning `window.ToastBus` was never initialized on standard page loads, forcing pages to rely on uncoordinated `window.showToast` implementations.
+- **Changes**:
+  - `Store.UI/Pages/Shared/_AppLayout.cshtml`: Included `<script src="~/js/toast-bus.js" asp-append-version="true"></script>` right after `site.js`.
+  - `Store.UI/Pages/Shared/_Layout.cshtml`: Included `<script src="~/js/toast-bus.js" asp-append-version="true"></script>` right after `site.js`.
+  - `Store.UI/Pages/Shared/_Layout.cshtml`: Routed server-rendered `TempData["StatusMessage"]` and `TempData["ErrorMessage"]` to `ToastBus.success('app', ...)` and `ToastBus.error('app', ...)` with fallback to `window.showToast`.
+
+### 28.B — ToastBus Core Robustness & Argument Normalization
+- **Issue**: Callers across different Razor Pages and JS files passed arguments in varying order (`(channel, level, message)` vs `(level, message)` vs `(message, level)`). Legacy `window.showToast` in `site.js` broke when callers inverted parameters.
+- **Changes**:
+  - `Store.UI/wwwroot/js/toast-bus.js`:
+    - Updated `ensureContainer()` to guarantee `#toast-container` is present, appending a clean accessible container with `role="status"` and `aria-live="polite"` if missing.
+    - Updated `publish(...)` to accept flexible calling signatures (`publish(level, message, opts)` or `publish(channel, level, message, opts)`), defaulting channel to `'app'`.
+    - Added channel-specific CSS classes (`toast-channel-${channel}`) on created toasts for visual differentiation.
+    - Added helper methods `ToastBus.success(channel, msg, opts)`, `ToastBus.info(...)`, `ToastBus.warning(...)`, `ToastBus.error(...)` supporting both optional and explicit channel arguments.
+  - `Store.UI/wwwroot/js/site.js`:
+    - Updated `window.showToast` to detect argument inversions (e.g. `showToast('Item saved', 'success')` vs `showToast('success', 'Item saved')`) and auto-normalize them.
+    - Auto-creates `#toast-container` if absent in DOM.
+
+### 28.C — Migration of All UI Surfaces & Hubs to ToastBus
+- **Changes**:
+  - `Store.UI/wwwroot/js/webauthn.js`: Migrated biometric registration and authentication alerts to `ToastBus.success`/`error` on the `'auth'` channel.
+  - `Store.UI/wwwroot/js/notifications-hub.js`: Migrated in-app real-time notification toasts to `ToastBus.publish('app', toastLevel, item.message)`.
+  - `Store.UI/wwwroot/js/site.js`: Migrated Smart Scanner event notifications (duplicate scan, resume, in-page scan, barcode copied, pause intervals, disabled, resumed) to `ToastBus` on the `'inventory'` and `'app'` channels.
+  - `Store.UI/Pages/InventoryOps.cshtml`: Migrated purchase order receipt toasts to `ToastBus.info`/`warning` on the `'inventory'` channel.
+  - `Store.UI/Pages/RoleMatrix.cshtml`: Migrated permission matrix toggle success/error toasts to `ToastBus.success`/`error` on the `'admin'` channel.
+  - `Store.UI/Pages/Pos.cshtml`: Migrated checkout status feedback (`setMessage`) to `ToastBus.publish('pos', isError ? 'error' : 'success', message)`.
+  - `Store.UI/Pages/Payments.cshtml`: Migrated payment polling retry notices, verification results, and errors to `ToastBus` on the `'finance'` channel.
+  - `Store.UI/Pages/Invoices.cshtml`: Re-routed internal `showToast` to `ToastBus.publish('finance', type, msg)`.
+
+### Verification
+- Solution build clean: `dotnet build StoreProject.sln --configuration Release` (0 warnings in code, 0 errors).
+- Test suite passes: `dotnet test Store.API.Tests` -> 282 passed, 0 failed.
+- Audit tracker updated: `GAP-20` -> `[x]`.
+
+
 
 

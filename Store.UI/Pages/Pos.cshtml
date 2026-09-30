@@ -606,7 +606,11 @@
     function setMessage(message, isError = false) {
         checkoutMessage.textContent = message;
         checkoutMessage.className = isError ? 'checkout-message error' : 'checkout-message ok';
-        if (window.showToast) window.showToast(isError ? 'error' : 'success', message);
+        if (window.ToastBus) {
+            window.ToastBus.publish('pos', isError ? 'error' : 'success', message);
+        } else if (window.showToast) {
+            window.showToast(isError ? 'error' : 'success', message);
+        }
     }
 
     function showReceipt(checkoutResult, saleLines, isOffline = false) {

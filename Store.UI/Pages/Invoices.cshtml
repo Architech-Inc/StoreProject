@@ -572,11 +572,18 @@
 
         // ── Toast System ─────────────────────────────────────────
         function showToast(msg, type = 'success') {
+            if (window.ToastBus) {
+                window.ToastBus.publish('finance', type, msg);
+            } else if (window.showToast) {
+                window.showToast(type, msg);
+            }
             const t = document.getElementById('invToast');
             const tm = document.getElementById('invToastMsg');
-            tm.textContent = msg;
-            t.className = `inv-toast show ${type}`;
-            setTimeout(() => { t.className = 'inv-toast'; }, 3500);
+            if (t && tm) {
+                tm.textContent = msg;
+                t.className = `inv-toast show ${type}`;
+                setTimeout(() => { t.className = 'inv-toast'; }, 3500);
+            }
         }
 
         function copyToClipboard(text, successMsg = 'Copied!') {

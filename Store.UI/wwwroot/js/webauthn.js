@@ -78,7 +78,7 @@ async function registerBiometrics() {
         });
 
         if (regRes.ok) {
-            window.showToast?.('success', 'Biometrics successfully registered!');
+            (window.ToastBus ? window.ToastBus.success('auth', 'Biometrics successfully registered!') : window.showToast?.('success', 'Biometrics successfully registered!'));
         } else {
             const errData = await regRes.json().catch(() => ({}));
             console.error('Registration server response error:', errData);
@@ -86,11 +86,11 @@ async function registerBiometrics() {
             if (errData.errors && Array.isArray(errData.errors)) {
                 errMsg += '\nDetails: ' + errData.errors.join(', ');
             }
-            window.showToast?.('error', 'Failed to register biometrics: ' + errMsg);
+            (window.ToastBus ? window.ToastBus.error('auth', 'Failed to register biometrics: ' + errMsg) : window.showToast?.('error', 'Failed to register biometrics: ' + errMsg));
         }
     } catch (e) {
         console.error('WebAuthn Error:', e);
-        window.showToast?.('error', 'Biometric registration failed or was cancelled: ' + e.message);
+        (window.ToastBus ? window.ToastBus.error('auth', 'Biometric registration failed or was cancelled: ' + e.message) : window.showToast?.('error', 'Biometric registration failed or was cancelled: ' + e.message));
     }
 }
 
@@ -98,7 +98,7 @@ async function loginBiometrics() {
     try {
         const usernameInput = document.getElementById('inputUserName');
         if (!usernameInput || !usernameInput.value.trim()) {
-            window.showToast?.('error', 'Please enter your username first.');
+            (window.ToastBus ? window.ToastBus.error('auth', 'Please enter your username first.') : window.showToast?.('error', 'Please enter your username first.'));
             return;
         }
 
@@ -111,7 +111,7 @@ async function loginBiometrics() {
         // 1. Get AssertionOptions from Server
         const response = await fetch('/api/webauthn/assertionOptions', fetchOptions);
         if (!response.ok) {
-            window.showToast?.('error', 'This user does not have biometrics enabled.');
+            (window.ToastBus ? window.ToastBus.error('auth', 'This user does not have biometrics enabled.') : window.showToast?.('error', 'This user does not have biometrics enabled.'));
             return;
         }
         const assertionOptions = await response.json();
@@ -161,10 +161,10 @@ async function loginBiometrics() {
             if (errData.errors && Array.isArray(errData.errors)) {
                 errMsg += '\nDetails: ' + errData.errors.join(', ');
             }
-            window.showToast?.('error', 'Failed to authenticate with biometrics: ' + errMsg);
+            (window.ToastBus ? window.ToastBus.error('auth', 'Failed to authenticate with biometrics: ' + errMsg) : window.showToast?.('error', 'Failed to authenticate with biometrics: ' + errMsg));
         }
     } catch (e) {
         console.error('WebAuthn Error:', e);
-        window.showToast?.('error', 'Biometric login failed or was cancelled: ' + e.message);
+        (window.ToastBus ? window.ToastBus.error('auth', 'Biometric login failed or was cancelled: ' + e.message) : window.showToast?.('error', 'Biometric login failed or was cancelled: ' + e.message));
     }
 }

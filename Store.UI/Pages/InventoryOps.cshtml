@@ -619,10 +619,12 @@
                         opts += `<option value="${po.purchaseOrderId}">${po.poNumber} — ${po.supplierName} (${po.items.length} lines)</option>`;
                     });
                     selectEl.innerHTML = opts;
-                    if (window.showToast) window.showToast(`Loaded ${data.purchaseOrders.length} approved purchase order(s).`, 'info');
+                    if (window.ToastBus) window.ToastBus.info('inventory', `Loaded ${data.purchaseOrders.length} approved purchase order(s).`);
+                    else if (window.showToast) window.showToast('info', `Loaded ${data.purchaseOrders.length} approved purchase order(s).`);
                 }
             } catch (err) {
-                if (window.showToast) window.showToast(`Unable to load purchase orders: ${err.message}`, 'warning');
+                if (window.ToastBus) window.ToastBus.warning('inventory', `Unable to load purchase orders: ${err.message}`);
+                else if (window.showToast) window.showToast('warning', `Unable to load purchase orders: ${err.message}`);
             } finally {
                 selectEl.disabled = false;
             }

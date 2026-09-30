@@ -200,13 +200,30 @@
     };
 
     window.showToast = (type, message, options = {}) => {
-        const container = document.getElementById('toast-container');
-        if (!container) return;
-
+        // Guard against inverted (message, type) calling convention
         const allowedTypes = ['success', 'error', 'warning', 'info'];
+        if (allowedTypes.includes(message) && !allowedTypes.includes(type)) {
+            const temp = type;
+            type = message;
+            message = temp;
+        }
+
+        let container = options.container 
+            || (options.channel ? document.getElementById(`toast-container-${options.channel}`) : null)
+            || document.getElementById('toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toast-container';
+            container.className = 'toast-container';
+            container.setAttribute('aria-live', 'polite');
+            container.setAttribute('aria-atomic', 'false');
+            document.body.appendChild(container);
+        }
+
         const safeType = allowedTypes.includes(type) ? type : 'info';
+        const channelClass = options.channel ? ` toast-channel-${options.channel}` : '';
         const toast = document.createElement('div');
-        toast.className = `toast toast-${safeType}`;
+        toast.className = `toast toast-${safeType}${channelClass}`;
         toast.setAttribute('role', 'status');
         toast.setAttribute('aria-live', 'polite');
 
@@ -979,8 +996,10 @@
             const now = Date.now();
             if (code === this.lastScannedCode && (now - this.lastScannedTime) < cooldownMs) {
                 console.warn(`[BarcodeGuard] Suppressed duplicate bounce for "${code}" (${now - this.lastScannedTime}ms since last read).`);
-                if (window.showToast) {
-                    window.showToast('error', `Duplicate scan ignored: ${code}`);
+                if (window.ToastBus) {
+                    window.ToastBus.warning('inventory', `Duplicate scan ignored: ${code}`);
+                } else if (window.showToast) {
+                    window.showToast('warning', `Duplicate scan ignored: ${code}`);
                 }
                 return false;
             }
@@ -1147,7 +1166,8 @@
                 this.state.status = 'active';
                 this.state.pauseUntil = null;
                 this.savePreferences();
-                if (window.showToast) window.showToast('info', 'Smart Scanner has automatically resumed.');
+                if (window.ToastBus) window.ToastBus.info('inventory', 'Smart Scanner has automatically resumed.');
+                else if (window.showToast) window.showToast('info', 'Smart Scanner has automatically resumed.');
             }
         },
 
@@ -1265,7 +1285,8 @@
 
             // 2. If in-page-only mode, do not open global modal
             if (this.state.status === 'in_page_only') {
-                if (window.showToast) window.showToast('info', `Scanned: ${code} (In-page mode only)`);
+                if (window.ToastBus) window.ToastBus.info('inventory', `Scanned: ${code} (In-page mode only)`);
+                else if (window.showToast) window.showToast('info', `Scanned: ${code} (In-page mode only)`);
                 return;
             }
 
@@ -1400,7 +1421,8 @@
                     const text = document.getElementById('scanModalCodeText')?.textContent;
                     if (text && text !== '---') {
                         navigator.clipboard.writeText(text);
-                        if (window.showToast) window.showToast('info', 'Code copied to clipboard');
+                        if (window.ToastBus) window.ToastBus.info('app', 'Code copied to clipboard');
+                        else if (window.showToast) window.showToast('info', 'Code copied to clipboard');
                     }
                 });
             }
@@ -1461,22 +1483,28 @@
                     const action = btn.dataset.action;
                     if (action === 'pause-15m') {
                         this.setStatus('paused', 15 * 60 * 1000);
-                        if (window.showToast) window.showToast('warning', 'Scanner paused for 15 minutes');
+                        if (window.ToastBus) window.ToastBus.warning('inventory', 'Scanner paused for 15 minutes');
+                        else if (window.showToast) window.showToast('warning', 'Scanner paused for 15 minutes');
                     } else if (action === 'pause-1h') {
                         this.setStatus('paused', 60 * 60 * 1000);
-                        if (window.showToast) window.showToast('warning', 'Scanner paused for 1 hour');
+                        if (window.ToastBus) window.ToastBus.warning('inventory', 'Scanner paused for 1 hour');
+                        else if (window.showToast) window.showToast('warning', 'Scanner paused for 1 hour');
                     } else if (action === 'toggle-session') {
                         this.setStatus('session_disabled');
-                        if (window.showToast) window.showToast('warning', 'Scanner disabled for this browser session');
+                        if (window.ToastBus) window.ToastBus.warning('inventory', 'Scanner disabled for this browser session');
+                        else if (window.showToast) window.showToast('warning', 'Scanner disabled for this browser session');
                     } else if (action === 'toggle-inpage') {
                         this.setStatus('in_page_only');
-                        if (window.showToast) window.showToast('info', 'Scanner set to In-Page Inputs Only (No Popups)');
+                        if (window.ToastBus) window.ToastBus.info('inventory', 'Scanner set to In-Page Inputs Only (No Popups)');
+                        else if (window.showToast) window.showToast('info', 'Scanner set to In-Page Inputs Only (No Popups)');
                     } else if (action === 'toggle-permanent') {
                         this.setStatus('permanently_disabled');
-                        if (window.showToast) window.showToast('error', 'Scanner disabled permanently');
+                        if (window.ToastBus) window.ToastBus.error('inventory', 'Scanner disabled permanently');
+                        else if (window.showToast) window.showToast('error', 'Scanner disabled permanently');
                     } else if (action === 'resume') {
                         this.setStatus('active');
-                        if (window.showToast) window.showToast('success', 'Scanner resumed and listening!');
+                        if (window.ToastBus) window.ToastBus.success('inventory', 'Scanner resumed and listening!');
+                        else if (window.showToast) window.showToast('success', 'Scanner resumed and listening!');
                     }
 
                     if (popover) popover.hidden = true;

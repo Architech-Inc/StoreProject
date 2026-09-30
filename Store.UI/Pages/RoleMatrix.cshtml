@@ -235,14 +235,18 @@
 
             // Confirmed server state
             applyBtnState(btn, data.isAllowed);
-            if (window.showToast) {
-                window.showToast(data.message || `${roleName}: ${permKey} updated.`, 'success');
+            if (window.ToastBus) {
+                window.ToastBus.success('admin', data.message || `${roleName}: ${permKey} updated.`);
+            } else if (window.showToast) {
+                window.showToast('success', data.message || `${roleName}: ${permKey} updated.`);
             }
         } catch (err) {
             // Rollback optimistic state
             applyBtnState(btn, currentlyAllowed);
-            if (window.showToast) {
-                window.showToast(`Failed to update ${permKey}: ${err.message}`, 'error');
+            if (window.ToastBus) {
+                window.ToastBus.error('admin', `Failed to update ${permKey}: ${err.message}`);
+            } else if (window.showToast) {
+                window.showToast('error', `Failed to update ${permKey}: ${err.message}`);
             } else {
                 alert(`Error: ${err.message}`);
             }

@@ -331,8 +331,11 @@
                     maxAttempts: 3,
                     initialDelayMs: 1500,
                     onRetry: (attempt, delayMs) => {
-                        if (window.showToast) {
-                            window.showToast(`Gateway pending... retrying status verification in ${(delayMs/1000).toFixed(1)}s (Attempt ${attempt}/3)`, 'info');
+                        const msg = `Gateway pending... retrying status verification in ${(delayMs/1000).toFixed(1)}s (Attempt ${attempt}/3)`;
+                        if (window.ToastBus) {
+                            window.ToastBus.info('finance', msg);
+                        } else if (window.showToast) {
+                            window.showToast('info', msg);
                         }
                     }
                 });
@@ -363,13 +366,18 @@
                     }
                 }
 
-                if (window.showToast) {
-                    window.showToast(resultData.message, resultData.isSuccess ? 'success' : (resultData.isPending ? 'info' : 'warning'));
+                const toastLevel = resultData.isSuccess ? 'success' : (resultData.isPending ? 'info' : 'warning');
+                if (window.ToastBus) {
+                    window.ToastBus.publish('finance', toastLevel, resultData.message);
+                } else if (window.showToast) {
+                    window.showToast(toastLevel, resultData.message);
                 }
             }
         } catch (err) {
-            if (window.showToast) {
-                window.showToast(`Polling error: ${err.message}`, 'error');
+            if (window.ToastBus) {
+                window.ToastBus.error('finance', `Polling error: ${err.message}`);
+            } else if (window.showToast) {
+                window.showToast('error', `Polling error: ${err.message}`);
             } else {
                 alert(`Error: ${err.message}`);
             }

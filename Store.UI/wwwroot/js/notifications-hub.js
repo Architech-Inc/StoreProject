@@ -189,9 +189,12 @@
         renderNotifications();
         playChime();
 
-        // Trigger in-app toast if toast helper exists
-        if (window.showToast) {
-            window.showToast(item.message, item.severity === 'Danger' ? 'error' : (item.severity === 'Success' ? 'success' : 'info'));
+        // Trigger in-app toast via ToastBus
+        const toastLevel = item.severity === 'Danger' ? 'error' : (item.severity === 'Success' ? 'success' : 'info');
+        if (window.ToastBus) {
+            window.ToastBus.publish('app', toastLevel, item.message);
+        } else if (window.showToast) {
+            window.showToast(toastLevel, item.message);
         }
     }
 
