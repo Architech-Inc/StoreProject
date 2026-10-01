@@ -49,6 +49,7 @@ Prefixes used across audits — `SEC-*` (security) · `GAP-*` (functional) · `U
 | 25 | Real-time POS discount override push | `GAP-28` (live SignalR discount-override status push to POS terminal session; live cart line badge state transitions) |
 | 34 | Lookup endpoints consolidation & SRP | `GAP-14` (decoupled monolithic lookup controllers/services/interfaces, duplicate checks, FK guards, 36 tests) |
 | 35 | OAuth state server-side binding & CSRF verification | `SEC-10`, `MT-10` (4-part OAuth state, server-side nonce registry, single-use replay protection, session cookie anti-CSRF binding, 9 security tests) |
+| 36 | Hardcoded VPS IP elimination & compose config hardening | `OPS-10` (parameterized `STORE_DOMAIN`, `API_DOMAIN`, `HTTP_PORT`, `HTTPS_PORT`, strict `${VAR:?required}` compose guards, expanded `.env.example`) |
 
 ---
 
@@ -168,7 +169,7 @@ Prefixes used across audits — `SEC-*` (security) · `GAP-*` (functional) · `U
 | `OPS-07` | No log shipping (Loki/Seq/ELK) | all services | `[ ]` | Add Loki + Promtail; or Seq if simpler. |
 | `OPS-08` | Compose `${VAR:?...}` strict (no `:-secret` defaults) | all `docker-compose*.yml` | `[x]` | Wave 1 — all env vars use `:-` form stripped; non-root user + cap_drop ALL + read_only + tmpfs. |
 | `OPS-09` | `provision-docker-vps.ps1` assumes root without sudo failure | `scripts/provision-docker-vps.ps1` | `[ ]` | Detect non-root, fail with a clear message; offer `sudo` wrapper. |
-| `OPS-10` | Hardcoded VPS IP `157.173.112.19` | compose labels, CORS | `[ ]` | Move to env vars / DNS variables. |
+| `OPS-10` | Hardcoded VPS IP `157.173.112.19` | compose labels, CORS | `[x]` | Wave 36 — Parameterized `STORE_DOMAIN` and `API_DOMAIN` across compose labels, CORS, external API URLs, and Traefik router rules with strict `${VAR:?required}` fail-fast validation. Removed hardcoded IP from `docker-compose.prod.yml`, `tenants.json`, and architecture documentation. Expanded `.env.example` template with complete domain, port, and security variables. |
 | `OPS-11` | Hardcoded Contabo VPS IP and SSH port in CI | `.github/workflows/ci-cd.yml` | `[x]` | Wave 1 — replaced with `VPS_HOST` / `VPS_PORT` secrets; explicit env-var contract enforced before deploy. |
 | `OPS-12` | Per-tenant backup job missing | `docker/backup/` | `[ ]` | Single backup container today; per-tenant backup is a Wave 12+ item. |
 | `OPS-13` | gitleaks scan in CI | `.github/workflows/ci-cd.yml` | `[x]` | Wave 1 — gitleaks scan stage added; pre-commit blocked. |

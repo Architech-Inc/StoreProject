@@ -416,8 +416,8 @@ if the session already has a `TenantId`, redirect to `/dashboard`.
     "ApiKey": ""
   },
   "PortalDomain": {
-    "RootDomain": "store.157.173.112.19.nip.io",
-    "PortalHost": "portal.store.157.173.112.19.nip.io"
+    "RootDomain": "store.yourcompany.com",
+    "PortalHost": "portal.store.yourcompany.com"
   },
   "OAuth": {
     "Microsoft": {

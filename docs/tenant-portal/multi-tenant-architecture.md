@@ -263,8 +263,8 @@ private static readonly HashSet<string> ReservedSlugs = new(StringComparer.Ordin
 
 | Component | Pattern | Example |
 |:---|:---|:---|
-| Tenant UI | `http://{slug}.{rootDomain}:18080` | `http://acme.store.157.173.112.19.nip.io:18080` |
-| Tenant API | `http://api.{slug}.{rootDomain}:18080` | `http://api.acme.store.157.173.112.19.nip.io:18080` |
+| Tenant UI | `http://{slug}.{rootDomain}:18080` | `http://acme.store.example.com:18080` |
+| Tenant API | `http://api.{slug}.{rootDomain}:18080` | `http://api.acme.store.example.com:18080` |
 | Control Plane API | `http://{host}:9999` | Internal management endpoint |
 
 ### Traefik Label Configuration
@@ -488,8 +488,8 @@ Every lifecycle event writes a `TenantProvisioningLog` entry:
     "slug": "acme-foods",
     "status": "Active",
     "planTier": "Professional",
-    "uiUrl": "http://acme-foods.store.157.173.112.19.nip.io:18080",
-    "apiUrl": "http://api.acme-foods.store.157.173.112.19.nip.io:18080",
+    "uiUrl": "http://acme-foods.store.example.com:18080",
+    "apiUrl": "http://api.acme-foods.store.example.com:18080",
     "isHealthy": true,
     "dateCreated": "2026-09-01T09:00:00Z"
   }
@@ -505,7 +505,7 @@ Every lifecycle event writes a `TenantProvisioningLog` entry:
 ```json
 {
   "ControlPlane": {
-    "RootDomain":       "store.157.173.112.19.nip.io",
+    "RootDomain":       "store.example.com",
     "AutoDeployDocker": false,
     "StoreApiImage":    "store-api:latest",
     "StoreUiImage":     "store-ui:latest"
@@ -517,7 +517,7 @@ Every lifecycle event writes a `TenantProvisioningLog` entry:
 
 | Key | Default | Description |
 |:---|:---|:---|
-| `ControlPlane:RootDomain` | `store.157.173.112.19.nip.io` | Wildcard root domain — change to your actual domain in production |
+| `ControlPlane:RootDomain` | `store.example.com` | Wildcard root domain — change to your actual domain in production |
 | `ControlPlane:AutoDeployDocker` | `false` | `false` = generate compose only; `true` = auto-run `docker compose up -d` |
 | `ControlPlane:StoreApiImage` | `store-api:latest` | API container image — pin to semantic version tags in production |
 | `ControlPlane:StoreUiImage` | `store-ui:latest` | UI container image — pin to semantic version tags in production |

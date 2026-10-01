@@ -2300,6 +2300,45 @@ Startup crashed in `Store.API` with `InvalidOperationException: Unable to resolv
 - Test suite passes: `dotnet test Store.API.Tests -c Release` -> **362 passed, 0 failed** (+9 new security unit tests).
 - Audit tracker updated: `SEC-10` -> `[x]`, `MT-10` -> `[x]`.
 
+---
+
+## 2026-10-01 — Wave 36 (Hardcoded VPS IP Elimination & Compose Config Hardening: OPS-10 — completed)
+
+### 36.A — Parameterization of Store & API Domains
+- **Audit Finding**: `OPS-10` / `full_codebase_audit.md § 328` noted that the production compose file `docker-compose.prod.yml` hardcoded a VPS IP fallback (`157.173.112.19.nip.io`) across CORS origins, Traefik routing rules, and external API URLs. IP-based routing is brittle — migrating to a new VPS or domain breaks all routing and CORS headers.
+- **Compose Hardening (`docker-compose.prod.yml`)**:
+  - Replaced hardcoded IP fallbacks with strict required environment variables:
+    - `STORE_DOMAIN`: `${STORE_DOMAIN:?STORE_DOMAIN is required}` applied to `Cors__AllowedOrigins__0`, `Cors__AllowedOrigins__1`, Traefik UI router rule (`Host(...)`), and `/files` routing rule.
+    - `API_DOMAIN`: `${API_DOMAIN:?API_DOMAIN is required}` applied to Traefik API router rule (`Host(...)`) and `ApiSettings__ExternalBaseUrl`.
+    - `HTTP_PORT` / `HTTPS_PORT`: Configured with sensible defaults (`${HTTP_PORT:-18080}`, `${HTTPS_PORT:-18443}`) for CORS and UI external API URLs.
+  - Hardened database credentials and application secrets to enforce strict required syntax `${VAR:?VAR is required}` per AGENTS.md § 4, eliminating insecure fallback defaults (`root`, `rootpassword`, `admin`, `adminpassword`):
+    - `MYSQL_ROOT_PASSWORD`, `MYSQL_USER`, `MYSQL_PASSWORD`
+    - `MONGO_INITDB_ROOT_USERNAME`, `MONGO_INITDB_ROOT_PASSWORD`
+    - `STORE_CONNECTION_STRING`, `STORE_MONGO_CONNECTION_STRING`
+    - `STORE_JWT_SECRET`, `STORE_OTP_PEPPER`, `STORE_MOMO_CALLBACK_KEY`
+
+### 36.B — Data & Documentation Cleansing
+- **ControlPlane App_Data (`Store.ControlPlane/App_Data/tenants.json`)**:
+  - Cleaned up demo tenant `acmefoods`: updated `UiUrl` and `ApiUrl` from `157.173.112.19.nip.io` to `acmefoods.store.127.0.0.1.nip.io:18080` and `api.acmefoods.store.127.0.0.1.nip.io:18080`, matching the rest of the local seed tenants.
+- **Tenant Portal Architecture & Specifications**:
+  - `docs/tenant-portal/01-technical-spec.md`: Replaced hardcoded IP references with `store.yourcompany.com` and `portal.store.yourcompany.com`.
+  - `docs/tenant-portal/multi-tenant-architecture.md`: Replaced hardcoded IP examples in URL scheme table and JSON responses with canonical `store.example.com`.
+
+### 36.C — Comprehensive Environment Variable Template (`.env.example`)
+- Expanded root `.env.example` into a well-documented 6-section template:
+  1. Edge Proxy (Traefik) configuration (`TRAEFIK_API_ENABLED`, `TRAEFIK_DASHBOARD_PORT`).
+  2. Production Domain & Networking Settings (`STORE_DOMAIN`, `API_DOMAIN`, `ROOT_DOMAIN`, `HTTP_PORT`, `HTTPS_PORT`).
+  3. Platform & ControlPlane Orchestration Settings (`IMAGE_PREFIX`, `IMAGE_TAG`, database and key overrides).
+  4. Production Tenant Stack Database Credentials & Connection Strings.
+  5. Application Security & Cryptographic Secrets (`STORE_JWT_SECRET`, `STORE_OTP_PEPPER`, `STORE_MOMO_CALLBACK_KEY`).
+  6. Database Backup & Cloud Storage Configuration (`BACKUP_RETENTION_DAYS`, `MYSQL_BACKUP_CRON`, `MONGO_BACKUP_CRON`, S3 settings).
+
+### Verification
+- Compose syntax validated: `docker compose -f docker-compose.prod.yml config` passes cleanly with environment variables provided, and strictly fails with clear errors when required variables are missing.
+- Solution build clean: `dotnet build StoreProject.sln --configuration Release` (**0 warnings, 0 errors**).
+- Test suite passes: `dotnet test Store.API.Tests -c Release` -> **362 passed, 0 failed**.
+- Audit tracker updated: `OPS-10` -> `[x]`.
+
 
 
 

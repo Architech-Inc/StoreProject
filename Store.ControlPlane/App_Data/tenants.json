@@ -9,8 +9,8 @@
     "Status": 2,
     "PlanTier": 2,
     "CustomDomain": "acmefoods.com",
-    "UiUrl": "https://acmefoods.store.157.173.112.19.nip.io:18443",
-    "ApiUrl": "https://api.acmefoods.store.157.173.112.19.nip.io:18443",
+    "UiUrl": "http://acmefoods.store.127.0.0.1.nip.io:18080",
+    "ApiUrl": "http://api.acmefoods.store.127.0.0.1.nip.io:18080",
     "Secrets": {
       "MySqlRootPassword": "kezweX8\u002BAVjmRPXYuVblNGUh7pSPNK6A",
       "MySqlUserPassword": "pCvO68bAoXcOIHe/B4CpJxcAxzU7L1zf",
