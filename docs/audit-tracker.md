@@ -50,6 +50,7 @@ Prefixes used across audits — `SEC-*` (security) · `GAP-*` (functional) · `U
 | 34 | Lookup endpoints consolidation & SRP | `GAP-14` (decoupled monolithic lookup controllers/services/interfaces, duplicate checks, FK guards, 36 tests) |
 | 35 | OAuth state server-side binding & CSRF verification | `SEC-10`, `MT-10` (4-part OAuth state, server-side nonce registry, single-use replay protection, session cookie anti-CSRF binding, 9 security tests) |
 | 36 | Hardcoded VPS IP elimination & compose config hardening | `OPS-10` (parameterized `STORE_DOMAIN`, `API_DOMAIN`, `HTTP_PORT`, `HTTPS_PORT`, strict `${VAR:?required}` compose guards, expanded `.env.example`) |
+| 37 | File upload & path traversal hardening | `SEC-12` (`OrdinalIgnoreCase` traversal guards, `~` and colon stream rejection, symlink/reparse point checks, magic byte MIME inspection, 21 security tests) |
 
 ---
 
@@ -75,7 +76,7 @@ Prefixes used across audits — `SEC-*` (security) · `GAP-*` (functional) · `U
 | ID | Finding | Where | Status | Recommended fix |
 |----|---------|-------|--------|-----------------|
 | `SEC-11` | Anonymous `/api/auth/avatar/{username}` timing oracle | `AuthController.cs:124-141` | `[x]` | Add `Task.Delay(60)` *before* the dispatcher call so all paths take the same wall-clock time. *(Wave 12: landed — Stopwatch-based 80 ms constant wall-clock across hit/miss/error/malformed.)*|
-| `SEC-12` | `/api/files/*` MIME/whitelist + path traversal + AV scan | `FilesController.cs` | `[~]` | Wave 5 added ClamAV sidecar + scan-before-persist + 415 on hit. **Verify** `OrdinalIgnoreCase` is used on the path-traversal check and that `~` / symlinks are rejected. |
+| `SEC-12` | `/api/files/*` MIME/whitelist + path traversal + AV scan | `FilesController.cs` | `[x]` | Wave 37 — Hardened `FilesController` and `LocalFileStorageService`: added `OrdinalIgnoreCase` traversal checks, `~` and NTFS alternate data stream (`:`) rejection, symlink / reparse point rejection on file deletion and directory creation, extension allowlist (`.jpg`, `.jpeg`, `.png`, `.webp`, `.gif`), magic byte header inspection (JPEG/PNG/GIF/WebP), and comprehensive 21-test security test suite (`FilesControllerSecurityTests`). |
 | `SEC-13` | MoMo callback HMAC verification | `PaymentsController.cs`; `MobileMoneyService.HandleMtnMomoCallbackAsync` | `[x]` | Wave 2 — HMAC-SHA256 over raw body via `Payments:MoMoCallbackKey`; constant-time compare; `X-Callback-Signature: sha256=<hex>` header required. Static `X-Callback-Key` removed. |
 | `SEC-14` | Refresh-token rotation race | `AuthenticationService.RefreshTokenAsync` | `[x]` | Atomic compare-and-set on `UserToken.Version`. *(Wave 12: landed — `ExecuteUpdateAsync(... WHERE Token = @old AND IsRevoked = false)`.)*|
 | `SEC-15` | Mobile-money callback idempotency | `MobileMoneyService.HandleMtnMomoCallbackAsync:60` | `[x]` | Add `ProviderTransactionId UNIQUE` constraint. *(Wave 12: landed — UNIQUE filtered index + migration revokes pre-existing dupes.)*|

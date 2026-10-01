@@ -30,13 +30,23 @@ namespace Store.API.Infrastructure.Storage
                 throw new ArgumentException("File is empty or null.", nameof(file));
             }
 
-            var directoryPath = Path.Combine(_basePath, subfolder);
+            var directoryPath = ResolveSafeDirectoryPath(subfolder);
+            if (directoryPath is null)
+            {
+                throw new ArgumentException("Invalid or unsafe subfolder path.", nameof(subfolder));
+            }
+
             if (!Directory.Exists(directoryPath))
             {
                 Directory.CreateDirectory(directoryPath);
             }
 
             var extension = Path.GetExtension(file.FileName);
+            if (string.IsNullOrWhiteSpace(extension) || extension.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || extension.Contains("..", StringComparison.OrdinalIgnoreCase))
+            {
+                extension = ".webp";
+            }
+
             var uniqueFileName = $"{Guid.NewGuid()}{extension}";
             var filePath = Path.Combine(directoryPath, uniqueFileName);
 
@@ -60,6 +70,14 @@ namespace Store.API.Infrastructure.Storage
             {
                 try
                 {
+                    // SEC-12: Reject deletion of symbolic links and reparse points
+                    var fileInfo = new FileInfo(fullPath);
+                    if (fileInfo.Attributes.HasFlag(FileAttributes.ReparsePoint) || !string.IsNullOrEmpty(fileInfo.LinkTarget))
+                    {
+                        _logger.LogWarning("Rejected deletion of symbolic link / reparse point at {Path}", fullPath);
+                        return;
+                    }
+
                     File.Delete(fullPath);
                 }
                 catch (Exception ex)
@@ -72,7 +90,11 @@ namespace Store.API.Infrastructure.Storage
         private string? ResolveSafePath(string relativePath)
         {
             var normalized = relativePath.Replace('\\', '/').TrimStart('/');
-            if (normalized.Contains("..", StringComparison.Ordinal) || Path.IsPathRooted(normalized))
+            if (normalized.Contains("..", StringComparison.OrdinalIgnoreCase) ||
+                normalized.Contains('~') ||
+                normalized.Contains(':') ||
+                Path.IsPathRooted(normalized) ||
+                normalized.IndexOfAny(Path.GetInvalidPathChars()) >= 0)
             {
                 _logger.LogWarning("Rejected unsafe relative path: {Path}", relativePath);
                 return null;
@@ -92,6 +114,43 @@ namespace Store.API.Infrastructure.Storage
             return combined;
         }
 
+        private string? ResolveSafeDirectoryPath(string subfolder)
+        {
+            var normalized = (subfolder ?? string.Empty).Replace('\\', '/').Trim().TrimStart('/');
+            if (normalized.Contains("..", StringComparison.OrdinalIgnoreCase) ||
+                normalized.Contains('~') ||
+                normalized.Contains(':') ||
+                Path.IsPathRooted(normalized) ||
+                normalized.IndexOfAny(Path.GetInvalidPathChars()) >= 0)
+            {
+                _logger.LogWarning("Rejected unsafe subfolder path: {Subfolder}", subfolder);
+                return null;
+            }
+
+            var combined = Path.GetFullPath(Path.Combine(_basePath, normalized.Replace('/', Path.DirectorySeparatorChar)));
+            var root = Path.GetFullPath(_basePath)
+                .TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+
+            if (!combined.StartsWith(root, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(combined, Path.GetFullPath(_basePath), StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogWarning("Rejected path traversal in subfolder: {Subfolder}", subfolder);
+                return null;
+            }
+
+            if (Directory.Exists(combined))
+            {
+                var dirInfo = new DirectoryInfo(combined);
+                if (dirInfo.Attributes.HasFlag(FileAttributes.ReparsePoint) || !string.IsNullOrEmpty(dirInfo.LinkTarget))
+                {
+                    _logger.LogWarning("Rejected operation targeting symbolic link / reparse point directory: {Path}", combined);
+                    return null;
+                }
+            }
+
+            return combined;
+        }
+
         public async Task<string> SaveStreamAsync(Stream stream, string fileName, string subfolder)
         {
             if (stream == null || stream.Length == 0)
@@ -99,13 +158,23 @@ namespace Store.API.Infrastructure.Storage
                 throw new ArgumentException("Stream is empty or null.", nameof(stream));
             }
 
-            var directoryPath = Path.Combine(_basePath, subfolder);
+            var directoryPath = ResolveSafeDirectoryPath(subfolder);
+            if (directoryPath is null)
+            {
+                throw new ArgumentException("Invalid or unsafe subfolder path.", nameof(subfolder));
+            }
+
             if (!Directory.Exists(directoryPath))
             {
                 Directory.CreateDirectory(directoryPath);
             }
 
             var extension = Path.GetExtension(fileName);
+            if (string.IsNullOrWhiteSpace(extension) || extension.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || extension.Contains("..", StringComparison.OrdinalIgnoreCase))
+            {
+                extension = ".webp";
+            }
+
             var uniqueFileName = $"{Guid.NewGuid()}{extension}";
             var filePath = Path.Combine(directoryPath, uniqueFileName);
 

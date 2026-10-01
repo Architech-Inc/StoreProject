@@ -2339,6 +2339,54 @@ Startup crashed in `Store.API` with `InvalidOperationException: Unable to resolv
 - Test suite passes: `dotnet test Store.API.Tests -c Release` -> **362 passed, 0 failed**.
 - Audit tracker updated: `OPS-10` -> `[x]`.
 
+---
+
+## 2026-10-01 — Wave 37 (File Upload Security, Path Traversal Hardening & MIME Validation: SEC-12 — completed)
+
+### 37.A — Path Traversal & Symlink Defense-in-Depth
+- **Audit Finding**: `SEC-12` required verifying that `FilesController.cs` and `LocalFileStorageService.cs` use `OrdinalIgnoreCase` on all path-traversal checks, reject tildes (`~`) and Windows NTFS alternate data streams (`:`), and prevent operations targeting symbolic links, junctions, or reparse points.
+- **Controller Hardening (`Store.API/Controllers/FilesController.cs`)**:
+  - `UploadFile`:
+    - Safe folder validation upgraded to `StringComparison.OrdinalIgnoreCase`.
+    - Added explicit rejection of `~`, `:`, invalid path characters, and relative segment traversal (`..`, `.`).
+    - Added strict validation of `file.FileName` preventing directory traversal (`..`, `~`, `:`, path separators, and invalid filename characters).
+    - Added typed image extension allowlist (`.jpg`, `.jpeg`, `.png`, `.webp`, `.gif`) checking `Path.GetExtension(file.FileName)`.
+    - Added binary magic byte inspection (`HasValidImageHeader`) validating JPEG (`FF D8 FF`), PNG (`89 50 4E 47 0D 0A 1A 0A`), GIF (`GIF87a`/`GIF89a`), and WebP (`RIFF....WEBP`) before invoking downstream processors.
+    - Specifically caught ImageSharp `UnknownImageFormatException` and `InvalidImageContentException` to return HTTP 400 Bad Request instead of unhandled 500 errors.
+  - `DeleteFile`:
+    - Normalized path and enforced `StringComparison.OrdinalIgnoreCase` on traversal checks.
+    - Explicitly rejected paths containing `~`, `:`, rooted paths, or invalid path characters.
+    - Enforced folder allowlist across root segment and all child segments.
+- **Storage Service Hardening (`Store.API/Infrastructure/Storage/LocalFileStorageService.cs`)**:
+  - `ResolveSafePath`:
+    - Enforced `StringComparison.OrdinalIgnoreCase` on `..` checks, rejected `~`, `:`, rooted paths, and invalid path characters.
+  - `DeleteFile`:
+    - Added `FileInfo` reparse point / link inspection: rejects deletion if `fileInfo.Attributes.HasFlag(FileAttributes.ReparsePoint)` or `!string.IsNullOrEmpty(fileInfo.LinkTarget)` to prevent deletion of target files through malicious symlinks.
+  - `ResolveSafeDirectoryPath`:
+    - Created safe directory resolution helper validating that target subfolders stay strictly within `_basePath` and do not resolve to or traverse through symbolic links or reparse point directories.
+  - Extension sanitization: Sanitized output extensions in `SaveFileAsync` and `SaveStreamAsync` to prevent double-extension or traversal exploits.
+
+### 37.B — Comprehensive Security Unit Test Suite
+- `Store.API.Tests/FilesControllerSecurityTests.cs` (21 tests across upload, delete, and storage):
+  - `UploadFile_NullOrEmptyFile_ReturnsBadRequest`
+  - `UploadFile_ExceedsSizeLimit_ReturnsBadRequest`
+  - `UploadFile_InvalidOrTraversalFolder_ReturnsBadRequest` (tests `../secret`, `..\secret`, `misc/../../etc`, `~/uploads`, `misc/~`, `misc:stream`, `unauthorized_folder`, `admin`)
+  - `UploadFile_PathTraversalFileName_ReturnsBadRequest` (tests `../evil.png`, `..\evil.png`, `~evil.png`, `evil:stream.png`, `evil\0.png`)
+  - `UploadFile_DisallowedExtension_ReturnsBadRequest` (tests `.php`, `.sh`, `.exe`, `.pdf`, `.svg`)
+  - `UploadFile_DisallowedContentType_ReturnsBadRequest` (tests `application/x-msdownload`, `text/html`, `application/javascript`, `application/octet-stream`)
+  - `UploadFile_SpoofedMagicBytes_ReturnsBadRequest` (tests file with `.jpg` extension and `image/jpeg` header but executable/ASCII binary payload)
+  - `UploadFile_AntivirusFlagged_Returns415UnsupportedMediaType` (tests ClamAV virus scan rejection and 415 response with threat signature)
+  - `UploadFile_ValidCleanImage_ProcessesAndReturnsUrls` (tests valid JPEG upload, AV pass, thumbnail and full image webp generation)
+  - `DeleteFile_EmptyPath_ReturnsBadRequest` (tests empty and whitespace paths)
+  - `DeleteFile_PathTraversalOrInvalidFolder_ReturnsBadRequest` (tests `../secret.webp`, `..\secret.webp`, `/files/users/../../etc/passwd`, `/files/users/~/evil.png`, `/files/users/stream:colon`, `/etc/passwd`, `C:/Windows/system.ini`, `/files/unauthorized_folder/file.webp`)
+  - `DeleteFile_ValidPath_CallsStorageDeleteAndReturnsOk`
+  - `LocalFileStorageService_ResolveSafePath_PreventsTraversal`
+
+### Verification
+- Solution build clean: `dotnet build StoreProject.sln --configuration Release` (**0 warnings, 0 errors**).
+- Test suite passes: `dotnet test Store.API.Tests -c Release` -> **401 passed, 0 failed** (+39 new security and functional assertions).
+- Audit tracker updated: `SEC-12` -> `[x]`.
+
 
 
 
