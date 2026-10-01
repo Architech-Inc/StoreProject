@@ -156,20 +156,18 @@ public class InvoiceService : IInvoiceService
         {
             var invoiceIds = items.Select(i => i.InvoiceId).ToList();
 
-            var salesTask = _uow.Repository<Sale>().Query()
+            var sales = await _uow.Repository<Sale>().Query()
                 .Where(s => invoiceIds.Contains(s.InvoiceId))
                 .AsNoTracking()
                 .ToListAsync(ct);
 
-            var tendersTask = _uow.Repository<InvoiceTender>().Query()
+            var tenders = await _uow.Repository<InvoiceTender>().Query()
                 .Where(t => invoiceIds.Contains(t.InvoiceId))
                 .AsNoTracking()
                 .ToListAsync(ct);
 
-            await Task.WhenAll(salesTask, tendersTask);
-
-            var salesByInvoice = salesTask.Result.GroupBy(s => s.InvoiceId).ToDictionary(g => g.Key, g => g.ToList());
-            var tendersByInvoice = tendersTask.Result.GroupBy(t => t.InvoiceId).ToDictionary(g => g.Key, g => g.ToList());
+            var salesByInvoice = sales.GroupBy(s => s.InvoiceId).ToDictionary(g => g.Key, g => g.ToList());
+            var tendersByInvoice = tenders.GroupBy(t => t.InvoiceId).ToDictionary(g => g.Key, g => g.ToList());
 
             foreach (var inv in items)
             {
