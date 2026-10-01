@@ -154,6 +154,17 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
     networks:
       - proxy-network
+  # Seq: Centralized Log Shipping & Observability (OPS-07)
+  store-seq:
+    image: datalust/seq:latest
+    container_name: store-seq
+    restart: unless-stopped
+    environment:
+      - ACCEPT_EULA=Y
+    volumes:
+      - /opt/projects/proxy/seq-data:/data
+    networks:
+      - proxy-network
     labels:
       - "com.centurylinklabs.watchtower.enable=false"
 
@@ -162,6 +173,7 @@ networks:
     external: true
 EOF
 
+mkdir -p /opt/projects/proxy/seq-data
 chown -R `$NEW_USER:`$NEW_USER /opt/projects
 chmod 600 /opt/projects/proxy/letsencrypt/acme.json
 

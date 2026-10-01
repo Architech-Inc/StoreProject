@@ -1,7 +1,9 @@
 using Store.Models.Interfaces.Services;
+using Store.Models.Logging;
 using StoreUI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.ConfigureEnterpriseLogging("Store.UI");
 
 // Add services to the container.
 builder.Services.AddRazorPages();

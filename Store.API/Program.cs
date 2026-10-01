@@ -22,7 +22,10 @@ using Store.API.Services;
 using Store.Models.Interfaces.Services;
 using Hangfire;
 using Store.API.Extensions;
+using Store.Models.Logging;
+
 var builder = WebApplication.CreateBuilder(args);
+builder.ConfigureEnterpriseLogging("Store.API");
 
 // ─── Database & Domain Services ──────────────────────────────────────────────
 builder.Services.AddStoreDbServices(builder.Configuration);

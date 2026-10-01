@@ -57,6 +57,7 @@ services:
       - Payments__MoMoCallbackKey={{MOMO_CALLBACK_KEY}}
       - Cors__AllowedOrigins__0=http://{{SLUG}}.{{ROOT_DOMAIN}}:18080
       - Cors__AllowedOrigins__1=https://{{SLUG}}.{{ROOT_DOMAIN}}:18443
+      - Seq__ServerUrl=http://store-seq:5341
     depends_on:
       {{SLUG}}-mysql:
         condition: service_healthy
@@ -94,6 +95,7 @@ services:
       - ASPNETCORE_ENVIRONMENT=Production
       - ApiSettings__InternalBaseUrl=http://{{SLUG}}-api:8080
       - ApiSettings__ExternalBaseUrl=http://api.{{SLUG}}.{{ROOT_DOMAIN}}:18080
+      - Seq__ServerUrl=http://store-seq:5341
     depends_on:
       {{SLUG}}-api:
         condition: service_started

@@ -117,16 +117,31 @@ services:
     labels:
       - \"com.centurylinklabs.watchtower.enable=false\"
 
+  # Seq: Centralized Log Shipping & Observability (OPS-07)
+  store-seq:
+    image: datalust/seq:latest
+    container_name: store-seq
+    restart: unless-stopped
+    environment:
+      - ACCEPT_EULA=Y
+    volumes:
+      - /opt/projects/proxy/seq-data:/data
+    networks:
+      - proxy-network
+    labels:
+      - \"com.centurylinklabs.watchtower.enable=false\"
+
 networks:
   proxy-network:
     external: true
 EOF
 
+mkdir -p /opt/projects/proxy/seq-data
 chown -R $DEPLOY_USER:$DEPLOY_USER /opt/projects
 chmod 600 /opt/projects/proxy/letsencrypt/acme.json
 
 cd /opt/projects/proxy
 docker compose up -d
 
-echo \"[SUCCESS] VPS setup complete with Traefik ACME TLS and Watchtower.\"
+echo \"[SUCCESS] VPS setup complete with Traefik ACME TLS, Watchtower, and Seq Logging.\"
 '"

@@ -1,3 +1,5 @@
+using Serilog.Context;
+
 namespace Store.API.Middleware;
 
 public class CorrelationIdMiddleware
@@ -21,6 +23,13 @@ public class CorrelationIdMiddleware
         context.TraceIdentifier = correlationId;
         context.Response.Headers[HeaderName] = correlationId;
 
-        await _next(context);
+        var tenantId = context.User?.FindFirst("tenant")?.Value
+            ?? (context.Request.Headers.TryGetValue("X-Tenant-Id", out var tenantHeader) ? tenantHeader.ToString() : null);
+
+        using (LogContext.PushProperty("CorrelationId", correlationId))
+        using (LogContext.PushProperty("TenantId", string.IsNullOrWhiteSpace(tenantId) ? "system" : tenantId))
+        {
+            await _next(context);
+        }
     }
 }

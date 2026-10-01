@@ -58,6 +58,7 @@ services:
       - Payments__MoMoCallbackKey=${STORE_MOMO_CALLBACK_KEY:?STORE_MOMO_CALLBACK_KEY is required}
       - Cors__AllowedOrigins__0=http://${STORE_DOMAIN:?STORE_DOMAIN is required}:${HTTP_PORT:-18080}
       - Cors__AllowedOrigins__1=https://${STORE_DOMAIN:?STORE_DOMAIN is required}:${HTTPS_PORT:-18443}
+      - Seq__ServerUrl=${SEQ_SERVER_URL:-http://store-seq:5341}
     depends_on:
       store-mysql:
         condition: service_healthy
@@ -97,6 +98,7 @@ services:
       - ASPNETCORE_ENVIRONMENT=Production
       - ApiSettings__InternalBaseUrl=http://store-api:8080
       - ApiSettings__ExternalBaseUrl=http://${API_DOMAIN:?API_DOMAIN is required}:${HTTP_PORT:-18080}
+      - Seq__ServerUrl=${SEQ_SERVER_URL:-http://store-seq:5341}
     depends_on:
       store-api:
         condition: service_started

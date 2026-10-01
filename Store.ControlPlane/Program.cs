@@ -5,8 +5,10 @@ using Store.ControlPlane.Data;
 using Store.ControlPlane.Repositories;
 using Store.ControlPlane.Services;
 using Store.ControlPlane.Workers;
+using Store.Models.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.ConfigureEnterpriseLogging("Store.ControlPlane");
 
 builder.Services.AddControllers().AddJsonOptions(options =>
 {

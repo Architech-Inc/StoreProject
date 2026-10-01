@@ -2686,6 +2686,67 @@ Resolve findings `OPS-05` (Let's Encrypt TLS certificate automation in Traefik e
 - Release build: `dotnet build StoreProject.sln --configuration Release` (**0 warnings, 0 errors**).
 - Audit tracker updated: `OPS-05`, `OPS-06`, and `OPS-09` marked `[x]`.
 
+---
+
+## Wave 45 — Centralized Log Shipping & Observability (OPS-07)
+
+### Objective
+Resolve finding `OPS-07` by establishing centralized, structured log shipping and observability using Seq across all applications (`Store.API`, `Store.ControlPlane`, `Store.TenantPortal`, and `Store.UI`), enriching logs with request context (`CorrelationId`, `TenantId`, `Application`, `Environment`), and deploying the Seq log collector container alongside the proxy and platform stacks.
+
+### 45.A — Enterprise Structured Logging Infrastructure (`Store.Models/Logging/`)
+- Created `EnterpriseLoggingExtensions.cs` in `Store.Models/Logging/` providing:
+  - `ConfigureEnterpriseLogging(this WebApplicationBuilder builder, string applicationName)`: Wires Serilog as the primary logging subsystem across applications.
+  - Sinks:
+    - **Console**: Standard structured console output with level, timestamp, application name, message, and exception stack traces.
+    - **Seq Sink (OPS-07)**: If `Seq:ServerUrl` is configured in `appsettings.json` or `SEQ_SERVER_URL` environment variable is defined, logs are shipped to the centralized Seq collector over HTTP with optional API key authentication (`Seq:ApiKey` / `SEQ_API_KEY`).
+    - **Fail-Open Resilience**: In local dev or test environments lacking a Seq collector, the system operates seamlessly with local console logging without failing startup or dropping requests.
+  - Enrichers:
+    - `Enrich.FromLogContext()`: Enables dynamic property enrichment during request execution.
+    - `Enrich.WithProperty("Application", applicationName)`: Indexes logs by originating microservice (`Store.API`, `Store.ControlPlane`, `Store.TenantPortal`, `Store.UI`).
+    - `Enrich.WithProperty("Environment", environmentName)`: Differentiates production, staging, and development telemetry.
+  - Noise Suppression: Configured log level overrides for `Microsoft.AspNetCore`, EF Core commands, and `DefaultHttpClientFactory` to prevent log bloat.
+
+### 45.B — Request & Tenant Context Log Enrichment (`Store.API/Middleware/`)
+- Upgraded `CorrelationIdMiddleware.cs`:
+  - Captures incoming `X-Correlation-ID` header or generates a unique correlation UUID.
+  - Resolves active `TenantId` from authenticated JWT `tenant` claim or `X-Tenant-Id` header (falling back to `"system"`).
+  - Pushes `CorrelationId` and `TenantId` to Serilog's `LogContext` using `LogContext.PushProperty(...)`.
+  - Ensures every log message emitted by controllers, domain handlers, background workers, and database commands within a request automatically contains indexed correlation and tenant IDs for instant filtering in Seq.
+
+### 45.C — Application Wiring across All Services
+- Integrated `builder.ConfigureEnterpriseLogging(...)` into:
+  - `Store.API/Program.cs` (`"Store.API"`)
+  - `Store.ControlPlane/Program.cs` (`"Store.ControlPlane"`)
+  - `Store.TenantPortal/Program.cs` (`"Store.TenantPortal"`)
+  - `Store.UI/Program.cs` (`"Store.UI"`)
+
+### 45.D — Seq Container Declarations & Compose Orchestration
+- **Platform Stack (`docker-compose.platform.yml`)**:
+  - Declared `store-seq` container service using `datalust/seq:latest` with persistent volume `seq_data:/data`, `ACCEPT_EULA=Y`, and Traefik ingress route `seq.${ROOT_DOMAIN}` behind TLS.
+  - Injected `Seq__ServerUrl=${SEQ_SERVER_URL:-http://store-seq:5341}` into `store-controlplane` and `store-tenantportal`.
+- **Tenant Production Stack (`docker-compose.prod.yml`)**:
+  - Injected `Seq__ServerUrl=${SEQ_SERVER_URL:-http://store-seq:5341}` into `store-api` and `store-ui`.
+- **Tenant Templates (`docker-compose.tenant.template.yml`, `docker-compose.tenant.hostmysql.template.yml`)**:
+  - Injected `Seq__ServerUrl=http://store-seq:5341` into tenant API and UI containers.
+- **Environment Template (`.env.example`)**:
+  - Added Section 9 (`SEQ_SERVER_URL`, `SEQ_ADMIN_PASSWORD_HASH`, `SEQ_API_KEY`).
+- **VPS Provisioning Scripts (`scripts/provision-docker-vps.{ps1,sh}`, `vps-manager/provision-docker-vps.ps1`)**:
+  - Added `store-seq` container service and `/opt/projects/proxy/seq-data` persistent storage directory creation.
+
+### 45.E — Automated Unit Tests & Verification
+- Authored `Store.API.Tests/EnterpriseLoggingTests.cs` (4 tests):
+  - `ConfigureLogger_WithoutSeqUrl_ConfiguresConsoleAndEnrichersGracefully`: Verifies logger initializes and emits events without error when Seq URL is absent.
+  - `ConfigureLogger_WithSeqUrl_ConfiguresSeqSinkSuccessfully`: Verifies Seq sink is attached when `Seq:ServerUrl` is configured.
+  - `CorrelationIdMiddleware_PushesCorrelationAndTenantPropertiesToLogContext`: Verifies header-based correlation and tenant extraction.
+  - `CorrelationIdMiddleware_ResolvesTenantFromUserClaims_WhenHeaderMissing`: Verifies JWT tenant claim extraction when header is absent.
+- **Solution Verification**:
+  - `Store.API.Tests`: **418 passed, 0 failed** (increased from 414).
+  - `Store.ControlPlane.Tests`: **40 passed, 0 failed**.
+  - `Store.TenantPortal.Tests`: **27 passed, 0 failed**.
+  - **Total Solution**: **485 passed, 0 failed**.
+  - Release Build: `dotnet build StoreProject.sln --configuration Release` (**0 warnings, 0 errors**).
+- Audit tracker updated: `OPS-07` marked `[x]`.
+
 
 
 

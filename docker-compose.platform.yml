@@ -49,6 +49,7 @@ services:
       - ControlPlane__StoreUiImage=${IMAGE_PREFIX:-ghcr.io/architech-inc/storeproject}/store-ui:latest
       - ControlPlaneCors__AllowedOrigins__0=https://portal.${ROOT_DOMAIN}
       - ControlPlaneCors__AllowedOrigins__1=http://portal.${ROOT_DOMAIN}
+      - Seq__ServerUrl=${SEQ_SERVER_URL:-http://store-seq:5341}
     volumes:
       # docker socket — proxied via docker-socket-proxy in real production
       # (we keep it here for development; remove or proxy in prod compose).
@@ -80,6 +81,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ControlPlane__BaseUrl=http://store-controlplane:19999
+      - Seq__ServerUrl=${SEQ_SERVER_URL:-http://store-seq:5341}
     depends_on:
       store-controlplane:
         condition: service_started
@@ -96,6 +98,28 @@ services:
       - "traefik.http.routers.tenantportal.tls.certresolver=letsencrypt"
       - "traefik.http.services.tenantportal.loadbalancer.server.port=19090"
       - "com.centurylinklabs.watchtower.enable=true"
+
+  # ─── Seq: Centralized Log Shipping & Observability (OPS-07) ─────────────────
+  store-seq:
+    image: datalust/seq:latest
+    container_name: store-seq
+    restart: always
+    environment:
+      - ACCEPT_EULA=Y
+      - SEQ_FIRSTRUN_ADMINPASSWORDHASH=${SEQ_ADMIN_PASSWORD_HASH:-}
+    volumes:
+      - seq_data:/data
+    networks:
+      - proxy-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy-network"
+      - "traefik.http.routers.seq.rule=Host(`seq.${ROOT_DOMAIN:?ROOT_DOMAIN is required}`)"
+      - "traefik.http.routers.seq.entrypoints=web,websecure"
+      - "traefik.http.routers.seq.tls=true"
+      - "traefik.http.routers.seq.tls.certresolver=letsencrypt"
+      - "traefik.http.services.seq.loadbalancer.server.port=80"
+      - "com.centurylinklabs.watchtower.enable=false"
 
   # ─── Watchtower: Automated image updates with cleanup & schedule (OPS-06) ──
   watchtower:
@@ -121,7 +145,9 @@ services:
 volumes:
   controlplane_data:
   controlplane_db_data:
+  seq_data:
 
 networks:
   proxy-network:
     external: true
+

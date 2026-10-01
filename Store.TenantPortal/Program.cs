@@ -6,7 +6,10 @@ using Store.TenantPortal.Services;
 
 using Microsoft.Extensions.Logging.Abstractions;
 using Store.Models.Common;
+using Store.Models.Logging;
+
 var builder = WebApplication.CreateBuilder(args);
+builder.ConfigureEnterpriseLogging("Store.TenantPortal");
 
 // Add Razor Pages
 builder.Services.AddRazorPages(options =>
