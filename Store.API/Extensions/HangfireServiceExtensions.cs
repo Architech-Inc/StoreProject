@@ -12,7 +12,8 @@ public static class HangfireServiceExtensions
 {
     public static IServiceCollection AddHangfireServices(this IServiceCollection services, IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("Default");
+        var rawConnectionString = configuration.GetConnectionString("Default");
+        var connectionString = NormalizeConnectionString(rawConnectionString);
 
         services.AddHangfire(config => config
             .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
@@ -33,6 +34,20 @@ public static class HangfireServiceExtensions
         services.AddHangfireServer();
 
         return services;
+    }
+
+    private static string NormalizeConnectionString(string? connectionString)
+    {
+        if (string.IsNullOrWhiteSpace(connectionString))
+            return string.Empty;
+
+        // Strip trailing semicolons and empty tokens to prevent Hangfire.MySql IndexOutOfRangeException in ToString()
+        var parts = connectionString
+            .Split(';', StringSplitOptions.RemoveEmptyEntries)
+            .Where(p => p.Contains('='))
+            .Select(p => p.Trim());
+
+        return string.Join(";", parts);
     }
 
     public static void ScheduleProcurementJobs(this IServiceProvider serviceProvider)

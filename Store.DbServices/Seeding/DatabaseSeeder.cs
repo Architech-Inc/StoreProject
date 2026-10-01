@@ -603,28 +603,42 @@ public static class DatabaseSeeder
 
     private static bool HasAnyRows(StoreDbContext db, Type clrType)
     {
-        var set = GetQueryableForType(db, clrType);
-        var anyMethod = typeof(Queryable)
-            .GetMethods(BindingFlags.Public | BindingFlags.Static)
-            .First(m => m.Name == nameof(Queryable.Any)
-                        && m.IsGenericMethodDefinition
-                        && m.GetParameters().Length == 1)
-            .MakeGenericMethod(clrType);
+        try
+        {
+            var set = GetQueryableForType(db, clrType);
+            var anyMethod = typeof(Queryable)
+                .GetMethods(BindingFlags.Public | BindingFlags.Static)
+                .First(m => m.Name == nameof(Queryable.Any)
+                            && m.IsGenericMethodDefinition
+                            && m.GetParameters().Length == 1)
+                .MakeGenericMethod(clrType);
 
-        return (bool)(anyMethod.Invoke(null, new object[] { set }) ?? false);
+            return (bool)(anyMethod.Invoke(null, new object[] { set }) ?? false);
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private static object? GetFirstEntity(StoreDbContext db, Type clrType)
     {
-        var set = GetQueryableForType(db, clrType);
-        var method = typeof(Queryable)
-            .GetMethods(BindingFlags.Public | BindingFlags.Static)
-            .First(m => m.Name == nameof(Queryable.FirstOrDefault)
-                        && m.IsGenericMethodDefinition
-                        && m.GetParameters().Length == 1)
-            .MakeGenericMethod(clrType);
+        try
+        {
+            var set = GetQueryableForType(db, clrType);
+            var method = typeof(Queryable)
+                .GetMethods(BindingFlags.Public | BindingFlags.Static)
+                .First(m => m.Name == nameof(Queryable.FirstOrDefault)
+                            && m.IsGenericMethodDefinition
+                            && m.GetParameters().Length == 1)
+                .MakeGenericMethod(clrType);
 
-        return method.Invoke(null, new object[] { set });
+            return method.Invoke(null, new object[] { set });
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private static IQueryable GetQueryableForType(StoreDbContext db, Type clrType)

@@ -1,6 +1,9 @@
 using System;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Store.DbServices.Context;
 
 #nullable disable
 
@@ -15,13 +18,9 @@ namespace Store.DbServices.Migrations
     /// <c>Store.Models/Entities/TrustedDevice.cs</c> for the entity shape
     /// and <c>Store.Models/Security/DeviceFingerprint.cs</c> for the
     /// hash derivation.
-    ///
-    /// NOTE — Designer file intentionally omitted. Runtime migration
-    /// application only needs Up/Down. <c>dotnet ef migrations script</c>
-    /// would require the Designer; regen via
-    /// <c>dotnet ef migrations add AddTrustedDevices_SEC23</c> (after
-    /// adding an IDesignTimeDbContextFactory) when needed.
     /// </summary>
+    [DbContext(typeof(StoreDbContext))]
+    [Migration("20260925120000_AddTrustedDevices_SEC23")]
     public partial class AddTrustedDevices_SEC23 : Migration
     {
         /// <inheritdoc />
