@@ -2187,6 +2187,71 @@ Startup crashed in `Store.API` with `InvalidOperationException: Unable to resolv
 - Test suite passes: `dotnet test Store.API.Tests -c Release` -> 317 passed, 0 failed.
 - Audit tracker updated: `GAP-13` -> `[x]`.
 
+---
+
+## 2026-10-01 — Wave 34 (Lookup Endpoints Consolidation & Separation of Concerns: GAP-14 — completed)
+
+### 34.A — Elimination of Monolithic Lookup Files
+- **Audit Finding**: `GAP-14` identified multiple violations of the Single Responsibility Principle and Clean Architecture conventions:
+  - `LookupControllers.cs` bundled 5 controllers (`CategoriesController`, `UnitsController`, `DepartmentsController`, `SalariesController`, `CountriesController`) and inline request DTOs into a single 229-line source file.
+  - `LookupServices.cs` bundled 4 unrelated domain services (`CategoryService`, `UnitService`, `DepartmentService`, `SalaryService`) into a single 203-line file.
+  - `ILookupServices.cs` bundled 4 distinct service interfaces into one file.
+- **Refactoring & File Separation**:
+  - **DTOs**:
+    - `Store.Models/DTOs/Items/CategoryDtos.cs`: `CreateCategoryRequest`, `UpdateCategoryRequest` with validation attributes (`[Required]`, `[StringLength]`).
+    - `Store.Models/DTOs/Items/UnitDtos.cs`: `CreateUnitRequest`, `UpdateUnitRequest` with validation attributes.
+    - `Store.Models/DTOs/HR/DepartmentDtos.cs`: `CreateDepartmentRequest`, `UpdateDepartmentRequest`, and backward-compatible `CreateLookupRequest` alias.
+  - **Interfaces**:
+    - `Store.Models/Interfaces/Services/ICategoryService.cs`
+    - `Store.Models/Interfaces/Services/IUnitService.cs`
+    - `Store.Models/Interfaces/Services/IDepartmentService.cs`
+    - `Store.Models/Interfaces/Services/ISalaryService.cs`
+    - Removed `Store.Models/Interfaces/Services/ILookupServices.cs`.
+  - **Services**:
+    - `Store.DbServices/Services/CategoryService.cs`
+    - `Store.DbServices/Services/UnitService.cs`
+    - `Store.DbServices/Services/DepartmentService.cs`
+    - `Store.DbServices/Services/SalaryService.cs`
+    - Removed `Store.DbServices/Services/LookupServices.cs`.
+  - **Controllers**:
+    - `Store.API/Controllers/CategoriesController.cs`
+    - `Store.API/Controllers/UnitsController.cs`
+    - `Store.API/Controllers/DepartmentsController.cs`
+    - `Store.API/Controllers/SalariesController.cs`
+    - `Store.API/Controllers/CountriesController.cs`
+    - Removed `Store.API/Controllers/LookupControllers.cs`.
+
+### 34.B — Service Hardening & Foreign Key Integrity
+- **Update Duplicate Checks**:
+  - `CategoryService.UpdateAsync`: Added duplicate name check `ExistsAsync(c => c.Name == name && c.CategoryId != id)` throwing `InvalidOperationException`.
+  - `UnitService.UpdateAsync`: Added duplicate abbreviation check `ExistsAsync(u => u.Abbreviation == abbreviation && u.UnitId != id)` throwing `InvalidOperationException`.
+  - `DepartmentService.UpdateAsync`: Added duplicate name check `ExistsAsync(d => d.Name == name && d.DepartmentId != id)` throwing `InvalidOperationException`.
+- **Delete FK Dependency Protection**:
+  - `CategoryService.DeleteAsync`: Added pre-check preventing deletion if referenced by `Item` or `ItemCategory`, throwing clear `InvalidOperationException` instead of letting MySQL fail with a raw FK constraint exception.
+  - `UnitService.DeleteAsync`: Added pre-check preventing deletion if referenced by `Item`.
+  - `DepartmentService.DeleteAsync`: Added pre-check preventing deletion if referenced by `Employee`.
+- **API Controller Error Mapping & Audit Trails**:
+  - Decorated all mutating actions (`POST`, `PUT`, `DELETE`) with `[Audit]` and respective permissions (`InventoryWrite`, `EmployeeCreate`, `EmployeeUpdate`, `PayrollWrite`, `AdminSystem`).
+  - Standardized error returns: mapped `InvalidOperationException` to HTTP 409 Conflict with `ApiErrorResponse.From(ErrorCode.Conflict, ...)`.
+  - Standardized 404 responses with `ErrorCode.NotFound`.
+  - Added `GetById` to `UnitsController` and `DepartmentsController` for API consistency.
+  - Added `GetByIsoCode` and `GetDefault` to `CountriesController`.
+
+### 34.C — Comprehensive Unit Test Suites
+- Added 36 new unit tests across 5 test suites:
+  - `Store.API.Tests/CategoryServiceTests.cs` (8 tests): GetAll sorting, GetById, Create, duplicate name check, Update, update conflict check, Delete, in-use FK guard.
+  - `Store.API.Tests/UnitServiceTests.cs` (8 tests): GetAll sorting, GetById, Create, duplicate abbreviation check, Update, update abbreviation conflict check, Delete, in-use FK guard.
+  - `Store.API.Tests/DepartmentServiceTests.cs` (8 tests): GetAll sorting, GetById, Create, duplicate name check, Update, update name conflict check, Delete, in-use employee FK guard.
+  - `Store.API.Tests/SalaryServiceTests.cs` (8 tests): GetAll sorting, GetById, Create, duplicate grade check, Update, update grade conflict check, Delete, in-use employee FK guard.
+  - `Store.API.Tests/CountriesControllerTests.cs` (4 tests): GetAll, GetByIsoCode found, GetByIsoCode 404, GetDefault country.
+- Fixed CS8604 compiler warning in `WebAuthnDevicesEndpointsTests.cs` (`Assert.NotNull(payload.Data)`).
+
+### Verification
+- Solution build clean: `dotnet build StoreProject.sln --configuration Release` (**0 warnings, 0 errors**).
+- Test suite passes: `dotnet test Store.API.Tests -c Release` -> **353 passed, 0 failed**.
+- Audit tracker updated: `GAP-14` -> `[x]`.
+
+
 
 
 

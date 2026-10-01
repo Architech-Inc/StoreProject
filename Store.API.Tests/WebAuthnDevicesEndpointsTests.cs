@@ -56,6 +56,7 @@ public class WebAuthnDevicesEndpointsTests
         var payload = ok.Value as ApiResponse<IReadOnlyList<TrustedDeviceDto>>;
         Assert.NotNull(payload);
         Assert.True(payload!.Success);
+        Assert.NotNull(payload.Data);
         Assert.Empty(payload.Data);
     }
 
