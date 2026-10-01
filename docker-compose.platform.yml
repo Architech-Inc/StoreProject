@@ -17,6 +17,8 @@ services:
       start_period: 20s
     networks:
       - proxy-network
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
 
   store-controlplane:
     image: ${IMAGE_PREFIX:-ghcr.io/architech-inc/storeproject}/store-controlplane:${IMAGE_TAG:-latest}
@@ -66,7 +68,10 @@ services:
       - "traefik.docker.network=proxy-network"
       - "traefik.http.routers.controlplane.rule=Host(`cp.${ROOT_DOMAIN}`)"
       - "traefik.http.routers.controlplane.entrypoints=web,websecure"
+      - "traefik.http.routers.controlplane.tls=true"
+      - "traefik.http.routers.controlplane.tls.certresolver=letsencrypt"
       - "traefik.http.services.controlplane.loadbalancer.server.port=19999"
+      - "com.centurylinklabs.watchtower.enable=true"
 
   store-tenantportal:
     image: ${IMAGE_PREFIX:-ghcr.io/architech-inc/storeproject}/store-tenantportal:${IMAGE_TAG:-latest}
@@ -87,21 +92,31 @@ services:
       - "traefik.docker.network=proxy-network"
       - "traefik.http.routers.tenantportal.rule=Host(`portal.${ROOT_DOMAIN}`)"
       - "traefik.http.routers.tenantportal.entrypoints=web,websecure"
+      - "traefik.http.routers.tenantportal.tls=true"
+      - "traefik.http.routers.tenantportal.tls.certresolver=letsencrypt"
       - "traefik.http.services.tenantportal.loadbalancer.server.port=19090"
+      - "com.centurylinklabs.watchtower.enable=true"
 
-
-
-  # ─── Watchtower: only if explicitly opted in via env. Off by default. ──────
+  # ─── Watchtower: Automated image updates with cleanup & schedule (OPS-06) ──
   watchtower:
-    image: containrrr/watchtower
+    image: containrrr/watchtower:latest
     container_name: store-watchtower
     restart: unless-stopped
     profiles: ["watchtower"]
-    command: --schedule "0 0 4 * * *" --cleanup --include-stopped --label-enable
+    command: --schedule "${WATCHTOWER_SCHEDULE:-0 0 4 * * *}" --cleanup --include-stopped --label-enable
+    environment:
+      - WATCHTOWER_SCHEDULE=${WATCHTOWER_SCHEDULE:-0 0 4 * * *}
+      - WATCHTOWER_CLEANUP=${WATCHTOWER_CLEANUP:-true}
+      - WATCHTOWER_INCLUDE_STOPPED=${WATCHTOWER_INCLUDE_STOPPED:-true}
+      - WATCHTOWER_LABEL_ENABLE=${WATCHTOWER_LABEL_ENABLE:-true}
+      - WATCHTOWER_ROLLING_RESTART=${WATCHTOWER_ROLLING_RESTART:-true}
+      - WATCHTOWER_TIMEOUT=${WATCHTOWER_TIMEOUT:-60s}
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - proxy-network
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
 
 volumes:
   controlplane_data:

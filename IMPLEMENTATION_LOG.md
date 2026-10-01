@@ -2621,6 +2621,71 @@ Resolve finding `PROC-05` by establishing dedicated automated unit and smoke tes
   - Total across solution: **478 passed, 0 failed** in Release mode.
 - Audit tracker updated: `PROC-05` marked `[x]`.
 
+---
+
+## Wave 44 — Production TLS Automation & Watchtower Container Declarations (OPS-05, OPS-06, OPS-09)
+
+### Objective
+Resolve findings `OPS-05` (Let's Encrypt TLS certificate automation in Traefik edge proxy), `OPS-06` (declare Watchtower container service for automated application updates with maintenance schedules and cleanup flags), and `OPS-09` (harden VPS provisioning scripts against unauthorized/non-root execution).
+
+### 44.A — Traefik Let's Encrypt ACME Resolver & HTTPS Enforcement (OPS-05)
+- **Edge Proxy Configuration (`docker-compose.traefik.yml`)**:
+  - Configured automated ACME certificate resolver named `letsencrypt` with:
+    - Storage volume path `/letsencrypt/acme.json` mounted from host volume `traefik-acme`.
+    - Automated HTTP-01 challenge support (`--certificatesresolvers.letsencrypt.acme.httpchallenge=true` bound to `web` entrypoint on port 80).
+    - TLS-ALPN-01 fallback challenge support (`--certificatesresolvers.letsencrypt.acme.tlschallenge=true`).
+    - Configurable ACME contact email (`${ACME_EMAIL}`) and CA directory server (`${ACME_CA_SERVER:-https://acme-v02.api.letsencrypt.org/directory}`) supporting staging CA testing.
+  - Configured global permanent HTTP-to-HTTPS redirect on the `web` entrypoint (`entrypoints.web.http.redirections.entrypoint.to=websecure`, `scheme=https`, `permanent=true`).
+  - Set default TLS certificate resolver to `letsencrypt` on `websecure` entrypoint (`--entrypoints.websecure.http.tls.certresolver=letsencrypt`).
+  - Added port parameterization defaulting to production standards: `${HTTP_PORT:-80}:80` and `${HTTPS_PORT:-443}:443`, preserving backward compatibility with local dev overrides (e.g., 18080/18443).
+- **Tenant Compose & Dynamic Configuration (`docker-compose.prod.yml`, `Store.ControlPlane/Templates/`)**:
+  - Bound production routers (`store-api`, `store-ui`, `store-controlplane`, `store-tenantportal`) to `web,websecure` entrypoints with `traefik.http.routers.<name>.tls=true` and `traefik.http.routers.<name>.tls.certresolver=letsencrypt`.
+  - Updated both `docker-compose.tenant.template.yml` and `docker-compose.tenant.hostmysql.template.yml` to declare TLS routers with `letsencrypt` resolver for dynamic tenant stack provisioning.
+
+### 44.B — Watchtower Container Declarations & Selective Updating (OPS-06)
+- **Container Service Declarations (`docker-compose.traefik.yml`, `docker-compose.platform.yml`, `docker-compose.prod.yml`)**:
+  - Declared `containrrr/watchtower:latest` service with scheduled execution and automatic stale image cleanup:
+    - Command flags: `--schedule "0 0 4 * * *" --cleanup --include-stopped --label-enable`.
+    - Environment variables: `WATCHTOWER_SCHEDULE`, `WATCHTOWER_CLEANUP=true`, `WATCHTOWER_INCLUDE_STOPPED=true`, `WATCHTOWER_LABEL_ENABLE=true`, `WATCHTOWER_ROLLING_RESTART=true`, and `WATCHTOWER_TIMEOUT=60s`.
+    - Volume mounts: `/var/run/docker.sock:/var/run/docker.sock:ro` with `restart: unless-stopped`.
+    - Placed under `profiles: ["watchtower"]` in compose files to allow controlled activation alongside platform and tenant stacks.
+- **Selective Label-Based Container Updates**:
+  - Enabled Watchtower updates (`com.centurylinklabs.watchtower.enable=true`) on stateless application containers:
+    - `store-api`, `store-ui`, `store-controlplane`, `store-tenantportal`, and tenant API/UI containers.
+  - Explicitly disabled Watchtower updates (`com.centurylinklabs.watchtower.enable=false`) on stateful databases and critical system services to prevent unintended restart or schema corruption:
+    - `mysql`, `mongodb`, `traefik`, `watchtower` itself, and backup containers.
+
+### 44.C — Environment Templates & Variables (`.env.example`)
+- Added Section 7 (**Automated TLS & Let's Encrypt (OPS-05)**):
+  - `ACME_EMAIL=admin@clexan.com`
+  - `ACME_CA_SERVER=https://acme-v02.api.letsencrypt.org/directory` (with comment pointing to staging endpoint for dry-runs).
+- Added Section 8 (**Container Update Automation & Watchtower (OPS-06)**):
+  - `WATCHTOWER_SCHEDULE=0 0 4 * * *`
+  - `WATCHTOWER_CLEANUP=true`
+  - `WATCHTOWER_INCLUDE_STOPPED=true`
+  - `WATCHTOWER_LABEL_ENABLE=true`
+  - `WATCHTOWER_ROLLING_RESTART=true`
+  - `WATCHTOWER_TIMEOUT=60s`
+
+### 44.D — VPS Provisioning Scripts & Root/Sudo Hardening (OPS-09)
+- Authored production-ready provisioning scripts in `scripts/provision-docker-vps.ps1` and `scripts/provision-docker-vps.sh` (and synced with `github-repos/vps-manager/provision-docker-vps.ps1`):
+  - Added non-root / sudo privilege validation at script startup to fail fast with clear diagnostic messages if invoked without sufficient privileges (`OPS-09`).
+  - Provisioned Traefik storage directory `/opt/projects/proxy/letsencrypt` and initialized `acme.json` with strict POSIX permissions (`chmod 600`).
+  - Integrated Watchtower container service declaration into the generated proxy `docker-compose.yml` with `--schedule "0 0 4 * * *"`, `--cleanup`, `--include-stopped`, and `--label-enable`.
+
+### 44.E — Unit Tests & Verification
+- Authored `Store.ControlPlane.Tests/TraefikConfigWriterTests.cs` (3 tests):
+  - `WriteTenantRoutingConfigAsync_ProductionDomain_IncludesTlsAndLetsEncryptCertResolver`: Verifies that production domains generate Traefik dynamic router YAML with `tls: {}` and `certResolver: "letsencrypt"`.
+  - `WriteTenantRoutingConfigAsync_LocalDomain_OmitsTlsSection`: Verifies that `localhost` and `.local` domains omit TLS certresolvers to prevent local development ACME errors.
+  - `RemoveTenantRoutingConfigAsync_ExistingFile_DeletesConfigFile`: Verifies clean cleanup of dynamic tenant routing configuration on tenant deprovisioning.
+- Solution-wide test run:
+  - `Store.ControlPlane.Tests`: **40 passed, 0 failed** (increased from 37).
+  - `Store.TenantPortal.Tests`: **27 passed, 0 failed**.
+  - `Store.API.Tests`: **414 passed, 0 failed**.
+  - **Total: 481 passed, 0 failed** across all 3 test projects.
+- Release build: `dotnet build StoreProject.sln --configuration Release` (**0 warnings, 0 errors**).
+- Audit tracker updated: `OPS-05`, `OPS-06`, and `OPS-09` marked `[x]`.
+
 
 
 

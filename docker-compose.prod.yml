@@ -20,6 +20,8 @@ services:
       start_period: 20s
     networks:
       - store-network
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
 
   store-mongodb:
     image: mongo:latest
@@ -38,6 +40,8 @@ services:
       start_period: 10s
     networks:
       - store-network
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
 
   store-api:
     build:
@@ -71,10 +75,17 @@ services:
       - "traefik.enable=true"
       - "traefik.docker.network=proxy-network"
       - "traefik.http.routers.storeproject-storeapi.rule=Host(`${API_DOMAIN:?API_DOMAIN is required}`)"
+      - "traefik.http.routers.storeproject-storeapi.entrypoints=web,websecure"
+      - "traefik.http.routers.storeproject-storeapi.tls=true"
+      - "traefik.http.routers.storeproject-storeapi.tls.certresolver=letsencrypt"
       - "traefik.http.services.storeproject-storeapi.loadbalancer.server.port=8080"
       - "traefik.http.routers.storeproject-storeapi-files.rule=Host(`${STORE_DOMAIN:?STORE_DOMAIN is required}`) && PathPrefix(`/files`)"
+      - "traefik.http.routers.storeproject-storeapi-files.entrypoints=web,websecure"
+      - "traefik.http.routers.storeproject-storeapi-files.tls=true"
+      - "traefik.http.routers.storeproject-storeapi-files.tls.certresolver=letsencrypt"
       - "traefik.http.routers.storeproject-storeapi-files.service=storeproject-storeapi"
       - "traefik.http.routers.storeproject-storeapi-files.priority=100"
+      - "com.centurylinklabs.watchtower.enable=true"
 
   store-ui:
     build:
@@ -100,8 +111,12 @@ services:
       - "traefik.enable=true"
       - "traefik.docker.network=proxy-network"
       - "traefik.http.routers.storeproject-storeui.rule=Host(`${STORE_DOMAIN:?STORE_DOMAIN is required}`)"
+      - "traefik.http.routers.storeproject-storeui.entrypoints=web,websecure"
+      - "traefik.http.routers.storeproject-storeui.tls=true"
+      - "traefik.http.routers.storeproject-storeui.tls.certresolver=letsencrypt"
       - "traefik.http.routers.storeproject-storeui.priority=10"
       - "traefik.http.services.storeproject-storeui.loadbalancer.server.port=8080"
+      - "com.centurylinklabs.watchtower.enable=true"
 
   store-backup-mysql:
     build:
@@ -127,6 +142,8 @@ services:
       - store-backups-data:/backups
     networks:
       - store-network
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
 
   store-backup-mongodb:
     build:
@@ -151,6 +168,29 @@ services:
       - store-backups-data:/backups
     networks:
       - store-network
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+
+  # ─── Watchtower: Automated image updates with cleanup & schedule (OPS-06) ──
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: store-watchtower-prod
+    restart: unless-stopped
+    profiles: ["watchtower"]
+    command: --schedule "${WATCHTOWER_SCHEDULE:-0 0 4 * * *}" --cleanup --include-stopped --label-enable
+    environment:
+      - WATCHTOWER_SCHEDULE=${WATCHTOWER_SCHEDULE:-0 0 4 * * *}
+      - WATCHTOWER_CLEANUP=${WATCHTOWER_CLEANUP:-true}
+      - WATCHTOWER_INCLUDE_STOPPED=${WATCHTOWER_INCLUDE_STOPPED:-true}
+      - WATCHTOWER_LABEL_ENABLE=${WATCHTOWER_LABEL_ENABLE:-true}
+      - WATCHTOWER_ROLLING_RESTART=${WATCHTOWER_ROLLING_RESTART:-true}
+      - WATCHTOWER_TIMEOUT=${WATCHTOWER_TIMEOUT:-60s}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - proxy-network
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
 
 volumes:
   store-mysql-data:

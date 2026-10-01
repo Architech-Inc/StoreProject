@@ -21,6 +21,8 @@ services:
       start_period: 20s
     networks:
       - {{SLUG}}_net
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
 
   {{SLUG}}-mongodb:
     image: mongo:latest
@@ -39,6 +41,8 @@ services:
       start_period: 10s
     networks:
       - {{SLUG}}_net
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
 
   {{SLUG}}-api:
     image: {{STORE_API_IMAGE}}
@@ -70,10 +74,17 @@ services:
       - "traefik.enable=true"
       - "traefik.docker.network=proxy-network"
       - "traefik.http.routers.{{SLUG}}-api.rule=Host(`api.{{SLUG}}.{{ROOT_DOMAIN}}`)"
+      - "traefik.http.routers.{{SLUG}}-api.entrypoints=web,websecure"
+      - "traefik.http.routers.{{SLUG}}-api.tls=true"
+      - "traefik.http.routers.{{SLUG}}-api.tls.certresolver=letsencrypt"
       - "traefik.http.services.{{SLUG}}-api.loadbalancer.server.port=8080"
       - "traefik.http.routers.{{SLUG}}-api-files.rule=Host(`{{SLUG}}.{{ROOT_DOMAIN}}`) && PathPrefix(`/files`)"
+      - "traefik.http.routers.{{SLUG}}-api-files.entrypoints=web,websecure"
+      - "traefik.http.routers.{{SLUG}}-api-files.tls=true"
+      - "traefik.http.routers.{{SLUG}}-api-files.tls.certresolver=letsencrypt"
       - "traefik.http.routers.{{SLUG}}-api-files.service={{SLUG}}-api"
       - "traefik.http.routers.{{SLUG}}-api-files.priority=100"
+      - "com.centurylinklabs.watchtower.enable=true"
 
   {{SLUG}}-ui:
     image: {{STORE_UI_IMAGE}}
@@ -97,8 +108,12 @@ services:
       - "traefik.enable=true"
       - "traefik.docker.network=proxy-network"
       - "traefik.http.routers.{{SLUG}}-ui.rule=Host(`{{SLUG}}.{{ROOT_DOMAIN}}`)"
+      - "traefik.http.routers.{{SLUG}}-ui.entrypoints=web,websecure"
+      - "traefik.http.routers.{{SLUG}}-ui.tls=true"
+      - "traefik.http.routers.{{SLUG}}-ui.tls.certresolver=letsencrypt"
       - "traefik.http.routers.{{SLUG}}-ui.priority=10"
       - "traefik.http.services.{{SLUG}}-ui.loadbalancer.server.port=8080"
+      - "com.centurylinklabs.watchtower.enable=true"
 
 volumes:
   {{SLUG}}_mysql_data:
