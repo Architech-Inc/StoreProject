@@ -29,99 +29,91 @@ StoreProject is a comprehensive, scalable retail management platform designed fo
 ## Architecture
 
 ### Technology Stack
-- **Backend**: ASP.NET Core 8.0 Web API (minimal APIs), EF Core with MySQL/Pomelo provider.
-- **Frontend**: ASP.NET Core Razor Pages and Blazor for web UI; .NET MAUI for mobile/tablet POS apps.
-- **Database**: MySQL for transactional data; Redis for caching/sessions; object storage for receipts/docs.
-- **Messaging**: RabbitMQ for asynchronous workflows with outbox pattern.
-- **Infrastructure**: Modular monolith initially; evolves to microservices as needed. Deployable on Kubernetes/App Service/ECS.
-- **Security**: JWT authentication, rate limiting, CORS, security headers, and audit logging.
+- **Backend**: ASP.NET Core 8.0 Web API with Clean Architecture (Dispatcher/Handlers/Ports) and EF Core (Pomelo MySQL provider).
+- **Frontend**: ASP.NET Core Razor Pages consuming the ClexAn Design System tokens, responsive POS engine, and offline Service Worker.
+- **SaaS & Multi-Tenancy**: `Store.ControlPlane` (tenant provisioning & lifecycle engine) and `Store.TenantPortal` (self-service signup).
+- **Database & Storage**: MySQL 8.0 for relational transactions; MongoDB 6.0+ for audit trails/attachments.
+- **Infrastructure**: Traefik 2.10 Edge Proxy, Docker Compose, ClamAV antivirus sidecar, and automated backup containers.
+- **Security**: JWT Bearer auth with security-stamp rotation, fine-grained permission claim policies, HMAC callback validation, strict rate limiting, and security headers.
 
 ### Project Structure
-- `Store.API/`: ASP.NET Core Web API with controllers, middleware, and Swagger.
-- `Store.UI/`: Razor Pages web UI for back-office and dashboards.
-- `Store.DbServices/`: Data access layer with EF Core contexts, services, and migrations.
-- `Store.Models/`: Shared DTOs, entities, and domain contracts.
-- `Store.API.Tests/`: Unit tests for middleware and core logic.
+- `Store.API/`: REST API layer with controllers, authorization policies, audit logging, and antivirus scanners.
+- `Store.UI/`: Back-office and POS web interface for cashiers, managers, and administrators.
+- `Store.ControlPlane/`: Tenant provisioning, suspension, lifecycle orchestration, and plan-quota enforcement.
+- `Store.TenantPortal/`: Public SaaS onboarding and registration portal.
+- `Store.DbServices/`: EF Core `StoreDbContext`, Pomelo MySQL migrations, and business services.
+- `Store.Models/`: Shared DTOs, domain models, and permission keys (`PermissionKeys.All`).
+- `Store.API.Tests/`: xUnit test suite (414+ tests) covering security policies, controllers, and domain logic.
 
 ## Getting Started
 
+> **For step-by-step setup, see the complete [Developer Onboarding Guide](docs/onboarding.md).**
+
 ### Prerequisites
 - .NET 8.0 SDK
-- MySQL Server (or Docker container)
-- Node.js (if React components are added later)
-- Android SDK (for .NET MAUI POS app development)
+- Docker Engine & Docker Compose
+- MySQL 8.0 (local server or Docker container)
+- PowerShell 7+ (Windows) or GNU Make (Linux/macOS)
 
-### Setup
-1. **Clone the Repository**:
-   ```bash
-   git clone https://github.com/Architech-Inc/StoreProject.git
-   cd StoreProject
-   ```
+### Quickstart with Task Runners
 
-2. **Database Setup**:
-   - Install MySQL and create a database (e.g., `store_db`).
-   - Update connection string in `Store.API/appsettings.json` or environment variables.
-   - Run migrations:
-     ```bash
-     dotnet ef database update --project Store.DbServices
-     ```
+We provide unified task runners for both POSIX (`make`) and Windows PowerShell (`tasks.ps1`):
 
-3. **Build and Run**:
-   - Build the solution:
-     ```bash
-     dotnet build StoreProject.sln
-     ```
-   - Run the API:
-     ```bash
-     dotnet run --project Store.API
-     ```
-     - API available at `https://localhost:7112` (or configured URL).
-     - Swagger UI at `https://localhost:7112/swagger`.
-   - Run the UI (in another terminal):
-     ```bash
-     dotnet run --project Store.UI
-     ```
-     - Web UI at `https://localhost:5001` (or configured).
+```bash
+# 1. Clone repository
+git clone https://github.com/Architech-Inc/StoreProject.git
+cd StoreProject
 
-4. **Seed Data** (Development Only)**:
-   - The API auto-seeds sample data on startup in Development environment.
+# 2. Configure environment
+cp .env.example .env
 
-### Configuration
-- **JWT**: Set `Jwt:Key` in appsettings (strong secret, min 32 chars in production).
-- **CORS**: Configure `Cors:AllowedOrigins` (wildcard allowed in dev, explicit in prod).
-- **Mobile Money**: Add API keys for MTN MoMo/Orange Money in appsettings.
-- **Database**: Connection string in `ConnectionStrings:StoreDb`.
+# 3. Build solution (Enforces 0 warnings policy)
+# On Linux/macOS:
+make build
+# On Windows:
+.\tasks.ps1 build
 
-### Testing
-- Run unit tests:
-  ```bash
-  dotnet test Store.API.Tests
-  ```
-- For integration tests, ensure MySQL is running.
+# 4. Run test suite
+# On Linux/macOS:
+make test
+# On Windows:
+.\tasks.ps1 test
 
-## API Documentation
-- Access Swagger UI at `/swagger` when running the API.
-- Key endpoints:
-  - Auth: `/api/auth/login`, `/api/auth/refresh`
-  - Users: `/api/users`
-  - Inventory: `/api/inventory`
-  - POS: `/api/invoices` (for sales)
-  - Pricing: `/api/pricing`
-  - Cash: `/api/cash`
-- All endpoints require JWT Bearer token except login.
+# 5. Launch development services
+# On Linux/macOS:
+make run-api    # Terminal 1: REST API (https://localhost:7112)
+make run-ui     # Terminal 2: Web Console (https://localhost:5001)
+
+# On Windows:
+.\tasks.ps1 run api
+.\tasks.ps1 run ui
+```
+
+For a full list of runner commands (`make help` or `.\tasks.ps1 help`):
+- `clean`: Remove build outputs and temporary caches
+- `platform-up` / `platform-down`: Orchestrate Traefik and Control Plane via Docker Compose
+- `provision-tenant`: Provision a new isolated tenant store stack
+- `migrate`: Apply pending EF Core database migrations
+- `audit`: Run clean release build and test suite verification
+
+## Documentation & Runbooks
+
+- [**Developer Onboarding Guide**](docs/onboarding.md) — Comprehensive local setup, database seeding, and troubleshooting FAQ.
+- [**Agent & Contributor Rules (AGENTS.md)**](AGENTS.md) — Architecture principles, coding conventions, and secrets guards.
+- [**Security Runbook**](docs/security_runbook.md) — Security incident response, secret rotation, and operational triage.
+- [**ClexAn Design System Specification**](docs/design_system_specification.md) — Design tokens, component primitives, and UX rules.
+- [**Master Audit Tracker**](docs/audit-tracker.md) — Status of all security, functional, and infrastructure audit items.
+- [**Implementation Log**](IMPLEMENTATION_LOG.md) — Chronological record of remediation waves.
 
 ## Contributing
-1. Fork the repository.
-2. Create a feature branch.
-3. Make changes and add tests.
-4. Submit a pull request with a clear description.
+1. Fork the repository and create a feature branch.
+2. Ensure solution builds clean with 0 warnings: `make build` / `.\tasks.ps1 build`.
+3. Ensure all tests pass: `make test` / `.\tasks.ps1 test`.
+4. Review the pull request against [.github/PULL_REQUEST_TEMPLATE.md](.github/PULL_REQUEST_TEMPLATE.md).
 
 ## License
 This project is licensed under the terms in [LICENSE.txt](LICENSE.txt).
 
-## Support
-For issues or questions, contact the development team or open an issue on GitHub.
-
 ---
 
-*Built for Cameroon, designed for Africa and beyond.*
+*Built for Cameroon, designed for Africa and beyond.*

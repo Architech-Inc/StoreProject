@@ -2460,6 +2460,45 @@ Resolve `UX-04` by building and standardizing a modern, accessible, and comprehe
 - Audit tracker updated: `UX-04` -> `[x]`.
 
 
+## Wave 40 — Developer Onboarding Guide & Cross-Platform Task Runners (PROC-08, PROC-09, PROC-10)
+
+### Objective
+Resolve `PROC-08`, `PROC-09`, and `PROC-10` by authoring a comprehensive, production-grade Developer Onboarding Guide, introducing cross-platform CLI task orchestration (`Makefile` and `tasks.ps1`), and reconciling repository root documentation (`README.md`).
+
+### 40.A — Developer Onboarding Guide (`docs/onboarding.md`)
+- Authored a comprehensive developer guide taking engineers from clone to local operational stack in <30 minutes.
+- **Architecture Topology**: Documented the 4-tier model (Traefik 2.10 Edge Proxy, Control Plane orchestrator, Tenant Portal, and isolated per-tenant container stacks with MySQL, MongoDB, and ClamAV).
+- **Setup & Configuration**: Step-by-step guidance covering prerequisite tooling, `.env.example` -> `.env` configuration, secrets minimums (≥32 chars), and dev cert trust.
+- **Database Provisioning**: Documented Docker container spin-up, EF Core migration flow, and baseline demo catalog seeding (`001_production_base.sql`).
+- **Development Workflows**: Documented dual execution strategies: host-level hot-reload development (`make run-api`, `make run-ui`, `make run-cp`, `make run-tp`) vs containerized platform execution (`make platform-up`).
+- **Quality & Security Rules**: Codified the zero-warnings policy, Clean Architecture boundaries, permission policy claims, audit logging rules, and ClexAn design system tokens.
+- **Troubleshooting FAQ**: Actionable solutions for `SecretEncryptionService` startup guards, port conflicts (7112, 5000, 5050), ClamAV NoOp dev fallback, and CORS allowlisting.
+
+### 40.B — Master Platform Makefile (`Makefile`)
+- Created a POSIX-compliant Makefile with auto-generated, colorized `help` menu and `.PHONY` targets.
+- Implemented core build & test workflows: `make build` (Release with 0 warnings), `make build-dev` (Debug), `make test` (xUnit suite), `make test-verbose`, `make restore`, and `make clean`.
+- Implemented individual service runners: `make run-api`, `make run-ui`, `make run-cp`, `make run-tp`.
+- Implemented platform orchestration & multi-tenancy: `make platform-up`, `make platform-down`, `make platform-restart`, `make platform-logs`, and parameter-driven `make provision-tenant`.
+- Implemented database lifecycle actions: `make migrate`, `make backup`, `make restore-db`, and `make audit`.
+
+### 40.C — PowerShell Platform Task Runner (`tasks.ps1`)
+- Built a native Windows/PowerShell 7+ task runner with parameter validation, ANSI styling, command execution timing, and error handling.
+- Commands supported: `.\tasks.ps1 help`, `.\tasks.ps1 build`, `.\tasks.ps1 test`, `.\tasks.ps1 clean`, `.\tasks.ps1 restore`, `.\tasks.ps1 run <api|ui|cp|tp>`, `.\tasks.ps1 platform <up|down|restart|logs>`, `.\tasks.ps1 provision`, `.\tasks.ps1 migrate`, `.\tasks.ps1 backup`, `.\tasks.ps1 restore-db`, and `.\tasks.ps1 audit`.
+
+### 40.D — Documentation Reconciliation (`README.md`)
+- Overhauled repository `README.md` to reflect the multi-tenant architecture (`Store.ControlPlane` and `Store.TenantPortal`).
+- Removed obsolete references to unused frameworks (Blazor, MAUI, Redis, RabbitMQ).
+- Linked `docs/onboarding.md`, `AGENTS.md`, `docs/security_runbook.md`, `docs/design_system_specification.md`, and task runners directly from `README.md` (resolving `PROC-09`).
+
+### Verification
+- `tasks.ps1 help` validated with formatted colorized menu.
+- `tasks.ps1 test` validated with all 414 tests passing.
+- Solution build clean: `dotnet build StoreProject.sln --configuration Release` (**0 warnings, 0 errors**).
+- Test suite passes: `dotnet test Store.API.Tests -c Release` -> **414 passed, 0 failed**.
+- Audit tracker updated: `PROC-08` -> `[x]`, `PROC-09` -> `[x]`, `PROC-10` -> `[x]`.
+
+
+
 
 
 

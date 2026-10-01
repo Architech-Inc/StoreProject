@@ -205,9 +205,9 @@ Prefixes used across audits — `SEC-*` (security) · `GAP-*` (functional) · `U
 | `PROC-05` | No tests for ControlPlane / TenantPortal | `Store.API.Tests/` | `[ ]` | Add `Store.ControlPlane.Tests` and `Store.TenantPortal.Tests` projects; minimum smoke test per controller. |
 | `PROC-06` | `api_analyzer_report.md` checked into source | repo root | `[ ]` | Move generation to CI artifact; do not commit `api_analysis_report.md` (1.2k lines, will go stale). |
 | `PROC-07` | No `architecture-decision-records/` | repo root | `[ ]` | ADR-001 = clean architecture decision; ADR-002 = per-tenant isolation strategy; etc. |
-| `PROC-08` | No `docs/onboarding.md` for new devs | `docs/` | `[ ]` | Local-dev quickstart: docker-compose up, env vars, seed script. |
-| `PROC-09` | `docs/security_runbook.md` not linked from README | repo root | `[~]` | Wave 6 — `security_runbook.md` exists; **verify** it's referenced from the main README. |
-| `PROC-10` | No `Makefile` or `justfile` for common commands | repo root | `[ ]` | `make build`, `make test`, `make provision-tenant`, `make audit`. |
+| `PROC-08` | No `docs/onboarding.md` for new devs | `docs/` | `[x]` | Wave 40 — comprehensive developer onboarding guide created in `docs/onboarding.md` covering system topology, prerequisites, step-by-step setup, database seeding, task runners, code conventions, and troubleshooting FAQ. |
+| `PROC-09` | `docs/security_runbook.md` not linked from README | repo root | `[x]` | Wave 40 — verified and linked under Documentation & Runbooks in `README.md`. |
+| `PROC-10` | No `Makefile` or `justfile` for common commands | repo root | `[x]` | Wave 40 — created POSIX-compliant root `Makefile` and native `tasks.ps1` PowerShell task runner supporting build, test, clean, run, platform orchestration, tenant provisioning, database migration, and full audit. |
 | `PROC-11` | CI does not run ControlPlane / TenantPortal builds | `.github/workflows/ci-cd.yml` | `[x]` | Wave 13 — refactored CI into 6-leg build matrix (`Store.Models`, `Store.DbServices`, `Store.API`, `Store.UI`, `Store.ControlPlane`, `Store.TenantPortal`) with per-leg cache + log; `docker-build-and-push` now needs both `build-matrix` and `build-and-test`. Also fixed pre-existing YAML indent bug in `deploy-production` heredoc. |
 
 ---
