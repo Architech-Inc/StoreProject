@@ -33,19 +33,29 @@ public class InvoiceService : IInvoiceService
 
     public async Task<InvoiceDto?> GetByIdAsync(Guid invoiceId, CancellationToken ct = default)
     {
+        // 1. Fetch invoice header with customer, cashier user/employee, branch, and tenders in an optimized split query
         var invoice = await _uow.Repository<Invoice>().Query()
             .Include(i => i.Customer).ThenInclude(c => c!.Phones).ThenInclude(cp => cp.Phone)
             .Include(i => i.Customer).ThenInclude(c => c!.Emails).ThenInclude(ce => ce.Email)
             .Include(i => i.Customer).ThenInclude(c => c!.LoyaltyAccount)
             .Include(i => i.User).ThenInclude(u => u!.Employee)
             .Include(i => i.Branch)
-            .Include(i => i.Sales).ThenInclude(s => s.Item).ThenInclude(it => it.Unit)
             .Include(i => i.Tenders)
             .AsNoTracking()
             .AsSplitQuery()
             .FirstOrDefaultAsync(i => i.InvoiceId == invoiceId, ct);
 
-        return invoice is null ? null : MapToDto(invoice);
+        if (invoice is null) return null;
+
+        // 2. Fetch line items separately to prevent massive Cartesian products with customer/tenders trees (GAP-12)
+        var sales = await _uow.Repository<Sale>().Query()
+            .Where(s => s.InvoiceId == invoiceId)
+            .AsNoTracking()
+            .ToListAsync(ct);
+
+        invoice.Sales = sales;
+
+        return MapToDto(invoice);
     }
 
     public async Task<PublicReceiptDto?> GetPublicReceiptAsync(Guid invoiceId, CancellationToken ct = default)
@@ -54,13 +64,20 @@ public class InvoiceService : IInvoiceService
             .Include(i => i.Customer)
             .Include(i => i.User).ThenInclude(u => u!.Employee)
             .Include(i => i.Branch)
-            .Include(i => i.Sales).ThenInclude(s => s.Item)
             .Include(i => i.Tenders)
             .AsNoTracking()
             .AsSplitQuery()
             .FirstOrDefaultAsync(i => i.InvoiceId == invoiceId, ct);
 
         if (invoice == null) return null;
+
+        // Fetch line items separately to avoid Cartesian joins with tenders/branch (GAP-12)
+        var sales = await _uow.Repository<Sale>().Query()
+            .Where(s => s.InvoiceId == invoiceId)
+            .AsNoTracking()
+            .ToListAsync(ct);
+
+        invoice.Sales = sales;
 
         var cashierName = invoice.User?.Employee?.FirstName ?? invoice.User?.Username ?? "Staff Cashier";
         var customerName = invoice.Customer != null ? $"{invoice.Customer.FirstName} {invoice.Customer.LastName}".Trim() : "Walk-in Customer";
@@ -89,7 +106,7 @@ public class InvoiceService : IInvoiceService
             VerificationSignature = verificationSig,
             Lines = invoice.Sales.Select(s => new PublicReceiptLineDto
             {
-                ItemName = s.Item?.Name ?? "Item",
+                ItemName = !string.IsNullOrWhiteSpace(s.ItemName) ? s.ItemName : "Item",
                 Quantity = s.Quantity,
                 UnitPrice = s.UnitPrice,
                 DiscountAmount = s.DiscountAmount ?? 0,
@@ -123,10 +140,43 @@ public class InvoiceService : IInvoiceService
             _ => query.OrderByDescending(i => i.DateCreated)
         };
 
+        // Fetch paginated invoice headers with reference navigations in a split query
         var items = await query
+            .Include(i => i.Customer).ThenInclude(c => c!.Phones).ThenInclude(cp => cp.Phone)
+            .Include(i => i.Customer).ThenInclude(c => c!.Emails).ThenInclude(ce => ce.Email)
+            .Include(i => i.User).ThenInclude(u => u!.Employee)
+            .Include(i => i.Branch)
+            .AsSplitQuery()
             .Skip((invReq.Page - 1) * invReq.PageSize)
             .Take(invReq.PageSize)
             .ToListAsync(ct);
+
+        // Fetch line items and tenders in separate targeted queries to avoid Cartesian explosion (GAP-12)
+        if (items.Count > 0)
+        {
+            var invoiceIds = items.Select(i => i.InvoiceId).ToList();
+
+            var salesTask = _uow.Repository<Sale>().Query()
+                .Where(s => invoiceIds.Contains(s.InvoiceId))
+                .AsNoTracking()
+                .ToListAsync(ct);
+
+            var tendersTask = _uow.Repository<InvoiceTender>().Query()
+                .Where(t => invoiceIds.Contains(t.InvoiceId))
+                .AsNoTracking()
+                .ToListAsync(ct);
+
+            await Task.WhenAll(salesTask, tendersTask);
+
+            var salesByInvoice = salesTask.Result.GroupBy(s => s.InvoiceId).ToDictionary(g => g.Key, g => g.ToList());
+            var tendersByInvoice = tendersTask.Result.GroupBy(t => t.InvoiceId).ToDictionary(g => g.Key, g => g.ToList());
+
+            foreach (var inv in items)
+            {
+                inv.Sales = salesByInvoice.TryGetValue(inv.InvoiceId, out var salesList) ? salesList : new List<Sale>();
+                inv.Tenders = tendersByInvoice.TryGetValue(inv.InvoiceId, out var tenderList) ? tenderList : new List<InvoiceTender>();
+            }
+        }
 
         return new PagedResult<InvoiceDto>
         {
@@ -182,14 +232,7 @@ public class InvoiceService : IInvoiceService
     private IQueryable<Invoice> BuildFilteredQuery(InvoicePagedRequest request)
     {
         var query = _uow.Repository<Invoice>().Query()
-            .Include(i => i.Customer).ThenInclude(c => c!.Phones).ThenInclude(cp => cp.Phone)
-            .Include(i => i.Customer).ThenInclude(c => c!.Emails).ThenInclude(ce => ce.Email)
-            .Include(i => i.User).ThenInclude(u => u!.Employee)
-            .Include(i => i.Branch)
-            .Include(i => i.Sales)
-            .Include(i => i.Tenders)
-            .AsNoTracking()
-            .AsSplitQuery();
+            .AsNoTracking();
 
         if (!string.IsNullOrWhiteSpace(request.SearchTerm))
         {

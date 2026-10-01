@@ -2105,6 +2105,44 @@ Startup crashed in `Store.API` with `InvalidOperationException: Unable to resolv
 - Test suite passes: `dotnet test Store.API.Tests` -> 298 passed, 0 failed.
 - Audit tracker updated: `GAP-24` -> `[x]`.
 
+---
+
+## 2026-10-01 — Wave 32 (InvoiceService Query Splitting & Line-Item Fetch Optimization: GAP-12 — completed)
+
+### 32.A — Elimination of Cartesian Product Joins in Invoice Retrieval
+- **Issue**: `GAP-12` / `DB-02` audit finding identified that `InvoiceService.cs` loaded multi-level navigation trees (`Customer -> Phones -> Phone`, `Customer -> Emails -> Email`, `Customer -> LoyaltyAccount`, `User -> Employee`, `Branch`, `Sales -> Item -> Unit`, `Tenders`) in single queries, causing massive Cartesian joins and slow execution for invoices with multiple line items.
+- **Changes in `Store.DbServices/Services/InvoiceService.cs`**:
+  - `GetByIdAsync`:
+    - Retained split query `.AsSplitQuery()` on invoice header, customer contact navigations, branch, and cashier user/employee.
+    - Decoupled `Sales` line items from the header query. Line items are now fetched via a separate targeted query: `_uow.Repository<Sale>().Query().Where(s => s.InvoiceId == invoiceId).AsNoTracking().ToListAsync()`.
+    - Removed redundant `.ThenInclude(s => s.Item).ThenInclude(it => it.Unit)` since `ItemName` and `UnitAbbreviation` are snapshot fields persisted directly on `Sale`.
+  - `GetPublicReceiptAsync`:
+    - Decoupled `Sales` line items into a separate indexed query: `_uow.Repository<Sale>().Query().Where(s => s.InvoiceId == invoiceId).AsNoTracking().ToListAsync()`.
+    - Removed `.ThenInclude(s => s.Item)` join; uses persisted `s.ItemName` with fallback.
+  - `GetAllAsync`:
+    - Refactored `BuildFilteredQuery` to build a clean, lean base query without eager navigation includes on child collections (`Sales`, `Tenders`).
+    - Pagination (`Skip`/`Take`) retrieves the filtered slice of invoice headers with reference navigations (`Customer`, `User.Employee`, `Branch`).
+    - Fetches child collections for the paged batch in two concurrent index-seek queries:
+      `_uow.Repository<Sale>().Query().Where(s => invoiceIds.Contains(s.InvoiceId)).AsNoTracking().ToListAsync()`
+      `_uow.Repository<InvoiceTender>().Query().Where(t => invoiceIds.Contains(t.InvoiceId)).AsNoTracking().ToListAsync()`
+    - In-memory grouping attaches `Sales` and `Tenders` to their respective `Invoice` entities before mapping to `InvoiceDto`.
+  - `GetSummaryMetricsAsync`:
+    - Benefits from the cleaned `BuildFilteredQuery`, generating a lightweight SQL aggregation without eager joins to customer contacts or tenders.
+
+### 32.B — Unit Tests & Verification
+- `Store.API.Tests/Store.API.Tests.csproj`: Added package reference `Microsoft.EntityFrameworkCore.InMemory` (v8.0.4).
+- `Store.API.Tests/InvoiceServiceQuerySplittingTests.cs` (5 new unit tests):
+  - `GetByIdAsync_ReturnsInvoiceWithSeparatelyFetchedSalesAndTenders`: Validates header navigations, separate sale and tender retrieval, and DTO mapping.
+  - `GetByIdAsync_ReturnsNull_WhenInvoiceDoesNotExist`: Validates not found path.
+  - `GetPublicReceiptAsync_ReturnsReceiptWithCorrectCalculations`: Validates public receipt line retrieval and verification signature generation.
+  - `GetAllAsync_PaginatesAndAssociatesLinesAndTendersSeparately`: Validates batch line item and tender association across paginated invoices.
+  - `GetSummaryMetricsAsync_CalculatesAggregatesAccurately`: Validates lean aggregate calculation.
+
+### Verification
+- Solution build clean: `dotnet build StoreProject.sln --configuration Release` (0 warnings in code, 0 errors).
+- Test suite passes: `dotnet test Store.API.Tests -c Release` -> 303 passed, 0 failed.
+- Audit tracker updated: `GAP-12` -> `[x]`.
+
 
 
 
