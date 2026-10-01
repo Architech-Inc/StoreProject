@@ -2251,6 +2251,55 @@ Startup crashed in `Store.API` with `InvalidOperationException: Unable to resolv
 - Test suite passes: `dotnet test Store.API.Tests -c Release` -> **353 passed, 0 failed**.
 - Audit tracker updated: `GAP-14` -> `[x]`.
 
+---
+
+## 2026-10-01 — Wave 35 (OAuth State Server-Side Binding Verification & Anti-CSRF: SEC-10, MT-10 — completed)
+
+### 35.A — Server-Side Nonce Registry & Single-Use Replay Protection
+- **Audit Finding**: `SEC-10` / `MT-10` identified that OAuth state validation relied purely on stateless HMAC verification (`{tenantId}:{timestamp}:{signature}`). While the signature proved the state originated from the server, it lacked server-side binding and single-use enforcement:
+  - An attacker could capture and replay an intercepted state parameter within the 10-minute validity window.
+  - A state generated for one tenant session could be injected into a victim's flow (Login CSRF / OAuth account linking fixation) without verification that the callback originated from the user-agent that initiated the flow.
+- **Implementation**:
+  - `Store.TenantPortal/Services/OAuthService.cs`:
+    - Upgraded state generation to a 4-part payload: `{tenantId:D}:{timestamp}:{nonce}:{signature}` using a 16-byte cryptographically secure random nonce (`RandomNumberGenerator.GetBytes(16)`).
+    - Introduced a thread-safe server-side registry (`ConcurrentDictionary<string, OAuthStateEntry>`) holding `(TenantId, ExpiresAt)`.
+    - Implemented atomic one-time consumption via `_activeStates.TryRemove(nonce, out var recordedEntry)`. Once a state is validated, its entry is permanently consumed, defeating replay attacks.
+    - Added automatic pruning of expired entries during generation (`PruneExpiredStates()`).
+    - Made testing helpers (`ActiveStateCount`, `ClearActiveStates()`) accessible for unit test fixtures.
+
+### 35.B — User-Agent Session Binding via Anti-CSRF Cookie
+- **Cookie Binding**:
+  - During `GenerateSignedState(tenantId, httpContext)`, an `HttpOnly`, `SameSite=Lax`, `Secure` cookie (`clexan_oauth_state_nonce`) is appended to the response containing the nonce with a 10-minute expiry. `SameSite=Lax` ensures the cookie is supplied across top-level redirects returning from external IdPs (Microsoft / Google).
+  - During `ValidateSignedState(state, httpContext, out tenantId)`, the request cookie nonce is retrieved and verified against the state nonce using constant-time comparison (`CryptographicOperations.FixedTimeEquals`).
+  - On validation completion, the cookie is deleted to ensure zero lingering state.
+  - Added overload `IOAuthService.GenerateSignedState(Guid, HttpContext?)` and `IOAuthService.ValidateSignedState(string, HttpContext?, out Guid)`.
+  - Retained fallback for legacy 3-part states when `HttpContext` is null for backward compatibility.
+- **Plumbing**:
+  - `Store.TenantPortal/Program.cs`: Registered `builder.Services.AddHttpContextAccessor()`.
+  - Updated all OAuth connection and callback Razor page-models to supply `HttpContext`:
+    - `Store.TenantPortal/Pages/Dashboard/OAuth/Connect.cshtml.cs`: Passes `HttpContext` to `GenerateSignedState`.
+    - `Store.TenantPortal/Pages/Dashboard/OAuth/Callback.cshtml.cs`: Passes `HttpContext` to `ValidateSignedState`.
+    - `Store.TenantPortal/Pages/OAuth/MicrosoftCallback.cshtml.cs`: Passes `HttpContext` to `ValidateSignedState`.
+    - `Store.TenantPortal/Pages/OAuth/GoogleCallback.cshtml.cs`: Passes `HttpContext` to `ValidateSignedState`.
+
+### 35.C — Comprehensive Security Unit Test Suite
+- `Store.API.Tests/Store.API.Tests.csproj`: Added project reference to `Store.TenantPortal`.
+- `Store.API.Tests/OAuthServiceTests.cs` (9 new security unit tests):
+  - `GenerateSignedState_FormatsFourPartPayload_AndSetsStateCookie`: Verifies 4-part structure, HMAC validity, server registry registration, and `HttpOnly`/`SameSite=Lax`/`Secure` cookie headers.
+  - `ValidateSignedState_ValidCookieAndState_ReturnsTrue_AndConsumesNonce`: Verifies end-to-end happy path and cookie deletion.
+  - `ValidateSignedState_ReplayAttack_ReturnsFalseOnSecondAttempt`: Verifies atomic `TryRemove` rejects replay attempts with the same state parameter.
+  - `ValidateSignedState_TamperedSignature_ReturnsFalse`: Verifies signature tampering is rejected.
+  - `ValidateSignedState_CookieMismatch_ReturnsFalse`: Verifies anti-CSRF check rejects mismatched session cookies.
+  - `ValidateSignedState_MissingCookie_ReturnsFalse`: Verifies anti-CSRF check rejects requests when state cookie is absent.
+  - `ValidateSignedState_UnissuedForgedNonce_ReturnsFalse`: Verifies forged state with unissued nonce is rejected by server registry.
+  - `ValidateSignedState_ExpiredTimestamp_ReturnsFalse`: Verifies 10-minute expiry window rejection.
+  - `BuildAuthUrls_IncludesRequiredParametersAndState`: Verifies Microsoft and Google authorization URL builders include proper client IDs, scopes, redirect URIs, and escaped state.
+
+### Verification
+- Solution build clean: `dotnet build StoreProject.sln --configuration Release` (**0 warnings, 0 errors**).
+- Test suite passes: `dotnet test Store.API.Tests -c Release` -> **362 passed, 0 failed** (+9 new security unit tests).
+- Audit tracker updated: `SEC-10` -> `[x]`, `MT-10` -> `[x]`.
+
 
 
 

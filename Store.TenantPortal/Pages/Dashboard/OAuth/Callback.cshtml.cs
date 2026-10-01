@@ -58,7 +58,7 @@ public class CallbackModel : PageModel
             return Page();
         }
 
-        if (!_oAuthService.ValidateSignedState(State, out var tenantId) || tenantId != session.TenantId.Value)
+        if (!_oAuthService.ValidateSignedState(State, HttpContext, out var tenantId) || tenantId != session.TenantId.Value)
         {
             _logger.LogWarning("CSRF state validation failed or mismatched tenant in OAuth callback.");
             ErrorMessage = "Security validation failed. Please try again.";

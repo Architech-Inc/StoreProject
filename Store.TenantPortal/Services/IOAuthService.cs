@@ -2,8 +2,9 @@ namespace Store.TenantPortal.Services;
 
 public interface IOAuthService
 {
-    string GenerateSignedState(Guid tenantId);
+    string GenerateSignedState(Guid tenantId, Microsoft.AspNetCore.Http.HttpContext? httpContext = null);
     bool ValidateSignedState(string state, out Guid tenantId);
+    bool ValidateSignedState(string state, Microsoft.AspNetCore.Http.HttpContext? httpContext, out Guid tenantId);
     string BuildMicrosoftAuthUrl(string state, string redirectUri);
     string BuildGoogleAuthUrl(string state, string redirectUri);
     Task<OAuthTokenResult> ExchangeMicrosoftCodeAsync(string code, string redirectUri, CancellationToken ct = default);

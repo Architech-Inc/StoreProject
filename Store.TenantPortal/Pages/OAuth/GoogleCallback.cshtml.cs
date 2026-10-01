@@ -52,7 +52,7 @@ public class GoogleCallbackModel : PageModel
             return Page();
         }
 
-        if (string.IsNullOrEmpty(state) || !_oauthService.ValidateSignedState(state, out var stateTenantId) || stateTenantId != session.TenantId!.Value)
+        if (string.IsNullOrEmpty(state) || !_oauthService.ValidateSignedState(state, HttpContext, out var stateTenantId) || stateTenantId != session.TenantId!.Value)
         {
             IsSuccess = false;
             Message = "Invalid or expired anti-CSRF state token.";

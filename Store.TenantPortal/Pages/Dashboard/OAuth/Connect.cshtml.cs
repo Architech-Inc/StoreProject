@@ -24,7 +24,7 @@ public class ConnectModel : PageModel
         var session = _sessionService.GetCurrentSession(User);
         if (session == null || !session.TenantId.HasValue) return RedirectToPage("/Login");
 
-        var state = _oAuthService.GenerateSignedState(session.TenantId.Value);
+        var state = _oAuthService.GenerateSignedState(session.TenantId.Value, HttpContext);
         // We embed the provider in the state or we rely on the callback route. 
         // We can just embed provider inside a cookie or use specific redirect URIs.
         // But our callback will be /Dashboard/OAuth/Callback/{provider}

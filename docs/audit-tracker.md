@@ -47,6 +47,8 @@ Prefixes used across audits — `SEC-*` (security) · `GAP-*` (functional) · `U
 | 11 | Error-surface hardening | `SEC-27` (error code structure), all PII surface funnelled through `SafeErrorMessage.From`; `OPS-04` (HttpClientFactory log spam silenced); dev/prod split enforced |
 | 24 | Quick-wins polish wave | `SEC-21` (HSTS & ForwardedHeaders TLS verification), `GAP-26` (centralized keyboard shortcuts), `GAP-29` (POS loyalty tier live re-fetch) |
 | 25 | Real-time POS discount override push | `GAP-28` (live SignalR discount-override status push to POS terminal session; live cart line badge state transitions) |
+| 34 | Lookup endpoints consolidation & SRP | `GAP-14` (decoupled monolithic lookup controllers/services/interfaces, duplicate checks, FK guards, 36 tests) |
+| 35 | OAuth state server-side binding & CSRF verification | `SEC-10`, `MT-10` (4-part OAuth state, server-side nonce registry, single-use replay protection, session cookie anti-CSRF binding, 9 security tests) |
 
 ---
 
@@ -65,7 +67,7 @@ Prefixes used across audits — `SEC-*` (security) · `GAP-*` (functional) · `U
 | `SEC-07` | CI/CD `StrictHostKeyChecking=accept-new` | `.github/workflows/ci-cd.yml:170-188` | `[x]` | Wave 1 — `ssh-keyscan` + `accept-new` removed; pinned `VPS_SSH_KNOWN_HOSTS` required secret. |
 | `SEC-08` | Docker socket = host root (ControlPlane) | `docker-compose.platform.yml:17` | `[x]` | Wave 1 — non-root user + cap_drop ALL + read_only + tmpfs on control-plane. **Further hardening recommended**: docker-socket-proxy (api filters), AppArmor/seccomp profile. |
 | `SEC-09` | Empty-password root MySQL on startup | `Store.API/Program.cs`; `Store.ControlPlane/Program.cs` | `[x]` | Wave 1 — `ContainsEmptyMySqlPassword` guard refuses empty MySQL password in non-dev. |
-| `SEC-10` | OAuth `state` HMAC not verified server-side | `TenantPortal/Program.cs` OAuth callbacks | `[ ]` | Verify the state is server-side-bound (not just signature-valid). Cross-reference `phase-4-security-rate-limiting-audit.md`. |
+| `SEC-10` | OAuth `state` HMAC not verified server-side | `TenantPortal/Program.cs` OAuth callbacks | `[x]` | Wave 35 — Upgraded OAuth state generation to 4-part payload (`{tenantId}:{timestamp}:{nonce}:{signature}`). Stored nonces in server-side `ConcurrentDictionary` registry with atomic single-use consumption (`TryRemove`) to eliminate replay attacks. Issued `HttpOnly`, `SameSite=Lax`, `Secure` cookie (`clexan_oauth_state_nonce`) to bind state to initiating user session and eliminate login CSRF and account linking fixation. |
 
 ### 🟠 HIGH
 
@@ -186,7 +188,7 @@ Prefixes used across audits — `SEC-*` (security) · `GAP-*` (functional) · `U
 | `MT-07` | No tenant-status / scheduled-maintenance page | n/a | `[x]` | Wave 13 — `MaintenanceWindow` JSON collection on `Tenant` + `PublicStatusController` (`/api/public/tenants/{slug}/status`, anonymous, `[AllowAnonymous]`, 30s `ResponseCache`) + `/Status/{slug}` Razor page (no auth) + operator CRUD endpoints (`POST/DELETE /api/control/tenants/{id}/maintenance-windows`, `POST .../resolve`) + audit trail entries. |
 | `MT-08` | Tenant-scoped JWT issuer/audience per env | `Program.cs` JWT options | `[x]` | Per-AGENTS.md: tenant-scoped issuer/audience per env var. |
 | `MT-09` | `TenantOwnerOnlyAttribute` IDOR filter | `TenantPortal` | `[x]` | Per `phase-4` plan: IDOR filter landed. |
-| `MT-10` | OAuth state HMAC | `TenantPortal/Program.cs` | `[~]` | `phase-4` plan claims HMAC-SHA256; verify code matches plan. |
+| `MT-10` | OAuth state HMAC | `TenantPortal/Program.cs` | `[x]` | Wave 35 — Upgraded OAuth state to cryptographically signed 4-part payload with server-side nonce tracking and cookie binding. |
 
 ---
 

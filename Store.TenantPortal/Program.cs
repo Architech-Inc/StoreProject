@@ -45,6 +45,7 @@ builder.Services.AddHttpClient<IControlPlaneClient, ControlPlaneClient>(client =
     .WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromMilliseconds(200 * Math.Pow(2, retryAttempt))));
 
 // Register Portal Services
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IPortalSessionService, PortalSessionService>();
 builder.Services.AddScoped<IOAuthService, OAuthService>();
 
