@@ -240,6 +240,10 @@
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                         Install ClexAn App
                     </button>
+                    <button type="button" class="context-menu-item" onclick="openKbdHelp()" role="menuitem" style="width: 100%; text-align: left; background: none; border: none;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><line x1="6" y1="8" x2="6.01" y2="8"></line><line x1="10" y1="8" x2="10.01" y2="8"></line><line x1="14" y1="8" x2="14.01" y2="8"></line><line x1="18" y1="8" x2="18.01" y2="8"></line><line x1="8" y1="12" x2="8.01" y2="12"></line><line x1="12" y1="12" x2="12.01" y2="12"></line><line x1="16" y1="12" x2="16.01" y2="12"></line><line x1="7" y1="16" x2="17" y2="16"></line></svg>
+                        Shortcuts (?)
+                    </button>
                     <div class="context-menu-divider"></div>
                     <form method="post" asp-page="/Logout" style="margin:0;">
                         <button type="submit" class="context-menu-item danger" role="menuitem">
@@ -284,6 +288,20 @@
                         <span>Search items, invoices, customers...</span>
                         <kbd class="kbd-shortcut">Ctrl K</kbd>
                     </div>
+                    <button type="button" class="topbar-kbd-btn" id="topbarKbdHelpBtn" onclick="openKbdHelp()" aria-label="Keyboard Shortcuts" title="Keyboard Shortcuts (?)">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect>
+                            <line x1="6" y1="8" x2="6.01" y2="8"></line>
+                            <line x1="10" y1="8" x2="10.01" y2="8"></line>
+                            <line x1="14" y1="8" x2="14.01" y2="8"></line>
+                            <line x1="18" y1="8" x2="18.01" y2="8"></line>
+                            <line x1="8" y1="12" x2="8.01" y2="12"></line>
+                            <line x1="12" y1="12" x2="12.01" y2="12"></line>
+                            <line x1="16" y1="12" x2="16.01" y2="12"></line>
+                            <line x1="7" y1="16" x2="17" y2="16"></line>
+                        </svg>
+                        <span class="topbar-kbd-key" aria-hidden="true">?</span>
+                    </button>
                     <button type="button" class="topbar-notif-btn" id="topbarNotifBtn" aria-label="Open Activity Center" title="Activity & Alerts">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>

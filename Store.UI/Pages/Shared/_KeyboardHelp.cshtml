@@ -1,140 +1,864 @@
 @*
-    UX-04 — keyboard shortcut help dialog.
+    UX-04 — Global Keyboard Shortcut Help Modal & Navigation Cheatsheet.
 
-    Press `?` (anywhere outside an input) to open this dialog. It enumerates
-    the global shortcuts wired in site.js + command-palette.js. Press Escape
-    or click the backdrop to close.
+    Press `?` (anywhere outside an input) or click the keyboard icon in the topbar
+    to open this cheatsheet. Enumerates all global navigation chords, command palette
+    controls, POS register shortcuts, and dialog actions.
 *@
 <div class="kbd-help-backdrop" id="kbdHelpBackdrop" role="dialog" aria-modal="true"
      aria-labelledby="kbdHelpTitle" onclick="closeKbdHelp()" hidden>
     <div class="kbd-help-card" role="document" onclick="event.stopPropagation()">
+        <!-- Header -->
         <div class="kbd-help-header">
-            <h3 id="kbdHelpTitle" style="margin: 0; font-size: 1.15rem; font-weight: 600;">
-                Keyboard shortcuts
-            </h3>
-            <button type="button" class="kbd-help-close" onclick="closeKbdHelp()"
-                    aria-label="Close shortcut help">
-                &times;
+            <div class="kbd-help-title-wrap">
+                <div class="kbd-help-icon-wrap" aria-hidden="true">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect>
+                        <line x1="6" y1="8" x2="6.01" y2="8"></line>
+                        <line x1="10" y1="8" x2="10.01" y2="8"></line>
+                        <line x1="14" y1="8" x2="14.01" y2="8"></line>
+                        <line x1="18" y1="8" x2="18.01" y2="8"></line>
+                        <line x1="8" y1="12" x2="8.01" y2="12"></line>
+                        <line x1="12" y1="12" x2="12.01" y2="12"></line>
+                        <line x1="16" y1="12" x2="16.01" y2="12"></line>
+                        <line x1="7" y1="16" x2="17" y2="16"></line>
+                    </svg>
+                </div>
+                <div>
+                    <h3 id="kbdHelpTitle" class="kbd-help-title">Keyboard Shortcuts</h3>
+                    <p class="kbd-help-subtitle">Global navigation jumps, POS keys &amp; system shortcuts</p>
+                </div>
+            </div>
+            <button type="button" class="kbd-help-close" onclick="closeKbdHelp()" aria-label="Close shortcut help (Esc)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
             </button>
         </div>
 
-        <p style="margin: 0 0 16px; color: var(--text-secondary, #6b7280); font-size: 0.875rem;">
-            These shortcuts work on every page. They are suppressed inside
-            text inputs so they don't fight with text editing.
-        </p>
+        <!-- Live Search Filter -->
+        <div class="kbd-search-bar">
+            <svg class="kbd-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text"
+                   id="kbdSearchInput"
+                   class="kbd-search-input"
+                   placeholder="Filter shortcuts (e.g. POS, Esc, G D, Catalog, Barcode)..."
+                   autocomplete="off"
+                   spellcheck="false"
+                   oninput="filterKbdShortcuts(this.value)" />
+            <button type="button"
+                    class="kbd-search-clear"
+                    id="kbdSearchClear"
+                    onclick="clearKbdSearch()"
+                    aria-label="Clear filter"
+                    style="display: none;">
+                &times;
+            </button>
+            <span class="kbd-search-hint"><kbd>ESC</kbd> to close</span>
+        </div>
 
-        <table class="kbd-help-table" aria-label="Available keyboard shortcuts">
-            <thead>
-                <tr>
-                    <th scope="col">Shortcut</th>
-                    <th scope="col">Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr><td><kbd>Ctrl</kbd> + <kbd>K</kbd></td><td>Open the command palette / search</td></tr>
-                <tr><td><kbd>?</kbd></td><td>Show this help dialog</td></tr>
-                <tr><td><kbd>Esc</kbd></td><td>Close any open dialog, sidebar, or palette</td></tr>
-                <tr><td><kbd>G</kbd> then <kbd>D</kbd></td><td>Go to Dashboard</td></tr>
-                <tr><td><kbd>G</kbd> then <kbd>P</kbd></td><td>Go to POS Terminal</td></tr>
-                <tr><td><kbd>G</kbd> then <kbd>C</kbd></td><td>Go to Item Catalog</td></tr>
-                <tr><td><kbd>G</kbd> then <kbd>M</kbd></td><td>Go to Customers</td></tr>
-                <tr><td><kbd>G</kbd> then <kbd>I</kbd></td><td>Go to Invoices</td></tr>
-                <tr><td><kbd>G</kbd> then <kbd>S</kbd></td><td>Go to Suppliers</td></tr>
-                <tr><td><kbd>G</kbd> then <kbd>O</kbd></td><td>Go to Purchase Orders</td></tr>
-            </tbody>
-        </table>
+        <!-- Scrollable Content -->
+        <div class="kbd-help-body" id="kbdHelpBody">
+            <!-- Category: Two-Key Quick Navigation ("G" Chords) -->
+            <div class="kbd-help-section" data-section="nav">
+                <div class="kbd-section-header">
+                    <div class="kbd-section-title">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                        </svg>
+                        <span>Quick Navigation (Two-Key "G" Chords)</span>
+                    </div>
+                    <span class="kbd-section-badge">Press <kbd class="kbd-mini">G</kbd> then key</span>
+                </div>
+                <div class="kbd-shortcut-list">
+                    <div class="kbd-shortcut-row clickable" data-search="g d dashboard home overview" data-href="/Dashboard" onclick="window.location.href='/Dashboard'" tabindex="0" role="link">
+                        <div class="kbd-keys-col">
+                            <kbd>G</kbd><span class="kbd-then">then</span><kbd>D</kbd>
+                        </div>
+                        <div class="kbd-desc-col">
+                            <span class="kbd-action-title">Dashboard</span>
+                            <span class="kbd-action-desc">High-level sales, inventory alerts, and operations overview</span>
+                        </div>
+                        <span class="kbd-jump-indicator" aria-hidden="true">&rarr;</span>
+                    </div>
 
-        <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border, #e5e7eb);
-                    font-size: 0.8125rem; color: var(--text-secondary, #6b7280);">
-            Tip: Type <kbd style="font-size: 0.75rem;">?</kbd> while focused on a
-            page to surface the most-used actions in the command palette.
+                    <div class="kbd-shortcut-row clickable" data-search="g p pos point of sale terminal checkout register cashier" data-href="/Pos" onclick="window.location.href='/Pos'" tabindex="0" role="link">
+                        <div class="kbd-keys-col">
+                            <kbd>G</kbd><span class="kbd-then">then</span><kbd>P</kbd>
+                        </div>
+                        <div class="kbd-desc-col">
+                            <span class="kbd-action-title">POS Terminal</span>
+                            <span class="kbd-action-desc">Point of sale checkout register &amp; quick tender</span>
+                        </div>
+                        <span class="kbd-jump-indicator" aria-hidden="true">&rarr;</span>
+                    </div>
+
+                    <div class="kbd-shortcut-row clickable" data-search="g c catalog products items inventory stock pricing" data-href="/Catalog" onclick="window.location.href='/Catalog'" tabindex="0" role="link">
+                        <div class="kbd-keys-col">
+                            <kbd>G</kbd><span class="kbd-then">then</span><kbd>C</kbd>
+                        </div>
+                        <div class="kbd-desc-col">
+                            <span class="kbd-action-title">Item Catalog</span>
+                            <span class="kbd-action-desc">Manage products, stock levels, margins, and barcodes</span>
+                        </div>
+                        <span class="kbd-jump-indicator" aria-hidden="true">&rarr;</span>
+                    </div>
+
+                    <div class="kbd-shortcut-row clickable" data-search="g m customers crm clients accounts debts balances" data-href="/Customers" onclick="window.location.href='/Customers'" tabindex="0" role="link">
+                        <div class="kbd-keys-col">
+                            <kbd>G</kbd><span class="kbd-then">then</span><kbd>M</kbd>
+                        </div>
+                        <div class="kbd-desc-col">
+                            <span class="kbd-action-title">Customers CRM</span>
+                            <span class="kbd-action-desc">Customer directory, loyalty tiers, credit debts, and contact info</span>
+                        </div>
+                        <span class="kbd-jump-indicator" aria-hidden="true">&rarr;</span>
+                    </div>
+
+                    <div class="kbd-shortcut-row clickable" data-search="g i invoices billing sales receipts transactions refunds" data-href="/Invoices" onclick="window.location.href='/Invoices'" tabindex="0" role="link">
+                        <div class="kbd-keys-col">
+                            <kbd>G</kbd><span class="kbd-then">then</span><kbd>I</kbd>
+                        </div>
+                        <div class="kbd-desc-col">
+                            <span class="kbd-action-title">Invoices &amp; Billing</span>
+                            <span class="kbd-action-desc">Sales transaction ledger, thermal receipts, tax invoices, and refunds</span>
+                        </div>
+                        <span class="kbd-jump-indicator" aria-hidden="true">&rarr;</span>
+                    </div>
+
+                    <div class="kbd-shortcut-row clickable" data-search="g s suppliers vendors procurement partners directory" data-href="/Suppliers" onclick="window.location.href='/Suppliers'" tabindex="0" role="link">
+                        <div class="kbd-keys-col">
+                            <kbd>G</kbd><span class="kbd-then">then</span><kbd>S</kbd>
+                        </div>
+                        <div class="kbd-desc-col">
+                            <span class="kbd-action-title">Suppliers Directory</span>
+                            <span class="kbd-action-desc">Vendor database, contacts matrix, and procurement records</span>
+                        </div>
+                        <span class="kbd-jump-indicator" aria-hidden="true">&rarr;</span>
+                    </div>
+
+                    <div class="kbd-shortcut-row clickable" data-search="g o purchase orders po receiving procurement supply chain" data-href="/PurchaseOrders" onclick="window.location.href='/PurchaseOrders'" tabindex="0" role="link">
+                        <div class="kbd-keys-col">
+                            <kbd>G</kbd><span class="kbd-then">then</span><kbd>O</kbd>
+                        </div>
+                        <div class="kbd-desc-col">
+                            <span class="kbd-action-title">Purchase Orders</span>
+                            <span class="kbd-action-desc">Vendor procurement orders, incoming stock receiving, and invoices</span>
+                        </div>
+                        <span class="kbd-jump-indicator" aria-hidden="true">&rarr;</span>
+                    </div>
+
+                    <div class="kbd-shortcut-row clickable" data-search="g r restock recommendations low stock replenishment inventory ops" data-href="/Restock" onclick="window.location.href='/Restock'" tabindex="0" role="link">
+                        <div class="kbd-keys-col">
+                            <kbd>G</kbd><span class="kbd-then">then</span><kbd>R</kbd>
+                        </div>
+                        <div class="kbd-desc-col">
+                            <span class="kbd-action-title">Restock Recommendations</span>
+                            <span class="kbd-action-desc">Critical stock replenishments, lead-time forecasting, and low inventory</span>
+                        </div>
+                        <span class="kbd-jump-indicator" aria-hidden="true">&rarr;</span>
+                    </div>
+
+                    <div class="kbd-shortcut-row clickable" data-search="g l loyalty rewards points vip campaigns members" data-href="/Loyalty" onclick="window.location.href='/Loyalty'" tabindex="0" role="link">
+                        <div class="kbd-keys-col">
+                            <kbd>G</kbd><span class="kbd-then">then</span><kbd>L</kbd>
+                        </div>
+                        <div class="kbd-desc-col">
+                            <span class="kbd-action-title">Loyalty &amp; Rewards</span>
+                            <span class="kbd-action-desc">Customer rewards ledger, points adjustments, and VIP tiers</span>
+                        </div>
+                        <span class="kbd-jump-indicator" aria-hidden="true">&rarr;</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category: Global System & Overlays -->
+            <div class="kbd-help-section" data-section="system">
+                <div class="kbd-section-header">
+                    <div class="kbd-section-title">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                        </svg>
+                        <span>Global System &amp; Overlays</span>
+                    </div>
+                </div>
+                <div class="kbd-shortcut-list">
+                    <div class="kbd-shortcut-row" data-search="ctrl k cmd k command palette omnisearch quick search lookup finder">
+                        <div class="kbd-keys-col">
+                            <kbd>Ctrl</kbd><span class="kbd-then">+</span><kbd>K</kbd>
+                            <span class="kbd-or">/</span>
+                            <kbd>⌘</kbd><span class="kbd-then">+</span><kbd>K</kbd>
+                        </div>
+                        <div class="kbd-desc-col">
+                            <span class="kbd-action-title">OmniSearch &amp; Command Palette</span>
+                            <span class="kbd-action-desc">Search products, invoices, customers, and execute commands across the store</span>
+                        </div>
+                    </div>
+
+                    <div class="kbd-shortcut-row" data-search="? question mark help shortcuts cheatsheet keybindings">
+                        <div class="kbd-keys-col">
+                            <kbd>?</kbd>
+                        </div>
+                        <div class="kbd-desc-col">
+                            <span class="kbd-action-title">Keyboard Shortcuts Cheatsheet</span>
+                            <span class="kbd-action-desc">Display this reference cheatsheet anytime outside active text inputs</span>
+                        </div>
+                    </div>
+
+                    <div class="kbd-shortcut-row" data-search="esc escape close cancel dismiss modal drawer palette popup dialog">
+                        <div class="kbd-keys-col">
+                            <kbd>Esc</kbd>
+                        </div>
+                        <div class="kbd-desc-col">
+                            <span class="kbd-action-title">Close Active Dialog / Modal / Drawer</span>
+                            <span class="kbd-action-desc">Dismiss open modals, slide-over blades, command palette, or mobile menu</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category: POS Register & Operations -->
+            <div class="kbd-help-section" data-section="pos">
+                <div class="kbd-section-header">
+                    <div class="kbd-section-title">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="9" cy="21" r="1"></circle>
+                            <circle cx="20" cy="21" r="1"></circle>
+                            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                        </svg>
+                        <span>POS Register &amp; Checkout Operations</span>
+                    </div>
+                </div>
+                <div class="kbd-shortcut-list">
+                    <div class="kbd-shortcut-row" data-search="enter barcode scan add cart product line item submit">
+                        <div class="kbd-keys-col">
+                            <kbd>Enter</kbd>
+                        </div>
+                        <div class="kbd-desc-col">
+                            <span class="kbd-action-title">Barcode Scan &amp; Add Item</span>
+                            <span class="kbd-action-desc">In the barcode input field, instantly looks up and adds product to the active ticket</span>
+                        </div>
+                    </div>
+
+                    <div class="kbd-shortcut-row" data-search="tab shift tab cycle inputs tender payment discount customer focus">
+                        <div class="kbd-keys-col">
+                            <kbd>Tab</kbd> / <kbd>Shift</kbd><span class="kbd-then">+</span><kbd>Tab</kbd>
+                        </div>
+                        <div class="kbd-desc-col">
+                            <span class="kbd-action-title">Cycle Focus Fields</span>
+                            <span class="kbd-action-desc">Advance or return focus between barcode, item quantities, discounts, and payment tenders</span>
+                        </div>
+                    </div>
+
+                    <div class="kbd-shortcut-row" data-search="esc escape close receipt tender modal offline queue ledger drawer">
+                        <div class="kbd-keys-col">
+                            <kbd>Esc</kbd>
+                        </div>
+                        <div class="kbd-desc-col">
+                            <span class="kbd-action-title">Dismiss Tender / Receipt Blade</span>
+                            <span class="kbd-action-desc">Exit payment drawer, close thermal receipt preview, or close offline sync panel</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category: Dialogs & Accessible Controls -->
+            <div class="kbd-help-section" data-section="controls">
+                <div class="kbd-section-header">
+                    <div class="kbd-section-title">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <polyline points="9 11 12 14 22 4"></polyline>
+                        </svg>
+                        <span>Dialogs &amp; Interactive Controls</span>
+                    </div>
+                </div>
+                <div class="kbd-shortcut-list">
+                    <div class="kbd-shortcut-row" data-search="enter confirm primary action submit form ok accept">
+                        <div class="kbd-keys-col">
+                            <kbd>Enter</kbd>
+                        </div>
+                        <div class="kbd-desc-col">
+                            <span class="kbd-action-title">Confirm Primary Action</span>
+                            <span class="kbd-action-desc">Executes default confirm/save action on alert and confirmation dialogs</span>
+                        </div>
+                    </div>
+
+                    <div class="kbd-shortcut-row" data-search="space toggle switch checkbox button activate select">
+                        <div class="kbd-keys-col">
+                            <kbd>Space</kbd>
+                        </div>
+                        <div class="kbd-desc-col">
+                            <span class="kbd-action-title">Toggle Control</span>
+                            <span class="kbd-action-desc">Toggles focused checkbox, radio option, or switch control</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Empty Search Results State -->
+            <div class="kbd-empty-state" id="kbdEmptyState" style="display: none;">
+                <div class="kbd-empty-icon">🔍</div>
+                <div class="kbd-empty-title">No matching shortcuts</div>
+                <p class="kbd-empty-desc">No shortcut matched "<span id="kbdEmptySearchTerm"></span>". Try searching for <a href="javascript:void(0)" onclick="applySearchExample('G D')">G D</a>, <a href="javascript:void(0)" onclick="applySearchExample('POS')">POS</a>, or <a href="javascript:void(0)" onclick="applySearchExample('Esc')">Esc</a>.</p>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="kbd-help-footer">
+            <div class="kbd-footer-hint">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <span>Shortcuts are suppressed while typing in form fields or search bars.</span>
+            </div>
+            <div class="kbd-footer-count" id="kbdShortcutCount">
+                17 shortcuts registered
+            </div>
         </div>
     </div>
 </div>
 
 <style>
+    /* ============================================================
+       UX-04 — Global Keyboard Shortcut Help Modal Styles
+       Compliant with ClexAn Master Design System tokens
+       ============================================================ */
+
     .kbd-help-backdrop {
         position: fixed;
         inset: 0;
-        background: rgba(0, 0, 0, 0.55);
-        backdrop-filter: blur(4px);
-        z-index: 9999;
+        background: rgba(15, 23, 42, 0.68);
+        -webkit-backdrop-filter: blur(6px);
+        backdrop-filter: blur(6px);
+        z-index: var(--z-modal, 9992);
         display: flex;
         align-items: center;
         justify-content: center;
         padding: 20px;
+        animation: kbdFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .kbd-help-backdrop[hidden] {
-        display: none;
+        display: none !important;
     }
 
     .kbd-help-card {
-        background: var(--surface, #fff);
-        border-radius: var(--radius-lg, 12px);
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+        background: var(--surface, #ffffff);
+        border: 1px solid var(--border, #cbd5e1);
+        border-radius: var(--radius-lg, 16px);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.05);
         width: 100%;
-        max-width: 540px;
-        max-height: 90vh;
-        overflow-y: auto;
-        padding: 24px;
+        max-width: 660px;
+        max-height: 86vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        animation: kbdCardIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
+    /* Header */
     .kbd-help-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 12px;
+        padding: 18px 24px 14px;
+        border-bottom: 1px solid var(--border, #e2e8f0);
+        background: var(--surface, #ffffff);
+    }
+
+    .kbd-help-title-wrap {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .kbd-help-icon-wrap {
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+        background: var(--brand-soft, #e8f5e8);
+        color: var(--brand, #019c01);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        box-shadow: 0 2px 6px rgba(1, 156, 1, 0.12);
+    }
+
+    .kbd-help-title {
+        margin: 0;
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: var(--text-primary, #0f172a);
+        line-height: 1.25;
+    }
+
+    .kbd-help-subtitle {
+        margin: 2px 0 0;
+        font-size: 0.8125rem;
+        color: var(--text-secondary, #64748b);
+        line-height: 1.3;
     }
 
     .kbd-help-close {
         background: transparent;
         border: none;
-        font-size: 24px;
-        color: var(--text-secondary, #6b7280);
+        color: var(--text-muted, #94a3b8);
         cursor: pointer;
         padding: 0;
         width: 32px;
         height: 32px;
-        border-radius: 6px;
-        line-height: 1;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.15s ease;
     }
 
     .kbd-help-close:hover {
-        background: var(--surface-alt, #f3f4f6);
+        background: var(--surface-alt, #f1f5f9);
+        color: var(--text-primary, #0f172a);
     }
 
-    .kbd-help-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 0.9rem;
+    /* Live Search Filter */
+    .kbd-search-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 24px;
+        background: var(--surface-alt, #f8fafc);
+        border-bottom: 1px solid var(--border, #e2e8f0);
     }
 
-    .kbd-help-table th,
-    .kbd-help-table td {
-        text-align: left;
-        padding: 8px 12px;
-        border-bottom: 1px solid var(--border, #e5e7eb);
+    .kbd-search-icon {
+        color: var(--text-secondary, #64748b);
+        flex-shrink: 0;
     }
 
-    .kbd-help-table thead th {
-        font-size: 0.75rem;
+    .kbd-search-input {
+        flex: 1;
+        background: transparent;
+        border: none;
+        padding: 4px 0;
+        font-size: 0.875rem;
+        color: var(--text-primary, #0f172a);
+        outline: none;
+    }
+
+    .kbd-search-input::placeholder {
+        color: var(--text-muted, #94a3b8);
+    }
+
+    .kbd-search-clear {
+        background: var(--surface-alt, #f1f5f9);
+        border: 1px solid var(--border, #cbd5e1);
+        border-radius: 50%;
+        color: var(--text-secondary, #64748b);
+        cursor: pointer;
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        line-height: 1;
+        padding: 0;
+        transition: all 0.15s ease;
+    }
+
+    .kbd-search-clear:hover {
+        background: #e2e8f0;
+        color: var(--text-primary, #0f172a);
+    }
+
+    .kbd-search-hint {
+        font-size: 0.72rem;
+        color: var(--text-secondary, #64748b);
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    /* Scrollable Body */
+    .kbd-help-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px 24px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    /* Section Styling */
+    .kbd-help-section {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .kbd-section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 6px;
+        border-bottom: 1px solid var(--border-subtle, #edf1ee);
+    }
+
+    .kbd-section-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.8125rem;
+        font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        color: var(--text-secondary, #6b7280);
-        font-weight: 600;
+        color: var(--brand-dark, #006300);
     }
 
-    .kbd-help-table kbd {
-        display: inline-block;
-        padding: 2px 6px;
-        background: var(--surface-alt, #f3f4f6);
-        border: 1px solid var(--border, #e5e7eb);
-        border-bottom-width: 2px;
+    .kbd-section-badge {
+        font-size: 0.75rem;
+        color: var(--text-secondary, #64748b);
+    }
+
+    .kbd-shortcut-list {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    /* Shortcut Row */
+    .kbd-shortcut-row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 8px 12px;
+        border-radius: var(--radius-md, 8px);
+        transition: background 0.15s ease, transform 0.1s ease;
+    }
+
+    .kbd-shortcut-row.clickable {
+        cursor: pointer;
+    }
+
+    .kbd-shortcut-row.clickable:hover {
+        background: var(--brand-soft, #e8f5e8);
+        transform: translateX(2px);
+    }
+
+    .kbd-shortcut-row.clickable:hover .kbd-jump-indicator {
+        opacity: 1;
+        transform: translateX(3px);
+        color: var(--brand, #019c01);
+    }
+
+    .kbd-shortcut-row.clickable:focus-visible {
+        outline: 2px solid var(--brand, #019c01);
+        background: var(--brand-soft, #e8f5e8);
+    }
+
+    .kbd-keys-col {
+        min-width: 130px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        flex-shrink: 0;
+    }
+
+    .kbd-then, .kbd-or {
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: var(--text-muted, #94a3b8);
+        user-select: none;
+    }
+
+    .kbd-desc-col {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+    }
+
+    .kbd-action-title {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--text-primary, #0f172a);
+    }
+
+    .kbd-action-desc {
+        font-size: 0.78rem;
+        color: var(--text-secondary, #64748b);
+        line-height: 1.25;
+    }
+
+    .kbd-jump-indicator {
+        font-size: 1rem;
+        color: var(--text-muted, #94a3b8);
+        opacity: 0;
+        transition: all 0.15s ease;
+        padding-left: 4px;
+    }
+
+    /* 3D Keycap Aesthetics */
+    kbd {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 24px;
+        height: 24px;
+        padding: 0 7px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 0.75rem;
+        font-weight: 700;
+        line-height: 1;
+        color: var(--text-primary, #0f172a);
+        background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
+        border: 1px solid #cbd5e1;
+        border-bottom: 2px solid #94a3b8;
+        border-radius: 5px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+        letter-spacing: -0.01em;
+        user-select: none;
+    }
+
+    kbd.kbd-mini {
+        min-width: 18px;
+        height: 18px;
+        padding: 0 4px;
+        font-size: 0.7rem;
+        border-bottom-width: 1.5px;
+    }
+
+    kbd.kbd-pill {
         border-radius: 4px;
-        font-family: monospace;
-        font-size: 0.8rem;
-        color: var(--text-primary, #111827);
-        margin: 0 2px;
+        padding: 0 5px;
+    }
+
+    /* Empty State */
+    .kbd-empty-state {
+        text-align: center;
+        padding: 32px 16px;
+    }
+
+    .kbd-empty-icon {
+        font-size: 2rem;
+        margin-bottom: 8px;
+    }
+
+    .kbd-empty-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-primary, #0f172a);
+        margin-bottom: 4px;
+    }
+
+    .kbd-empty-desc {
+        font-size: 0.8125rem;
+        color: var(--text-secondary, #64748b);
+        margin: 0;
+    }
+
+    .kbd-empty-desc a {
+        color: var(--brand, #019c01);
+        text-decoration: underline;
+        cursor: pointer;
+    }
+
+    /* Footer */
+    .kbd-help-footer {
+        padding: 12px 24px;
+        background: var(--surface-alt, #f8fafc);
+        border-top: 1px solid var(--border, #e2e8f0);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        font-size: 0.78rem;
+        color: var(--text-secondary, #64748b);
+    }
+
+    .kbd-footer-hint {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .kbd-footer-hint svg {
+        color: var(--brand, #019c01);
+        flex-shrink: 0;
+    }
+
+    .kbd-footer-count {
+        font-weight: 600;
+        color: var(--text-muted, #64748b);
+        white-space: nowrap;
+    }
+
+    /* Animations */
+    @@keyframes kbdFadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @@keyframes kbdCardIn {
+        from {
+            opacity: 0;
+            transform: scale(0.96) translateY(8px);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
+    }
+
+    /* Topbar Keyboard Trigger Button */
+    .topbar-kbd-btn {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 38px;
+        height: 38px;
+        background: var(--surface, #ffffff);
+        border: 1px solid var(--border, #cbd5e1);
+        border-radius: 8px;
+        color: var(--text-secondary, #64748b);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        padding: 0;
+        flex-shrink: 0;
+    }
+
+    .topbar-kbd-btn:hover {
+        color: var(--brand, #019c01);
+        border-color: var(--brand, #019c01);
+        background: var(--brand-soft, #e8f5e8);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 10px rgba(1, 156, 1, 0.12);
+    }
+
+    .topbar-kbd-btn:focus-visible {
+        outline: 2px solid var(--brand, #019c01);
+    }
+
+    .topbar-kbd-key {
+        position: absolute;
+        bottom: -3px;
+        right: -3px;
+        background: var(--surface-alt, #f1f5f9);
+        border: 1px solid var(--border, #cbd5e1);
+        border-radius: 4px;
+        font-size: 0.65rem;
+        font-weight: 700;
+        color: var(--text-primary, #0f172a);
+        line-height: 1;
+        padding: 1px 3px;
+        pointer-events: none;
+    }
+
+    /* Responsive */
+    @@media (max-width: 640px) {
+        .kbd-help-backdrop {
+            padding: 12px;
+        }
+
+        .kbd-help-card {
+            max-height: 92vh;
+        }
+
+        .kbd-help-header, .kbd-search-bar, .kbd-help-body, .kbd-help-footer {
+            padding-left: 16px;
+            padding-right: 16px;
+        }
+
+        .kbd-shortcut-row {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 6px;
+        }
+
+        .kbd-keys-col {
+            min-width: auto;
+        }
+
+        .kbd-jump-indicator {
+            display: none;
+        }
+
+        .kbd-footer-count {
+            display: none;
+        }
     }
 </style>
+
+<script>
+    function filterKbdShortcuts(query) {
+        query = (query || '').toLowerCase().trim();
+        const rows = document.querySelectorAll('.kbd-shortcut-row');
+        const sections = document.querySelectorAll('.kbd-help-section');
+        const emptyState = document.getElementById('kbdEmptyState');
+        const clearBtn = document.getElementById('kbdSearchClear');
+
+        if (clearBtn) {
+            clearBtn.style.display = query.length > 0 ? 'inline-flex' : 'none';
+        }
+
+        let totalVisible = 0;
+
+        sections.forEach(function (sec) {
+            let sectionMatches = 0;
+            const secRows = sec.querySelectorAll('.kbd-shortcut-row');
+            secRows.forEach(function (row) {
+                const searchData = (row.getAttribute('data-search') || row.innerText || '').toLowerCase();
+                const matches = !query || searchData.indexOf(query) !== -1;
+                row.style.display = matches ? 'flex' : 'none';
+                if (matches) sectionMatches++;
+            });
+            sec.style.display = sectionMatches > 0 ? 'block' : 'none';
+            totalVisible += sectionMatches;
+        });
+
+        if (emptyState) {
+            emptyState.style.display = totalVisible === 0 ? 'block' : 'none';
+            const termEl = document.getElementById('kbdEmptySearchTerm');
+            if (termEl) termEl.textContent = query;
+        }
+
+        const countEl = document.getElementById('kbdShortcutCount');
+        if (countEl) {
+            countEl.textContent = query.length > 0 
+                ? (totalVisible + ' shortcut' + (totalVisible === 1 ? '' : 's') + ' found')
+                : (rows.length + ' shortcuts registered');
+        }
+    }
+
+    function clearKbdSearch() {
+        const input = document.getElementById('kbdSearchInput');
+        if (input) {
+            input.value = '';
+            filterKbdShortcuts('');
+            input.focus();
+        }
+    }
+
+    function applySearchExample(example) {
+        const input = document.getElementById('kbdSearchInput');
+        if (input) {
+            input.value = example;
+            filterKbdShortcuts(example);
+            input.focus();
+        }
+    }
+
+    window.filterKbdShortcuts = filterKbdShortcuts;
+    window.clearKbdSearch = clearKbdSearch;
+    window.applySearchExample = applySearchExample;
+</script>

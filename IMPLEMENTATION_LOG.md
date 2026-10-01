@@ -2432,6 +2432,35 @@ Startup crashed in `Store.API` with `InvalidOperationException: Unable to resolv
 - Audit tracker updated: `SEC-20` -> `[x]`.
 
 
+## Wave 39 — Global Keyboard Shortcut Help Modal & Navigation Cheatsheet (UX-04)
+
+### Objective
+Resolve `UX-04` by building and standardizing a modern, accessible, and comprehensive keyboard shortcut cheatsheet modal accessible via the `?` hotkey or visible UI triggers. Ensure complete coverage of all global two-key `G` navigation chords, system command palette triggers, POS checkout operations, and modal dialog controls according to the ClexAn Master Design System.
+
+### 39.A — Component Redesign & Modernization (`_KeyboardHelp.cshtml`)
+- **Design System Compliance**: Replaced flat unstyled table with glassmorphic modal overlay (`rgba(15, 23, 42, 0.68)` with `backdrop-filter: blur(6px)`) utilizing design tokens (`--surface`, `--brand`, `--brand-soft`, `--border`, `--z-modal`).
+- **Live Search Filtering**: Integrated `#kbdSearchInput` filter bar with client-side keyword search across shortcut combinations, destinations, and action descriptions. Added clear button (`&times;`), dynamic count badge, and a friendly empty search state when no shortcuts match.
+- **Categorized Structure**:
+  1. *Quick Navigation (Two-Key "G" Chords)*: `G` then `D` (Dashboard), `G` then `P` (POS Terminal), `G` then `C` (Catalog), `G` then `M` (Customers CRM), `G` then `I` (Invoices & Billing), `G` then `S` (Suppliers Directory), `G` then `O` (Purchase Orders), `G` then `R` (Restock Recommendations), `G` then `L` (Loyalty & Rewards).
+  2. *Global System & Overlays*: `Ctrl+K` / `⌘+K` (OmniSearch & Command Palette), `?` (Keyboard Cheatsheet), `Esc` (Close active dialog, modal, drawer, sidebar, or palette).
+  3. *POS Register & Checkout*: `Enter` (Barcode scan / add item to ticket), `Tab` / `Shift+Tab` (Cycle focus between checkout fields), `Esc` (Dismiss tender drawer / receipt preview).
+  4. *Dialogs & Interactive Controls*: `Enter` (Confirm primary dialog action), `Space` (Toggle switches/checkboxes).
+- **Interactive Quick-Jump Actions**: Enabled direct click navigation on all navigation rows (`data-href`), turning the help modal into an interactive quick launcher.
+- **3D Keycap Aesthetics**: Designed tactile `<kbd>` keycaps with gradient backgrounds, double bottom borders, subtle shadows, and active pressed states.
+
+### 39.B — UI Discoverability & Wiring (`_AppLayout.cshtml` & `site.js`)
+- **Discoverable Trigger Button**: Added keyboard icon button (`#topbarKbdHelpBtn`) with `?` badge in `.topbar-actions` next to the Command Palette and Notification Center.
+- **Profile Menu Integration**: Added "Shortcuts (?)" entry into `#userContextMenu` for mobile/touch discovery.
+- **Auto-Focus & State Management**: Enhanced `openKbdHelp()` in `site.js` to automatically clear and focus `#kbdSearchInput` with focus fallback to close button.
+- **Route Synchronization**: Corrected `quickJumps['r']` in `site.js` to `/Restock` aligning with the Razor page directive.
+
+### Verification
+- Solution build clean: `dotnet build StoreProject.sln --configuration Release` (**0 warnings, 0 errors**).
+- Test suite passes: `dotnet test Store.API.Tests -c Release` -> **414 passed, 0 failed**.
+- Audit tracker updated: `UX-04` -> `[x]`.
+
+
+
 
 
 

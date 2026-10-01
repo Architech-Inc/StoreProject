@@ -1819,8 +1819,17 @@
         const el = document.getElementById('kbdHelpBackdrop');
         if (el) {
             el.hidden = false;
-            const close = el.querySelector('.kbd-help-close');
-            if (close) close.focus();
+            const searchInput = document.getElementById('kbdSearchInput');
+            if (searchInput) {
+                searchInput.value = '';
+                if (typeof window.filterKbdShortcuts === 'function') {
+                    window.filterKbdShortcuts('');
+                }
+                setTimeout(() => searchInput.focus(), 60);
+            } else {
+                const close = el.querySelector('.kbd-help-close');
+                if (close) close.focus();
+            }
         }
     };
 
@@ -1828,6 +1837,13 @@
         const el = document.getElementById('kbdHelpBackdrop');
         if (el && !el.hidden) {
             el.hidden = true;
+            const searchInput = document.getElementById('kbdSearchInput');
+            if (searchInput) {
+                searchInput.value = '';
+                if (typeof window.filterKbdShortcuts === 'function') {
+                    window.filterKbdShortcuts('');
+                }
+            }
         }
     };
 
@@ -1842,7 +1858,7 @@
         'i': '/Invoices',
         's': '/Suppliers',
         'o': '/PurchaseOrders',
-        'r': '/RestockRecommendations',
+        'r': '/Restock',
         'l': '/Loyalty'
     };
 

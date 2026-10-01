@@ -43,6 +43,50 @@
     color: var(--text-muted, #475569);
 }
 
+.topbar-kbd-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    background: var(--surface, #ffffff);
+    border: 1px solid var(--border, #cbd5e1);
+    border-radius: 8px;
+    color: var(--text-secondary, #64748b);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.topbar-kbd-btn:hover {
+    color: var(--brand, #019c01);
+    border-color: var(--brand, #019c01);
+    background: var(--brand-soft, #e8f5e8);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(1, 156, 1, 0.12);
+}
+
+.topbar-kbd-btn:focus-visible {
+    outline: 2px solid var(--brand, #019c01);
+}
+
+.topbar-kbd-key {
+    position: absolute;
+    bottom: -3px;
+    right: -3px;
+    background: var(--surface-alt, #f1f5f9);
+    border: 1px solid var(--border, #cbd5e1);
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--text-primary, #0f172a);
+    line-height: 1;
+    padding: 1px 3px;
+    pointer-events: none;
+}
+
 /* Modal Overlay */
 .command-palette-overlay {
     position: fixed;
