@@ -52,6 +52,7 @@ Prefixes used across audits — `SEC-*` (security) · `GAP-*` (functional) · `U
 | 36 | Hardcoded VPS IP elimination & compose config hardening | `OPS-10` (parameterized `STORE_DOMAIN`, `API_DOMAIN`, `HTTP_PORT`, `HTTPS_PORT`, strict `${VAR:?required}` compose guards, expanded `.env.example`) |
 | 37 | File upload & path traversal hardening | `SEC-12` (`OrdinalIgnoreCase` traversal guards, `~` and colon stream rejection, symlink/reparse point checks, magic byte MIME inspection, 21 security tests) |
 | 38 | Controller authorization policy audit & endpoint access hardening | `SEC-20` (audited all 39 API controllers; enforced fine-grained `PermissionKeys` policies across CommunicationLogs, Payroll, Finance, Customers, Employees, Departments, Categories, Units, Item, Invoices, LoyaltyCampaigns, Loyalty, Payments, Users; strict AllowAnonymous allowlist + rate limiting; 13 security tests) |
+| 43 | ControlPlane & TenantPortal automated test projects | `PROC-05` (Store.ControlPlane.Tests: 37 tests covering all 10 controllers; Store.TenantPortal.Tests: 27 tests covering clients, filters, sessions, and Razor page models) |
 
 ---
 
@@ -202,7 +203,7 @@ Prefixes used across audits — `SEC-*` (security) · `GAP-*` (functional) · `U
 | `PROC-02` | No `AGENTS.md` / `CONTRIBUTING.md` at repo root | repo root | `[x]` | Wave 6 — `AGENTS.md` (12-section onboarding). `CONTRIBUTING.md` still missing. |
 | `PROC-03` | No `CODEOWNERS` | repo root | `[x]` | Add `.github/CODEOWNERS` with directory->owner mapping. *(Wave 12: landed — directory-based ownership with security-sensitive files requiring both team-lead and security review.)*|
 | `PROC-04` | No PR template / issue templates | `.github/` | `[x]` | Add `PULL_REQUEST_TEMPLATE.md`. *(Wave 12: landed — security checklist, migration impact, doc-update requirements.)*|
-| `PROC-05` | No tests for ControlPlane / TenantPortal | `Store.API.Tests/` | `[ ]` | Add `Store.ControlPlane.Tests` and `Store.TenantPortal.Tests` projects; minimum smoke test per controller. |
+| `PROC-05` | No tests for ControlPlane / TenantPortal | `Store.API.Tests/` | `[x]` | Wave 43 — added `Store.ControlPlane.Tests` (37 unit/smoke tests covering all 10 controllers) and `Store.TenantPortal.Tests` (27 tests covering `ControlPlaneClient`, `TenantOwnerOnlyAttribute`, `PortalSessionService`, and PageModels). Added to solution with 100% pass rate. |
 | `PROC-06` | `api_analyzer_report.md` checked into source | repo root | `[ ]` | Move generation to CI artifact; do not commit `api_analysis_report.md` (1.2k lines, will go stale). |
 | `PROC-07` | No `architecture-decision-records/` | `docs/adr/` | `[x]` | Wave 41 — created `docs/adr/` repository with index and 5 foundational ADRs: ADR-001 (Clean Architecture Dispatchers), ADR-002 (Per-Tenant Isolated Stacks), ADR-003 (Layered Security & Audit), ADR-004 (Antivirus ClamAV Pipeline), and ADR-005 (Plan Quotas & Lifecycle State Machine). |
 | `PROC-08` | No `docs/onboarding.md` for new devs | `docs/` | `[x]` | Wave 40 — comprehensive developer onboarding guide created in `docs/onboarding.md` covering system topology, prerequisites, step-by-step setup, database seeding, task runners, code conventions, and troubleshooting FAQ. |

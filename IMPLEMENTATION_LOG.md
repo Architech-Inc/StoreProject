@@ -2581,6 +2581,47 @@ Resolve finding `UX-02` by designing and implementing a mobile-first responsive 
 - Automated tests clean: `dotnet test Store.API.Tests -c Release` -> **414 passed, 0 failed**.
 - Audit tracker updated: `UX-02` -> `[x]`.
 
+---
+
+## Wave 43 — ControlPlane & TenantPortal Automated Test Projects (PROC-05)
+
+### Objective
+Resolve finding `PROC-05` by establishing dedicated automated unit and smoke test projects for `Store.ControlPlane` and `Store.TenantPortal`, ensuring full coverage across all 10 ControlPlane API controllers, TenantPortal HTTP client adapters, authorization filters, session services, and Razor page models without regression to the core platform or build health.
+
+### 43.A — Store.ControlPlane.Tests Project & Controller Test Suites
+- Created `Store.ControlPlane.Tests/Store.ControlPlane.Tests.csproj` targeting .NET 8.0 with xUnit, Moq, and EF Core In-Memory database support.
+- Added project references to `Store.ControlPlane` and `Store.Models`, and registered the project in `StoreProject.sln`.
+- Authored 37 automated tests across all 10 ControlPlane controllers:
+  - **`AuditControllerTests`**: Tests audit trail retrieval with pagination, empty trail fallback, and structured payload deserialization.
+  - **`BackupsControllerTests`**: Tests backup summary queries, 404 handling, on-demand snapshot triggering, and invalid state guard.
+  - **`BillingControllerTests`**: Tests invoice creation parameter validations (amount, planId), payment confirmation reconciliation, and PayDunya IPN HMAC authorization guards.
+  - **`BranchesControllerTests`**: Tests branch listing, branch creation HTTP 201 response, and ModelState validation failure HTTP 400.
+  - **`DomainsControllerTests`**: Tests custom domain configuration retrieval, pending verification state transitions, and DNS TXT verification workflows.
+  - **`EnvironmentControllerTests`**: Tests multi-container health checks, 404 tenant handling, whole-silo restart, and individual container restarts.
+  - **`PortalAuthControllerTests`**: Tests owner account registration, duplicate email rejection, session token issuance on login, and unauthorized credential checks.
+  - **`PublicStatusControllerTests`**: Tests anonymous tenant public health endpoint, missing slug validation, and not-found responses.
+  - **`SdlcControllerTests`**: Tests system release queries ordered by release date, pre-upgrade snapshot creation, release ID mutation, and container restart orchestration.
+  - **`TenantsControllerTests`**: Tests multi-tenant listing, slug availability checks (length, duplicates, valid names), and 404 handling.
+
+### 43.B — Store.TenantPortal.Tests Project & Service/PageModel Test Suites
+- Created `Store.TenantPortal.Tests/Store.TenantPortal.Tests.csproj` targeting .NET 8.0 with xUnit, Moq, and ASP.NET Core test hosting.
+- Added project references to `Store.TenantPortal` and `Store.Models`, and registered the project in `StoreProject.sln`.
+- Authored 27 automated tests across core portal components:
+  - **`ControlPlaneClientTests`**: Tests HTTP client communication against ControlPlane endpoints (`CheckSlugAvailabilityAsync` with fallback resilience, `RegisterAccountAsync` with error handling, `LoginAsync` valid and invalid credentials, `GetAccountAsync`, and `GetTenantPublicStatusAsync`).
+  - **`TenantOwnerOnlyAttributeTests`**: Tests page filter security rules — redirects unauthenticated users to `/Login`, permits authorized requests matching tenant claim, and denies cross-tenant access with `ForbidResult` when route ID or query tenant ID mismatches the session claim.
+  - **`PortalSessionServiceTests`**: Tests `GetCurrentSession` with valid/invalid claims and tenant properties, cookie `SignInAsync` dispatch via `IAuthenticationService`, and cookie `SignOutAsync`.
+  - **`PageModelSmokeTests`**: Tests Razor Page models (`StatusModel` valid/empty slugs, `LoginModel` unauthenticated/authenticated redirects and invalid credentials, and `DashboardModel` authentication guards and tenant detail rendering).
+
+### Verification
+- Solution build clean: `dotnet build StoreProject.sln --configuration Release` (**0 warnings, 0 errors**).
+- Automated test suites:
+  - `Store.TenantPortal.Tests`: **27 passed, 0 failed**.
+  - `Store.ControlPlane.Tests`: **37 passed, 0 failed**.
+  - `Store.API.Tests`: **414 passed, 0 failed**.
+  - Total across solution: **478 passed, 0 failed** in Release mode.
+- Audit tracker updated: `PROC-05` marked `[x]`.
+
+
 
 
 
