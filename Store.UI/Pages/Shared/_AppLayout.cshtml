@@ -2,6 +2,7 @@
 @using StoreUI.Services
 @inject StoreUI.Services.ICurrentUserContext CurrentUserContext
 @inject StoreUI.Services.IBranchManager BranchManager
+@inject StoreUI.Services.IBreadcrumbService BreadcrumbService
 @inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 @{
     var token = Context.Session.GetString("access_token") ?? string.Empty;
@@ -292,6 +293,51 @@
                     </button>
                 </div>
             </header>
+            @{
+                var currentPath = Context.Request.Path.Value ?? "/";
+                var pageTitle = ViewData["Title"] as string;
+                var customCrumbs = ViewData["Breadcrumbs"] as IReadOnlyList<StoreUI.Services.BreadcrumbItem>;
+                var customBack = ViewData["BackLink"] as StoreUI.Services.BreadcrumbItem;
+                var referer = Context.Request.Headers["Referer"].ToString();
+
+                var crumbs = BreadcrumbService.BuildBreadcrumbs(currentPath, pageTitle, customCrumbs);
+                var backLink = BreadcrumbService.GetBackLink(currentPath, referer, customBack);
+            }
+            @if (crumbs.Count > 1 || backLink != null)
+            {
+                <nav class="app-breadcrumbs-bar" aria-label="Breadcrumb navigation">
+                    <div class="breadcrumbs-container">
+                        @if (backLink != null)
+                        {
+                            <a href="@backLink.Url" class="btn-breadcrumb-back" title="@backLink.Label" onclick="if(window.history.length > 1 && document.referrer && new URL(document.referrer).origin === window.location.origin && new URL(document.referrer).pathname !== window.location.pathname) { event.preventDefault(); window.history.back(); }">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                                    <polyline points="12 19 5 12 12 5"></polyline>
+                                </svg>
+                                <span>@backLink.Label</span>
+                            </a>
+                        }
+                        @if (crumbs.Count > 1)
+                        {
+                            <ol class="breadcrumb-trail">
+                                @for (int i = 0; i < crumbs.Count; i++)
+                                {
+                                    var crumb = crumbs[i];
+                                    if (crumb.IsActive || i == crumbs.Count - 1)
+                                    {
+                                        <li class="breadcrumb-item active" aria-current="page">@crumb.Label</li>
+                                    }
+                                    else
+                                    {
+                                        <li class="breadcrumb-item"><a href="@crumb.Url">@crumb.Label</a></li>
+                                        <li class="breadcrumb-sep" aria-hidden="true">/</li>
+                                    }
+                                }
+                            </ol>
+                        }
+                    </div>
+                </nav>
+            }
             <div class="app-content">
                 @{
                     // Prefer TempData, fall back to ViewData for pages that set StatusMessage as a property

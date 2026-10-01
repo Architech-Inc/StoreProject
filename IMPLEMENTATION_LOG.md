@@ -2056,6 +2056,55 @@ Startup crashed in `Store.API` with `InvalidOperationException: Unable to resolv
 - Test suite passes: `dotnet test Store.API.Tests` -> 287 passed, 0 failed.
 - Audit tracker updated: `GAP-21` -> `[x]`.
 
+---
+
+## 2026-10-01 — Wave 31 (Dynamic Route Breadcrumb Navigation & Back Link Service: GAP-24 — completed)
+
+### 31.A — Centralized Route Hierarchy & Breadcrumb Service
+- **Issue**: `GAP-24` audit finding noted that management UI pages lacked hierarchical route breadcrumbs and consistent back navigation, with some pages having ad-hoc placed back buttons (e.g. `/ContactRequests`).
+- **Changes**:
+  - `Store.UI/Services/IBreadcrumbService.cs`:
+    - Defined `BreadcrumbItem` record (`Title`, `Url`, `IsActive`, `Icon`).
+    - Defined `IBreadcrumbService` contract (`BuildBreadcrumbs(path, customCrumbs)`, `GetBackLink(currentPath, referer, customBackLink)`).
+  - `Store.UI/Services/BreadcrumbService.cs`:
+    - Implemented hierarchical mapping of app sections (POS & Sales, Inventory & Catalog, Customers & Loyalty, Purchasing & Suppliers, Financial & Analytics, Management & Admin).
+    - Normalized path parsing using `StringComparison.OrdinalIgnoreCase` to strip query parameters while maintaining trail continuity.
+    - Added smart parent-chain traversal: builds trail from Home/Dashboard up to the active page.
+    - Implemented smart referer-aware back navigation: validates referer origin/path and returns parent fallback URL when direct navigation or external referer occurs.
+  - `Store.UI/Program.cs`:
+    - Registered `builder.Services.AddSingleton<IBreadcrumbService, BreadcrumbService>();`.
+
+### 31.B — Layout Integration & Responsive Breadcrumb Bar
+- **Changes**:
+  - `Store.UI/Pages/Shared/_AppLayout.cshtml`:
+    - Injected `IBreadcrumbService BreadcrumbService`.
+    - Computed `currentPath = Context.Request.Path.Value ?? "/Dashboard"`, `referer = Context.Request.Headers.Referer.FirstOrDefault()`.
+    - Integrated `.app-breadcrumbs-bar` between the top navigation bar and main view content.
+    - Rendered contextual "Back" button with client-side smart `history.back()` (checking `document.referrer` against `window.location.origin`) and fallback to server-computed back URL.
+    - Rendered breadcrumb trail with chevron dividers (`fa-chevron-right`), accessible `aria-label="Breadcrumb"`, and `aria-current="page"` on active leaf crumbs.
+    - Suppressed breadcrumbs on root dashboard (`/` or `/Dashboard`) where breadcrumb bar is redundant.
+  - `Store.UI/Pages/ContactRequests.cshtml`:
+    - Cleaned up redundant ad-hoc back button (`<a href="/Users" class="btn btn-secondary mb-3">...Back to User Accounts</a>`) now natively handled by the layout breadcrumb bar.
+  - `Store.UI/wwwroot/css/components.css`:
+    - Added styles for `.app-breadcrumbs-bar`, `.breadcrumbs-container`, `.btn-breadcrumb-back`, `.breadcrumb-trail`, `.breadcrumb-sep`, and active/hover states with smooth transitions and mobile overflow support (`overflow-x: auto`).
+
+### 31.C — Unit Tests & Verification
+- `Store.API.Tests/Store.API.Tests.csproj`: Added project reference to `Store.UI`.
+- `Store.API.Tests/BreadcrumbServiceTests.cs` (7 new unit tests):
+  - `BuildBreadcrumbs_RootOrDashboard_ReturnsSingleHomeItem`
+  - `BuildBreadcrumbs_NestedPage_ReturnsFullHierarchicalTrail`
+  - `BuildBreadcrumbs_MapsKnownPageTitlesAndIcons`
+  - `BuildBreadcrumbs_AppendsCustomTrailingCrumbs`
+  - `GetBackLink_Dashboard_ReturnsNull`
+  - `GetBackLink_SubPage_ReturnsParentHierarchyLink_WhenNoReferer`
+  - `GetBackLink_PrefersValidRefererOverParent_WhenRefererIsDifferentPage`
+  - `GetBackLink_RespectsCustomBackLinkOverride`
+
+### Verification
+- Solution build clean: `dotnet build StoreProject.sln --configuration Release` (0 warnings in code, 0 errors).
+- Test suite passes: `dotnet test Store.API.Tests` -> 298 passed, 0 failed.
+- Audit tracker updated: `GAP-24` -> `[x]`.
+
 
 
 

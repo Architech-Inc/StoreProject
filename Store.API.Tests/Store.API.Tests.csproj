@@ -22,6 +22,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Store.API\Store.API.csproj" />
     <ProjectReference Include="..\Store.ControlPlane\Store.ControlPlane.csproj" />
+    <ProjectReference Include="..\Store.UI\Store.UI.csproj" />
   </ItemGroup>
 
 </Project>

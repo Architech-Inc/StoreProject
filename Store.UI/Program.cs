@@ -85,6 +85,7 @@ builder.Services.AddScoped<IContactRequestManager, ContactRequestManager>();
 builder.Services.AddScoped<ICurrentUserContext, CurrentUserContext>();
 builder.Services.AddScoped<IPayrollManager, PayrollManager>();
 builder.Services.AddScoped<IFinanceManager, FinanceManager>();
+builder.Services.AddSingleton<IBreadcrumbService, BreadcrumbService>();
 
 var app = builder.Build();
 
