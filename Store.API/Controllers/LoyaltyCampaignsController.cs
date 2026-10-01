@@ -5,11 +5,13 @@ using Store.Models.DTOs.Loyalty;
 using Store.Models.DTOs.Operations;
 using Store.Models.Interfaces.Services;
 
+using Store.API.Attributes;
+
 namespace Store.API.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-[Authorize]
+[Authorize(Policy = PermissionKeys.LoyaltyRead)]
 public class LoyaltyCampaignsController : ControllerBase
 {
     private readonly ILoyaltyCampaignService _campaignService;
@@ -40,7 +42,8 @@ public class LoyaltyCampaignsController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Policy = PermissionKeys.AdminBranches)]
+    [Authorize(Policy = PermissionKeys.LoyaltyWrite)]
+    [Audit("Create Loyalty Campaign", Category = "Loyalty")]
     public async Task<IActionResult> Create([FromBody] CreateCampaignRequest request, CancellationToken ct)
     {
         if (!ModelState.IsValid)
@@ -54,7 +57,8 @@ public class LoyaltyCampaignsController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [Authorize(Policy = PermissionKeys.AdminBranches)]
+    [Authorize(Policy = PermissionKeys.LoyaltyWrite)]
+    [Audit("Update Loyalty Campaign", Category = "Loyalty")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateCampaignRequest request, CancellationToken ct)
     {
         if (!ModelState.IsValid)
@@ -66,7 +70,8 @@ public class LoyaltyCampaignsController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize(Policy = PermissionKeys.AdminBranches)]
+    [Authorize(Policy = PermissionKeys.LoyaltyWrite)]
+    [Audit("Delete Loyalty Campaign", Category = "Loyalty")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
         var success = await _campaignService.DeleteAsync(id, ct);

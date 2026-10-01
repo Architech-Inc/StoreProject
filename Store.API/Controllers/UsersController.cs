@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Store.API.Application.Abstractions;
 using Store.API.Application.Users.Requests;
 using Store.Models.DTOs.Common;
@@ -45,6 +46,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
+    [Authorize(Policy = PermissionKeys.AdminUsers)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
     {
         var user = await _dispatcher.SendAsync(new GetUserByIdQuery(id), ct);
@@ -57,6 +59,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet("{id:guid}/360")]
+    [Authorize(Policy = PermissionKeys.AdminUsers)]
     public async Task<IActionResult> Get360ById(Guid id, CancellationToken ct)
     {
         var user360 = await _userService.Get360ByIdAsync(id, ct);
@@ -281,6 +284,7 @@ public class UsersController : ControllerBase
     }
 
     [AllowAnonymous]
+    [EnableRateLimiting("general")]
     [HttpGet("profile/contact-change/verify")]
     public async Task<IActionResult> VerifyContactChange([FromQuery] string token, CancellationToken ct)
     {

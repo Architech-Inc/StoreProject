@@ -4,8 +4,9 @@ using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Loyalty;
 using Store.Models.Interfaces.Services;
 
-using Microsoft.Extensions.Logging;
+using Store.API.Attributes;
 using Store.Models.Common;
+using Store.Models.DTOs.Operations;
 namespace Store.API.Controllers;
 
 [ApiController]
@@ -25,6 +26,7 @@ public class LoyaltyController : ControllerBase
 
     /// <summary>Get aggregate store-wide loyalty metrics and KPI indicators.</summary>
     [HttpGet("metrics")]
+    [Authorize(Policy = PermissionKeys.LoyaltyRead)]
     public async Task<IActionResult> GetMetrics(CancellationToken ct)
     {
         var metrics = await _loyaltyService.GetMetricsAsync(ct);
@@ -33,6 +35,7 @@ public class LoyaltyController : ControllerBase
 
     /// <summary>Get paginated and searchable list of enrolled loyalty members.</summary>
     [HttpGet("members")]
+    [Authorize(Policy = PermissionKeys.LoyaltyRead)]
     public async Task<IActionResult> GetAllMembers(
         [FromQuery] string? search = null,
         [FromQuery] string? tier = null,
@@ -47,6 +50,7 @@ public class LoyaltyController : ControllerBase
 
     /// <summary>Get full 360 profile for a loyalty member including ledger and active campaigns.</summary>
     [HttpGet("customers/{customerId:guid}/profile")]
+    [Authorize(Policy = PermissionKeys.LoyaltyRead)]
     public async Task<IActionResult> GetProfile(Guid customerId, CancellationToken ct)
     {
         var profile = await _loyaltyService.GetMemberProfileAsync(customerId, ct);
@@ -58,6 +62,7 @@ public class LoyaltyController : ControllerBase
 
     /// <summary>Get loyalty account for a specific customer.</summary>
     [HttpGet("customers/{customerId:guid}")]
+    [Authorize(Policy = PermissionKeys.LoyaltyRead)]
     public async Task<IActionResult> GetAccount(Guid customerId, CancellationToken ct)
     {
         var account = await _loyaltyService.GetAccountAsync(customerId, ct);
@@ -77,6 +82,7 @@ public class LoyaltyController : ControllerBase
 
     /// <summary>Get transaction history for a customer's loyalty account.</summary>
     [HttpGet("customers/{customerId:guid}/transactions")]
+    [Authorize(Policy = PermissionKeys.LoyaltyRead)]
     public async Task<IActionResult> GetTransactions(Guid customerId, [FromQuery] int take = 50, CancellationToken ct = default)
     {
         var txns = await _loyaltyService.GetTransactionsAsync(customerId, Math.Min(take, 200), ct);
@@ -94,6 +100,7 @@ public class LoyaltyController : ControllerBase
 
     /// <summary>Get global store-wide loyalty transaction audit stream.</summary>
     [HttpGet("transactions")]
+    [Authorize(Policy = PermissionKeys.LoyaltyRead)]
     public async Task<IActionResult> GetGlobalTransactions(
         [FromQuery] string? search = null,
         [FromQuery] string? transactionType = null,
@@ -108,6 +115,8 @@ public class LoyaltyController : ControllerBase
 
     /// <summary>Earn points for a customer (e.g. after a purchase or promotion).</summary>
     [HttpPost("earn")]
+    [Authorize(Policy = PermissionKeys.CashWrite)]
+    [Audit("Earn Loyalty Points", Category = "Loyalty")]
     public async Task<IActionResult> Earn([FromBody] EarnPointsRequest request, CancellationToken ct)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -124,6 +133,8 @@ public class LoyaltyController : ControllerBase
 
     /// <summary>Redeem points for a customer reward / discount voucher.</summary>
     [HttpPost("redeem")]
+    [Authorize(Policy = PermissionKeys.CashWrite)]
+    [Audit("Redeem Loyalty Points", Category = "Loyalty")]
     public async Task<IActionResult> Redeem([FromBody] RedeemPointsRequest request, CancellationToken ct)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -140,6 +151,8 @@ public class LoyaltyController : ControllerBase
 
     /// <summary>Manually adjust loyalty points (admin or manager correction).</summary>
     [HttpPost("adjust")]
+    [Authorize(Policy = PermissionKeys.LoyaltyWrite)]
+    [Audit("Adjust Loyalty Points", Category = "Loyalty")]
     public async Task<IActionResult> Adjust([FromBody] AdjustPointsRequest request, CancellationToken ct)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -149,6 +162,8 @@ public class LoyaltyController : ControllerBase
 
     /// <summary>Unified management endpoint for Earn, Redeem, and Adjust.</summary>
     [HttpPost("manage")]
+    [Authorize(Policy = PermissionKeys.LoyaltyWrite)]
+    [Audit("Manage Loyalty Points", Category = "Loyalty")]
     public async Task<IActionResult> ManagePoints([FromBody] ManagePointsRequest request, CancellationToken ct)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);

@@ -26,10 +26,12 @@ public class DepartmentsController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Policy = PermissionKeys.EmployeeRead)]
     public async Task<IActionResult> GetAll(CancellationToken ct) =>
         Ok(ApiResponse<IEnumerable<Department>>.Ok(await _deptService.GetAllAsync(ct)));
 
     [HttpGet("{id:int}")]
+    [Authorize(Policy = PermissionKeys.EmployeeRead)]
     public async Task<IActionResult> GetById(int id, CancellationToken ct)
     {
         var dept = await _deptService.GetByIdAsync(id, ct);

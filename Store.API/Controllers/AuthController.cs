@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Store.API.Application.Abstractions;
 using Store.API.Application.Auth.Requests;
 using Store.API.Auth;
@@ -10,6 +12,7 @@ namespace Store.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class AuthController : ControllerBase
 {
     private readonly IRequestDispatcher _dispatcher;
@@ -21,6 +24,8 @@ public class AuthController : ControllerBase
         HttpContext.Request.IsHttps
         || string.Equals(HttpContext.Request.Headers["X-Forwarded-Proto"].ToString(), "https", StringComparison.OrdinalIgnoreCase);
 
+    [AllowAnonymous]
+    [EnableRateLimiting("auth")]
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request, CancellationToken ct)
     {
@@ -47,6 +52,8 @@ public class AuthController : ControllerBase
         return Ok(ApiResponse<LoginResponse>.Ok(result));
     }
 
+    [AllowAnonymous]
+    [EnableRateLimiting("auth")]
     [HttpPost("login/email")]
     public async Task<IActionResult> LoginWithEmail([FromBody] LoginWithEmailRequest request, CancellationToken ct)
     {
@@ -70,6 +77,8 @@ public class AuthController : ControllerBase
         return Ok(ApiResponse<LoginResponse>.Ok(result));
     }
 
+    [AllowAnonymous]
+    [EnableRateLimiting("auth")]
     [HttpPost("login/phone")]
     public async Task<IActionResult> LoginWithPhone([FromBody] LoginWithPhoneRequest request, CancellationToken ct)
     {
@@ -93,6 +102,8 @@ public class AuthController : ControllerBase
         return Ok(ApiResponse<LoginResponse>.Ok(result));
     }
 
+    [AllowAnonymous]
+    [EnableRateLimiting("auth")]
     [HttpPost("login/2fa")]
     public async Task<IActionResult> Login2FA([FromBody] Login2FARequest request, CancellationToken ct)
     {
@@ -113,6 +124,8 @@ public class AuthController : ControllerBase
         return Ok(ApiResponse<LoginResponse>.Ok(result));
     }
 
+    [AllowAnonymous]
+    [EnableRateLimiting("auth")]
     [HttpPost("refresh")]
     public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest? request, CancellationToken ct)
     {
@@ -191,7 +204,8 @@ public class AuthController : ControllerBase
     }
 
     [HttpGet("avatar/{username}")]
-    [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+    [AllowAnonymous]
+    [EnableRateLimiting("general")]
     public async Task<IActionResult> GetAvatar(string username, CancellationToken ct)
     {
         // SEC-11 — Constant-time response.

@@ -5,11 +5,13 @@ using Store.Models.DTOs.Employees;
 using Store.Models.DTOs.Operations;
 using Store.Models.Interfaces.Services;
 
+using Store.API.Attributes;
+
 namespace Store.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Policy = PermissionKeys.EmployeeRead)]
 public class EmployeesController : ControllerBase
 {
     private readonly IEmployeeService _employeeService;
@@ -48,6 +50,7 @@ public class EmployeesController : ControllerBase
 
     [HttpPost]
     [Authorize(Policy = PermissionKeys.EmployeeCreate)]
+    [Audit("Create Employee", Category = "HR")]
     public async Task<IActionResult> Create([FromBody] CreateEmployeeRequest request, CancellationToken ct)
     {
         var employee = await _employeeService.CreateAsync(request, ct);
@@ -56,6 +59,7 @@ public class EmployeesController : ControllerBase
 
     [HttpPut("{id:guid}")]
     [Authorize(Policy = PermissionKeys.EmployeeUpdate)]
+    [Audit("Update Employee", Category = "HR")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateEmployeeRequest request, CancellationToken ct)
     {
         var employee = await _employeeService.UpdateAsync(id, request, ct);
@@ -65,6 +69,7 @@ public class EmployeesController : ControllerBase
 
     [HttpDelete("{id:guid}")]
     [Authorize(Policy = PermissionKeys.EmployeeDelete)]
+    [Audit("Delete Employee", Category = "HR")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
         var userIdClaim = User.FindFirst("uid")?.Value;

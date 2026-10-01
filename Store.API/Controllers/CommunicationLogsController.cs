@@ -3,11 +3,13 @@ using Microsoft.AspNetCore.Mvc;
 using Store.Models.Entities;
 using Store.Models.Interfaces.Services;
 
+using Store.Models.DTOs.Operations;
+
 namespace Store.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize] // In a real scenario, probably require specific Admin policy
+[Authorize(Policy = PermissionKeys.CommunicationsRead)]
 public class CommunicationLogsController : ControllerBase
 {
     private readonly ICommunicationLogService _logService;

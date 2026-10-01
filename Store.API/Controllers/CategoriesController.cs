@@ -26,10 +26,12 @@ public class CategoriesController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Policy = PermissionKeys.InventoryRead)]
     public async Task<IActionResult> GetAll(CancellationToken ct) =>
         Ok(ApiResponse<IEnumerable<Category>>.Ok(await _categoryService.GetAllAsync(ct)));
 
     [HttpGet("{id:int}")]
+    [Authorize(Policy = PermissionKeys.InventoryRead)]
     public async Task<IActionResult> GetById(int id, CancellationToken ct)
     {
         var category = await _categoryService.GetByIdAsync(id, ct);

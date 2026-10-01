@@ -2388,6 +2388,51 @@ Startup crashed in `Store.API` with `InvalidOperationException: Unable to resolv
 - Audit tracker updated: `SEC-12` -> `[x]`.
 
 
+## Wave 38 — Controller Authorization Policy & Endpoint Access Hardening (SEC-20)
+
+**Goal:** Conduct a comprehensive security audit of all 39 API controllers in `Store.API/Controllers`, enforce fine-grained `PermissionKeys` policies, eliminate coarse/missing `[Authorize]` attributes, safeguard public `[AllowAnonymous]` endpoints against DoS/enumeration/brute-force attacks, and establish reflection test coverage.
+
+### 38.A — Controller Policy Hardening & Audit Decorators
+- **`CommunicationLogsController`**: Changed generic `[Authorize]` to explicit `[Authorize(Policy = PermissionKeys.CommunicationsRead)]` to prevent unprivileged staff from reading customer communication logs (SMS/Email message payloads, recipient contact details, and dispatch statuses).
+- **`PayrollController`**: Replaced coarse `[Authorize(Policy = PermissionKeys.AdminSettings)]` placeholder with class-level `[Authorize(Policy = PermissionKeys.PayrollRead)]` and decorated mutating actions (`DraftPayrollRun`, `ApprovePayroll`, `PayPayroll`) with `[Authorize(Policy = PermissionKeys.PayrollWrite)]` and `[Audit("...", Category = "HR")]`.
+- **`FinanceController`**: Added class-level `[Authorize(Policy = PermissionKeys.FinanceRead)]` preventing any regular authenticated user from accessing sensitive Profit & Loss, Balance Sheet, and AP/AR aging reports.
+- **`CustomersController`**: Added class-level `[Authorize(Policy = PermissionKeys.CustomerRead)]`, enforced `[Authorize(Policy = PermissionKeys.CustomerCreate)]` on `Create`, `[Authorize(Policy = PermissionKeys.CustomerUpdate)]` on `Update`, and attached `[Audit("...", Category = "Customers")]` across all mutations.
+- **`EmployeesController`**: Added class-level `[Authorize(Policy = PermissionKeys.EmployeeRead)]` to safeguard employee directories and 360 reviews; added `[Audit("...", Category = "HR")]` across creation, update, and deletion.
+- **`DepartmentsController`**: Added `[Authorize(Policy = PermissionKeys.EmployeeRead)]` to `GetAll` and `GetById`.
+- **`SalariesController`**: Added `[Authorize(Policy = PermissionKeys.PayrollRead)]` to `GetAll` and `GetById`.
+- **`CategoriesController`**: Added `[Authorize(Policy = PermissionKeys.InventoryRead)]` to `GetAll` and `GetById`.
+- **`UnitsController`**: Added `[Authorize(Policy = PermissionKeys.InventoryRead)]` to `GetAll` and `GetById`.
+- **`ItemController`**: Added `[Authorize(Policy = PermissionKeys.InventoryRead)]` to `GetAll` and `GetById`.
+- **`InvoicesController`**: Added `[Authorize(Policy = PermissionKeys.InvoiceRead)]` to `GetAll`, `GetSummary`, and `GetById`; added `[Authorize(Policy = PermissionKeys.InvoiceCreate)]` and `[Audit("Create Invoice", Category = "POS")]` to `Create`; added `[EnableRateLimiting("general")]` to public QR receipt lookup (`GetPublicReceipt`).
+- **`LoyaltyCampaignsController`**: Added class-level `[Authorize(Policy = PermissionKeys.LoyaltyRead)]`; replaced misplaced `AdminBranches` with `[Authorize(Policy = PermissionKeys.LoyaltyWrite)]` and `[Audit]` on `Create`, `Update`, and `Delete`.
+- **`LoyaltyController`**: Added `[Authorize(Policy = PermissionKeys.LoyaltyRead)]` to `GetMetrics`, `GetAllMembers`, `GetProfile`, `GetAccount`, `GetTransactions`, and `GetGlobalTransactions`; enforced `[Authorize(Policy = PermissionKeys.CashWrite)]` on `Earn` and `Redeem`, and `[Authorize(Policy = PermissionKeys.LoyaltyWrite)]` on `Adjust` and `Manage`.
+- **`PaymentsController`**: Added `[Authorize(Policy = PermissionKeys.CashWrite)]` and `[Audit]` to `Initiate`.
+- **`UsersController`**: Enforced `[Authorize(Policy = PermissionKeys.AdminUsers)]` on `GetById` and `Get360ById`; protected anonymous email/SMS contact change verification link with `[EnableRateLimiting("general")]`.
+- **`AuthController`**: Hardened class with `[Authorize]`, made anonymous endpoints (`Login`, `LoginWithEmail`, `LoginWithPhone`, `Login2FA`, `Refresh`) explicit `[AllowAnonymous]` + `[EnableRateLimiting("auth")]`, and bound `GetAvatar` with `[EnableRateLimiting("general")]`.
+
+### 38.B — Automated Security & Authorization Test Suite
+- `Store.API.Tests/EndpointAuthorizationSecurityTests.cs` (13 tests):
+  - `AllControllers_AreDiscovered_ExpectedCount39`: Discovers all controllers in `Store.API` assembly via reflection and verifies total count.
+  - `AllowAnonymous_Endpoints_AreStrictlyAllowlisted`: Mathematical reflection check asserting that ONLY the approved 18 endpoints have `[AllowAnonymous]` across the entire API surface.
+  - `PublicReceipt_HasRateLimitingAttribute`: Asserts rate limiting is active on the public receipt scanner endpoint.
+  - `VerifyContactChange_HasRateLimitingAttribute`: Asserts rate limiting is active on anonymous contact verification.
+  - `CommunicationLogsController_HasCommunicationsReadPolicy`: Validates `CommunicationsRead` policy requirement.
+  - `FinanceController_HasFinanceReadPolicy`: Validates `FinanceRead` policy requirement.
+  - `PayrollController_HasFineGrainedPolicies`: Validates `PayrollRead` and `PayrollWrite` policy distribution.
+  - `CustomersController_HasFineGrainedPolicies`: Validates customer CRUD policies.
+  - `EmployeesController_HasFineGrainedPolicies`: Validates employee CRUD policies.
+  - `InvoicesController_HasFineGrainedPolicies`: Validates invoice read and create policies.
+  - `LoyaltyCampaignsController_HasLoyaltyPolicies`: Validates loyalty campaign policies.
+  - `UsersController_GetById_RequiresAdminUsersPolicy`: Validates user admin query policies.
+  - `PaymentsController_Initiate_RequiresCashWritePolicy`: Validates `CashWrite` policy on mobile money payment initiation.
+
+### Verification
+- Solution build clean: `dotnet build StoreProject.sln --configuration Release` (**0 warnings, 0 errors**).
+- Test suite passes: `dotnet test Store.API.Tests -c Release` -> **414 passed, 0 failed** (+13 new security reflection tests).
+- Audit tracker updated: `SEC-20` -> `[x]`.
+
+
+
 
 
 

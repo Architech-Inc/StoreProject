@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Store.Models.DTOs.Common;
 using Store.Models.DTOs.Items;
@@ -18,6 +18,7 @@ public class ItemController : ControllerBase
     public ItemController(IItemService itemService) => _itemService = itemService;
 
     [HttpGet]
+    [Authorize(Policy = PermissionKeys.InventoryRead)]
     public async Task<IActionResult> GetAll([FromQuery] PagedRequest request, CancellationToken ct)
     {
         var result = await _itemService.GetAllAsync(request, ct);
@@ -25,6 +26,7 @@ public class ItemController : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
+    [Authorize(Policy = PermissionKeys.InventoryRead)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
     {
         var item = await _itemService.GetByIdAsync(id, ct);

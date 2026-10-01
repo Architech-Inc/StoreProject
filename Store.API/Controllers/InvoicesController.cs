@@ -5,6 +5,8 @@ using Store.Models.DTOs.Invoices;
 using Store.Models.DTOs.Operations;
 using Store.Models.Interfaces.Services;
 
+using Microsoft.AspNetCore.RateLimiting;
+using Store.API.Attributes;
 using Microsoft.Extensions.Logging.Abstractions;
 using Store.Models.Common;
 namespace Store.API.Controllers;
@@ -19,6 +21,7 @@ public class InvoicesController : ControllerBase
     public InvoicesController(IInvoiceService invoiceService) => _invoiceService = invoiceService;
 
     [HttpGet]
+    [Authorize(Policy = PermissionKeys.InvoiceRead)]
     public async Task<IActionResult> GetAll([FromQuery] InvoicePagedRequest request, CancellationToken ct)
     {
         var result = await _invoiceService.GetAllAsync(request, ct);
@@ -26,6 +29,7 @@ public class InvoicesController : ControllerBase
     }
 
     [HttpGet("summary")]
+    [Authorize(Policy = PermissionKeys.InvoiceRead)]
     public async Task<IActionResult> GetSummary([FromQuery] InvoicePagedRequest request, CancellationToken ct)
     {
         var result = await _invoiceService.GetSummaryMetricsAsync(request, ct);
@@ -33,6 +37,7 @@ public class InvoicesController : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
+    [Authorize(Policy = PermissionKeys.InvoiceRead)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
     {
         var invoice = await _invoiceService.GetByIdAsync(id, ct);
@@ -42,6 +47,7 @@ public class InvoicesController : ControllerBase
 
     [HttpGet("public/{id:guid}")]
     [AllowAnonymous]
+    [EnableRateLimiting("general")]
     public async Task<IActionResult> GetPublicReceipt(Guid id, CancellationToken ct)
     {
         var receipt = await _invoiceService.GetPublicReceiptAsync(id, ct);
@@ -50,6 +56,8 @@ public class InvoicesController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = PermissionKeys.InvoiceCreate)]
+    [Audit("Create Invoice", Category = "POS")]
     public async Task<IActionResult> Create([FromBody] CreateInvoiceRequest request, CancellationToken ct)
     {
         var userIdClaim = User.FindFirst("uid")?.Value;

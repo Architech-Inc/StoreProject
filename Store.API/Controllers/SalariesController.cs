@@ -26,10 +26,12 @@ public class SalariesController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Policy = PermissionKeys.PayrollRead)]
     public async Task<IActionResult> GetAll(CancellationToken ct) =>
         Ok(ApiResponse<IEnumerable<Salary>>.Ok(await _salaryService.GetAllAsync(ct)));
 
     [HttpGet("{id:int}")]
+    [Authorize(Policy = PermissionKeys.PayrollRead)]
     public async Task<IActionResult> GetById(int id, CancellationToken ct)
     {
         var salary = await _salaryService.GetByIdAsync(id, ct);

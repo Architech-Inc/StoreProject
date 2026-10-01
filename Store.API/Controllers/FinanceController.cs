@@ -3,11 +3,13 @@ using Microsoft.AspNetCore.Mvc;
 using Store.Models.DTOs.Finance;
 using Store.Models.Interfaces.Services;
 
+using Store.Models.DTOs.Operations;
+
 namespace Store.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Policy = PermissionKeys.FinanceRead)]
 public class FinanceController : ControllerBase
 {
     private readonly IFinanceService _financeService;

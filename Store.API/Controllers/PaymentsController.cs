@@ -4,6 +4,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using Store.API.Attributes;
 using Store.Models.DTOs.Operations;
 using Store.Models.DTOs.Payments;
 using Store.Models.Enums;
@@ -29,7 +30,8 @@ public class PaymentsController : ControllerBase
     // ─── Initiate (requires auth) ─────────────────────────────────────────────
 
     [HttpPost("momo/initiate")]
-    [Authorize]
+    [Authorize(Policy = PermissionKeys.CashWrite)]
+    [Audit("Initiate MoMo Payment", Category = "Payments")]
     public async Task<IActionResult> Initiate([FromBody] InitiateMobileMoneyRequest request, CancellationToken ct)
     {
         var tx = await _momo.InitiateAsync(request, ct);

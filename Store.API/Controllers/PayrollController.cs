@@ -7,12 +7,13 @@ using Store.Models.Entities.HR;
 using Store.Models.Enums;
 
 using Microsoft.Extensions.Logging;
+using Store.API.Attributes;
 using Store.Models.Common;
 namespace Store.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Policy = PermissionKeys.AdminSettings)] // Or a dedicated HR/Finance policy
+[Authorize(Policy = PermissionKeys.PayrollRead)]
 public class PayrollController : ControllerBase
 {
     private readonly IPayrollService _payrollService;
@@ -55,6 +56,8 @@ public class PayrollController : ControllerBase
     }
 
     [HttpPost("draft")]
+    [Authorize(Policy = PermissionKeys.PayrollWrite)]
+    [Audit("Draft Payroll Run", Category = "HR")]
     public async Task<IActionResult> DraftPayrollRun([FromBody] DraftPayrollRequest request)
     {
         try
@@ -74,6 +77,8 @@ public class PayrollController : ControllerBase
     }
 
     [HttpPost("{id:guid}/approve")]
+    [Authorize(Policy = PermissionKeys.PayrollWrite)]
+    [Audit("Approve Payroll Run", Category = "HR")]
     public async Task<IActionResult> ApprovePayroll(Guid id)
     {
         try
@@ -96,6 +101,8 @@ public class PayrollController : ControllerBase
     }
 
     [HttpPost("{id:guid}/pay")]
+    [Authorize(Policy = PermissionKeys.PayrollWrite)]
+    [Audit("Pay Payroll Run", Category = "HR")]
     public async Task<IActionResult> PayPayroll(Guid id)
     {
         try

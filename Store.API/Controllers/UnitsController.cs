@@ -26,10 +26,12 @@ public class UnitsController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Policy = PermissionKeys.InventoryRead)]
     public async Task<IActionResult> GetAll(CancellationToken ct) =>
         Ok(ApiResponse<IEnumerable<Unit>>.Ok(await _unitService.GetAllAsync(ct)));
 
     [HttpGet("{id:int}")]
+    [Authorize(Policy = PermissionKeys.InventoryRead)]
     public async Task<IActionResult> GetById(int id, CancellationToken ct)
     {
         var unit = await _unitService.GetByIdAsync(id, ct);

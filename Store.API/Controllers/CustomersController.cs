@@ -7,11 +7,13 @@ using Store.Models.DTOs.Operations;
 using Store.Models.Interfaces;
 using Store.Models.Interfaces.Services;
 
+using Store.API.Attributes;
+
 namespace Store.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Policy = PermissionKeys.CustomerRead)]
 public class CustomersController : ControllerBase
 {
     private readonly ICustomerService _customerService;
@@ -80,6 +82,8 @@ public class CustomersController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = PermissionKeys.CustomerCreate)]
+    [Audit("Create Customer", Category = "Customers")]
     public async Task<IActionResult> Create([FromBody] CreateCustomerRequest request, CancellationToken ct)
     {
         var customer = await _customerService.CreateAsync(request, ct);
@@ -87,6 +91,8 @@ public class CustomersController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Policy = PermissionKeys.CustomerUpdate)]
+    [Audit("Update Customer", Category = "Customers")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateCustomerRequest request, CancellationToken ct)
     {
         var customer = await _customerService.UpdateAsync(id, request, ct);
@@ -96,6 +102,7 @@ public class CustomersController : ControllerBase
 
     [HttpDelete("{id:guid}")]
     [Authorize(Policy = PermissionKeys.CustomerDelete)]
+    [Audit("Delete Customer", Category = "Customers")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
         var userIdClaim = User.FindFirst("uid")?.Value;
