@@ -533,22 +533,43 @@ div.stackPanel {
     display: block;
 }
 
-/* Tablet-friendly touch targets for buttons on inventory + POS pages. */
+/* Tablet & Mobile touch targets & responsive layout polish (WCAG 2.5.5 / 2.5.8 compliant). */
 @media (max-width: 900px) {
+    .btn,
     .btn-table-action,
     .btn-glass,
     .btn-primary-glow,
     .btn-brand-primary,
-    .btn-brand-secondary {
-        min-height: 36px;
-        min-width: 36px;
+    .btn-brand-secondary,
+    .button-primary,
+    .button-secondary {
+        min-height: 44px;
+        min-width: 44px;
+        touch-action: manipulation;
     }
 
-    /* Scrollable tables on narrow viewports — keep the data, lose the
-       horizontal squeeze. */
+    /* Scrollable tables on narrow viewports — keep the data, lose the horizontal squeeze. */
     .table-wrap {
+        width: 100%;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
+        position: relative;
+        overscroll-behavior-x: contain;
+    }
+
+    .table-wrap table {
+        min-width: 600px;
+    }
+
+    /* Prevent iOS auto-zoom on form inputs */
+    input[type="text"],
+    input[type="search"],
+    input[type="number"],
+    input[type="email"],
+    input[type="password"],
+    select,
+    textarea {
+        font-size: 16px !important;
     }
 
     .dash-card {
@@ -557,6 +578,35 @@ div.stackPanel {
 
     .kpi-tile {
         padding: 12px !important;
+    }
+
+    /* Topbar responsive wrapping */
+    .topbar-actions {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .topbar-kbd-btn,
+    .topbar-notif-btn {
+        min-width: 44px;
+        min-height: 44px;
+    }
+}
+
+@media (max-width: 640px) {
+    .topbar-search-trigger {
+        margin-right: 0 !important;
+    }
+
+    .topbar-branch-switcher {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .topbar-branch-switcher select {
+        font-size: 16px !important;
     }
 }
 

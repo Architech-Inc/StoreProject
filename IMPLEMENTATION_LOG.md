@@ -2535,6 +2535,52 @@ Resolve `PROC-07`, `DOC-04`, and `DOC-05` by establishing a formal Architecture 
 - Test suite passes: `dotnet test Store.API.Tests -c Release` -> **414 passed, 0 failed**.
 - Audit tracker updated: `PROC-07` -> `[x]`, `DOC-04` -> `[x]`, `DOC-05` -> `[x]`.
 
+---
+
+## Wave 42 — Mobile-First Responsive Layout & Touch-Friendly POS Register (UX-02)
+
+### Objective
+Resolve finding `UX-02` by designing and implementing a mobile-first responsive layout and touch-optimized checkout workflow for ClexAn POS and back-office management. Eliminate the legacy mobile layout flaw where product catalogs pushed carts offscreen on narrow devices, enforce WCAG 2.5.5 touch target sizes (minimum 44px x 44px), provide high-speed Quick Cash tender shortcuts, and transform slide-over blades into native-feeling mobile bottom sheets.
+
+### 42.A — Mobile Register View Switcher & Sticky Cart Bar (`Pos.cshtml`, `pos.css`)
+- **Segmented View Switcher (`#posMobileTabs`)**:
+  - Replaces stacked single-column overload on viewports `<= 900px` with an accessible tabbed bar (`[ 📦 Catalog ]` vs `[ 🛒 Cart ]`).
+  - Includes a real-time reactive cart count pill (`#posMobileCartBadge`) that updates dynamically on item add/remove and hides when empty.
+  - Switches views cleanly without page reloads using `switchPosMobileView(tab)`.
+- **Floating Sticky Cart Summary Bar (`#posMobileCartBar`)**:
+  - Floats fixed at the bottom of the screen with a subtle backdrop blur when browsing the catalog on mobile devices (`<= 900px`) and cart has items.
+  - Displays total quantity, formatted XAF total, and a prominent 44px `Review & Pay →` action button that instantly shifts view to checkout.
+  - Automatically respects mobile device bottom navigation / home indicator via `env(safe-area-inset-bottom)`.
+
+### 42.B — Touch-Friendly Quantity Stepper & Product Cards (`Pos.cshtml`, `pos.css`)
+- **Quantity Stepper (`.qty-stepper`)**:
+  - Replaced standard numeric inputs in the cart with tactile `[ − ] [ Qty ] [ + ]` stepper buttons.
+  - Touch buttons enforce WCAG 2.5.5 minimum 44px x 44px touch targets on mobile (38px on desktop).
+  - Prevents accidental mobile virtual keyboard popups while maintaining fast 1-tap increments, decrements, and stock boundary caps.
+- **Product Card Touch Polish (`.catalog-card`)**:
+  - Added `:active` micro-scaling feedback (`transform: scale(0.97)`), elevation hover states, and clear typography.
+  - Configured `touch-action: manipulation` and `-webkit-tap-highlight-color: transparent` to eliminate double-tap zoom delays on touch devices.
+
+### 42.C — Quick Cash Tender Pills (`Pos.cshtml`, `pos.css`)
+- **Quick Cash Tender Row (`#posQuickCashRow`)**:
+  - Integrated 6 touch-friendly tender shortcut pills (`Exact`, `1,000`, `2,000`, `5,000`, `10,000`, `20,000` XAF) for high-speed cash transactions.
+  - Clicking any denomination automatically targets or initializes the Cash tender line, calculates Change or Remaining balance in real-time, and dispatches change events without requiring cashier keyboard typing.
+
+### 42.D — Mobile Bottom-Sheet Blades & Layout Polish (`site.css`, `pos.css`, `_AppLayout.cshtml`, `sw.js`)
+- **Responsive Bottom-Sheet Blades (`@media (max-width: 640px)`)**:
+  - Slides receipt and offline ledger blades up from the bottom of the viewport with rounded top corners (`border-radius: 16px 16px 0 0`), drag handle visual indicator, and safe-area padding.
+- **Responsive Back-Office Layout & iOS Zoom Prevention**:
+  - Enforced `font-size: 16px !important` on mobile form inputs (`<= 900px`) to eliminate aggressive iOS Safari viewport auto-zooming.
+  - Bounded `.table-wrap` horizontally with smooth `-webkit-overflow-scrolling: touch` and `overscroll-behavior-x: contain`.
+  - Unified hamburger toggles (`menuToggle` and `mobileSidebarToggle`) in `_AppLayout.cshtml` to trigger the mobile sidebar drawer with backdrop dimming.
+- **Offline Shell Cache Upgrade (`sw.js`)**:
+  - Added `/css/pos.css` to `OFFLINE_SHELL` static cache array and bumped `CACHE_VERSION` to `clexan-v3`.
+
+### Verification
+- Solution build clean: `dotnet build StoreProject.sln --configuration Release` (**0 warnings, 0 errors**).
+- Automated tests clean: `dotnet test Store.API.Tests -c Release` -> **414 passed, 0 failed**.
+- Audit tracker updated: `UX-02` -> `[x]`.
+
 
 
 

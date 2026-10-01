@@ -86,8 +86,20 @@
         </div>
     }
 
+    <nav class="pos-mobile-tabs" id="posMobileTabs" aria-label="POS Register Views">
+        <button type="button" class="pos-tab-btn active" id="posTabCatalog" onclick="switchPosMobileView('catalog')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+            <span>Catalog</span>
+        </button>
+        <button type="button" class="pos-tab-btn" id="posTabCart" onclick="switchPosMobileView('cart')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+            <span>Cart</span>
+            <span class="pos-cart-badge" id="posMobileCartBadge" hidden>0</span>
+        </button>
+    </nav>
+
     <div class="pos-grid">
-        <section class="catalog-panel" id="catalog" aria-label="Product catalog">
+        <section class="catalog-panel is-active" id="catalog" aria-label="Product catalog">
             <div class="panel-head">
                 <h2>Catalog</h2>
                 <input id="catalogSearch" type="search" placeholder="Search products..." aria-label="Search products" />
@@ -156,6 +168,17 @@
                         <label>Payment</label>
                         <button type="button" class="button-secondary tender-add-btn" id="addTenderLineBtn">+ Add</button>
                     </div>
+                    <div class="pos-quick-cash-row" id="posQuickCashRow" aria-label="Quick Cash Tender">
+                        <span class="quick-cash-label">Quick Cash Tender</span>
+                        <div class="quick-cash-pills">
+                            <button type="button" class="quick-cash-btn" data-quick-cash="exact">Exact</button>
+                            <button type="button" class="quick-cash-btn" data-quick-cash="1000">1,000</button>
+                            <button type="button" class="quick-cash-btn" data-quick-cash="2000">2,000</button>
+                            <button type="button" class="quick-cash-btn" data-quick-cash="5000">5,000</button>
+                            <button type="button" class="quick-cash-btn" data-quick-cash="10000">10,000</button>
+                            <button type="button" class="quick-cash-btn" data-quick-cash="20000">20,000</button>
+                        </div>
+                    </div>
                     <div id="tenderLinesContainer"></div>
                     <div class="tender-summary">
                         <span>Tendered</span><strong id="tenderedTotal">0 XAF</strong>
@@ -198,6 +221,18 @@
                 <div id="checkoutMessage" class="checkout-message" role="status" aria-live="polite"></div>
             </div>
         </section>
+    </div>
+
+    <!-- Floating Sticky Cart Summary on Mobile Catalog View -->
+    <div class="pos-mobile-cart-bar" id="posMobileCartBar" hidden>
+        <div class="mobile-cart-summary">
+            <span class="mobile-cart-count" id="mobileBarItemCount">0 items</span>
+            <span class="mobile-cart-total" id="mobileBarTotal">0 XAF</span>
+        </div>
+        <button type="button" class="mobile-cart-view-btn" id="mobileCartViewBtn" onclick="switchPosMobileView('cart')">
+            <span>Review &amp; Pay</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+        </button>
     </div>
 </div>
 
@@ -420,6 +455,34 @@
 
         changeText.textContent = `${xaf(change)} XAF`;
     }
+
+    function applyQuickCash(val) {
+        const subtotal = getSubtotal();
+        if (subtotal <= 0) {
+            setMessage('Add items to cart first before tendering.', true);
+            return;
+        }
+        let targetAmount = 0;
+        if (val === 'exact') {
+            targetAmount = subtotal;
+        } else {
+            targetAmount = parseFloat(val) || 0;
+        }
+
+        let firstLine = tenderLinesContainer.querySelector('.tender-line');
+        if (!firstLine) {
+            addTenderLine(0, targetAmount);
+        } else {
+            const typeSelect = firstLine.querySelector('.tender-type');
+            const amountInput = firstLine.querySelector('.tender-amount');
+            if (typeSelect) typeSelect.value = '0'; // Cash
+            if (amountInput) {
+                amountInput.value = targetAmount;
+                amountInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        }
+        updateTenderTotals();
+    }
     const clearCartBtn = document.getElementById('clearCartBtn');
     const barcodeInput = document.getElementById('barcodeInput');
     const barcodeAddBtn = document.getElementById('barcodeAddBtn');
@@ -529,13 +592,72 @@
         renderCart();
     }
 
+    let currentMobileTab = 'catalog';
+
+    window.switchPosMobileView = function (tab) {
+        currentMobileTab = tab;
+        const catalogPanel = document.getElementById('catalog');
+        const cartPanel = document.getElementById('checkout');
+        const tabCatalog = document.getElementById('posTabCatalog');
+        const tabCart = document.getElementById('posTabCart');
+        const mobileCartBar = document.getElementById('posMobileCartBar');
+
+        if (tab === 'cart') {
+            tabCatalog?.classList.remove('active');
+            tabCart?.classList.add('active');
+            catalogPanel?.classList.remove('is-active');
+            cartPanel?.classList.add('is-active');
+            if (mobileCartBar) mobileCartBar.hidden = true;
+        } else {
+            tabCart?.classList.remove('active');
+            tabCatalog?.classList.add('active');
+            cartPanel?.classList.remove('is-active');
+            catalogPanel?.classList.add('is-active');
+            if (mobileCartBar) {
+                mobileCartBar.hidden = (cart.size === 0);
+            }
+        }
+    };
+
     function renderCart() {
+        const mobileCartBadge = document.getElementById('posMobileCartBadge');
+        const mobileBarItemCount = document.getElementById('mobileBarItemCount');
+        const mobileBarTotal = document.getElementById('mobileBarTotal');
+        const mobileCartBar = document.getElementById('posMobileCartBar');
+
         if (cart.size === 0) {
+            if (mobileCartBadge) {
+                mobileCartBadge.hidden = true;
+                mobileCartBadge.textContent = '0';
+            }
+            if (mobileCartBar) {
+                mobileCartBar.hidden = true;
+            }
             cartEmpty.hidden = false;
             cartTable.hidden = true;
             subtotalText.textContent = '0 XAF';
             updateTenderTotals();
             return;
+        }
+
+        let totalItemsCount = 0;
+        for (const line of cart.values()) {
+            totalItemsCount += line.quantity;
+        }
+
+        if (mobileCartBadge) {
+            mobileCartBadge.hidden = false;
+            mobileCartBadge.textContent = totalItemsCount > 99 ? '99+' : String(totalItemsCount);
+        }
+
+        if (mobileCartBar) {
+            if (mobileBarItemCount) mobileBarItemCount.textContent = `${totalItemsCount} ${totalItemsCount === 1 ? 'item' : 'items'}`;
+            if (mobileBarTotal) mobileBarTotal.textContent = `${xaf(getSubtotal())} XAF`;
+            if (currentMobileTab === 'catalog') {
+                mobileCartBar.hidden = false;
+            } else {
+                mobileCartBar.hidden = true;
+            }
         }
 
         cartEmpty.hidden = true;
@@ -558,12 +680,16 @@
                 </td>
                 <td>${xaf(line.unitPrice)}</td>
                 <td>
-                    <input type="number" min="1" max="${line.maxStock}" value="${line.quantity}" data-qty="${line.itemId}" style="width:60px;padding:0.25rem" />
+                    <div class="qty-stepper" role="group" aria-label="Quantity for ${line.name}">
+                        <button type="button" class="qty-step-btn" data-step-dec="${line.itemId}" aria-label="Decrease quantity" title="Decrease">&minus;</button>
+                        <input type="number" min="1" max="${line.maxStock}" value="${line.quantity}" data-qty="${line.itemId}" class="qty-stepper-input" inputmode="numeric" aria-label="Quantity" />
+                        <button type="button" class="qty-step-btn" data-step-inc="${line.itemId}" aria-label="Increase quantity" title="Increase">&plus;</button>
+                    </div>
                 </td>
                 <td><strong>${xaf(line.unitPrice * line.quantity)}</strong></td>
                 <td style="white-space:nowrap">
-                    <button type="button" class="button-secondary" data-override="${line.itemId}" style="padding:0.2rem 0.45rem;font-size:0.75rem" title="Request discount override">Override</button>
-                    <button type="button" class="danger" data-del="${line.itemId}" style="padding:0.2rem 0.45rem">&times;</button>
+                    <button type="button" class="button-secondary" data-override="${line.itemId}" style="padding:0.3rem 0.55rem;font-size:0.75rem;min-height:36px;" title="Request discount override">Override</button>
+                    <button type="button" class="danger" data-del="${line.itemId}" style="padding:0.3rem 0.6rem;min-height:36px;font-size:0.9rem;" title="Remove item">&times;</button>
                 </td>
             `;
             cartBody.appendChild(row);
@@ -577,6 +703,39 @@
                 if (line) {
                     line.quantity = Math.min(Math.max(1, qty), line.maxStock);
                     renderCart();
+                }
+            });
+        }
+
+        for (const btn of cartBody.querySelectorAll('[data-step-dec]')) {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const itemId = btn.dataset.stepDec;
+                const line = cart.get(itemId);
+                if (line) {
+                    if (line.quantity > 1) {
+                        line.quantity--;
+                        renderCart();
+                    } else {
+                        cart.delete(itemId);
+                        renderCart();
+                    }
+                }
+            });
+        }
+
+        for (const btn of cartBody.querySelectorAll('[data-step-inc]')) {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const itemId = btn.dataset.stepInc;
+                const line = cart.get(itemId);
+                if (line) {
+                    if (line.quantity < line.maxStock) {
+                        line.quantity++;
+                        renderCart();
+                    } else {
+                        setMessage(`Max available stock (${line.maxStock}) reached for ${line.name}.`, true);
+                    }
                 }
             });
         }
@@ -1336,6 +1495,13 @@
         e.preventDefault();
         checkoutAsync();
     });
+
+    // Wire quick cash tender pills
+    for (const btn of document.querySelectorAll('#posQuickCashRow [data-quick-cash]')) {
+        btn.addEventListener('click', () => {
+            applyQuickCash(btn.dataset.quickCash);
+        });
+    }
 
     // Startup Initialization
     seedCustomers();

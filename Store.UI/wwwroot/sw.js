@@ -10,7 +10,7 @@
  * Update strategy: bumped CACHE_VERSION triggers the install event to
  * replace the cache. The activate event deletes any old cache entries.
  */
-const CACHE_VERSION = 'clexan-v2';
+const CACHE_VERSION = 'clexan-v3';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -25,6 +25,7 @@ const OFFLINE_SHELL = [
     '/images/icon-192.svg',
     '/images/icon-512.svg',
     '/css/site.css',
+    '/css/pos.css',
     '/css/components.css',
     '/css/tokens.css',
     '/css/operations.css',

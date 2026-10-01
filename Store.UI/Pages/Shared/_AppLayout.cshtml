@@ -466,8 +466,12 @@
         });
 
         menuToggle?.addEventListener('click', () => {
-            const collapsed = shell?.classList.toggle('sidebar-collapsed');
-            menuToggle?.setAttribute('aria-expanded', collapsed ? 'true' : 'false');
+            if (typeof window.toggleMobileSidebar === 'function') {
+                window.toggleMobileSidebar();
+            } else {
+                const collapsed = shell?.classList.toggle('sidebar-collapsed');
+                menuToggle?.setAttribute('aria-expanded', collapsed ? 'true' : 'false');
+            }
         });
 
         // Deep linking and active state based on URL
