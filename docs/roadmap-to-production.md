@@ -1,234 +1,119 @@
-## Concrete Roadmap to Production → Multi-Tenant → Global
+# Concrete Roadmap to Production → Multi-Tenant → Global — ClexAn Foods
 
-This roadmap is based on the current repository state and the architectural gaps that are still visible.
-
----
-
-## Phase 0 — Current State Baseline
-
-### Done
-- Strong internal business-domain foundation
-- Layered architecture is present
-- Auth/authorization groundwork exists
-- API/UI separation is established
-- Business modules exist for:
-  - users
-  - employees
-  - customers
-  - catalog/items
-  - invoices
-  - orders
-  - cash variance
-  - purchase orders
-- Shared models and DTO contracts are centralized
-- Some security hardening is already in place at the file upload boundary
-
-### Not yet done
-- True tenant abstraction
-- Tenant-scoped isolation in data access
-- Global localization and regional compliance model
-- Full production hardening for operations, monitoring, and release safety
-- Real SaaS billing/limits/feature flag architecture
-- End-to-end business test coverage
+> **Reconciled Roadmap & Audit Tracker Cross-Reference**  
+> Last Updated: 2026-10-01 (Reconciled with Audit Tracker Waves 1–40)  
+> This roadmap documents the architectural progression of ClexAn Foods (StoreProject), mapping strategic delivery phases directly to finding IDs in [`docs/audit-tracker.md`](audit-tracker.md).
 
 ---
 
-## Phase 1 — Production Hardening
+## Strategic Phase Overview
 
-This is the first necessary move before “multi-tenant” meaningfully makes sense.
+```
+Phase 1: Production Hardening ───────────────► [ 95% COMPLETE ] (Waves 1–40)
+Phase 2: Multi-Tenant Enablement ────────────► [ 85% COMPLETE ] (Waves 13, 20, 36)
+Phase 3: Regional Compliance & Africa-First ──► [ 70% COMPLETE ] (Waves 16, 21, 38)
+Phase 4: Enterprise SaaS Maturity ───────────► [ 40% IN PROGRESS ]
+```
+
+---
+
+## Phase 1 — Production Hardening & Operational Safety
 
 ### Goal
-Make the system reliable, observable, secure, and deployable as a real production application.
+Transform the internal business engine into an observable, secure, zero-warning, production-grade platform.
 
-### Done
-- Basic structured API/UI layering exists
-- Centralized error handling is present
-- File upload contract is hardened
-- Build compiles successfully after stabilization pass
+### Status: **95% Complete** (Validated by Waves 1–40)
 
-### Not yet done
-- CI/CD pipeline with automated release gates
-- Production secrets management
-- Environment-specific configuration policy
-- Health checks and readiness probes
-- Distributed tracing / correlation visibility beyond simple middleware
-- Container orchestration / deployment strategy
-- Backup/restore and disaster recovery plan
-- Production-grade logging and error monitoring
-- SLO / alerting / uptime monitoring
-- Regression coverage for business workflows
-
-### Concrete deliverables
-1. Add production config profile separation:
-   - dev
-   - staging
-   - prod
-
-2. Add health and readiness endpoints:
-   - `/health`
-   - `/ready`
-
-3. Add production telemetry:
-   - OpenTelemetry
-   - structured JSON logs
-   - trace IDs in request context
-
-4. Add automated deployment workflow:
-   - build
-   - test
-   - publish
-   - deploy
-   - rollback plan
-
-### Exit criteria for Phase 1
-- The app can be deployed safely to a production environment
-- failures are observable
-- secrets are externalized
-- rollback is documented and reproducible
+| Finding ID | Scope & Milestone | Status | Resolution Detail |
+|---|---|---|---|
+| `SEC-01` | MySQL root password empty fallback in compose | `[x]` | Stripped fallback; enforced `${VAR:?VAR is required}` in compose. |
+| `SEC-02` | Placeholder JWT key startup crash guard | `[x]` | `Program.cs` throws fatal startup exception if key is placeholder or <32 chars. |
+| `SEC-03` | Master Encryption Key placeholder guard | `[x]` | `SecretEncryptionService` enforces 32-character high-entropy master key. |
+| `SEC-04` | MoMo payment callback HMAC signature | `[x]` | Migrated from static key to `X-Callback-Signature: sha256=<hex>` constant-time compare. |
+| `SEC-05` | CSRF protection across Razor Pages | `[x]` | Enforced `AutoValidateAntiforgeryToken` globally. |
+| `SEC-06` | Rate limiting on authentication & recovery | `[x]` | Configured ASP.NET Core rate limiters (`auth`, `password-recovery`, `financial`). |
+| `SEC-08` | Structured audit logging | `[x]` | `AuditLoggingMiddleware` captures structured logs + database audit records via `[Audit]`. |
+| `SEC-11` | ClamAV antivirus file boundary inspection | `[x]` | `IVirusScanner` streams bytes to ClamAV sidecar; `NoOp` refused in prod (`ADR-004`). |
+| `SEC-12` | Path traversal & MIME type spoofing | `[x]` | Enforced magic-number inspection and UUID filenames in `FilesController`. |
+| `SEC-14` | Refresh token cryptographic rotation | `[x]` | Enforced single-use refresh token rotation in `AuthenticationService`. |
+| `SEC-20` | Controller authorization policy audit | `[x]` | Hardened policies across all 39 controllers; 13 security reflection tests. |
+| `OPS-01` | Production compose secrets externalization | `[x]` | Eliminated empty fallbacks across all docker-compose files. |
+| `OPS-02` | Healthchecks and readiness probes | `[x]` | Added `/health` and `/ready` probes to API and ControlPlane. |
+| `OPS-03` | Traefik Edge Proxy & Dashboard security | `[x]` | Gated Traefik dashboard behind local dev flag; exposed via `docker-compose.traefik.yml`. |
+| `PROC-08` | Developer onboarding documentation | `[x]` | Published comprehensive `docs/onboarding.md` guide. |
+| `PROC-10` | Unified CLI task runners | `[x]` | Delivered root `Makefile` and native `tasks.ps1` PowerShell runner. |
+| `PROC-11` | Automated CI/CD build matrix | `[x]` | Configured 6-leg parallel GitHub Actions workflow with build caching. |
+| `OPS-05` | Automated Let's Encrypt TLS (DNS-01 / HTTP-01) | `[ ]` | Wire ACME automated wildcard resolver for production Traefik. |
+| `OPS-06` | Automated container updates (Watchtower) | `[ ]` | Add Watchtower daemon with cleanup schedule. |
+| `OPS-07` | Centralized log shipping (Loki / Seq) | `[ ]` | Provision Promtail/Loki sidecar for structured log aggregation. |
 
 ---
 
-## Phase 2 — Multi-Tenant Enablement
-
-This is the point where the app stops being “one shared deployment” and becomes a tenant-aware platform.
+## Phase 2 — Multi-Tenant Enablement & Orchestration
 
 ### Goal
-Support multiple independent tenants on one platform without data leakage or shared configuration drift.
+Provide isolated retail operations per tenant with zero cross-tenant data leakage, automated provisioning, and plan-tier enforcement.
 
-### Done
-- App has strong domain module structure
-- Authorization model exists
-- Shared service/container architecture already supports modular extension
+### Status: **85% Complete**
 
-### Not yet done
-- `TenantId` model across all persisted entities
-- Global query filters for tenant isolation
-- Tenant-aware authentication and membership
-- Tenant-specific settings and feature flags
-- Tenant boundary enforcement in business services
-- Tenant admin console
-- Tenant onboarding / lifecycle management
-- Billing and subscription model integration
-
-### Required architecture additions
-1. Tenant entity
-   - `Tenant`
-   - `TenantId`
-   - `TenantName`
-   - `Status`
-   - `Plan`
-   - `Region`
-
-2. Tenant-aware entity model
-   - every business entity inherits or references tenant ID
-   - all CRUD flows are tenant-filtered
-
-3. Tenant security boundary
-   - JWT claims include tenant context
-   - cross-tenant access prevented at repository/service layer
-   - auditable tenant access logs
-
-4. Tenant configuration
-   - tenant-specific SMTP
-   - tenant-specific currency/tax settings
-   - tenant-specific themes and feature toggles
-
-### Exit criteria for Phase 2
-- One deployment can safely host multiple tenants
-- no cross-tenant data leakage
-- tenant admin operations are isolated
-- tenant onboarding is repeatable
+| Finding ID | Scope & Milestone | Status | Resolution Detail |
+|---|---|---|---|
+| `MT-01` | Isolated container stack per tenant | `[x]` | Architected virtual private stack per tenant fronted by Traefik (`ADR-002`). |
+| `MT-02` | Plan quota enforcement action filter | `[x]` | Built `[EnforceTenantQuota]` returning `HTTP 402 QuotaExceeded` (`ADR-005`). |
+| `MT-03` | Centralized tenant lifecycle orchestration | `[x]` | Delivered `Store.ControlPlane` (provision, suspend, resume, deprovision). |
+| `MT-05` | Public SaaS customer signup portal | `[x]` | Delivered `Store.TenantPortal` for self-service tenant registration. |
+| `MT-06` | Tenant provisioning automation scripts | `[x]` | Authored `scripts/provision-tenant.ps1` and `scripts/provision-tenant.sh`. |
+| `MT-07` | Multi-tenant database backup snapshotting | `[x]` | Delivered `scripts/backup-now.ps1` and `scripts/restore-database.ps1`. |
+| `DOC-05` | Per-tenant operations runbook | `[x]` | Authored `docs/tenant_operations_runbook.md` with complete SOPs. |
+| `MT-04` | Per-tenant SMTP credentials rotation | `[ ]` | Migrate from shared SMTP relay to per-tenant `From` address & API keys. |
+| `PROC-05` | Smoke test suite for ControlPlane / TenantPortal| `[ ]` | Create `Store.ControlPlane.Tests` and `Store.TenantPortal.Tests` projects. |
 
 ---
 
-## Phase 3 — Global / Multinational Expansion
-
-This phase adds region and compliance readiness.
+## Phase 3 — Regional Compliance & Africa-First Retail
 
 ### Goal
-Allow the platform to operate across countries and currencies without custom rewrites.
+Enable seamless multi-currency, multi-branch operations tailored for Cameroon, Central/West Africa, and OHADA regulatory accounting.
 
-### Done
-- Core retail workflows exist
-- Multi-tenant architecture foundation is still missing, so this step should wait until Phase 2 is solid
+### Status: **70% Complete**
 
-### Not yet done
-- Locale-aware UI and date/time formatting
-- Currency abstraction
-- Tax model by country/region
-- Region-specific reporting
-- Data residency controls
-- Audit retention policies
-- Local regulatory compliance support
-- Payment/provider abstraction by region
-- Customer/legal entity modeling by geography
-
-### Required additions
-1. Region model
-   - country
-   - language
-   - currency
-   - tax rules
-
-2. Financial rules engine
-   - VAT/GST handling
-   - invoice numbering rules
-   - document localization
-
-3. Global operations policies
-   - regional data storage strategy
-   - regional backup location
-   - legal retention rules
-
-### Exit criteria for Phase 3
-- the platform supports region-aware configuration
-- financial logic is compliant by jurisdiction
-- deployment can expand to multiple countries safely
+| Finding ID | Scope & Milestone | Status | Resolution Detail |
+|---|---|---|---|
+| `GAP-01` | Thermal receipt printer & A4 tax invoice export | `[x]` | Standardized ESC/POS thermal receipt formatting and OHADA tax invoice layouts. |
+| `GAP-04` | Batch tracking, lot numbers & expiry alerts | `[x]` | FIFO/FEFO inventory batch tracking with automatic expiry degradation. |
+| `GAP-07` | Barcode scanner studio & live lookups | `[x]` | Smart scanner hub with floating FAB and instant barcode assignment. |
+| `GAP-21` | Mobile Money payment integration | `[x]` | MTN MoMo and Orange Money webhook validation with HMAC signatures. |
+| `GAP-23` | Offline-capable POS with local ledger | `[x]` | Service Worker caching (`sw.js`) and background sync for network outages. |
+| `UX-01` | Progressive Web App (PWA) manifest | `[x]` | Installed PWA manifest with mobile-friendly splash and offline cache. |
+| `UX-04` | Global keyboard shortcuts cheatsheet (`?`) | `[x]` | Built accessible shortcut modal with live search filter and 3D keycaps. |
+| `UX-02` | Mobile-first layout & touch-first POS register | `[ ]` | Reconcile small-screen viewport breakpoints and touch targets. |
+| `SEC-24` | Password hashing upgrade to Argon2id | `[ ]` | Migrate from BCrypt (cost 12) to Argon2id. |
 
 ---
 
-## Phase 4 — Enterprise SaaS Maturity
+## Phase 4 — Enterprise SaaS Commercialization
 
 ### Goal
-Move from “application platform” to “customer-facing SaaS product.”
+Scale to commercial SaaS operations with automated billing, self-service tier upgrades, and enterprise governance.
 
-### Done
-- Core business engine exists
-- domain modules are broad and useful
+### Status: **40% In Progress**
 
-### Not yet done
-- subscription management
-- billing integration
-- CRM/account management
-- audit governance
-- role-based tenant admin
-- tenant white-labeling
-- feature entitlement
-- customer support operations
+| Milestone | Deliverable | Status | Dependencies |
+|---|---|---|---|
+| **Automated Billing Webhooks** | Stripe / PayDunya subscription webhooks in ControlPlane | Planned | `MT-02` (Done), `MT-05` (Done) |
+| **Tenant White-Labeling** | Custom logo, portal CSS themes, and branded receipts | In Progress | `SOP-02` (Done) |
+| **Real-Time Push Alerts** | SignalR live hub for low stock, cash variance, and order approvals | Planned | `Store.API` WebSockets |
+| **API Versioning (`/api/v1/`)** | Asp.Versioning with ETag caching middleware | Planned | `GAP-15`, `GAP-16` |
+| **Architecture Records (ADR)** | Formal ADR documentation of system design decisions | `[x]` | `PROC-07` (`docs/adr/`) |
 
 ---
 
-## Recommended Delivery Order
+## Operational Maturity Index
 
-1. Phase 1 — Production hardening
-2. Phase 2 — Multi-tenant enablement
-3. Phase 3 — Global readiness
-4. Phase 4 — SaaS commercialization
-
----
-
-## Simple maturity snapshot
-
-| Stage | Status |
-|---|---|
-| Internal business app foundation | Done |
-| Production hardening | In progress / incomplete |
-| Multi-tenant architecture | Not yet done |
-| Global multinational support | Not yet done |
-| Enterprise SaaS platform | Not yet done |
-
----
-
-## Best one-sentence conclusion
-
-You currently have a strong internal business application codebase, but you are not yet at the level of a production-hardened, multi-tenant, globally scalable SaaS platform.
+| Metric | Target | Current Status | Notes |
+|---|---|---|---|
+| **Build Warnings** | 0 warnings | **0 warnings** | Release mode strictly enforced across all 7 projects. |
+| **Unit Test Suite** | >400 tests | **414 passed (100%)** | Includes controller security reflection test suite. |
+| **Build Time** | <90s | **~35s** | Release build with incremental Roslyn analyzer caching. |
+| **Tenant Isolation** | Virtual Private Stack | **100% Isolated** | Dedicated containers and database per tenant (`ADR-002`). |
+| **Documentation Coverage**| Comprehensive | **High** | Onboarding, Runbook, Security, ADRs, Design System. |

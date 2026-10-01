@@ -204,7 +204,7 @@ Prefixes used across audits — `SEC-*` (security) · `GAP-*` (functional) · `U
 | `PROC-04` | No PR template / issue templates | `.github/` | `[x]` | Add `PULL_REQUEST_TEMPLATE.md`. *(Wave 12: landed — security checklist, migration impact, doc-update requirements.)*|
 | `PROC-05` | No tests for ControlPlane / TenantPortal | `Store.API.Tests/` | `[ ]` | Add `Store.ControlPlane.Tests` and `Store.TenantPortal.Tests` projects; minimum smoke test per controller. |
 | `PROC-06` | `api_analyzer_report.md` checked into source | repo root | `[ ]` | Move generation to CI artifact; do not commit `api_analysis_report.md` (1.2k lines, will go stale). |
-| `PROC-07` | No `architecture-decision-records/` | repo root | `[ ]` | ADR-001 = clean architecture decision; ADR-002 = per-tenant isolation strategy; etc. |
+| `PROC-07` | No `architecture-decision-records/` | `docs/adr/` | `[x]` | Wave 41 — created `docs/adr/` repository with index and 5 foundational ADRs: ADR-001 (Clean Architecture Dispatchers), ADR-002 (Per-Tenant Isolated Stacks), ADR-003 (Layered Security & Audit), ADR-004 (Antivirus ClamAV Pipeline), and ADR-005 (Plan Quotas & Lifecycle State Machine). |
 | `PROC-08` | No `docs/onboarding.md` for new devs | `docs/` | `[x]` | Wave 40 — comprehensive developer onboarding guide created in `docs/onboarding.md` covering system topology, prerequisites, step-by-step setup, database seeding, task runners, code conventions, and troubleshooting FAQ. |
 | `PROC-09` | `docs/security_runbook.md` not linked from README | repo root | `[x]` | Wave 40 — verified and linked under Documentation & Runbooks in `README.md`. |
 | `PROC-10` | No `Makefile` or `justfile` for common commands | repo root | `[x]` | Wave 40 — created POSIX-compliant root `Makefile` and native `tasks.ps1` PowerShell task runner supporting build, test, clean, run, platform orchestration, tenant provisioning, database migration, and full audit. |
@@ -219,8 +219,8 @@ Prefixes used across audits — `SEC-*` (security) · `GAP-*` (functional) · `U
 | `DOC-01` | `api_analysis_report.md` (1.2k lines) checked in | repo root | `[ ]` | See `PROC-06`. |
 | `DOC-02` | No "what lives where" map for new agents | `docs/` | `[~]` | Wave 6 — `AGENTS.md` § 2 (Repository layout) covers most of it; expand if needed. |
 | `DOC-03` | `IMPLEMENTATION_LOG.md` doesn't index by finding ID | `IMPLEMENTATION_LOG.md` | `[~]` | Pointer added ("Pointer — Wave history" table at top). **Add** a Finding-ID column to each Wave entry so `[SEC-04]` etc. are searchable. |
-| `DOC-04` | `roadmap-to-production.md` exists but isn't reconciled with the audit | `docs/roadmap-to-production.md` | `[ ]` | Cross-link the audit-tracker items with the roadmap timeline. |
-| `DOC-05` | Per-tenant operations runbook missing | `docs/` | `[ ]` | How to onboard a new tenant, suspend, restore from backup. |
+| `DOC-04` | `roadmap-to-production.md` exists but isn't reconciled with the audit | `docs/roadmap-to-production.md` | `[x]` | Wave 41 — completely overhauled and reconciled `docs/roadmap-to-production.md`, mapping every strategic phase directly to audit tracker finding IDs across security, ops, multi-tenancy, and compliance. |
+| `DOC-05` | Per-tenant operations runbook missing | `docs/tenant_operations_runbook.md` | `[x]` | Wave 41 — authored `docs/tenant_operations_runbook.md` containing Standard Operating Procedures (SOPs) for provisioning, domain/SSL binding, quota scaling, suspension/resumption, backup/disaster recovery, and safe offboarding. |
 
 ---
 

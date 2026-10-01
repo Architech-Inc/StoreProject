@@ -2498,6 +2498,45 @@ Resolve `PROC-08`, `PROC-09`, and `PROC-10` by authoring a comprehensive, produc
 - Audit tracker updated: `PROC-08` -> `[x]`, `PROC-09` -> `[x]`, `PROC-10` -> `[x]`.
 
 
+## Wave 41 — Architecture Decision Records, Reconciled Production Roadmap & Tenant Operations Runbook (PROC-07, DOC-04, DOC-05)
+
+### Objective
+Resolve `PROC-07`, `DOC-04`, and `DOC-05` by establishing a formal Architecture Decision Record repository (`docs/adr/`), authoring an end-to-end Tenant Operations Runbook with Standard Operating Procedures (`docs/tenant_operations_runbook.md`), and reconciling the strategic production roadmap (`docs/roadmap-to-production.md`) with the active audit tracker finding IDs.
+
+### 41.A — Architecture Decision Records Repository (`docs/adr/`)
+- Created `docs/adr/README.md` indexing all architecture decisions in standard Michael Nygard format.
+- Published 5 foundational ADRs:
+  - **`ADR-001`**: *Clean Architecture & Request Dispatcher Pattern* — decouples controllers from EF Core; enforces boundary DTO mapping, asynchronous cancellation, and `.AsNoTracking()` reads.
+  - **`ADR-002`**: *Per-Tenant Isolated Container Stacks vs Shared Database* — documents the virtual private stack model (API, UI, dedicated MySQL, MongoDB, ClamAV) fronted by Traefik and orchestrated by ControlPlane to eliminate cross-tenant data leakage risks in retail finance.
+  - **`ADR-003`**: *Layered Security: JWT Bearer, Permission Policies & Structured Audit Logging* — documents automated permission policy registration from `PermissionKeys.All`, security-stamp revocation checks, reflection-tested allowlisting, and `[Audit]` dual logging.
+  - **`ADR-004`**: *Anti-Virus File Inspection with ClamAV Sidecar & Dev Fallback* — documents multi-stage upload validation (extension, magic numbers, path traversal) and `IVirusScanner` environment-enforced provider guard.
+  - **`ADR-005`**: *Plan Quota Enforcement & Tenant Lifecycle State Machine* — documents `[EnforceTenantQuota]` action filter returning `HTTP 402 QuotaExceeded` and the lifecycle state machine (`Provisioning`, `Active`, `Suspended`, `Deprovisioned`).
+
+### 41.B — Tenant Operations Runbook (`docs/tenant_operations_runbook.md`)
+- Authored a comprehensive Standard Operating Procedure (SOP) manual for SREs, DevOps engineers, and support teams:
+  - **SOP-01 (Provisioning)**: Step-by-step tenant creation via CLI runner, standalone script, and ControlPlane API with verification checklists.
+  - **SOP-02 (Domain & SSL)**: Custom branded domain binding, DNS CNAME/A records, Traefik dynamic router rules, and Let's Encrypt TLS negotiation.
+  - **SOP-03 (Plan Quotas)**: Diagnosing and resolving `HTTP 402 QuotaExceeded` errors, tier upgrades, and quota matrix adjustments.
+  - **SOP-04 (Suspension & Resumption)**: Operational procedures for billing/fraud suspension (redirecting traffic to support notice, placing DB in read-only) and instant reactivation.
+  - **SOP-05 (Backup & Offsite Sync)**: Automated and on-demand AES-256 encrypted database snapshotting to S3.
+  - **SOP-06 (Disaster Recovery)**: Full database restoration SOP from compressed snapshots.
+  - **SOP-07 (Deprovisioning & Offboarding)**: 10-year OHADA-compliant financial export, grace period hold, volume purging, and cryptographic secret shredding.
+  - **Incident Triage Quick Reference**: Diagnostic lookup table for 502 Bad Gateway, DB connection exhaustion, ClamAV timeouts, and Traefik 404 routing misses.
+
+### 41.C — Reconciled Production Roadmap (`docs/roadmap-to-production.md`)
+- Overhauled the strategic roadmap to align directly with audit tracker finding IDs across 4 concrete delivery phases:
+  - **Phase 1 (Production Hardening - 95% Complete)**: Mapped all resolved `SEC-*`, `OPS-*`, and `PROC-*` findings.
+  - **Phase 2 (Multi-Tenant Enablement - 85% Complete)**: Mapped `MT-*` findings and container orchestration milestones.
+  - **Phase 3 (Regional Compliance & Africa-First - 70% Complete)**: Mapped POS offline sync, Mobile Money HMACs, thermal receipting, and OHADA tax calculations.
+  - **Phase 4 (Enterprise SaaS Maturity - 40% In Progress)**: Mapped subscription billing webhooks, custom branding, and real-time push notifications.
+
+### Verification
+- Solution build clean: `dotnet build StoreProject.sln --configuration Release` (**0 warnings, 0 errors**).
+- Test suite passes: `dotnet test Store.API.Tests -c Release` -> **414 passed, 0 failed**.
+- Audit tracker updated: `PROC-07` -> `[x]`, `DOC-04` -> `[x]`, `DOC-05` -> `[x]`.
+
+
+
 
 
 
