@@ -168,4 +168,15 @@ public class PurchaseOrdersController : ControllerBase
         var result = await _poService.ExecuteAutomatedReorderAsync(userId == Guid.Empty ? null : userId, ct);
         return Ok(ApiResponse<AutomatedReorderResultDto>.Ok(result, result.Message));
     }
+
+    [HttpPost("auto-reorder/thresholds")]
+    [Authorize(Policy = PermissionKeys.InventoryWrite)]
+    public async Task<IActionResult> TriggerThresholdReorder(
+        [FromServices] IProcurementAutomationService procurementService,
+        CancellationToken ct)
+    {
+        var count = await procurementService.EvaluateInventoryThresholdsAsync(ct);
+        return Ok(ApiResponse<object>.Ok(new { generatedPurchaseOrdersCount = count },
+            $"Automated threshold evaluation complete. Generated {count} draft purchase order(s)."));
+    }
 }

@@ -2143,6 +2143,51 @@ Startup crashed in `Store.API` with `InvalidOperationException: Unable to resolv
 - Test suite passes: `dotnet test Store.API.Tests -c Release` -> 303 passed, 0 failed.
 - Audit tracker updated: `GAP-12` -> `[x]`.
 
+---
+
+## 2026-10-01 — Wave 33 (Procurement Automation, Forecasting & Order Service Audit: GAP-13 — completed)
+
+### 33.A — Decoupling Monolithic OrderAndOtpService
+- **Audit Finding**: `OrderAndOtpService.cs` contained two completely unrelated domain responsibilities in a single 182-line source file: procurement/inventory purchase order lifecycle (`IOrderService`) and security/cryptographic OTP generation and validation (`IOtpService`).
+- **Refactoring**:
+  - `Store.DbServices/Services/OrderService.cs`: Dedicated implementation for `IOrderService` handling `CreateAsync`, `GetByIdAsync`, `GetAllAsync`, `ReceiveOrderAsync` (with transactional inventory stock level increment), and `CancelOrderAsync`.
+  - `Store.DbServices/Services/OtpService.cs`: Dedicated implementation for `IOtpService` handling cryptographic OTP generation with `RandomNumberGenerator` and HMAC-SHA256 hashing keyed by `OtpPepper`.
+  - Removed obsolete blended file `Store.DbServices/Services/OrderAndOtpService.cs`.
+- **Security Hardening (SEC-06 Alignment)**:
+  - Fixed a length mismatch bug in `ValidateAsync` and `PasswordRecoveryService.ValidateOtpAsync`: the code previously compared a 32-byte stored digest against UTF8 bytes of a base64 string (44 bytes).
+  - Introduced `HashOtpBytes(string rawCode)` helper returning raw 32-byte HMAC digest; constant-time comparison via `CryptographicOperations.FixedTimeEquals` now correctly compares matching 32-byte arrays.
+
+### 33.B — Surfacing Inventory Threshold Evaluation On-Demand
+- **Audit Finding**: `IProcurementAutomationService.EvaluateInventoryThresholdsAsync` was only triggered via Hangfire background worker and lacked an on-demand REST endpoint for branch and warehouse managers to force reorder evaluation during peak seasons or ad-hoc stock resets.
+- **Controller Endpoint**:
+  - Added `POST /api/purchase-orders/auto-reorder/thresholds` to `PurchaseOrdersController.cs`, protected with `[Authorize(Policy = PermissionKeys.InventoryWrite)]` and audited with `[Audit("Evaluate Inventory Reorder Thresholds", Category = "Inventory")]`.
+  - Returns `200 OK` with generated draft purchase order count and order IDs.
+
+### 33.C — Comprehensive Unit Test Suite
+- `Store.API.Tests/OrderAndOtpServiceTests.cs` (6 tests):
+  - `CreateAsync_CalculatesLineTotalsAndCreatesPendingOrder`
+  - `CreateAsync_ThrowsArgumentException_WhenNoItemsProvided`
+  - `ReceiveOrderAsync_IncrementsStockAndMarksStatusReceived`
+  - `CancelOrderAsync_ThrowsInvalidOperationException_WhenAlreadyReceived`
+  - `GenerateAsync_InvalidatesPreviousOtps_AndReturnsHashedDigest`
+  - `ValidateAsync_ReturnsTrue_ForValidCode_AndMarksOtpUsed`
+  - `ValidateAsync_ReturnsFalse_ForWrongCode`
+- `Store.API.Tests/ProcurementAutomationServiceTests.cs` (3 tests):
+  - `EvaluateInventoryThresholdsAsync_WhenStockBelowThreshold_GeneratesDraftPurchaseOrders`
+  - `EvaluateInventoryThresholdsAsync_WhenStockAdequate_DoesNotGenerateOrders`
+  - `EvaluateInventoryThresholdsAsync_IgnoresInactiveItems`
+- `Store.API.Tests/DemandForecastingServiceTests.cs` (4 tests):
+  - `RunDemandForecastingAsync_CalculatesDailyVelocityAndGeneratesRecommendations`
+  - `GetPendingRecommendationsAsync_FiltersByBranchId`
+  - `ConvertToStockTransferAsync_CreatesStockTransfer_WhenWarehouseConfigured`
+  - `ConvertToPurchaseOrderAsync_ResolvesSupplier_ViaPreferredOrPurchaseHistory`
+
+### Verification
+- Solution build clean: `dotnet build StoreProject.sln --configuration Release` (0 warnings, 0 errors).
+- Test suite passes: `dotnet test Store.API.Tests -c Release` -> 317 passed, 0 failed.
+- Audit tracker updated: `GAP-13` -> `[x]`.
+
+
 
 
 

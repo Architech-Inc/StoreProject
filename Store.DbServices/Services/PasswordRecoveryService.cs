@@ -46,11 +46,15 @@ public class PasswordRecoveryService : IPasswordRecoveryService
     /// Never persists the plaintext code to disk. The returned base64 string is what
     /// we compare against at verify time, via <see cref="CryptographicOperations.FixedTimeEquals"/>.
     /// </summary>
-    private string HashOtpCode(string rawCode)
+    private byte[] HashOtpBytes(string rawCode)
     {
         var codeBytes = Encoding.UTF8.GetBytes(rawCode);
-        var hash = HMACSHA256.HashData(_otpPepper, codeBytes);
-        return Convert.ToBase64String(hash);
+        return HMACSHA256.HashData(_otpPepper, codeBytes);
+    }
+
+    private string HashOtpCode(string rawCode)
+    {
+        return Convert.ToBase64String(HashOtpBytes(rawCode));
     }
 
     public async Task<bool> RequestOtpAsync(string username, CancellationToken ct = default)
@@ -132,7 +136,7 @@ public class PasswordRecoveryService : IPasswordRecoveryService
                 && o.ExpiresAt > now)
             .ToListAsync(ct);
 
-        var submittedHashBytes = Encoding.UTF8.GetBytes(HashOtpCode(otpCode));
+        var submittedHashBytes = HashOtpBytes(otpCode);
 
         Otp? match = null;
         foreach (var candidate in candidates)
