@@ -188,7 +188,8 @@ public class ControlPlaneDbContext : DbContext
             MongoDbRootPassword = encryption.Encrypt(secrets.MongoDbRootPassword),
             JwtSecret = encryption.Encrypt(secrets.JwtSecret),
             MoMoCallbackKey = encryption.Encrypt(secrets.MoMoCallbackKey),
-            OtpPepper = string.IsNullOrEmpty(secrets.OtpPepper) ? string.Empty : encryption.Encrypt(secrets.OtpPepper)
+            OtpPepper = string.IsNullOrEmpty(secrets.OtpPepper) ? string.Empty : encryption.Encrypt(secrets.OtpPepper),
+            BackupEncryptionKey = string.IsNullOrEmpty(secrets.BackupEncryptionKey) ? string.Empty : encryption.Encrypt(secrets.BackupEncryptionKey)
         };
 
         return JsonSerializer.Serialize(encryptedSecrets, JsonOptions);
@@ -208,7 +209,8 @@ public class ControlPlaneDbContext : DbContext
             MongoDbRootPassword = encryption.Decrypt(secrets.MongoDbRootPassword),
             JwtSecret = encryption.Decrypt(secrets.JwtSecret),
             MoMoCallbackKey = encryption.Decrypt(secrets.MoMoCallbackKey),
-            OtpPepper = string.IsNullOrEmpty(secrets.OtpPepper) ? string.Empty : encryption.Decrypt(secrets.OtpPepper)
+            OtpPepper = string.IsNullOrEmpty(secrets.OtpPepper) ? string.Empty : encryption.Decrypt(secrets.OtpPepper),
+            BackupEncryptionKey = string.IsNullOrEmpty(secrets.BackupEncryptionKey) ? string.Empty : encryption.Decrypt(secrets.BackupEncryptionKey)
         };
     }
 }

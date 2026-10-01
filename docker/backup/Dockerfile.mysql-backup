@@ -3,6 +3,8 @@ FROM alpine:3.19
 RUN apk add --no-cache \
     mysql-client \
     gzip \
+    openssl \
+    coreutils \
     aws-cli \
     tzdata \
     dcron

@@ -8,6 +8,7 @@ public class TenantSecrets
     public string JwtSecret { get; set; } = string.Empty;
     public string MoMoCallbackKey { get; set; } = string.Empty;
     public string OtpPepper { get; set; } = string.Empty;
+    public string BackupEncryptionKey { get; set; } = string.Empty;
 }
 
 public class TenantProvisioningLog

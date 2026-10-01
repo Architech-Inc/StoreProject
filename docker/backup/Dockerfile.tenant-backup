@@ -1,0 +1,25 @@
+FROM alpine:3.19
+
+RUN apk add --no-cache \
+    mysql-client \
+    mongodb-tools \
+    openssl \
+    gzip \
+    aws-cli \
+    tzdata \
+    dcron \
+    bash \
+    coreutils \
+    jq
+
+WORKDIR /app
+
+COPY tenant-backup.sh /app/tenant-backup.sh
+COPY mysql-backup.sh /app/mysql-backup.sh
+COPY mongo-backup.sh /app/mongo-backup.sh
+RUN chmod +x /app/*.sh
+
+# Configure default cron schedule (daily at 02:00 UTC)
+ENV CRON_SCHEDULE="0 2 * * *"
+
+ENTRYPOINT ["sh", "-c", "echo \"$CRON_SCHEDULE /app/tenant-backup.sh >> /var/log/cron.log 2>&1\" > /etc/crontabs/root && touch /var/log/cron.log && crond -b -l 8 && tail -f /var/log/cron.log"]

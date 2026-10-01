@@ -92,7 +92,8 @@ usermod -aG docker "`$NEW_USER"
 
 echo "==> [5/6] Creating Docker proxy network and directory structures..."
 docker network create proxy-network 2>/dev/null || true
-mkdir -p /opt/projects/proxy/letsencrypt /opt/projects/proxy/dynamic /opt/projects/platform/tenants
+mkdir -p /opt/projects/proxy/letsencrypt /opt/projects/proxy/dynamic /opt/projects/platform/tenants /opt/projects/backups
+chmod 700 /opt/projects/backups
 touch /opt/projects/proxy/letsencrypt/acme.json
 chmod 600 /opt/projects/proxy/letsencrypt/acme.json
 

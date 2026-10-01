@@ -2747,6 +2747,84 @@ Resolve finding `OPS-07` by establishing centralized, structured log shipping an
   - Release Build: `dotnet build StoreProject.sln --configuration Release` (**0 warnings, 0 errors**).
 - Audit tracker updated: `OPS-07` marked `[x]`.
 
+---
+
+## Wave 46 — Per-Tenant Backup Automation & Isolated Rotation (OPS-12)
+
+**Goal**: Implement tenant-scoped database snapshot dumps for MySQL & MongoDB with encrypted archiving, cron orchestration, and isolated retention rotation.
+
+### 46.A — Docker Backup Shell Engine & Images (`docker/backup/`)
+- **`mysql-backup.sh`**:
+  - Upgraded to accept `TENANT_SLUG` and `MYSQL_DATABASE` (`store_${TENANT_SLUG}`).
+  - Added OpenSSL AES-256-CBC PBKDF2 encryption when `BACKUP_ENCRYPTION_KEY` is present, producing `${TENANT_SLUG}_mysql_${TIMESTAMP}.sql.gz.enc`.
+  - Added cryptographic SHA-256 hash generation (`${FILENAME}.sha256`) for tamper detection.
+  - Isolated backup directory: `${BACKUP_DIR}/${TENANT_SLUG}/mysql/`.
+  - Added isolated retention rotation enforcing both `RETENTION_DAYS` (time-based) and `RETENTION_COUNT` (count-based pruning).
+  - Configured tenant-isolated S3 offsite synchronization under `s3://${S3_BUCKET}/tenants/${TENANT_SLUG}/mysql/`.
+- **`mongo-backup.sh`**:
+  - Scoped to tenant database (`${MONGO_DATABASE:-store_${TENANT_SLUG}}`).
+  - Added OpenSSL AES-256-CBC PBKDF2 encrypted archiving to `${TENANT_SLUG}_mongodb_${TIMESTAMP}.archive.gz.enc`.
+  - Added SHA-256 checksum generation and S3 synchronization under `s3://${S3_BUCKET}/tenants/${TENANT_SLUG}/mongodb/`.
+  - Isolated backup directory: `${BACKUP_DIR}/${TENANT_SLUG}/mongodb/`.
+  - Retention rotation enforcing `RETENTION_DAYS` and `RETENTION_COUNT`.
+- **`tenant-backup.sh` (New)**:
+  - Unified per-tenant backup runner orchestrating MySQL + MongoDB snapshot dumps in a single pass.
+  - Generates JSON metadata manifests `${TENANT_SLUG}_manifest_${TIMESTAMP}.json` containing tenant slug, UTC timestamp, encryption status, algorithm, and file sizes + SHA-256 hashes.
+  - Performs isolated manifest pruning according to retention policy.
+- **`Dockerfile.tenant-backup` (New)** + Upgraded **`Dockerfile.mysql-backup`** & **`Dockerfile.mongo-backup`**:
+  - Added `openssl`, `coreutils`, `bash`, `jq`, `mysql-client`, `mongodb-tools`.
+  - Configured dynamic cron execution via `dcron` with `$CRON_SCHEDULE`.
+
+### 46.B — Compose Declarations & Tenant Stack Templates
+- **Tenant Compose Templates (`Store.ControlPlane/Templates/`)**:
+  - Added `{{SLUG}}-backup` service across `docker-compose.tenant.template.yml` and `docker-compose.tenant.hostmysql.template.yml`.
+  - Injected `TENANT_SLUG={{SLUG}}`, database credentials, `BACKUP_ENCRYPTION_KEY={{BACKUP_ENCRYPTION_KEY}}`, `CRON_SCHEDULE={{BACKUP_CRON:-0 2 * * *}}`, `RETENTION_DAYS={{BACKUP_RETENTION_DAYS:-7}}`, and `RETENTION_COUNT={{BACKUP_RETENTION_COUNT:-14}}`.
+  - Bound isolated persistent volume `{{SLUG}}_backups:/backups`.
+- **Multi-Tenant Template (`docker/multi-tenant/tenant-template.yml`)**:
+  - Added `${TENANT_ID}-backup` service and volume `${TENANT_ID}-backups:`.
+- **Tenant Production Stack (`docker-compose.prod.yml`)**:
+  - Injected `BACKUP_ENCRYPTION_KEY` and `RETENTION_COUNT` into `store-backup-mysql` and `store-backup-mongodb`.
+- **Environment Template (`.env.example`)**:
+  - Documented `BACKUP_ENCRYPTION_KEY` (AES-256 secret) and `BACKUP_RETENTION_COUNT` (14 snapshots default).
+- **VPS Provisioning Scripts (`scripts/provision-docker-vps.{ps1,sh}`)**:
+  - Added `/opt/projects/backups` directory initialization with restricted `chmod 700` permissions.
+
+### 46.C — Disaster Recovery & Host Utility Scripts (`scripts/`)
+- **`backup-now.sh` & `backup-now.ps1`**:
+  - Upgraded to support `-TenantSlug` / `$TENANT_SLUG`, `-EncryptionKey` / `$BACKUP_ENCRYPTION_KEY`, and `-RetentionCount`.
+  - Dumps MySQL & MongoDB into isolated directory `./backups/<tenant-slug>/`.
+  - Applies AES-256-CBC PBKDF2 encryption and generates SHA-256 checksums.
+  - Enforces count-based retention rotation by pruning older excess snapshots.
+- **`restore-database.sh` & `restore-database.ps1`**:
+  - Added automated SHA-256 checksum verification before restoration.
+  - Added on-the-fly decryption pipeline for `.enc` snapshot archives using OpenSSL / .NET Aes stream decryption.
+
+### 46.D — ControlPlane Backup Engine & Cryptography
+- **`TenantSecrets` (`Store.ControlPlane/Models/TenantSecretsAndLogs.cs`)**:
+  - Added `BackupEncryptionKey` property.
+  - Enforced symmetric encryption/decryption in `ControlPlaneDbContext.cs` (`SerializeAndEncryptSecrets` / `DeserializeAndDecryptSecrets`).
+- **`TenantOrchestrator`**:
+  - Generates cryptographically secure 32-character `BackupEncryptionKey` during tenant provisioning.
+  - Injected `{{BACKUP_ENCRYPTION_KEY}}`, `{{BACKUP_CRON}}`, `{{BACKUP_RETENTION_DAYS}}`, `{{BACKUP_RETENTION_COUNT}}`, and `{{STORE_BACKUP_IMAGE}}` into compose template renderer.
+- **`TenantBackupArchiver` (`Store.ControlPlane/Services/TenantBackupArchiver.cs`, New)**:
+  - Cryptographic AES-256-CBC PBKDF2 archiving with 16-byte random salt, 16-byte random IV, and 10,000 PBKDF2 iterations.
+  - Computes SHA-256 checksums and writes JSON metadata manifests.
+  - Enforces tenant-isolated retention rotation: prunes oldest snapshots for the tenant without ever touching another tenant's files.
+- **`BackupService` (`Store.ControlPlane/Services/BackupService.cs`)**:
+  - Integrated `TenantBackupArchiver` into `TriggerBackupNowAsync`.
+
+### 46.E — Automated Unit Tests & Verification
+- Authored `Store.ControlPlane.Tests/TenantBackupArchiverTests.cs` (4 tests):
+  - `CreateEncryptedSnapshot_GeneratesIsolatedFilesAndManifest`: Validates file generation, isolated directories, and JSON manifest.
+  - `EncryptionAndDecryption_RoundTripRecoversOriginalPayload`: Validates that plaintext is encrypted on disk and decrypted cleanly back to original data.
+  - `Sha256Checksum_DetectsTampering`: Validates checksum matches untouched files and immediately detects 1-bit tampering.
+  - `RetentionRotation_PrunesOldestSnapshotsAndPreservesIsolatedTenants`: Validates count-based rotation preserves exactly N newest files for Tenant A while leaving Tenant B's snapshots completely untouched.
+- **Solution Verification**:
+  - `Store.ControlPlane.Tests`: **44 passed, 0 failed** (increased from 40).
+  - `Store.API.Tests`: **418 passed, 0 failed**.
+  - Release Build: `dotnet build StoreProject.sln --configuration Release` (**0 warnings, 0 errors**).
+- Audit tracker updated: `OPS-12` marked `[x]`.
+
 
 
 

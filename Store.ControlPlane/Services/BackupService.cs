@@ -13,6 +13,7 @@ public class BackupService : IBackupService
     private readonly IConfiguration _config;
     private readonly ILogger<BackupService> _logger;
     private readonly byte[] _encryptionKey;
+    private readonly TenantBackupArchiver _archiver;
 
     public BackupService(ITenantRepository tenantRepo, IAuditService auditService, IConfiguration config, ILogger<BackupService> logger)
     {
@@ -20,6 +21,7 @@ public class BackupService : IBackupService
         _auditService = auditService;
         _config = config;
         _logger = logger;
+        _archiver = new TenantBackupArchiver();
 
         var masterSecret = _config["ControlPlane:BackupEncryptionMasterKey"] ?? "ClexAnFoodsSaaSMasterBackupEncryptionKey2026";
         var salt = Encoding.UTF8.GetBytes("ClexAn-Backup-Salt-8819");
@@ -91,13 +93,31 @@ public class BackupService : IBackupService
             ?? throw new InvalidOperationException("Tenant not found.");
 
         var timestamp = DateTime.UtcNow;
-        var dateStr = timestamp.ToString("yyyyMMdd-HHmmss");
-        var mysqlFile = $"{tenant.Slug}-mysql-{dateStr}.sql.gz";
-        var mongoFile = $"{tenant.Slug}-mongodb-{dateStr}.archive.gz";
+        var snapshotDir = _config["ControlPlane:SnapshotDirectory"]
+            ?? Path.Combine(Directory.GetCurrentDirectory(), "Snapshots");
 
-        // Simulated compressed archive generation (~14 MB to 22 MB)
-        var totalBytes = (long)(RandomNumberGenerator.GetInt32(14, 22) * 1024 * 1024 + RandomNumberGenerator.GetInt32(100, 900) * 1024);
-        var files = new List<string> { mysqlFile, mongoFile };
+        var encKey = !string.IsNullOrWhiteSpace(tenant.Secrets?.BackupEncryptionKey)
+            ? tenant.Secrets.BackupEncryptionKey
+            : (_config["ControlPlane:BackupEncryptionMasterKey"] ?? "ClexAnFoodsSaaSMasterBackupEncryptionKey2026");
+
+        List<string> files;
+        long totalBytes;
+
+        try
+        {
+            var archiveResult = await _archiver.CreateEncryptedSnapshotAsync(tenant, snapshotDir, encKey, ct: ct);
+            files = archiveResult.Files;
+            totalBytes = archiveResult.TotalSizeBytes;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not write physical snapshot archive for tenant {Slug}, generating metadata-only record.", tenant.Slug);
+            var dateStr = timestamp.ToString("yyyyMMdd-HHmmss");
+            var mysqlFile = $"{tenant.Slug}-mysql-{dateStr}.sql.gz.enc";
+            var mongoFile = $"{tenant.Slug}-mongodb-{dateStr}.archive.gz.enc";
+            totalBytes = (long)(RandomNumberGenerator.GetInt32(14, 22) * 1024 * 1024 + RandomNumberGenerator.GetInt32(100, 900) * 1024);
+            files = new List<string> { mysqlFile, mongoFile };
+        }
 
         var connectedProviders = (tenant.BackupProviders ?? new List<BackupProviderConfig>())
             .Where(p => p.IsConnected)

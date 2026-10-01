@@ -102,7 +102,8 @@ public class TenantOrchestrator : ITenantOrchestrator
                 MongoDbRootPassword = GenerateSecureSecret(24),
                 JwtSecret = GenerateSecureSecret(48),
                 MoMoCallbackKey = GenerateSecureSecret(32),
-                OtpPepper = GenerateSecureSecret(32)
+                OtpPepper = GenerateSecureSecret(32),
+                BackupEncryptionKey = GenerateSecureSecret(32)
             }
         };
 
@@ -737,6 +738,11 @@ public class TenantOrchestrator : ITenantOrchestrator
             .Replace("{{ADMIN_USER}}", t.AdminUsername)
             .Replace("{{ADMIN_EMAIL}}", t.AdminEmail)
             .Replace("{{CURRENCY}}", t.Currency)
+            .Replace("{{BACKUP_ENCRYPTION_KEY}}", string.IsNullOrEmpty(t.Secrets.BackupEncryptionKey) ? GenerateSecureSecret(32) : t.Secrets.BackupEncryptionKey)
+            .Replace("{{BACKUP_CRON}}", "0 2 * * *")
+            .Replace("{{BACKUP_RETENTION_DAYS}}", "7")
+            .Replace("{{BACKUP_RETENTION_COUNT}}", (t.BackupSchedule?.RetentionCount ?? 14).ToString())
+            .Replace("{{STORE_BACKUP_IMAGE}}", _config["ControlPlane:StoreBackupImage"] ?? "clexan-tenant-backup:latest")
             .Replace("{{STORE_API_IMAGE}}", storeApiImage)
             .Replace("{{STORE_UI_IMAGE}}", storeUiImage);
     }
