@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Store.ControlPlane.Data;
 using Store.ControlPlane.Models;
 using Store.ControlPlane.Models.DTOs;
+using Store.ControlPlane.Repositories;
 
 namespace Store.ControlPlane.Services;
 
@@ -82,6 +83,8 @@ public class TenantProvisioningHostedService : BackgroundService
         var encryption = scope.ServiceProvider.GetService<ISecretEncryptionService>();
         var authService = scope.ServiceProvider.GetRequiredService<IPortalAuthService>();
 
+        var tenantRepo = scope.ServiceProvider.GetRequiredService<ITenantRepository>();
+
         // Atomically claim the oldest Pending job — UPDATE ... WHERE Status=Pending
         // returns 0 rows for races so a second hosted-service instance won't double-process.
         var job = await db.TenantProvisioningJobs
@@ -113,29 +116,59 @@ public class TenantProvisioningHostedService : BackgroundService
                     ? throw new InvalidOperationException("ISecretEncryptionService is not registered; cannot decrypt the admin password from the job row.")
                     : encryption.Decrypt(job.AdminPasswordCipher);
 
-                var tenant = await orchestrator.ProvisionTenantAsync(new ProvisionTenantRequest
+                // Idempotency: Check if the tenant was already provisioned in an earlier attempt or step
+                var existingTenant = await tenantRepo.GetBySlugAsync(job.Slug, ct);
+                TenantDto tenant;
+                if (existingTenant != null && existingTenant.AdminEmail.Equals(job.AdminEmail, StringComparison.OrdinalIgnoreCase))
                 {
-                    StoreName = job.StoreName,
-                    Slug = job.Slug,
-                    AdminEmail = job.AdminEmail,
-                    AdminUsername = job.AdminUsername,
-                    AdminPassword = plaintextPassword,
-                    Currency = job.Currency,
-                    PlanTier = job.PlanTier,
-                    CustomDomain = job.CustomDomain
-                }, ct);
+                    _logger.LogInformation("Tenant {Slug} already provisioned for account {AccountId}, reusing existing tenant record.", job.Slug, job.AccountId);
+                    tenant = new TenantDto
+                    {
+                        TenantId = existingTenant.TenantId,
+                        Name = existingTenant.Name,
+                        Slug = existingTenant.Slug,
+                        AdminEmail = existingTenant.AdminEmail,
+                        AdminUsername = existingTenant.AdminUsername,
+                        Currency = existingTenant.Currency,
+                        Status = existingTenant.Status,
+                        PlanTier = existingTenant.PlanTier,
+                        CustomDomain = existingTenant.CustomDomain,
+                        UiUrl = existingTenant.UiUrl,
+                        ApiUrl = existingTenant.ApiUrl,
+                        DateCreated = existingTenant.DateCreated,
+                        LastHealthCheck = existingTenant.LastHealthCheck,
+                        IsHealthy = existingTenant.IsHealthy,
+                        LastHealthMessage = existingTenant.LastHealthMessage
+                    };
+                }
+                else
+                {
+                    tenant = await orchestrator.ProvisionTenantAsync(new ProvisionTenantRequest
+                    {
+                        StoreName = job.StoreName,
+                        Slug = job.Slug,
+                        AdminEmail = job.AdminEmail,
+                        AdminUsername = job.AdminUsername,
+                        AdminPassword = plaintextPassword,
+                        Currency = job.Currency,
+                        PlanTier = job.PlanTier,
+                        CustomDomain = job.CustomDomain
+                    }, ct);
+                }
 
                 // Link the account to the freshly-provisioned tenant.
                 await authService.LinkAccountToTenantAsync(job.AccountId, tenant.TenantId, ct);
 
-                // Mark Completed.
-                await db.TenantProvisioningJobs
-                    .Where(j => j.JobId == job.JobId)
-                    .ExecuteUpdateAsync(s => s
-                        .SetProperty(j => j.Status, TenantProvisioningStatus.Completed)
-                        .SetProperty(j => j.TenantId, tenant.TenantId)
-                        .SetProperty(j => j.StatusDetail, $"Tenant '{tenant.Slug}' provisioned at {DateTime.UtcNow:O}.")
-                        .SetProperty(j => j.CompletedAt, DateTime.UtcNow), ct);
+                // Mark Completed using tracked entity / SaveChangesAsync
+                var completedJob = await db.TenantProvisioningJobs.FirstOrDefaultAsync(j => j.JobId == job.JobId, ct);
+                if (completedJob != null)
+                {
+                    completedJob.Status = TenantProvisioningStatus.Completed;
+                    completedJob.TenantId = tenant.TenantId;
+                    completedJob.StatusDetail = $"Tenant '{tenant.Slug}' provisioned at {DateTime.UtcNow:O}.";
+                    completedJob.CompletedAt = DateTime.UtcNow;
+                    await db.SaveChangesAsync(ct);
+                }
 
                 _logger.LogInformation("Provisioning job {JobId} completed -> tenant {TenantId}", job.JobId, tenant.TenantId);
                 return 1;
@@ -153,12 +186,14 @@ public class TenantProvisioningHostedService : BackgroundService
 
         // All attempts exhausted — mark Failed.
         var failureReason = lastException?.Message ?? "Unknown error.";
-        await db.TenantProvisioningJobs
-            .Where(j => j.JobId == job.JobId)
-            .ExecuteUpdateAsync(s => s
-                .SetProperty(j => j.Status, TenantProvisioningStatus.Failed)
-                .SetProperty(j => j.FailureReason, failureReason)
-                .SetProperty(j => j.CompletedAt, DateTime.UtcNow), ct);
+        var failedJob = await db.TenantProvisioningJobs.FirstOrDefaultAsync(j => j.JobId == job.JobId, ct);
+        if (failedJob != null)
+        {
+            failedJob.Status = TenantProvisioningStatus.Failed;
+            failedJob.FailureReason = failureReason;
+            failedJob.CompletedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync(ct);
+        }
 
         _logger.LogError(lastException, "Provisioning job {JobId} failed after {Attempts} attempts", job.JobId, MaxAttempts);
         return 1;
