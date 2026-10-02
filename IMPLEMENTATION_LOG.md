@@ -3265,8 +3265,114 @@ Complete and harden `SEC-24` (Password hashing upgrade to Argon2id) and `SEC-25`
   - `Store.TenantPortal.Tests`: **27 passed, 0 failed**.
   - Total: **572 passed, 0 failed** (100% green).
 
+---
+
+## 2026-10-02 — Wave 54 (ERP Schema Pruning, Salary Grade Lifecycle, & Tax Bracket Management — completed)
+
+### Objective
+Following the in-depth ERP Evolution Analysis (`docs/storeproject_erp_evolution_analysis.md`), execute the three approved actions to eliminate dead architectural debt, integrate the orphaned `Salary` model end-to-end, and build admin management for progressive PAYE tax brackets:
+1. **Prune Dead Schema Debt**: Remove 9 completely abandoned, unreferenced tables (`privilege`, `user_privilege`, `user_privilege_action`, `employee_privilege`, `employee_privilege_action`, `customer_privilege`, `customer_privilege_action`, `customer_location`, `employee_location`) from EF Core while safely retaining historical models (`ItemsOrder`, `OrderItem`) and DMS/i18n roadmap models (`Document`, `Language`).
+2. **Salary Grade End-to-End Lifecycle**: Connect the `Salary` entity and `ISalaryService` from database to API to UI: add `UpdateAsync`, create `SalariesController`, extend `LookupManager`, build a dedicated "Salary Grades" tab in `Lookup.cshtml`, and link salary grades directly into employee onboarding and editing in `Employees.cshtml`.
+3. **Tax Bracket & PAYE Management UI**: Implement `ITaxBracketService` and `TaxBracketService` for the `TaxBracket` entity, expose `TaxBracketsController` in `Store.API`, and build an interactive modal and AJAX management workflow directly inside `Payroll.cshtml` for configuring progressive income tax rates.
+
+### 54.A — Schema Pruning & Entity Cleanup
+- **Entity Collections Removed**:
+  - `Location.cs`: Removed `EmployeeLocations` and `CustomerLocations` navigation collections.
+  - `Customer.cs`: Removed `Locations` (`CustomerLocation`) and `Privileges` (`CustomerPrivilege`) collections.
+  - `Employee.cs`: Removed `Locations` (`EmployeeLocation`) and `Privileges` (`EmployeePrivilege`) collections.
+  - `User.cs`: Removed `Privileges` (`UserPrivilege`), `PrivilegeActions` (`UserPrivilegeAction`), `EmployeePrivilegeActions`, and `CustomerPrivilegeActions` collections.
+- **Entity Definitions Deleted**:
+  - Removed 9 abandoned entity files in `Store.Models/Entities/`: `Privilege.cs`, `UserPrivilege.cs`, `UserPrivilegeAction.cs`, `EmployeePrivilege.cs`, `EmployeePrivilegeAction.cs`, `CustomerPrivilege.cs`, `CustomerPrivilegeAction.cs`, `CustomerLocation.cs`, `EmployeeLocation.cs`.
+- **DbContext & Fluent API Cleanup**:
+  - `StoreDbContext.cs`: Removed `DbSet` declarations for all 9 entities and deleted corresponding table configurations in `OnModelCreating`.
+- **Database Migration**:
+  - Created migration `20261002200500_PruneDeadPrivilegeAndLocationTables_W54.cs` + `.Designer.cs` dropping foreign keys and tables.
+
+### 54.B — Salary Grade End-to-End Lifecycle
+- **Contract & DTOs**:
+  - Extended `ISalaryService` (`Store.Models/Interfaces/Services/ILookupServices.cs`) with `Task<Salary> UpdateAsync(int id, CreateSalaryRequest request)`.
+  - Created `CreateSalaryRequest` DTO in `Store.Models/DTOs/HR/SalaryDtos.cs`.
+- **Service Implementation**:
+  - Implemented `SalaryService : ISalaryService` in `Store.DbServices/Services/LookupServices.cs` with full CRUD, existence validation, and auditing.
+  - Registered `ISalaryService, SalaryService` in `Store.DbServices/Extensions/ServiceCollectionExtensions.cs`.
+- **API Surface**:
+  - Created `SalariesController` in `Store.API/Controllers/LookupControllers.cs` with endpoints:
+    - `GET api/salaries` (Permission: `EmployeeRead`)
+    - `GET api/salaries/{id}` (Permission: `EmployeeRead`)
+    - `POST api/salaries` (Permission: `EmployeeWrite`)
+    - `PUT api/salaries/{id}` (Permission: `EmployeeWrite`)
+    - `DELETE api/salaries/{id}` (Permission: `EmployeeWrite`)
+- **UI Management**:
+  - Updated `ILookupManager` and `LookupManager` (`Store.UI/Services/LookupManager.cs`) with `GetSalariesAsync`, `SaveSalaryAsync`, and `DeleteSalaryAsync`.
+  - Added "Salary Grades" tab to `Lookup.cshtml` and `Lookup.cshtml.cs`:
+    - Summary KPI tile displaying total configured salary grades.
+    - Responsive data table with Grade Name, Base Salary, Tax Rate %, Allowance, and Actions.
+    - Interactive create/edit modal with validation and automated format masking.
+  - Linked Salary Grades into `Employees.cshtml` and `Employees.cshtml.cs`:
+    - Populated `SalaryGrades` lookup select box in employee modal.
+    - Updated `EmployeeManager.CreateEmployeeAsync` and `UpdateEmployeeAsync` to accept and persist `int? salaryId` (`EmpSalaryId`).
+
+### 54.C — Admin Tax Bracket / PAYE Management
+- **Service Layer**:
+  - Created `ITaxBracketService` in `Store.Models/Interfaces/Services/ITaxBracketService.cs`.
+  - Implemented `TaxBracketService` in `Store.DbServices/Services/TaxBracketService.cs` with full CRUD operations and auto-seeding of standard progressive tax brackets when empty.
+  - Registered `ITaxBracketService, TaxBracketService` in `Store.DbServices/Extensions/ServiceCollectionExtensions.cs`.
+- **API Surface**:
+  - Created `TaxBracketsController` in `Store.API/Controllers/TaxBracketsController.cs` exposing:
+    - `GET api/TaxBrackets`
+    - `GET api/TaxBrackets/{id}`
+    - `POST api/TaxBrackets`
+    - `PUT api/TaxBrackets/{id}`
+    - `DELETE api/TaxBrackets/{id}`
+- **UI Management**:
+  - Integrated Tax Bracket Management button and modal directly in `Payroll.cshtml`.
+  - Added AJAX handlers in `Payroll.cshtml.cs`:
+    - `OnGetTaxBracketsAsync`: retrieves bracket list for interactive configuration.
+    - `OnPostSaveTaxBracketAsync`: creates or updates brackets.
+    - `OnPostDeleteTaxBracketAsync`: deletes bracket entries.
+  - Included interactive modal with live calculations of marginal tax rates and threshold previews.
+
+### Verification
+- Solution Build: `dotnet build StoreProject.sln` (**0 warnings, 0 errors**).
+- Automated Unit Tests: `dotnet test Store.API.Tests` (**488 passed, 0 failed, 0 skipped**).
 
 
+
+---
+
+## Hotfix — CI/CD Post-Deploy Health-Check Port Mismatch (OPS)
+
+**Date:** 2026-10-02  
+**Trigger:** `Deploy to Production` pipeline failing at the `Post-deploy health-check` step with
+`Control plane failed to come up within 60s` — all 12 curl attempts returning 404.
+
+### Root Cause
+
+Three compounding issues caused the failure:
+
+1. **Wrong port in health-check** — the step curled `http://cp.${ROOT_DOMAIN}:18080/health`, but
+   the container listens on **19999** (hard-wired in the Dockerfile via `ASPNETCORE_HTTP_PORTS=19999`).
+   Port 18080 was never open; 404 was guaranteed.
+
+2. **Health-check routed through Traefik** — using the public hostname means the check depends on
+   DNS propagation and Let's Encrypt TLS cert provisioning, neither of which completes in 60s on a
+   fresh deploy.
+
+3. **Dead env vars in compose** — `ControlPlane__HttpPort=18080` and `ControlPlane__HttpsPort=18443`
+   were set in `docker-compose.platform.yml` but the app never reads them to change its bind port
+   (only `ASPNETCORE_HTTP_PORTS` affects the Kestrel listener). These were misleading and caused the
+   wrong port to appear in the health-check.
+
+### Changes
+
+| File | Change |
+|---|---|
+| `docker-compose.platform.yml` | Removed dead `ControlPlane__HttpPort` / `ControlPlane__HttpsPort` env vars; added `ASPNETCORE_HTTP_PORTS=19999` (matches Dockerfile); added `ports: "127.0.0.1:19999:19999"` (loopback-only, not publicly reachable) |
+| `.github/workflows/ci-cd.yml` | Health-check now curls `http://127.0.0.1:19999/health` directly on the VPS via SSH — no Traefik/DNS/TLS dependency; timeout extended from 60s (12×5s) → 120s (24×5s) to account for DB `start_period: 20s` + EF migration time; added per-attempt log output |
+
+### Verification
+- Build: `dotnet build StoreProject.sln` — no code changes, existing green.
+- Pipeline: re-run CI/CD → health-check expected to pass on next push.
 
 
 

@@ -298,14 +298,20 @@ jobs:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER || 'deploy' }}
           VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
-          ROOT_DOMAIN: ${{ secrets.ROOT_DOMAIN }}
         run: |
-          for i in {1..12}; do
+          # Curl the container's port DIRECTLY on the VPS (127.0.0.1:19999),
+          # NOT via the public domain+Traefik. This avoids:
+          #   - DNS propagation lag
+          #   - TLS cert provisioning delay from Let's Encrypt
+          #   - Port 18080 mismatch (container binds on 19999 per Dockerfile)
+          # The port is exposed only on loopback so it is not publicly reachable.
+          for i in {1..24}; do
             if ssh -i ~/.ssh/deploy_key -p $VPS_PORT -o StrictHostKeyChecking=yes \
-                $VPS_USER@$VPS_HOST "curl -fsS http://cp.${ROOT_DOMAIN}:18080/health > /dev/null"; then
+                $VPS_USER@$VPS_HOST "curl -fsS http://127.0.0.1:19999/health > /dev/null 2>&1"; then
               echo "Control plane healthy after ${i}x5s"; exit 0
             fi
+            echo "Waiting... attempt $i/24"
             sleep 5
           done
-          echo "::error::Control plane failed to come up within 60s"
+          echo "::error::Control plane failed to come up within 120s"
           exit 1

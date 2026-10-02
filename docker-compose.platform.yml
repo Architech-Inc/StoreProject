@@ -36,20 +36,26 @@ services:
       - no-new-privileges:true
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
+      # The container binds on 19999 (set in the Dockerfile via ASPNETCORE_HTTP_PORTS).
+      # Do NOT use ControlPlane__HttpPort / ControlPlane__HttpsPort here — the app
+      # does not read them to change its listen port; only ASPNETCORE_HTTP_PORTS does.
+      - ASPNETCORE_HTTP_PORTS=19999
       # Secrets — REQUIRED. docker compose refuses to start if these env vars are unset
       # (the startup guard in SecretEncryptionService throws on missing/placeholder values).
       - ConnectionStrings__ControlPlane=${CONTROLPLANE_DB_CONNECTION_STRING:?CONTROLPLANE_DB_CONNECTION_STRING is required}
       - ControlPlane__MasterEncryptionKey=${CONTROLPLANE_MASTER_KEY:?CONTROLPLANE_MASTER_KEY is required (min 32 chars)}
       - ControlPlane__WebhookSigningSecret=${CONTROLPLANE_WEBHOOK_SIGNING_SECRET:?CONTROLPLANE_WEBHOOK_SIGNING_SECRET is required}
       - ControlPlane__RootDomain=${ROOT_DOMAIN:?ROOT_DOMAIN is required}
-      - ControlPlane__HttpPort=18080
-      - ControlPlane__HttpsPort=18443
       - ControlPlane__AutoDeployDocker=true
       - ControlPlane__StoreApiImage=${IMAGE_PREFIX:-ghcr.io/architech-inc/storeproject}/store-api:latest
       - ControlPlane__StoreUiImage=${IMAGE_PREFIX:-ghcr.io/architech-inc/storeproject}/store-ui:latest
       - ControlPlaneCors__AllowedOrigins__0=https://portal.${ROOT_DOMAIN}
       - ControlPlaneCors__AllowedOrigins__1=http://portal.${ROOT_DOMAIN}
       - Seq__ServerUrl=${SEQ_SERVER_URL:-http://store-seq:5341}
+    ports:
+      # Expose on localhost only so the CI health-check can curl it directly
+      # via SSH without going through Traefik (avoids TLS cert timing issues).
+      - "127.0.0.1:19999:19999"
     volumes:
       # docker socket — proxied via docker-socket-proxy in real production
       # (we keep it here for development; remove or proxy in prod compose).
