@@ -11,10 +11,13 @@ public class FlutterwaveOptions
 {
     public const string SectionName = "Payments:Flutterwave";
 
+    public string? ClientId { get; set; }
     public string? PublicKey { get; set; }
     public string? SecretKey { get; set; }
+    public string? EncryptionKey { get; set; }
     public string? SecretHash { get; set; }
     public string BaseUrl { get; set; } = "https://api.flutterwave.com/v3/";
+    public string TokenUrl { get; set; } = "https://idp.flutterwave.com/realms/flutterwave/protocol/openid-connect/token";
 }
 
 // ─── Payment Link Creation (Hosted Checkout) ────────────────────────────────

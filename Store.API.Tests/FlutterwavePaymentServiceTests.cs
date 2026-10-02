@@ -28,10 +28,12 @@ public class FlutterwavePaymentServiceTests
     private static FlutterwavePaymentService BuildService(
         string secretKey = "FLWSECK_TEST-valid-secret-key-12345678",
         string secretHash = "flutterwave-webhook-secret-hash-12345",
+        string? clientId = null,
         Func<HttpRequestMessage, HttpResponseMessage>? responder = null)
     {
         var opts = new FlutterwaveOptions
         {
+            ClientId = clientId,
             SecretKey = secretKey,
             PublicKey = "FLWPUBK_TEST-valid-public-key",
             SecretHash = secretHash,
@@ -219,5 +221,51 @@ public class FlutterwavePaymentServiceTests
 
         var result = await svc.VerifyTransactionAsync(999999L);
         Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task CreatePaymentLinkAsync_WithOAuthClientId_RetrievesAndUsesToken()
+    {
+        string? capturedAuthHeader = null;
+        var tokenEndpointCalled = false;
+
+        var svc = BuildService(
+            secretKey: "my-client-secret-key",
+            clientId: "my-oauth-client-id",
+            responder: req =>
+            {
+                if (req.RequestUri?.AbsoluteUri.Contains("protocol/openid-connect/token") == true)
+                {
+                    tokenEndpointCalled = true;
+                    return new HttpResponseMessage(HttpStatusCode.OK)
+                    {
+                        Content = new StringContent("{\"access_token\":\"mocked-jwt-access-token\",\"expires_in\":600,\"token_type\":\"Bearer\"}")
+                    };
+                }
+
+                if (req.RequestUri?.AbsolutePath.EndsWith("payments") == true)
+                {
+                    capturedAuthHeader = req.Headers.Authorization?.ToString();
+                    return new HttpResponseMessage(HttpStatusCode.OK)
+                    {
+                        Content = new StringContent("{\"status\":\"success\",\"message\":\"ok\",\"data\":{\"link\":\"https://checkout.flutterwave.com/pay/abc\"}}")
+                    };
+                }
+
+                return new HttpResponseMessage(HttpStatusCode.NotFound);
+            });
+
+        var resp = await svc.CreatePaymentLinkAsync(new FlutterwavePaymentLinkRequest
+        {
+            TxRef = "tx-v4-test",
+            Amount = 5000,
+            Currency = "NGN",
+            CustomerEmail = "dev@example.com"
+        });
+
+        Assert.True(tokenEndpointCalled);
+        Assert.True(resp.Success);
+        Assert.Equal("Bearer mocked-jwt-access-token", capturedAuthHeader);
+        Assert.Equal("https://checkout.flutterwave.com/pay/abc", resp.PaymentLink);
     }
 }

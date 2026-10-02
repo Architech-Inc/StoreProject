@@ -19,12 +19,19 @@ namespace Store.DbServices.Services;
 public class FlutterwavePaymentService : IFlutterwavePaymentService
 {
     public const string DefaultBaseUrl = "https://api.flutterwave.com/v3/";
+    public const string DefaultTokenUrl = "https://idp.flutterwave.com/realms/flutterwave/protocol/openid-connect/token";
 
     private readonly HttpClient _http;
     private readonly ILogger<FlutterwavePaymentService> _logger;
+    private readonly string? _clientId;
     private readonly string _secretKey;
     private readonly string _publicKey;
     private readonly string _secretHash;
+    private readonly string _tokenUrl;
+
+    private string? _cachedAccessToken;
+    private DateTimeOffset _tokenExpiry = DateTimeOffset.MinValue;
+    private readonly SemaphoreSlim _tokenLock = new(1, 1);
 
     private static readonly JsonSerializerOptions JsonOpts = new(JsonSerializerDefaults.Web)
     {
@@ -40,18 +47,16 @@ public class FlutterwavePaymentService : IFlutterwavePaymentService
         _logger = logger;
         var opts = options.Value;
 
+        _clientId = string.IsNullOrWhiteSpace(opts.ClientId) ? null : opts.ClientId.Trim();
         _secretKey = opts.SecretKey?.Trim() ?? string.Empty;
         _publicKey = opts.PublicKey?.Trim() ?? string.Empty;
         _secretHash = opts.SecretHash?.Trim() ?? string.Empty;
+        _tokenUrl = string.IsNullOrWhiteSpace(opts.TokenUrl) ? DefaultTokenUrl : opts.TokenUrl.Trim();
 
         var baseUrl = string.IsNullOrWhiteSpace(opts.BaseUrl) ? DefaultBaseUrl : opts.BaseUrl.TrimEnd('/') + "/";
         _http.BaseAddress = new Uri(baseUrl);
 
         _http.DefaultRequestHeaders.UserAgent.ParseAdd("StoreProject/1.0 (Flutterwave-PaymentGateway)");
-        if (!string.IsNullOrEmpty(_secretKey) && !_secretKey.StartsWith("OVERRIDE_ME", StringComparison.OrdinalIgnoreCase))
-        {
-            _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _secretKey);
-        }
     }
 
     public async Task<FlutterwavePaymentLinkResponse> CreatePaymentLinkAsync(
@@ -96,7 +101,7 @@ public class FlutterwavePaymentService : IFlutterwavePaymentService
             {
                 Content = JsonContent.Create(payload, options: JsonOpts)
             };
-            AddAuthHeader(req);
+            await AddAuthHeaderAsync(req, ct);
 
             using var resp = await _http.SendAsync(req, ct);
             var raw = await resp.Content.ReadAsStringAsync(ct);
@@ -157,7 +162,7 @@ public class FlutterwavePaymentService : IFlutterwavePaymentService
         try
         {
             using var req = new HttpRequestMessage(HttpMethod.Get, $"transactions/{transactionId}/verify");
-            AddAuthHeader(req);
+            await AddAuthHeaderAsync(req, ct);
 
             using var resp = await _http.SendAsync(req, ct);
             var raw = await resp.Content.ReadAsStringAsync(ct);
@@ -242,11 +247,78 @@ public class FlutterwavePaymentService : IFlutterwavePaymentService
         return CryptographicOperations.FixedTimeEquals(expectedBytes, providedBytes);
     }
 
-    private void AddAuthHeader(HttpRequestMessage req)
+    private async Task<string?> GetBearerTokenAsync(CancellationToken ct)
     {
-        if (!string.IsNullOrEmpty(_secretKey) && !req.Headers.Contains("Authorization"))
+        // Legacy v3 mode (no ClientId or placeholder) uses SecretKey directly as Bearer token
+        if (string.IsNullOrWhiteSpace(_clientId) || _clientId.StartsWith("OVERRIDE_ME", StringComparison.OrdinalIgnoreCase))
         {
-            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _secretKey);
+            return _secretKey;
+        }
+
+        // Return cached token if valid (with 60-second cushion)
+        if (!string.IsNullOrEmpty(_cachedAccessToken) && DateTimeOffset.UtcNow < _tokenExpiry.AddSeconds(-60))
+        {
+            return _cachedAccessToken;
+        }
+
+        await _tokenLock.WaitAsync(ct);
+        try
+        {
+            if (!string.IsNullOrEmpty(_cachedAccessToken) && DateTimeOffset.UtcNow < _tokenExpiry.AddSeconds(-60))
+            {
+                return _cachedAccessToken;
+            }
+
+            using var tokenReq = new HttpRequestMessage(HttpMethod.Post, _tokenUrl)
+            {
+                Content = new FormUrlEncodedContent(new[]
+                {
+                    new KeyValuePair<string, string>("client_id", _clientId),
+                    new KeyValuePair<string, string>("client_secret", _secretKey),
+                    new KeyValuePair<string, string>("grant_type", "client_credentials")
+                })
+            };
+
+            using var resp = await _http.SendAsync(tokenReq, ct);
+            var raw = await resp.Content.ReadAsStringAsync(ct);
+
+            if (!resp.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Flutterwave OAuth token request failed: {StatusCode} {Body}", resp.StatusCode, raw);
+                return null;
+            }
+
+            using var doc = JsonDocument.Parse(raw);
+            if (doc.RootElement.TryGetProperty("access_token", out var tokenProp))
+            {
+                _cachedAccessToken = tokenProp.GetString();
+                var expiresIn = doc.RootElement.TryGetProperty("expires_in", out var expProp) ? expProp.GetInt32() : 600;
+                _tokenExpiry = DateTimeOffset.UtcNow.AddSeconds(expiresIn);
+                _logger.LogInformation("Refreshed Flutterwave OAuth token (expires in {ExpiresIn}s)", expiresIn);
+                return _cachedAccessToken;
+            }
+
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to retrieve Flutterwave OAuth token");
+            return null;
+        }
+        finally
+        {
+            _tokenLock.Release();
+        }
+    }
+
+    private async Task AddAuthHeaderAsync(HttpRequestMessage req, CancellationToken ct)
+    {
+        if (req.Headers.Contains("Authorization")) return;
+
+        var token = await GetBearerTokenAsync(ct);
+        if (!string.IsNullOrEmpty(token))
+        {
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         }
     }
 
