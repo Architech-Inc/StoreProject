@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Store.API.Attributes;
 using Store.Models.DTOs.Audit;
+using Store.Models.DTOs.Notifications;
 using Store.Models.DTOs.Operations;
 using Store.Models.Interfaces.Services;
 
@@ -14,11 +15,16 @@ public class CashManagementController : ControllerBase
 {
     private readonly IStoreOperationsService _ops;
     private readonly IAuditLogService _auditService;
+    private readonly IRealTimeNotificationService _notifications;
 
-    public CashManagementController(IStoreOperationsService ops, IAuditLogService auditService)
+    public CashManagementController(
+        IStoreOperationsService ops,
+        IAuditLogService auditService,
+        IRealTimeNotificationService notifications)
     {
         _ops = ops;
         _auditService = auditService;
+        _notifications = notifications;
     }
 
     [HttpGet("shift/active")]
@@ -90,6 +96,34 @@ public class CashManagementController : ControllerBase
             IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
             UserAgent = HttpContext.Request.Headers.UserAgent.ToString()
         }, ct);
+
+        // Wave 51: Dispatch real-time cash variance push notification if discrepancy detected
+        if (Math.Abs(variance) > 0)
+        {
+            try
+            {
+                var varianceDto = new CashVarianceAlertDto
+                {
+                    ShiftId = shift.CashierShiftId,
+                    CashierUserId = uid,
+                    CashierName = User.Identity?.Name ?? "Cashier",
+                    BranchId = null,
+                    BranchName = "Main Branch",
+                    ExpectedAmount = shift.ExpectedClosingAmount ?? 0m,
+                    ActualAmount = shift.ClosingFloat ?? 0m,
+                    VarianceAmount = variance,
+                    Severity = Math.Abs(variance) > 5000 ? "Danger" : "Warning",
+                    Notes = shift.Notes,
+                    DateCreated = DateTime.UtcNow
+                };
+
+                await _notifications.NotifyCashVarianceAsync(varianceDto, ct);
+            }
+            catch
+            {
+                // SignalR push failure must never abort business transaction
+            }
+        }
 
         return Ok(shift);
     }

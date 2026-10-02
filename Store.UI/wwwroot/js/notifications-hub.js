@@ -100,6 +100,9 @@
         if (filter === 'inventory') {
             return cat === 'lowstock' || cat === 'restockrecommendation' || cat === 'purchaseorder' || cat === '2' || cat === '3' || cat === '7';
         }
+        if (filter === 'financial') {
+            return cat === 'cashvariance' || cat === '6';
+        }
         if (filter === 'security') {
             return cat === 'security' || cat === '5';
         }
@@ -122,6 +125,9 @@
         }
         if (cat === 'purchaseorder' || cat === '3') {
             return { label: 'Purchase Order', cls: 'category-inventory' };
+        }
+        if (cat === 'cashvariance' || cat === '6') {
+            return { label: 'Cash Variance', cls: 'category-financial' };
         }
         if (cat === 'security' || cat === '5') {
             return { label: 'Security', cls: 'category-security' };
@@ -241,6 +247,8 @@
         const cat = String(item.category || '').toLowerCase();
         if (cat === 'lowstock' || cat === 'restockrecommendation' || cat === 'purchaseorder' || cat === '2' || cat === '3' || cat === '7') {
             channel = 'inventory';
+        } else if (cat === 'cashvariance' || cat === '6') {
+            channel = 'finance';
         } else if (cat === 'discountapproval' || cat === 'contactrequest' || cat === '1' || cat === '4') {
             channel = 'admin';
         }
@@ -378,6 +386,54 @@
                 // 2) Dispatch a CustomEvent so the /Restock page can refresh
                 //    its table live without reloading the whole page.
                 window.dispatchEvent(new CustomEvent('restock-recommendation-arrived', { detail: dto }));
+            });
+
+            connection.on('ReceiveCashVarianceAlert', (dto) => {
+                const shiftShort = dto.shiftId ? String(dto.shiftId).substring(0, 8) : 'shift';
+                const sign = dto.varianceAmount > 0 ? '+' : '';
+                addNotification({
+                    title: `Cash Variance · ${dto.cashierName || 'Cashier'}`,
+                    message: `Shift #${shiftShort} closed with ${sign}${Number(dto.varianceAmount).toLocaleString()} XAF variance (Expected: ${Number(dto.expectedAmount).toLocaleString()} XAF, Actual: ${Number(dto.actualAmount).toLocaleString()} XAF).`,
+                    category: 'CashVariance',
+                    severity: dto.severity || (Math.abs(dto.varianceAmount) > 5000 ? 'Danger' : 'Warning'),
+                    targetUrl: '/CashVariance',
+                    actionLabel: 'Review Variance'
+                });
+
+                window.dispatchEvent(new CustomEvent('cash-variance-alert-arrived', { detail: dto }));
+            });
+
+            connection.on('ReceivePurchaseOrderUpdate', (dto) => {
+                const orderNum = dto.orderNumber || dto.purchaseOrderId || 'PO';
+                const severity = dto.status === 'Approved' ? 'Success'
+                               : dto.status === 'Cancelled' ? 'Warning'
+                               : 'Info';
+                addNotification({
+                    title: `Purchase Order #${orderNum} · ${dto.status}`,
+                    message: dto.message || `PO #${orderNum} (${dto.supplierName || 'Supplier'}) is ${String(dto.status).toLowerCase()}. Total: ${Number(dto.totalAmount).toLocaleString()} XAF.`,
+                    category: 'PurchaseOrder',
+                    severity: severity,
+                    targetUrl: '/PurchaseOrders',
+                    actionLabel: 'View Order'
+                });
+
+                window.dispatchEvent(new CustomEvent('purchase-order-updated', { detail: dto }));
+            });
+
+            connection.on('ReceiveContactRequestUpdate', (dto) => {
+                const severity = dto.status === 'Approved' ? 'Success'
+                               : dto.status === 'Rejected' ? 'Warning'
+                               : 'Info';
+                addNotification({
+                    title: `Contact Request ${dto.status}`,
+                    message: dto.reason || `Contact change request for ${dto.username || 'user'} was ${String(dto.status).toLowerCase()}.`,
+                    category: 'ContactRequest',
+                    severity: severity,
+                    targetUrl: '/ContactRequests',
+                    actionLabel: 'View Requests'
+                });
+
+                window.dispatchEvent(new CustomEvent('contact-request-updated', { detail: dto }));
             });
 
             connection.onreconnecting(() => {

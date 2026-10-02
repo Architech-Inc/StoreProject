@@ -154,4 +154,100 @@ public class RealTimeNotificationServiceTests
         _mockClients.Verify(c => c.Group("role_manager"), Times.Once);
         _mockClientProxy.Verify(p => p.ReceiveNotification(notif), Times.Once);
     }
+
+    [Fact]
+    public async Task NotifyCashVarianceAsync_SendsToRolesAndBranch_WhenDiscrepancyOccurs()
+    {
+        var dto = new CashVarianceAlertDto
+        {
+            ShiftId = Guid.NewGuid(),
+            CashierUserId = Guid.NewGuid(),
+            CashierName = "Cashier Sarah",
+            BranchId = 3,
+            BranchName = "Downtown",
+            ExpectedAmount = 150000m,
+            ActualAmount = 142000m,
+            VarianceAmount = -8000m,
+            Severity = "Danger",
+            Notes = "Shortage at drawer close"
+        };
+
+        await _service.NotifyCashVarianceAsync(dto);
+
+        // Verify typed event and activity notification sent to manager, admin, and branch group
+        _mockClients.Verify(c => c.Group("role_manager"), Times.Exactly(2));
+        _mockClients.Verify(c => c.Group("role_admin"), Times.Exactly(2));
+        _mockClients.Verify(c => c.Group("branch_3"), Times.Exactly(2));
+        _mockClientProxy.Verify(p => p.ReceiveCashVarianceAlert(dto), Times.Exactly(3));
+
+        // Verify activity center notification sent
+        _mockClientProxy.Verify(p => p.ReceiveNotification(It.Is<StoreNotificationDto>(n =>
+            n.Category == NotificationCategory.CashVariance &&
+            n.Severity == "Danger" &&
+            n.TargetUrl == "/CashVariance")), Times.Exactly(3));
+    }
+
+    [Fact]
+    public async Task NotifyPurchaseOrderUpdateAsync_SendsToRolesBranchAndRequester()
+    {
+        var requesterId = Guid.NewGuid();
+        var dto = new PurchaseOrderNotificationDto
+        {
+            PurchaseOrderId = 101,
+            OrderNumber = "PO-2026-00101",
+            SupplierName = "Acme Supplies",
+            TotalAmount = 250000m,
+            Status = "Approved",
+            RequestedByUserId = requesterId,
+            RequestedByName = "Buyer John",
+            ApprovedByUserId = Guid.NewGuid(),
+            ApprovedByName = "Manager Jane",
+            BranchId = 5,
+            BranchName = "North Branch"
+        };
+
+        await _service.NotifyPurchaseOrderUpdateAsync(dto);
+
+        // Verify typed event and activity notification sent to manager, admin, branch, and requester
+        _mockClients.Verify(c => c.Group("role_manager"), Times.Exactly(2));
+        _mockClients.Verify(c => c.Group("role_admin"), Times.Exactly(2));
+        _mockClients.Verify(c => c.Group("branch_5"), Times.Exactly(2));
+        _mockClients.Verify(c => c.Group($"user_{requesterId}"), Times.Exactly(2));
+        _mockClientProxy.Verify(p => p.ReceivePurchaseOrderUpdate(dto), Times.Exactly(4));
+
+        // Verify activity center notification sent with Success severity on Approved
+        _mockClientProxy.Verify(p => p.ReceiveNotification(It.Is<StoreNotificationDto>(n =>
+            n.Category == NotificationCategory.PurchaseOrder &&
+            n.Severity == "Success" &&
+            n.TargetUrl == "/PurchaseOrders")), Times.Exactly(4));
+    }
+
+    [Fact]
+    public async Task NotifyContactRequestAsync_SendsToRolesAndUser()
+    {
+        var userId = Guid.NewGuid();
+        var dto = new ContactRequestNotificationDto
+        {
+            RequestId = Guid.NewGuid(),
+            UserId = userId,
+            Username = "cashier.doe",
+            RequestType = "Phone",
+            Status = "Approved",
+            ReviewedByUserId = Guid.NewGuid()
+        };
+
+        await _service.NotifyContactRequestAsync(dto);
+
+        // Verify typed event and activity notification sent to manager, admin, and user
+        _mockClients.Verify(c => c.Group("role_manager"), Times.Exactly(2));
+        _mockClients.Verify(c => c.Group("role_admin"), Times.Exactly(2));
+        _mockClients.Verify(c => c.Group($"user_{userId}"), Times.Exactly(2));
+        _mockClientProxy.Verify(p => p.ReceiveContactRequestUpdate(dto), Times.Exactly(3));
+
+        // Verify activity center notification sent
+        _mockClientProxy.Verify(p => p.ReceiveNotification(It.Is<StoreNotificationDto>(n =>
+            n.Category == NotificationCategory.ContactRequest &&
+            n.Severity == "Success" &&
+            n.TargetUrl == "/ContactRequests")), Times.Exactly(3));
+    }
 }

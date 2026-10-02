@@ -11,4 +11,7 @@ public interface IRealTimeNotificationService
     Task NotifyDiscountOverrideAsync(DiscountOverrideNotificationDto dto, CancellationToken ct = default);
     Task NotifyLowStockAsync(LowStockAlertDto dto, CancellationToken ct = default);
     Task NotifyRestockRecommendationAsync(RestockRecommendationNotificationDto dto, CancellationToken ct = default);
+    Task NotifyCashVarianceAsync(CashVarianceAlertDto dto, CancellationToken ct = default);
+    Task NotifyPurchaseOrderUpdateAsync(PurchaseOrderNotificationDto dto, CancellationToken ct = default);
+    Task NotifyContactRequestAsync(ContactRequestNotificationDto dto, CancellationToken ct = default);
 }

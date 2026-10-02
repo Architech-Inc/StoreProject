@@ -3070,6 +3070,66 @@ Integrate Flutterwave across both platform SaaS subscription billing (`Store.Con
   - `Store.TenantPortal.Tests`: **27 passed, 0 failed**.
   - Total: **526 passed, 0 failed**.
 
+---
+
+## 2026-10-02 — Wave 51 (Real-Time SignalR Push Notification Hub: Cash Variance, Purchase Orders, & Contact Requests — completed)
+
+### 51.A — Strongly-Typed Notification DTOs
+- Extended `Store.Models/DTOs/Notifications/StoreNotificationDtos.cs` with three domain-specific push models:
+  - `CashVarianceAlertDto`: `ShiftId`, `CashierUserId`, `CashierName`, `BranchId`, `BranchName`, `ExpectedAmount`, `ActualAmount`, `VarianceAmount`, `Severity`, `Notes`, `DateCreated`.
+  - `PurchaseOrderNotificationDto`: `PurchaseOrderId`, `OrderNumber`, `SupplierName`, `TotalAmount`, `Status`, `RequestedByUserId`, `RequestedByName`, `ApprovedByUserId`, `ApprovedByName`, `BranchId`, `BranchName`, `Message`, `DateCreated`.
+  - `ContactRequestNotificationDto`: `RequestId`, `UserId`, `Username`, `RequestType`, `Status`, `ReviewedByUserId`, `Reason`, `DateCreated`.
+
+### 51.B — Hub Client Contracts & Service Implementation
+- **Hub Client Interface (`IStoreNotificationClient.cs`)**:
+  - Added typed push contracts: `ReceiveCashVarianceAlert(CashVarianceAlertDto)`, `ReceivePurchaseOrderUpdate(PurchaseOrderNotificationDto)`, and `ReceiveContactRequestUpdate(ContactRequestNotificationDto)`.
+- **Service Abstraction (`IRealTimeNotificationService.cs`)**:
+  - Added service contracts: `NotifyCashVarianceAsync`, `NotifyPurchaseOrderUpdateAsync`, and `NotifyContactRequestAsync`.
+- **Service Implementation (`RealTimeNotificationService.cs`)**:
+  - Implemented `NotifyCashVarianceAsync`: dispatches typed `ReceiveCashVarianceAlert` to `role_manager`, `role_admin`, and `branch_{id}` alongside formatted activity center `StoreNotificationDto` (`Category = CashVariance`, `Severity = Danger/Warning`, `TargetUrl = /CashVariance`).
+  - Implemented `NotifyPurchaseOrderUpdateAsync`: dispatches typed `ReceivePurchaseOrderUpdate` to `role_manager`, `role_admin`, `branch_{id}`, and `user_{requesterId}` alongside formatted `StoreNotificationDto` (`Category = PurchaseOrder`, `TargetUrl = /PurchaseOrders`).
+  - Implemented `NotifyContactRequestAsync`: dispatches typed `ReceiveContactRequestUpdate` to `role_manager`, `role_admin`, and `user_{id}` alongside formatted `StoreNotificationDto` (`Category = ContactRequest`, `TargetUrl = /ContactRequests`).
+  - All dispatches enclosed in resilient non-blocking try/catch error handling.
+
+### 51.C — Backend Controller Dispatches
+- **Cash Drawer Discrepancies (`CashManagementController.cs`)**:
+  - Injected `IRealTimeNotificationService`.
+  - On `shift/close` (`CloseShift`): when `Math.Abs(variance) > 0`, dispatches `NotifyCashVarianceAsync` with cashier details, expected vs actual cash totals, and dynamic severity (`Danger` for variance > 5,000 XAF, otherwise `Warning`).
+- **Purchase Order Transitions (`PurchaseOrdersController.cs`)**:
+  - Injected `IRealTimeNotificationService`.
+  - Added `TryNotifyPurchaseOrderAsync` helper.
+  - Wired real-time notifications on `Submit` ("submitted for approval"), `Approve` ("approved by Manager"), `Receive` ("goods received"), and `Cancel` ("order cancelled").
+- **Contact Change Review Pipeline (`UsersController.cs`)**:
+  - Wired typed `NotifyContactRequestAsync` calls across `VerifyContactChange` (`Pending`), `ApproveContactChange` (`Approved`), and `RejectContactChange` (`Rejected`).
+
+### 51.D — Activity Center Drawer & ToastBus Integration
+- **Notification Drawer UI (`_NotificationCenter.cshtml`)**:
+  - Added dedicated `<button type="button" class="notif-tab" data-filter="financial">Financial</button>` tab to the drawer filter bar.
+- **Design System Badges (`notification-center.css`)**:
+  - Added `.notif-category-badge.category-financial` with emerald color palette (`rgba(16, 185, 129, 0.15)`, `#34d399`, border `rgba(16, 185, 129, 0.3)`).
+- **Client Script (`notifications-hub.js`)**:
+  - Updated `matchesFilter` and `getCategoryMeta` to recognize and label `cashvariance` / `6` as "Cash Variance".
+  - Routed financial notifications through the `finance` channel in `ToastBus` for live toast surfacing.
+  - Added SignalR hub listeners:
+    - `connection.on('ReceiveCashVarianceAlert', (dto) => ...)`
+    - `connection.on('ReceivePurchaseOrderUpdate', (dto) => ...)`
+    - `connection.on('ReceiveContactRequestUpdate', (dto) => ...)`
+  - Wired custom DOM event triggers (`cash-variance-alert-arrived`, `purchase-order-updated`, `contact-request-updated`) enabling live page reactions without full reloads.
+
+### 51.E — Automated Tests & Verification
+- **Test Suite Updates**:
+  - Updated `PurchaseOrderReorderTests.cs` to supply mock `IRealTimeNotificationService`.
+  - Added 3 comprehensive unit tests in `RealTimeNotificationServiceTests.cs`:
+    - `NotifyCashVarianceAsync_SendsToRolesAndBranch_WhenDiscrepancyOccurs`
+    - `NotifyPurchaseOrderUpdateAsync_SendsToRolesBranchAndRequester`
+    - `NotifyContactRequestAsync_SendsToRolesAndUser`
+- **Verification Results**:
+  - Solution build: `dotnet build StoreProject.sln --configuration Release` (**0 warnings, 0 errors**).
+  - `Store.API.Tests`: **445 passed, 0 failed**.
+  - `Store.ControlPlane.Tests`: **57 passed, 0 failed**.
+  - `Store.TenantPortal.Tests`: **27 passed, 0 failed**.
+  - Total: **529 passed, 0 failed** (100% green).
+
 
 
 

@@ -228,8 +228,8 @@ landed. Do not start one without updating both files so the next agent has
 continuity. Items still on the runway:
 
 - API versioning (`/api/v1/...` route prefix, ETag middleware).
-- SignalR hub for live notifications (low stock, approval, contact requests).
 - Stripe / PayDunya billing integration for plan-tier enforcement.
+- Security upgrade to Argon2id password hashing (SEC-24).
 
 ---
 

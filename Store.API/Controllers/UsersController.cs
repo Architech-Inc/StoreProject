@@ -308,6 +308,21 @@ public class UsersController : ControllerBase
             };
             await _notifications.SendToRoleAsync("Manager", notif, ct);
             await _notifications.SendToRoleAsync("Admin", notif, ct);
+
+            try
+            {
+                await _notifications.NotifyContactRequestAsync(new ContactRequestNotificationDto
+                {
+                    RequestId = Guid.NewGuid(),
+                    Status = "Pending",
+                    RequestType = "Contact Change",
+                    DateCreated = DateTime.UtcNow
+                }, ct);
+            }
+            catch
+            {
+                // Non-blocking real-time notification
+            }
         }
 
         return Ok(ApiResponse<object>.Ok(null!, "Contact information verified. Waiting for administrator approval."));
@@ -346,6 +361,21 @@ public class UsersController : ControllerBase
             };
             await _notifications.SendToRoleAsync("Manager", notif, ct);
             await _notifications.SendToRoleAsync("Admin", notif, ct);
+
+            try
+            {
+                await _notifications.NotifyContactRequestAsync(new ContactRequestNotificationDto
+                {
+                    RequestId = id,
+                    Status = "Approved",
+                    ReviewedByUserId = adminId,
+                    DateCreated = DateTime.UtcNow
+                }, ct);
+            }
+            catch
+            {
+                // Non-blocking real-time notification
+            }
         }
 
         return Ok(ApiResponse<object>.Ok(null!, "Contact change approved successfully."));
@@ -376,6 +406,21 @@ public class UsersController : ControllerBase
             };
             await _notifications.SendToRoleAsync("Manager", notif, ct);
             await _notifications.SendToRoleAsync("Admin", notif, ct);
+
+            try
+            {
+                await _notifications.NotifyContactRequestAsync(new ContactRequestNotificationDto
+                {
+                    RequestId = id,
+                    Status = "Rejected",
+                    ReviewedByUserId = adminId,
+                    DateCreated = DateTime.UtcNow
+                }, ct);
+            }
+            catch
+            {
+                // Non-blocking real-time notification
+            }
         }
 
         return Ok(ApiResponse<object>.Ok(null!, "Contact change rejected successfully."));

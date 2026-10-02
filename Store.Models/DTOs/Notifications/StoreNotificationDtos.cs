@@ -72,3 +72,47 @@ public class RestockRecommendationNotificationDto
     public string Reason { get; set; } = string.Empty;
     public DateTime DateCreated { get; set; } = DateTime.UtcNow;
 }
+
+public class CashVarianceAlertDto
+{
+    public Guid ShiftId { get; set; }
+    public Guid CashierUserId { get; set; }
+    public string CashierName { get; set; } = string.Empty;
+    public int? BranchId { get; set; }
+    public string BranchName { get; set; } = string.Empty;
+    public decimal ExpectedAmount { get; set; }
+    public decimal ActualAmount { get; set; }
+    public decimal VarianceAmount { get; set; }
+    public string Severity { get; set; } = "Warning"; // Info, Warning, Danger
+    public string? Notes { get; set; }
+    public DateTime DateCreated { get; set; } = DateTime.UtcNow;
+}
+
+public class PurchaseOrderNotificationDto
+{
+    public int PurchaseOrderId { get; set; }
+    public string OrderNumber { get; set; } = string.Empty;
+    public string SupplierName { get; set; } = string.Empty;
+    public decimal TotalAmount { get; set; }
+    public string Status { get; set; } = string.Empty; // Submitted, Approved, PartiallyReceived, Received, Cancelled
+    public Guid? RequestedByUserId { get; set; }
+    public string? RequestedByName { get; set; }
+    public Guid? ApprovedByUserId { get; set; }
+    public string? ApprovedByName { get; set; }
+    public int? BranchId { get; set; }
+    public string? BranchName { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public DateTime DateCreated { get; set; } = DateTime.UtcNow;
+}
+
+public class ContactRequestNotificationDto
+{
+    public Guid RequestId { get; set; }
+    public Guid UserId { get; set; }
+    public string Username { get; set; } = string.Empty;
+    public string RequestType { get; set; } = string.Empty; // Email, Phone, Email & Phone
+    public string Status { get; set; } = "Pending"; // Pending, Approved, Rejected
+    public Guid? ReviewedByUserId { get; set; }
+    public string? Reason { get; set; }
+    public DateTime DateCreated { get; set; } = DateTime.UtcNow;
+}

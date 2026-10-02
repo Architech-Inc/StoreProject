@@ -161,4 +161,135 @@ public class RealTimeNotificationService : IRealTimeNotificationService
             _logger.LogWarning(ex, "Failed to send restock recommendation notification.");
         }
     }
+
+    public async Task NotifyCashVarianceAsync(CashVarianceAlertDto dto, CancellationToken ct = default)
+    {
+        try
+        {
+            // 1. Dispatch typed event to managers, admins, and branch group if present
+            await _hubContext.Clients.Group("role_manager").ReceiveCashVarianceAlert(dto);
+            await _hubContext.Clients.Group("role_admin").ReceiveCashVarianceAlert(dto);
+            if (dto.BranchId.HasValue)
+            {
+                await _hubContext.Clients.Group($"branch_{dto.BranchId.Value}").ReceiveCashVarianceAlert(dto);
+            }
+
+            // 2. Dispatch StoreNotificationDto for the activity center and live toast
+            var shiftIdPrefix = dto.ShiftId.ToString("N")[..8];
+            var varianceFormatted = $"{(dto.VarianceAmount > 0 ? "+" : "")}{dto.VarianceAmount:N0} XAF";
+            var branchText = !string.IsNullOrWhiteSpace(dto.BranchName) ? $" · {dto.BranchName}" : "";
+            var notif = new StoreNotificationDto
+            {
+                Title = $"Cash Variance Alert{branchText}",
+                Message = $"Shift #{shiftIdPrefix} closed by {dto.CashierName} with {varianceFormatted} variance (Expected: {dto.ExpectedAmount:N0} XAF, Actual: {dto.ActualAmount:N0} XAF).",
+                Category = NotificationCategory.CashVariance,
+                Severity = dto.Severity,
+                TargetUrl = "/CashVariance",
+                ActionLabel = "Review Variance"
+            };
+
+            await _hubContext.Clients.Group("role_manager").ReceiveNotification(notif);
+            await _hubContext.Clients.Group("role_admin").ReceiveNotification(notif);
+            if (dto.BranchId.HasValue)
+            {
+                await _hubContext.Clients.Group($"branch_{dto.BranchId.Value}").ReceiveNotification(notif);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to send cash variance alert notification.");
+        }
+    }
+
+    public async Task NotifyPurchaseOrderUpdateAsync(PurchaseOrderNotificationDto dto, CancellationToken ct = default)
+    {
+        try
+        {
+            // 1. Dispatch typed event to managers, admins, requesting user, and branch
+            await _hubContext.Clients.Group("role_manager").ReceivePurchaseOrderUpdate(dto);
+            await _hubContext.Clients.Group("role_admin").ReceivePurchaseOrderUpdate(dto);
+            if (dto.BranchId.HasValue)
+            {
+                await _hubContext.Clients.Group($"branch_{dto.BranchId.Value}").ReceivePurchaseOrderUpdate(dto);
+            }
+            if (dto.RequestedByUserId.HasValue && dto.RequestedByUserId != Guid.Empty)
+            {
+                await _hubContext.Clients.Group($"user_{dto.RequestedByUserId.Value}").ReceivePurchaseOrderUpdate(dto);
+            }
+
+            // 2. Dispatch StoreNotificationDto for the activity center and live toast
+            var severity = dto.Status.Equals("Approved", StringComparison.OrdinalIgnoreCase) ? "Success"
+                         : dto.Status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase) ? "Warning"
+                         : "Info";
+
+            var orderDisplay = !string.IsNullOrWhiteSpace(dto.OrderNumber) ? dto.OrderNumber : dto.PurchaseOrderId.ToString();
+            var supplierText = !string.IsNullOrWhiteSpace(dto.SupplierName) ? $" ({dto.SupplierName})" : "";
+            var defaultMsg = $"PO #{orderDisplay}{supplierText} transitioned to {dto.Status}. Total: {dto.TotalAmount:N0} XAF.";
+
+            var notif = new StoreNotificationDto
+            {
+                Title = $"Purchase Order #{orderDisplay} · {dto.Status}",
+                Message = !string.IsNullOrWhiteSpace(dto.Message) ? dto.Message : defaultMsg,
+                Category = NotificationCategory.PurchaseOrder,
+                Severity = severity,
+                TargetUrl = "/PurchaseOrders",
+                ActionLabel = "View Order"
+            };
+
+            await _hubContext.Clients.Group("role_manager").ReceiveNotification(notif);
+            await _hubContext.Clients.Group("role_admin").ReceiveNotification(notif);
+            if (dto.BranchId.HasValue)
+            {
+                await _hubContext.Clients.Group($"branch_{dto.BranchId.Value}").ReceiveNotification(notif);
+            }
+            if (dto.RequestedByUserId.HasValue && dto.RequestedByUserId != Guid.Empty)
+            {
+                await _hubContext.Clients.Group($"user_{dto.RequestedByUserId.Value}").ReceiveNotification(notif);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to send purchase order notification.");
+        }
+    }
+
+    public async Task NotifyContactRequestAsync(ContactRequestNotificationDto dto, CancellationToken ct = default)
+    {
+        try
+        {
+            // 1. Dispatch typed event to managers, admins, and requesting user
+            await _hubContext.Clients.Group("role_manager").ReceiveContactRequestUpdate(dto);
+            await _hubContext.Clients.Group("role_admin").ReceiveContactRequestUpdate(dto);
+            if (dto.UserId != Guid.Empty)
+            {
+                await _hubContext.Clients.Group($"user_{dto.UserId}").ReceiveContactRequestUpdate(dto);
+            }
+
+            // 2. Dispatch StoreNotificationDto for the activity center and live toast
+            var severity = dto.Status.Equals("Approved", StringComparison.OrdinalIgnoreCase) ? "Success"
+                         : dto.Status.Equals("Rejected", StringComparison.OrdinalIgnoreCase) ? "Warning"
+                         : "Info";
+
+            var notif = new StoreNotificationDto
+            {
+                Title = $"Contact Request {dto.Status}",
+                Message = $"Contact change request for {dto.Username} was {dto.Status.ToLowerInvariant()}.",
+                Category = NotificationCategory.ContactRequest,
+                Severity = severity,
+                TargetUrl = "/ContactRequests",
+                ActionLabel = "View Requests"
+            };
+
+            await _hubContext.Clients.Group("role_manager").ReceiveNotification(notif);
+            await _hubContext.Clients.Group("role_admin").ReceiveNotification(notif);
+            if (dto.UserId != Guid.Empty)
+            {
+                await _hubContext.Clients.Group($"user_{dto.UserId}").ReceiveNotification(notif);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to send contact request notification.");
+        }
+    }
 }

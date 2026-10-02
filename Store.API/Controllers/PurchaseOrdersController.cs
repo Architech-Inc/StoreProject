@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Store.Models.DTOs.Common;
+using Store.Models.DTOs.Notifications;
 using Store.Models.DTOs.Operations;
 using Store.Models.DTOs.Procurement;
 using Store.Models.Enums;
@@ -14,9 +15,13 @@ namespace Store.API.Controllers;
 public class PurchaseOrdersController : ControllerBase
 {
     private readonly IPurchaseOrderService _poService;
+    private readonly IRealTimeNotificationService _notifications;
 
-    public PurchaseOrdersController(IPurchaseOrderService poService)
-        => _poService = poService;
+    public PurchaseOrdersController(IPurchaseOrderService poService, IRealTimeNotificationService notifications)
+    {
+        _poService = poService;
+        _notifications = notifications;
+    }
 
     [HttpGet("metrics")]
     [Authorize(Policy = PermissionKeys.InventoryRead)]
@@ -87,6 +92,8 @@ public class PurchaseOrdersController : ControllerBase
                 "Purchase order must be in Draft status to submit",
                 traceId: HttpContext.TraceIdentifier));
 
+        await TryNotifyPurchaseOrderAsync(dto, "was submitted for approval", $"PO #{dto.ReferenceNumber ?? dto.PurchaseOrderId.ToString()} submitted for approval by {dto.RequestedByUser}.");
+
         return Ok(ApiResponse<PurchaseOrderDto>.Ok(dto));
     }
 
@@ -103,6 +110,8 @@ public class PurchaseOrdersController : ControllerBase
             return BadRequest(ApiErrorResponse.From(ErrorCode.BadRequest,
                 "Purchase order must be in Submitted status to approve",
                 traceId: HttpContext.TraceIdentifier));
+
+        await TryNotifyPurchaseOrderAsync(dto, "was approved", $"PO #{dto.ReferenceNumber ?? dto.PurchaseOrderId.ToString()} approved by {dto.ApprovedByUser ?? "Manager"}. Ready for receiving.");
 
         return Ok(ApiResponse<PurchaseOrderDto>.Ok(dto));
     }
@@ -121,6 +130,8 @@ public class PurchaseOrdersController : ControllerBase
                 "Purchase order must be Approved or PartiallyReceived to receive goods",
                 traceId: HttpContext.TraceIdentifier));
 
+        await TryNotifyPurchaseOrderAsync(dto, $"goods received ({dto.Status})", $"PO #{dto.ReferenceNumber ?? dto.PurchaseOrderId.ToString()} goods received. Status: {dto.Status}.");
+
         return Ok(ApiResponse<PurchaseOrderDto>.Ok(dto));
     }
 
@@ -138,7 +149,36 @@ public class PurchaseOrdersController : ControllerBase
                 "Only Draft or Submitted purchase orders can be cancelled",
                 traceId: HttpContext.TraceIdentifier));
 
+        await TryNotifyPurchaseOrderAsync(dto, "was cancelled", $"PO #{dto.ReferenceNumber ?? dto.PurchaseOrderId.ToString()} was cancelled.");
+
         return Ok(ApiResponse<PurchaseOrderDto>.Ok(dto));
+    }
+
+    private async Task TryNotifyPurchaseOrderAsync(PurchaseOrderDto dto, string action, string? message = null)
+    {
+        try
+        {
+            var notifDto = new PurchaseOrderNotificationDto
+            {
+                PurchaseOrderId = dto.PurchaseOrderId,
+                OrderNumber = !string.IsNullOrWhiteSpace(dto.ReferenceNumber) ? dto.ReferenceNumber : dto.PurchaseOrderId.ToString(),
+                SupplierName = dto.SupplierName,
+                TotalAmount = dto.TotalValuation,
+                Status = dto.Status,
+                RequestedByName = dto.RequestedByUser,
+                ApprovedByName = dto.ApprovedByUser,
+                BranchId = dto.BranchId,
+                BranchName = dto.BranchName,
+                Message = message ?? $"Purchase order #{dto.ReferenceNumber ?? dto.PurchaseOrderId.ToString()} ({dto.SupplierName}) {action}.",
+                DateCreated = DateTime.UtcNow
+            };
+
+            await _notifications.NotifyPurchaseOrderUpdateAsync(notifDto);
+        }
+        catch
+        {
+            // Real-time broadcast failure must never abort primary business transaction
+        }
     }
 
     [HttpPost("{id:int}/pay")]

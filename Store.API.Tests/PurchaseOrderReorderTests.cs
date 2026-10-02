@@ -14,7 +14,8 @@ public class PurchaseOrderReorderTests
 {
     private static PurchaseOrdersController CreateController(IPurchaseOrderService poService, Guid? userId = null)
     {
-        var controller = new PurchaseOrdersController(poService);
+        var mockNotifications = new Mock<IRealTimeNotificationService>();
+        var controller = new PurchaseOrdersController(poService, mockNotifications.Object);
         var claims = new List<Claim>();
         if (userId.HasValue)
             claims.Add(new Claim("uid", userId.Value.ToString()));
