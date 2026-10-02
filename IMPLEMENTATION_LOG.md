@@ -3374,6 +3374,39 @@ Three compounding issues caused the failure:
 - Build: `dotnet build StoreProject.sln` — no code changes, existing green.
 - Pipeline: re-run CI/CD → health-check expected to pass on next push.
 
+---
+
+## Wave 55 — Tenant Onboarding & Provisioning Pipeline Resiliency (MT / OPS)
+
+**Date:** 2026-10-02  
+**Focus:** End-to-end verification and hardening of SaaS tenant onboarding and automated provisioning orchestration.
+
+### Root Causes & Remediation
+
+1. **EF Core Schema Mapping & DBNull Cast in ControlPlane**:
+   - `Tenant` model JSON collection properties (`maintenance_windows`, `payments`) added in later migrations contained `NULL` for existing rows, triggering `System.InvalidCastException: Unable to cast DBNull to System.String` when background workers scanned tenants.
+   - Mapped all `Tenant` subscription properties and `TenantProvisioningJob` fields to explicit snake_case column names (`HasColumnName`).
+   - Configured `.IsRequired(false)` and null-safe reverse converters (`string.IsNullOrEmpty(v) ? new() : ...`) across all JSON columns in `ControlPlaneDbContext.cs`.
+
+2. **Idempotent Background Provisioning Execution**:
+   - In `TenantProvisioningHostedService.cs`, job updates used `ExecuteUpdateAsync` which could fail on type mismatches or context tracking races, causing the retry loop to fail on attempt 2 with `"A store with subdomain slug already exists"`.
+   - Replaced `ExecuteUpdateAsync` with standard tracked entity updates and `SaveChangesAsync`.
+   - Added idempotency check via `ITenantRepository.GetBySlugAsync`: if a tenant is already provisioned in a prior attempt for the same account, it reuses the provisioned tenant and completes the job gracefully.
+
+### End-to-End Verification
+- **Slug Availability API**: Tested `GET /api/control/slugs/check` for both available and taken slugs.
+- **Account Registration**: Verified `POST /api/control/auth/register` creates portal accounts in `portal_accounts`.
+- **Async Provisioning Queue**: Verified `POST /api/control/tenants/provision-async` successfully accepts and queues provisioning jobs.
+- **Automated Stack Provisioning**:
+  - Automatically created MySQL database `store_novamart`.
+  - Applied full base schema template (`001_production_base.sql`) with all 60+ tables.
+  - Hashed credentials and seeded default administrator `novamart_admin`.
+  - Generated isolated `docker-compose.yml` in `Tenants/novamart/`.
+  - Generated Traefik reverse proxy dynamic routing in `traefik/dynamic/novamart.yml`.
+  - Successfully linked portal account to tenant ID in database.
+- **Automated Test Suite**: Ran `dotnet test Store.ControlPlane.Tests` (**57 passed, 0 failed**).
+
+
 
 
 
