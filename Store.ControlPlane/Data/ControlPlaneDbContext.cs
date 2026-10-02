@@ -104,19 +104,25 @@ public class ControlPlaneDbContext : DbContext
                 .HasConversion(
                     v => JsonSerializer.Serialize(v, JsonOptions),
                     v => JsonSerializer.Deserialize<List<MaintenanceWindow>>(v, JsonOptions) ?? new())
-                .HasColumnType("longtext");
+                .HasColumnType("longtext")
+                .HasColumnName("maintenance_windows");
 
             // Wave 18 — payment history surfaced on the Billing page.
             entity.Property(t => t.Payments)
                 .HasConversion(
                     v => JsonSerializer.Serialize(v, JsonOptions),
                     v => JsonSerializer.Deserialize<List<TenantPayment>>(v, JsonOptions) ?? new())
-                .HasColumnType("longtext");
+                .HasColumnType("longtext")
+                .HasColumnName("payments");
 
             // Wave 18 — subscription lifecycle scalar columns.
-            entity.Property(t => t.SubscriptionPlanId).HasMaxLength(64);
-            entity.Property(t => t.SubscriptionStatus).HasConversion<int>();
-            entity.Property(t => t.LastPaymentToken).HasMaxLength(128);
+            entity.Property(t => t.SubscriptionPlanId).HasMaxLength(64).HasColumnName("subscription_plan_id");
+            entity.Property(t => t.SubscriptionStatus).HasConversion<int>().HasColumnName("subscription_status");
+            entity.Property(t => t.SubscriptionStartUtc).HasColumnName("subscription_start_utc");
+            entity.Property(t => t.SubscriptionEndUtc).HasColumnName("subscription_end_utc");
+            entity.Property(t => t.NextBillingAtUtc).HasColumnName("next_billing_at_utc");
+            entity.Property(t => t.GracePeriodUntilUtc).HasColumnName("grace_period_until_utc");
+            entity.Property(t => t.LastPaymentToken).HasMaxLength(128).HasColumnName("last_payment_token");
         });
 
         // PortalAccount Configuration
@@ -156,20 +162,27 @@ public class ControlPlaneDbContext : DbContext
         {
             entity.ToTable("tenant_provisioning_jobs");
             entity.HasKey(j => j.JobId);
+            entity.Property(j => j.JobId).HasColumnName("job_id");
+            entity.Property(j => j.AccountId).HasColumnName("account_id");
+            entity.Property(j => j.StoreName).HasColumnName("store_name").HasMaxLength(200).IsRequired();
+            entity.Property(j => j.Slug).HasColumnName("slug").HasMaxLength(80).IsRequired();
+            entity.Property(j => j.AdminEmail).HasColumnName("admin_email").HasMaxLength(255).IsRequired();
+            entity.Property(j => j.AdminUsername).HasColumnName("admin_username").HasMaxLength(100).IsRequired();
+            entity.Property(j => j.AdminPasswordCipher).HasColumnName("admin_password_cipher").HasMaxLength(512);
+            entity.Property(j => j.Currency).HasColumnName("currency").HasMaxLength(8);
+            entity.Property(j => j.PlanTier).HasColumnName("plan_tier").HasConversion<string>().HasMaxLength(40);
+            entity.Property(j => j.CustomDomain).HasColumnName("custom_domain").HasMaxLength(255);
+            entity.Property(j => j.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(20);
+            entity.Property(j => j.StatusDetail).HasColumnName("status_detail").HasMaxLength(1000);
+            entity.Property(j => j.FailureReason).HasColumnName("failure_reason").HasMaxLength(2000);
+            entity.Property(j => j.TenantId).HasColumnName("tenant_id");
+            entity.Property(j => j.DateCreated).HasColumnName("date_created");
+            entity.Property(j => j.StartedAt).HasColumnName("started_at");
+            entity.Property(j => j.CompletedAt).HasColumnName("completed_at");
             entity.HasIndex(j => j.AccountId);
             // The hosted service polls Status=Pending ORDER BY DateCreated ASC.
             entity.HasIndex(j => new { j.Status, j.DateCreated })
                   .HasDatabaseName("ix_provisioning_jobs_status_date");
-            entity.Property(j => j.StoreName).HasMaxLength(200).IsRequired();
-            entity.Property(j => j.Slug).HasMaxLength(80).IsRequired();
-            entity.Property(j => j.AdminEmail).HasMaxLength(255).IsRequired();
-            entity.Property(j => j.AdminUsername).HasMaxLength(100).IsRequired();
-            entity.Property(j => j.Currency).HasMaxLength(8);
-            entity.Property(j => j.PlanTier).HasConversion<string>().HasMaxLength(40);
-            entity.Property(j => j.Status).HasConversion<string>().HasMaxLength(20);
-            entity.Property(j => j.AdminPasswordCipher).HasMaxLength(512);
-            entity.Property(j => j.StatusDetail).HasMaxLength(1000);
-            entity.Property(j => j.FailureReason).HasMaxLength(2000);
         });
     }
 
