@@ -60,60 +60,64 @@ public class ControlPlaneDbContext : DbContext
             entity.Property(t => t.DomainConfig)
                 .HasConversion(
                     v => JsonSerializer.Serialize(v, JsonOptions),
-                    v => JsonSerializer.Deserialize<TenantDomainConfig>(v, JsonOptions) ?? new())
+                    v => string.IsNullOrEmpty(v) ? new() : JsonSerializer.Deserialize<TenantDomainConfig>(v, JsonOptions) ?? new())
                 .HasColumnType("longtext");
 
             entity.Property(t => t.Branches)
                 .HasConversion(
                     v => JsonSerializer.Serialize(v, JsonOptions),
-                    v => JsonSerializer.Deserialize<List<TenantBranchMapping>>(v, JsonOptions) ?? new())
+                    v => string.IsNullOrEmpty(v) ? new() : JsonSerializer.Deserialize<List<TenantBranchMapping>>(v, JsonOptions) ?? new())
                 .HasColumnType("longtext");
 
             entity.Property(t => t.BackupProviders)
                 .HasConversion(
                     v => JsonSerializer.Serialize(v, JsonOptions),
-                    v => JsonSerializer.Deserialize<List<BackupProviderConfig>>(v, JsonOptions) ?? new())
+                    v => string.IsNullOrEmpty(v) ? new() : JsonSerializer.Deserialize<List<BackupProviderConfig>>(v, JsonOptions) ?? new())
                 .HasColumnType("longtext");
 
             entity.Property(t => t.BackupSchedule)
                 .HasConversion(
                     v => JsonSerializer.Serialize(v, JsonOptions),
-                    v => JsonSerializer.Deserialize<BackupScheduleConfig>(v, JsonOptions) ?? new())
+                    v => string.IsNullOrEmpty(v) ? new() : JsonSerializer.Deserialize<BackupScheduleConfig>(v, JsonOptions) ?? new())
                 .HasColumnType("longtext");
 
             entity.Property(t => t.BackupHistory)
                 .HasConversion(
                     v => JsonSerializer.Serialize(v, JsonOptions),
-                    v => JsonSerializer.Deserialize<List<TenantBackupJobRecord>>(v, JsonOptions) ?? new())
+                    v => string.IsNullOrEmpty(v) ? new() : JsonSerializer.Deserialize<List<TenantBackupJobRecord>>(v, JsonOptions) ?? new())
                 .HasColumnType("longtext");
 
             entity.Property(t => t.AuditTrail)
                 .HasConversion(
                     v => JsonSerializer.Serialize(v, JsonOptions),
-                    v => JsonSerializer.Deserialize<List<TenantAuditRecord>>(v, JsonOptions) ?? new())
+                    v => string.IsNullOrEmpty(v) ? new() : JsonSerializer.Deserialize<List<TenantAuditRecord>>(v, JsonOptions) ?? new())
                 .HasColumnType("longtext");
 
             entity.Property(t => t.ProvisioningLogs)
                 .HasConversion(
                     v => JsonSerializer.Serialize(v, JsonOptions),
-                    v => JsonSerializer.Deserialize<List<TenantProvisioningLog>>(v, JsonOptions) ?? new())
+                    v => string.IsNullOrEmpty(v) ? new() : JsonSerializer.Deserialize<List<TenantProvisioningLog>>(v, JsonOptions) ?? new())
                 .HasColumnType("longtext");
 
             // MT-07 — maintenance windows surfaced to the public status page.
+            // Column added with nullable=true; existing rows have NULL → must be IsRequired(false).
             entity.Property(t => t.MaintenanceWindows)
                 .HasConversion(
                     v => JsonSerializer.Serialize(v, JsonOptions),
-                    v => JsonSerializer.Deserialize<List<MaintenanceWindow>>(v, JsonOptions) ?? new())
+                    v => string.IsNullOrEmpty(v) ? new() : JsonSerializer.Deserialize<List<MaintenanceWindow>>(v, JsonOptions) ?? new())
                 .HasColumnType("longtext")
-                .HasColumnName("maintenance_windows");
+                .HasColumnName("maintenance_windows")
+                .IsRequired(false);
 
             // Wave 18 — payment history surfaced on the Billing page.
+            // Column added with nullable=true; existing rows have NULL → must be IsRequired(false).
             entity.Property(t => t.Payments)
                 .HasConversion(
                     v => JsonSerializer.Serialize(v, JsonOptions),
-                    v => JsonSerializer.Deserialize<List<TenantPayment>>(v, JsonOptions) ?? new())
+                    v => string.IsNullOrEmpty(v) ? new() : JsonSerializer.Deserialize<List<TenantPayment>>(v, JsonOptions) ?? new())
                 .HasColumnType("longtext")
-                .HasColumnName("payments");
+                .HasColumnName("payments")
+                .IsRequired(false);
 
             // Wave 18 — subscription lifecycle scalar columns.
             entity.Property(t => t.SubscriptionPlanId).HasMaxLength(64).HasColumnName("subscription_plan_id");
