@@ -9,6 +9,18 @@ public class TenantSecrets
     public string MoMoCallbackKey { get; set; } = string.Empty;
     public string OtpPepper { get; set; } = string.Empty;
     public string BackupEncryptionKey { get; set; } = string.Empty;
+
+    // MT-04 — Per-tenant custom SMTP relay configuration
+    public string SmtpHost { get; set; } = string.Empty;
+    public int SmtpPort { get; set; } = 587;
+    public string SmtpUsername { get; set; } = string.Empty;
+    public string SmtpPassword { get; set; } = string.Empty;
+    public string SmtpFromEmail { get; set; } = string.Empty;
+    public string SmtpFromName { get; set; } = string.Empty;
+    public bool SmtpEnableSsl { get; set; } = true;
+    public bool SmtpIsEnabled { get; set; } = false;
+    public DateTime? SmtpLastTestedAt { get; set; }
+    public string? SmtpLastTestStatus { get; set; }
 }
 
 public class TenantProvisioningLog

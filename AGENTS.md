@@ -188,6 +188,8 @@ dotnet build StoreProject.sln --configuration Release
 
 # 2. Tests pass
 dotnet test Store.API.Tests
+dotnet test Store.ControlPlane.Tests
+dotnet test Store.TenantPortal.Tests
 
 # 3. Secrets scan (CI runs this too, but check locally)
 # gitleaks detect --source . --no-banner

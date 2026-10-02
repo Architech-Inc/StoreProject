@@ -54,7 +54,7 @@ Transform the internal business engine into an observable, secure, zero-warning,
 ### Goal
 Provide isolated retail operations per tenant with zero cross-tenant data leakage, automated provisioning, and plan-tier enforcement.
 
-### Status: **85% Complete**
+### Status: **95% Complete**
 
 | Finding ID | Scope & Milestone | Status | Resolution Detail |
 |---|---|---|---|
@@ -65,8 +65,8 @@ Provide isolated retail operations per tenant with zero cross-tenant data leakag
 | `MT-06` | Tenant provisioning automation scripts | `[x]` | Authored `scripts/provision-tenant.ps1` and `scripts/provision-tenant.sh`. |
 | `MT-07` | Multi-tenant database backup snapshotting | `[x]` | Delivered `scripts/backup-now.ps1` and `scripts/restore-database.ps1`. |
 | `DOC-05` | Per-tenant operations runbook | `[x]` | Authored `docs/tenant_operations_runbook.md` with complete SOPs. |
-| `MT-04` | Per-tenant SMTP credentials rotation | `[ ]` | Migrate from shared SMTP relay to per-tenant `From` address & API keys. |
-| `PROC-05` | Smoke test suite for ControlPlane / TenantPortal| `[ ]` | Create `Store.ControlPlane.Tests` and `Store.TenantPortal.Tests` projects. |
+| `MT-04` | Per-tenant SMTP credentials rotation | `[x]` | Delivered `ITenantSmtpService`, AES-256 encrypted relay config, portal UI, live test dispatch, and Enterprise plan feature gate. |
+| `PROC-05` | Smoke test suite for ControlPlane / TenantPortal| `[x]` | Built `Store.ControlPlane.Tests` (51 tests) and `Store.TenantPortal.Tests` (27 tests) in Wave 43/47. |
 
 ---
 
@@ -86,7 +86,7 @@ Enable seamless multi-currency, multi-branch operations tailored for Cameroon, C
 | `GAP-23` | Offline-capable POS with local ledger | `[x]` | Service Worker caching (`sw.js`) and background sync for network outages. |
 | `UX-01` | Progressive Web App (PWA) manifest | `[x]` | Installed PWA manifest with mobile-friendly splash and offline cache. |
 | `UX-04` | Global keyboard shortcuts cheatsheet (`?`) | `[x]` | Built accessible shortcut modal with live search filter and 3D keycaps. |
-| `UX-02` | Mobile-first layout & touch-first POS register | `[ ]` | Reconcile small-screen viewport breakpoints and touch targets. |
+| `UX-02` | Mobile-first layout & touch-first POS register | `[x]` | Delivered mobile segmented view switcher, sticky bottom cart summary, and WCAG touch targets (Wave 42). |
 | `SEC-24` | Password hashing upgrade to Argon2id | `[ ]` | Migrate from BCrypt (cost 12) to Argon2id. |
 
 ---
@@ -112,8 +112,8 @@ Scale to commercial SaaS operations with automated billing, self-service tier up
 
 | Metric | Target | Current Status | Notes |
 |---|---|---|---|
-| **Build Warnings** | 0 warnings | **0 warnings** | Release mode strictly enforced across all 7 projects. |
-| **Unit Test Suite** | >400 tests | **414 passed (100%)** | Includes controller security reflection test suite. |
-| **Build Time** | <90s | **~35s** | Release build with incremental Roslyn analyzer caching. |
+| **Build Warnings** | 0 warnings | **0 warnings** | Release mode strictly enforced across all 9 projects. |
+| **Unit Test Suite** | >400 tests | **499 passed (100%)** | 421 API tests + 51 ControlPlane tests + 27 TenantPortal tests. |
+| **Build Time** | <90s | **~25s** | Release build with incremental Roslyn analyzer caching. |
 | **Tenant Isolation** | Virtual Private Stack | **100% Isolated** | Dedicated containers and database per tenant (`ADR-002`). |
 | **Documentation Coverage**| Comprehensive | **High** | Onboarding, Runbook, Security, ADRs, Design System. |

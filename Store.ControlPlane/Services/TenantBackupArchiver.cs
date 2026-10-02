@@ -67,7 +67,7 @@ public class TenantBackupArchiver
         CancellationToken ct = default)
     {
         var timestamp = DateTime.UtcNow;
-        var dateStr = timestamp.ToString("yyyyMMdd_HHmmss");
+        var dateStr = timestamp.ToString("yyyyMMdd_HHmmssfff");
         var tenantDir = Path.Combine(baseDirectory, tenant.Slug);
         Directory.CreateDirectory(tenantDir);
 
@@ -270,7 +270,7 @@ public class TenantBackupArchiver
 
         // Group files by timestamp prefix: e.g. "{slug}-mysql-{timestamp}"
         var manifestFiles = Directory.GetFiles(tenantDir, $"{tenantSlug}-manifest-*.json")
-            .OrderBy(f => File.GetCreationTimeUtc(f))
+            .OrderBy(f => Path.GetFileName(f))
             .ToList();
 
         if (manifestFiles.Count <= retentionCount) return 0;

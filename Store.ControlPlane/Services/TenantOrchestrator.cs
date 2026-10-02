@@ -744,7 +744,15 @@ public class TenantOrchestrator : ITenantOrchestrator
             .Replace("{{BACKUP_RETENTION_COUNT}}", (t.BackupSchedule?.RetentionCount ?? 14).ToString())
             .Replace("{{STORE_BACKUP_IMAGE}}", _config["ControlPlane:StoreBackupImage"] ?? "clexan-tenant-backup:latest")
             .Replace("{{STORE_API_IMAGE}}", storeApiImage)
-            .Replace("{{STORE_UI_IMAGE}}", storeUiImage);
+            .Replace("{{STORE_UI_IMAGE}}", storeUiImage)
+            .Replace("{{SMTP_HOST}}", t.Secrets.SmtpHost)
+            .Replace("{{SMTP_PORT}}", t.Secrets.SmtpPort.ToString())
+            .Replace("{{SMTP_USERNAME}}", t.Secrets.SmtpUsername)
+            .Replace("{{SMTP_PASSWORD}}", t.Secrets.SmtpPassword)
+            .Replace("{{SMTP_FROM_EMAIL}}", string.IsNullOrWhiteSpace(t.Secrets.SmtpFromEmail) ? "noreply@clexanfoods.cm" : t.Secrets.SmtpFromEmail)
+            .Replace("{{SMTP_FROM_NAME}}", string.IsNullOrWhiteSpace(t.Secrets.SmtpFromName) ? t.Name : t.Secrets.SmtpFromName)
+            .Replace("{{SMTP_ENABLE_SSL}}", t.Secrets.SmtpEnableSsl.ToString().ToLowerInvariant())
+            .Replace("{{SMTP_IS_ENABLED}}", t.Secrets.SmtpIsEnabled.ToString().ToLowerInvariant());
     }
 
     private async Task<(bool success, string output)> RunProcessAsync(string fileName, string arguments, string workingDir, CancellationToken ct = default)

@@ -41,11 +41,18 @@ public static class HangfireServiceExtensions
         if (string.IsNullOrWhiteSpace(connectionString))
             return string.Empty;
 
-        // Strip trailing semicolons and empty tokens to prevent Hangfire.MySql IndexOutOfRangeException in ToString()
+        // Strip trailing semicolons, empty tokens, and empty-value keys (such as 'Password=')
+        // to prevent Hangfire.MySql internal ToString() from throwing IndexOutOfRangeException.
         var parts = connectionString
             .Split(';', StringSplitOptions.RemoveEmptyEntries)
-            .Where(p => p.Contains('='))
-            .Select(p => p.Trim());
+            .Select(p => p.Trim())
+            .Where(p =>
+            {
+                var eqIdx = p.IndexOf('=');
+                if (eqIdx <= 0) return false;
+                var val = p.Substring(eqIdx + 1).Trim();
+                return !string.IsNullOrEmpty(val);
+            });
 
         return string.Join(";", parts);
     }

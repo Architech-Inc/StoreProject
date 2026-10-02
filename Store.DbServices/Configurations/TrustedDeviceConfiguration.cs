@@ -42,5 +42,11 @@ public class TrustedDeviceConfiguration : IEntityTypeConfiguration<TrustedDevice
             .WithMany()
             .HasForeignKey(d => d.UserId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // TrustedDevice uses IsRevoked for device revocation rather than soft deletion;
+        // ignore BaseEntity soft-delete columns not present in the trusted_device database table.
+        builder.Ignore(d => d.DeletedAt);
+        builder.Ignore(d => d.DeletedById);
+        builder.Ignore(d => d.IsDeleted);
     }
 }

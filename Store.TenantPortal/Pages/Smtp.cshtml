@@ -1,0 +1,286 @@
+@page
+@model Store.TenantPortal.Pages.SmtpModel
+@{
+    ViewData["Title"] = "Outbound Email Relay & SMTP";
+    var smtp = Model.SmtpConfig;
+}
+
+<div class="portal-container">
+    <!-- Header -->
+    <div style="margin-bottom: 32px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+                <h1 style="font-size: 2rem; margin-bottom: 6px;">Outbound Email & SMTP Relay</h1>
+                <p style="color: var(--p-text-muted); font-size: 0.95rem; margin: 0;">
+                    Configure custom SMTP mail servers (SendGrid, Mailgun, AWS SES, or private relays) for branded notifications, receipts, and OTP dispatches.
+                </p>
+            </div>
+            <div>
+                @if (Model.IsEnterprise)
+                {
+                    <span class="status-badge healthy">
+                        <span class="status-dot healthy"></span> Enterprise Tier Unlocked
+                    </span>
+                }
+                else
+                {
+                    <span class="status-badge" style="background: rgba(234, 179, 8, 0.15); color: #eab308; border-color: rgba(234, 179, 8, 0.3);">
+                        ★ Enterprise Feature
+                    </span>
+                }
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.FeedbackMessage))
+    {
+        <div class="portal-alert @(Model.IsError ? "danger" : "success") auto-dismiss">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                @if (Model.IsError)
+                {
+                    <circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line>
+                }
+                else
+                {
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline>
+                }
+            </svg>
+            <span>@Model.FeedbackMessage</span>
+        </div>
+    }
+
+    <!-- Relay Status Overview Card -->
+    <div class="portal-card" style="margin-bottom: 28px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <div>
+                <span class="status-badge @(smtp?.IsEnabled == true ? "healthy" : "warning")" style="margin-bottom: 8px;">
+                    <span class="status-dot @(smtp?.IsEnabled == true ? "healthy" : "warning")"></span>
+                    @(smtp?.IsEnabled == true ? "Custom Relay Active" : "Default Platform Relay Active")
+                </span>
+                <h3 style="font-size: 1.3rem; margin: 4px 0 0;">Outbound Dispatch Pipeline</h3>
+            </div>
+            @if (smtp?.IsEnabled == true && !string.IsNullOrEmpty(smtp.Host))
+            {
+                <div style="text-align: right;">
+                    <span style="font-size: 12px; color: var(--p-text-muted); display: block;">Last Diagnostic Test</span>
+                    <span style="font-size: 13px; font-weight: 500; color: @(smtp.LastTestStatus?.StartsWith("Success") == true ? "#4ade80" : "#f87171");">
+                        @(smtp.LastTestedAt.HasValue ? $"{smtp.LastTestedAt.Value:MMM dd, yyyy HH:mm} UTC — {smtp.LastTestStatus}" : "Not tested yet")
+                    </span>
+                </div>
+            }
+        </div>
+
+        <p style="color: var(--p-text-muted); font-size: 0.9rem; margin-bottom: 20px;">
+            Transactional emails (Password Reset OTPs, Contact Approvals, Low Stock Alerts, Purchase Order transmissions, and Digital Tax Invoices) are routed through this relay.
+        </p>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px;">
+            <div style="background: var(--p-surface-alt); padding: 14px; border-radius: 12px; border: 1px solid var(--p-border);">
+                <div style="font-size: 12px; color: var(--p-text-muted); margin-bottom: 4px;">Relay Host & Port</div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="code-font" style="font-size: 13px; color: #4ade80;">
+                        @(string.IsNullOrEmpty(smtp?.Host) ? "platform-relay.clexanfoods.cm:587 (Shared)" : $"{smtp.Host}:{smtp.Port}")
+                    </span>
+                </div>
+            </div>
+
+            <div style="background: var(--p-surface-alt); padding: 14px; border-radius: 12px; border: 1px solid var(--p-border);">
+                <div style="font-size: 12px; color: var(--p-text-muted); margin-bottom: 4px;">From Envelope / Sender</div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="code-font" style="font-size: 13px;">
+                        @(string.IsNullOrEmpty(smtp?.FromEmail) ? "noreply@clexanfoods.cm" : $"{smtp.FromName} <{smtp.FromEmail}>")
+                    </span>
+                </div>
+            </div>
+
+            <div style="background: var(--p-surface-alt); padding: 14px; border-radius: 12px; border: 1px solid var(--p-border);">
+                <div style="font-size: 12px; color: var(--p-text-muted); margin-bottom: 4px;">Security & TLS Protocol</div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 13px; font-weight: 500;">
+                        @(smtp?.EnableSsl != false ? "🔒 STARTTLS / TLS 1.3 Enforced" : "⚠️ Plaintext Unencrypted")
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (!Model.IsEnterprise)
+    {
+        <!-- Quota Upgrade Banner -->
+        <div class="portal-card" style="border: 1px solid rgba(234, 179, 8, 0.3); background: linear-gradient(135deg, rgba(234, 179, 8, 0.05) 0%, rgba(15, 23, 42, 0.4) 100%);">
+            <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
+                <div style="width: 48px; height: 48px; border-radius: 12px; background: rgba(234, 179, 8, 0.15); display: flex; align-items: center; justify-content: center; color: #eab308; font-size: 24px;">
+                    ✉️
+                </div>
+                <div style="flex: 1; min-width: 280px;">
+                    <h3 style="margin: 0 0 4px; font-size: 1.15rem; color: #fef08a;">Custom SMTP Relay is an Enterprise Feature</h3>
+                    <p style="margin: 0; color: var(--p-text-muted); font-size: 0.9rem; line-height: 1.5;">
+                        Your current subscription is <strong>@(Model.TenantDetail?.PlanTier.ToString() ?? "Starter")</strong>. Upgrade to <strong>Enterprise</strong> to send all customer and internal emails from your own domain server with custom DKIM/SPF alignment and private deliverability reputation.
+                    </p>
+                </div>
+                <div>
+                    <a href="/Billing/@Model.TenantDetail?.Slug" class="btn-primary-glow" style="padding: 10px 22px; font-size: 13px; text-decoration: none;">
+                        Upgrade to Enterprise &rarr;
+                    </a>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- Enterprise Configuration Grid -->
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; align-items: start;">
+            <!-- SMTP Settings Form -->
+            <div class="portal-card">
+                <div style="margin-bottom: 20px;">
+                    <h3 style="font-size: 1.25rem; margin: 0 0 6px;">Configure Custom Mail Relay</h3>
+                    <p style="color: var(--p-text-muted); font-size: 0.88rem; margin: 0;">
+                        Specify credentials for your dedicated SMTP server. Passwords are encrypted with AES-256-GCM at rest.
+                    </p>
+                </div>
+
+                <form method="post" asp-page-handler="Save">
+                    <div style="display: grid; grid-template-columns: 3fr 1fr; gap: 16px; margin-bottom: 16px;">
+                        <div>
+                            <label class="form-label" asp-for="SmtpInput.Host">SMTP Host Server *</label>
+                            <input asp-for="SmtpInput.Host" class="form-control" placeholder="e.g. smtp.sendgrid.net or mail.yourdomain.cm" required />
+                            <span asp-validation-for="SmtpInput.Host" style="color: #f87171; font-size: 12px;"></span>
+                        </div>
+                        <div>
+                            <label class="form-label" asp-for="SmtpInput.Port">Port *</label>
+                            <input asp-for="SmtpInput.Port" type="number" class="form-control" placeholder="587" min="1" max="65535" required />
+                            <span asp-validation-for="SmtpInput.Port" style="color: #f87171; font-size: 12px;"></span>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                        <div>
+                            <label class="form-label" asp-for="SmtpInput.Username">Auth Username / API Key</label>
+                            <input asp-for="SmtpInput.Username" class="form-control" placeholder="e.g. apikey or user@domain.cm" />
+                        </div>
+                        <div>
+                            <label class="form-label" asp-for="SmtpInput.Password">
+                                Auth Password / Secret
+                                @if (smtp?.HasPassword == true)
+                                {
+                                    <span style="color: #4ade80; font-size: 11px; margin-left: 6px;">(Saved ••••••••)</span>
+                                }
+                            </label>
+                            <input asp-for="SmtpInput.Password" type="password" class="form-control" placeholder="@(smtp?.HasPassword == true ? "Leave blank to keep current password" : "Enter SMTP password")" />
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                        <div>
+                            <label class="form-label" asp-for="SmtpInput.FromEmail">From Email Address *</label>
+                            <input asp-for="SmtpInput.FromEmail" type="email" class="form-control" placeholder="orders@yourdomain.cm" required />
+                            <span asp-validation-for="SmtpInput.FromEmail" style="color: #f87171; font-size: 12px;"></span>
+                        </div>
+                        <div>
+                            <label class="form-label" asp-for="SmtpInput.FromName">From Display Name</label>
+                            <input asp-for="SmtpInput.FromName" class="form-control" placeholder="e.g. ClexAn Foods - Bastos" />
+                        </div>
+                    </div>
+
+                    <div style="background: var(--p-surface-alt); padding: 16px; border-radius: 12px; margin-bottom: 24px; border: 1px solid var(--p-border);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <div>
+                                <div style="font-weight: 500; font-size: 13px;">Enable SSL / TLS Encryption</div>
+                                <div style="font-size: 12px; color: var(--p-text-muted);">Negotiate secure STARTTLS transport layer encryption (recommended).</div>
+                            </div>
+                            <label style="position: relative; display: inline-block; width: 44px; height: 24px; margin: 0;">
+                                <input asp-for="SmtpInput.EnableSsl" type="checkbox" style="opacity: 0; width: 0; height: 0;" id="sslToggle">
+                                <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--p-border); transition: .3s; border-radius: 24px;" class="slider"></span>
+                            </label>
+                        </div>
+
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-weight: 500; font-size: 13px;">Activate Custom Relay</div>
+                                <div style="font-size: 12px; color: var(--p-text-muted);">Route live traffic through this custom server rather than platform defaults.</div>
+                            </div>
+                            <label style="position: relative; display: inline-block; width: 44px; height: 24px; margin: 0;">
+                                <input asp-for="SmtpInput.IsEnabled" type="checkbox" style="opacity: 0; width: 0; height: 0;" id="relayToggle">
+                                <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--p-border); transition: .3s; border-radius: 24px;" class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <button type="submit" class="btn-primary-glow" style="padding: 10px 24px; font-size: 13px;">
+                            Save SMTP Configuration
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Diagnostics & Test Card -->
+            <div>
+                <div class="portal-card" style="margin-bottom: 24px;">
+                    <h3 style="font-size: 1.15rem; margin: 0 0 6px;">Live Connection Test</h3>
+                    <p style="color: var(--p-text-muted); font-size: 0.85rem; margin-bottom: 16px;">
+                        Send an automated RFC 5322 test verification email to confirm firewall egress, TLS handshake, and credentials.
+                    </p>
+
+                    <form method="post" asp-page-handler="Test">
+                        <div style="margin-bottom: 14px;">
+                            <label class="form-label">Recipient Email</label>
+                            <input asp-for="TestRecipientEmail" type="email" class="form-control" placeholder="your-email@domain.com" required />
+                        </div>
+                        <button type="submit" class="btn-glass" style="width: 100%; padding: 10px; font-size: 13px;">
+                            ✉️ Send Test Email
+                        </button>
+                    </form>
+
+                    @if (Model.TestResult != null)
+                    {
+                        <div style="margin-top: 16px; padding: 12px; border-radius: 8px; font-size: 12px; background: @(Model.TestResult.Success ? "rgba(34, 197, 94, 0.1)" : "rgba(239, 68, 68, 0.1)"); border: 1px solid @(Model.TestResult.Success ? "rgba(34, 197, 94, 0.3)" : "rgba(239, 68, 68, 0.3)"); color: @(Model.TestResult.Success ? "#4ade80" : "#f87171");">
+                            <div style="font-weight: 600; margin-bottom: 4px;">@(Model.TestResult.Success ? "✓ Verification Passed" : "✗ Verification Failed")</div>
+                            <div>@Model.TestResult.Message</div>
+                            @if (Model.TestResult.LatencyMs > 0)
+                            {
+                                <div style="color: var(--p-text-muted); margin-top: 4px;">Latency: @Model.TestResult.LatencyMs ms</div>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <div class="portal-card">
+                    <h3 style="font-size: 1.15rem; margin: 0 0 6px;">Reset Relay</h3>
+                    <p style="color: var(--p-text-muted); font-size: 0.85rem; margin-bottom: 16px;">
+                        Clear custom credentials and immediately fall back to the platform's default shared SMTP relay.
+                    </p>
+
+                    <form method="post" asp-page-handler="Reset" onsubmit="return confirm('Are you sure you want to revert to platform default SMTP?');">
+                        <button type="submit" class="btn-glass" style="width: 100%; padding: 10px; font-size: 13px; color: #f87171; border-color: rgba(239, 68, 68, 0.3);">
+                            ↺ Revert to Platform Default
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <style>
+        input:checked + .slider {
+            background-color: var(--p-green) !important;
+        }
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+    </style>
+}

@@ -109,6 +109,7 @@ builder.Services.AddSingleton<IDomainVerificationService, DomainVerificationServ
 builder.Services.AddSingleton<ITraefikConfigWriter, TraefikConfigWriter>();
 builder.Services.AddSingleton<IBackupService, BackupService>();
 builder.Services.AddScoped<ITenantOrchestrator, TenantOrchestrator>();
+builder.Services.AddScoped<ITenantSmtpService, TenantSmtpService>();
 // Wave 18 — payment reconciliation. Wired into the IPN handler so a
 // successful PayDunya webhook upgrades the tenant's plan tier.
 builder.Services.AddScoped<Store.ControlPlane.Services.SubscriptionReconciler>();

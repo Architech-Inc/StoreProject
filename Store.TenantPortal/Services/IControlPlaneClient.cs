@@ -76,5 +76,11 @@ public interface IControlPlaneClient
     Task<TenantDetailDto?> GetTenantAsync(string slug, CancellationToken ct = default);
     Task<CreateInvoiceResponse?> CreateBillingInvoiceAsync(string slug, CreateBillingInvoiceRequest request, CancellationToken ct = default);
     Task<TenantPaymentHistoryDto?> GetBillingHistoryAsync(string slug, CancellationToken ct = default);
+
+    // MT-04 — per-tenant custom SMTP mail relay
+    Task<Store.Models.DTOs.Tenant.TenantSmtpConfigDto?> GetSmtpConfigAsync(Guid tenantId, CancellationToken ct = default);
+    Task<Store.Models.DTOs.Tenant.TenantSmtpConfigDto> UpdateSmtpConfigAsync(Guid tenantId, Store.Models.DTOs.Tenant.UpdateTenantSmtpRequest request, CancellationToken ct = default);
+    Task<Store.Models.DTOs.Tenant.TestSmtpResponse> TestSmtpConfigAsync(Guid tenantId, Store.Models.DTOs.Tenant.TestSmtpRequest request, CancellationToken ct = default);
+    Task<bool> ResetSmtpConfigAsync(Guid tenantId, CancellationToken ct = default);
 }
 

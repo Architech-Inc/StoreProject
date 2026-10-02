@@ -2825,6 +2825,70 @@ Resolve finding `OPS-07` by establishing centralized, structured log shipping an
   - Release Build: `dotnet build StoreProject.sln --configuration Release` (**0 warnings, 0 errors**).
 - Audit tracker updated: `OPS-12` marked `[x]`.
 
+---
+
+## Wave 47 — Per-Tenant Custom SMTP Relay & Enterprise Mail Credentials (MT-04)
+
+**Goal**: Deliver per-tenant custom SMTP relay configuration, AES-256 encrypted credential storage, live delivery testing, and fallback simulation for transactional notifications.
+
+### 47.A — Models, DTOs & Configuration Options
+- **`TenantSmtpDtos` (`Store.Models/DTOs/Tenant/TenantSmtpDtos.cs`)**:
+  - `TenantSmtpConfigDto`: Host, Port, Username, FromEmail, FromName, EnableSsl, IsEnabled, HasConfiguredPassword, LastTestedAt, LastTestStatus.
+  - `UpdateTenantSmtpRequest`: Validation attributes for Host, Port, FromEmail, and optional password updates.
+  - `TestSmtpRequest` & `TestSmtpResponse`: Recipient email and test outcome diagnostics (success flag, latency ms, message).
+- **`SmtpOptions` (`Store.Models/Configuration/SmtpOptions.cs`)**:
+  - System-wide default fallback settings bound from `"Smtp"` config section.
+
+### 47.B — Email Transmission Abstraction & Safe Simulation
+- **`ISmtpEmailSender` (`Store.Models/Interfaces/Services/ISmtpEmailSender.cs`)**:
+  - Clean RFC 5321/5322 email transmission contract with HTML and attachment support.
+- **`SmtpEmailSender` (`Store.DbServices/Services/SmtpEmailSender.cs`)**:
+  - Network `SmtpClient` with SSL / STARTTLS negotiation.
+  - Automatic development/disabled fallback simulating dispatch to logger without failures.
+- **`NotificationService` & `MockEmailService` Integration**:
+  - Wired `ISmtpEmailSender` into `NotificationService.SendWithRetryAsync` and updated `MockEmailService` to delegate real mail requests.
+
+### 47.C — ControlPlane Cryptography & Plan-Tier Gating
+- **`TenantSecrets` (`Store.ControlPlane/Models/TenantSecretsAndLogs.cs`)**:
+  - Added SMTP relay fields: `SmtpHost`, `SmtpPort`, `SmtpUsername`, `SmtpPassword`, `SmtpFromEmail`, `SmtpFromName`, `SmtpEnableSsl`, `SmtpIsEnabled`, `SmtpLastTestedAt`, `SmtpLastTestStatus`.
+  - AES-256 encryption at rest in `ControlPlaneDbContext.cs` via `ISecretEncryptionService`.
+- **`PlanCatalog` Quota Gating**:
+  - Custom SMTP Relay enforced as an Enterprise-only feature via `PlanFeature.CustomSmtp`.
+  - Non-enterprise tenants attempting to save or test custom SMTP receive `HTTP 402 Payment Required` with `ErrorCode.QuotaExceeded`.
+- **`ITenantSmtpService` & `TenantSmtpService` (`Store.ControlPlane/Services/`)**:
+  - Full CRUD operations, plan tier verification, reset to system defaults, and live network SMTP test ping with latency measurement.
+- **`SmtpController` (`Store.ControlPlane/Controllers/SmtpController.cs`)**:
+  - REST endpoints at `api/control/tenants/{id}/smtp` (`GET`, `PUT`, `POST .../test`, `DELETE`).
+- **Compose Templates**:
+  - Injected `Smtp__Host`, `Smtp__Port`, `Smtp__Username`, `Smtp__Password`, `Smtp__FromEmail`, `Smtp__FromName`, `Smtp__EnableSsl`, `Smtp__IsEnabled` into `docker-compose.tenant.template.yml` and `docker-compose.tenant.hostmysql.template.yml`.
+
+### 47.D — TenantPortal Management UI & Client
+- **`IControlPlaneClient` & `ControlPlaneClient`**:
+  - Added client methods: `GetSmtpConfigAsync`, `UpdateSmtpConfigAsync`, `TestSmtpConfigAsync`, `ResetSmtpConfigAsync`.
+- **`Smtp.cshtml` & `Smtp.cshtml.cs` (`Store.TenantPortal/Pages/`)**:
+  - Responsive enterprise portal view with tokens.css variables, tier badges, form controls, live connection test modal with latency display, and one-click reset action.
+  - Added "Email Relay" navigation link in `_Layout.cshtml`.
+
+### 47.E — Test Coverage & Verification
+- **`Store.ControlPlane.Tests/SmtpControllerTests.cs` (6 tests)**:
+  - `GetSmtpConfig_TenantExists_ReturnsOkWithConfig`
+  - `GetSmtpConfig_TenantDoesNotExist_ReturnsNotFound`
+  - `UpdateSmtpConfig_EnterpriseTier_ReturnsOk`
+  - `UpdateSmtpConfig_StarterTierQuotaExceeded_Returns402PaymentRequired` (validates `ErrorCode.QuotaExceeded`)
+  - `TestSmtpConnection_WhenSuccessful_ReturnsOk`
+  - `ResetSmtpConfig_CallsService_ReturnsOk`
+- **`Store.API.Tests/SmtpEmailSenderTests.cs` (3 tests)**:
+  - `SendEmailAsync_WhenDisabled_SimulatesDispatchWithoutException`
+  - `SendEmailAsync_WithEmptyRecipient_ThrowsArgumentException`
+  - `NotificationService_DelegatesToSmtpEmailSender_WhenConfigured`
+- **Solution Verification**:
+  - Release Build: `dotnet build StoreProject.sln --configuration Release` (**0 warnings, 0 errors**).
+  - `Store.ControlPlane.Tests`: **51 passed, 0 failed**.
+  - `Store.API.Tests`: **421 passed, 0 failed**.
+  - `Store.TenantPortal.Tests`: **27 passed, 0 failed**.
+  - Total: **499 tests passed, 0 failed**.
+- Audit tracker updated: `MT-04` marked `[x]`.
+
 
 
 

@@ -189,7 +189,17 @@ public class ControlPlaneDbContext : DbContext
             JwtSecret = encryption.Encrypt(secrets.JwtSecret),
             MoMoCallbackKey = encryption.Encrypt(secrets.MoMoCallbackKey),
             OtpPepper = string.IsNullOrEmpty(secrets.OtpPepper) ? string.Empty : encryption.Encrypt(secrets.OtpPepper),
-            BackupEncryptionKey = string.IsNullOrEmpty(secrets.BackupEncryptionKey) ? string.Empty : encryption.Encrypt(secrets.BackupEncryptionKey)
+            BackupEncryptionKey = string.IsNullOrEmpty(secrets.BackupEncryptionKey) ? string.Empty : encryption.Encrypt(secrets.BackupEncryptionKey),
+            SmtpHost = secrets.SmtpHost,
+            SmtpPort = secrets.SmtpPort,
+            SmtpUsername = secrets.SmtpUsername,
+            SmtpPassword = string.IsNullOrEmpty(secrets.SmtpPassword) ? string.Empty : encryption.Encrypt(secrets.SmtpPassword),
+            SmtpFromEmail = secrets.SmtpFromEmail,
+            SmtpFromName = secrets.SmtpFromName,
+            SmtpEnableSsl = secrets.SmtpEnableSsl,
+            SmtpIsEnabled = secrets.SmtpIsEnabled,
+            SmtpLastTestedAt = secrets.SmtpLastTestedAt,
+            SmtpLastTestStatus = secrets.SmtpLastTestStatus
         };
 
         return JsonSerializer.Serialize(encryptedSecrets, JsonOptions);
@@ -210,7 +220,17 @@ public class ControlPlaneDbContext : DbContext
             JwtSecret = encryption.Decrypt(secrets.JwtSecret),
             MoMoCallbackKey = encryption.Decrypt(secrets.MoMoCallbackKey),
             OtpPepper = string.IsNullOrEmpty(secrets.OtpPepper) ? string.Empty : encryption.Decrypt(secrets.OtpPepper),
-            BackupEncryptionKey = string.IsNullOrEmpty(secrets.BackupEncryptionKey) ? string.Empty : encryption.Decrypt(secrets.BackupEncryptionKey)
+            BackupEncryptionKey = string.IsNullOrEmpty(secrets.BackupEncryptionKey) ? string.Empty : encryption.Decrypt(secrets.BackupEncryptionKey),
+            SmtpHost = secrets.SmtpHost,
+            SmtpPort = secrets.SmtpPort,
+            SmtpUsername = secrets.SmtpUsername,
+            SmtpPassword = string.IsNullOrEmpty(secrets.SmtpPassword) ? string.Empty : encryption.Decrypt(secrets.SmtpPassword),
+            SmtpFromEmail = secrets.SmtpFromEmail,
+            SmtpFromName = secrets.SmtpFromName,
+            SmtpEnableSsl = secrets.SmtpEnableSsl,
+            SmtpIsEnabled = secrets.SmtpIsEnabled,
+            SmtpLastTestedAt = secrets.SmtpLastTestedAt,
+            SmtpLastTestStatus = secrets.SmtpLastTestStatus
         };
     }
 }

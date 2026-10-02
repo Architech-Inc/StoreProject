@@ -81,6 +81,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ITaxBracketService, TaxBracketService>();
         services.AddScoped<ISalaryService, SalaryService>();
         services.AddScoped<IDemandForecastingService, DemandForecastingService>();
+        services.Configure<Store.Models.Configuration.SmtpOptions>(config.GetSection(Store.Models.Configuration.SmtpOptions.SectionName));
+        services.AddScoped<ISmtpEmailSender, SmtpEmailSender>();
         services.AddScoped<IEmailService, MockEmailService>();
 
         // SEC-06 — HMAC pepper for OTP hashing. Bound at startup so the service

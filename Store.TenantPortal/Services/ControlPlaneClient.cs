@@ -622,5 +622,63 @@ public class ControlPlaneClient : IControlPlaneClient
             return null;
         }
     }
+
+    // ==========================================
+    // MT-04: Tenant Custom SMTP Relay
+    // ==========================================
+
+    public async Task<Store.Models.DTOs.Tenant.TenantSmtpConfigDto?> GetSmtpConfigAsync(Guid tenantId, CancellationToken ct = default)
+    {
+        try
+        {
+            var response = await _http.GetAsync($"api/control/tenants/{tenantId}/smtp", ct);
+            if (!response.IsSuccessStatusCode) return null;
+            var result = await response.Content.ReadFromJsonAsync<ApiResponse<Store.Models.DTOs.Tenant.TenantSmtpConfigDto>>(cancellationToken: ct);
+            return result?.Data;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch SMTP config for tenant {TenantId}", tenantId);
+            return null;
+        }
+    }
+
+    public async Task<Store.Models.DTOs.Tenant.TenantSmtpConfigDto> UpdateSmtpConfigAsync(Guid tenantId, Store.Models.DTOs.Tenant.UpdateTenantSmtpRequest request, CancellationToken ct = default)
+    {
+        var response = await _http.PutAsJsonAsync($"api/control/tenants/{tenantId}/smtp", request, ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            var err = await response.Content.ReadFromJsonAsync<ApiResponse<object>>(cancellationToken: ct);
+            throw new InvalidOperationException(err?.Message ?? "Failed to update SMTP configuration.");
+        }
+
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse<Store.Models.DTOs.Tenant.TenantSmtpConfigDto>>(cancellationToken: ct);
+        return result!.Data!;
+    }
+
+    public async Task<Store.Models.DTOs.Tenant.TestSmtpResponse> TestSmtpConfigAsync(Guid tenantId, Store.Models.DTOs.Tenant.TestSmtpRequest request, CancellationToken ct = default)
+    {
+        var response = await _http.PostAsJsonAsync($"api/control/tenants/{tenantId}/smtp/test", request, ct);
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse<Store.Models.DTOs.Tenant.TestSmtpResponse>>(cancellationToken: ct);
+        if (result?.Data != null)
+        {
+            return result.Data;
+        }
+        return new Store.Models.DTOs.Tenant.TestSmtpResponse(false, result?.Message ?? "SMTP connection test failed.", 0);
+    }
+
+    public async Task<bool> ResetSmtpConfigAsync(Guid tenantId, CancellationToken ct = default)
+    {
+        try
+        {
+            var response = await _http.DeleteAsync($"api/control/tenants/{tenantId}/smtp", ct);
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to reset SMTP config for tenant {TenantId}", tenantId);
+            return false;
+        }
+    }
 }
 
