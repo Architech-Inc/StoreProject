@@ -83,7 +83,10 @@ public class CategoriesController : ControllerBase
     {
         try
         {
-            var deleted = await _categoryService.DeleteAsync(id, ct);
+            var userIdClaim = User.FindFirst("uid")?.Value;
+            Guid.TryParse(userIdClaim, out var deletedById);
+
+            var deleted = await _categoryService.DeleteAsync(id, deletedById == Guid.Empty ? null : deletedById, ct);
             if (!deleted)
                 return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "Category not found."));
 
@@ -93,5 +96,17 @@ public class CategoriesController : ControllerBase
         {
             return Conflict(ApiErrorResponse.From(ErrorCode.Conflict, SafeErrorMessage.From(ex, _logger, "DeleteCategory")));
         }
+    }
+
+    [HttpPost("{id:int}/restore")]
+    [Authorize(Policy = PermissionKeys.AdminSystem)]
+    [Audit("Restore Category", Category = "Inventory")]
+    public async Task<IActionResult> Restore(int id, CancellationToken ct)
+    {
+        var restored = await _categoryService.RestoreAsync(id, ct);
+        if (!restored)
+            return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "Category not found or not deleted."));
+
+        return Ok(ApiResponse<object>.Ok(null!, "Category restored."));
     }
 }

@@ -143,7 +143,16 @@ public class StoreDbContext : DbContext
             typeof(Store.Models.Entities.Item),
             typeof(Store.Models.Entities.Supplier),
             typeof(Store.Models.Entities.Employee),
-            typeof(Store.Models.Entities.Customer)
+            typeof(Store.Models.Entities.Customer),
+            typeof(Store.Models.Entities.Category),
+            typeof(Store.Models.Entities.Department),
+            typeof(Store.Models.Entities.Unit),
+            typeof(Store.Models.Entities.Salary),
+            typeof(Store.Models.Entities.Batch),
+            typeof(Store.Models.Entities.Discount),
+            typeof(Store.Models.Entities.LoyaltyCampaign),
+            typeof(Store.Models.Entities.WastageEntry),
+            typeof(Store.Models.Entities.HR.TaxBracket)
         };
 
         modelBuilder.Entity<Store.Models.Entities.Item>()
@@ -154,6 +163,24 @@ public class StoreDbContext : DbContext
             .HasQueryFilter(e => !e.IsDeleted);
         modelBuilder.Entity<Store.Models.Entities.Customer>()
             .HasQueryFilter(c => !c.IsDeleted);
+        modelBuilder.Entity<Store.Models.Entities.Category>()
+            .HasQueryFilter(c => !c.IsDeleted);
+        modelBuilder.Entity<Store.Models.Entities.Department>()
+            .HasQueryFilter(d => !d.IsDeleted);
+        modelBuilder.Entity<Store.Models.Entities.Unit>()
+            .HasQueryFilter(u => !u.IsDeleted);
+        modelBuilder.Entity<Store.Models.Entities.Salary>()
+            .HasQueryFilter(s => !s.IsDeleted);
+        modelBuilder.Entity<Store.Models.Entities.Batch>()
+            .HasQueryFilter(b => !b.IsDeleted);
+        modelBuilder.Entity<Store.Models.Entities.Discount>()
+            .HasQueryFilter(d => !d.IsDeleted);
+        modelBuilder.Entity<Store.Models.Entities.LoyaltyCampaign>()
+            .HasQueryFilter(l => !l.IsDeleted);
+        modelBuilder.Entity<Store.Models.Entities.WastageEntry>()
+            .HasQueryFilter(w => !w.IsDeleted);
+        modelBuilder.Entity<Store.Models.Entities.HR.TaxBracket>()
+            .HasQueryFilter(t => !t.IsDeleted);
 
         AddMatchingChildQueryFilters(modelBuilder, softDeletableRoots);
 

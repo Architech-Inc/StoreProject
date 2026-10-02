@@ -93,7 +93,7 @@ public class SupplierControllerTests
     {
         var supplierId = Guid.NewGuid();
         var mockService = new Mock<ISupplierService>();
-        mockService.Setup(s => s.DeleteAsync(supplierId, null)).ReturnsAsync(false);
+        mockService.Setup(s => s.DeleteAsync(supplierId, null, It.IsAny<CancellationToken>())).ReturnsAsync(false);
 
         var controller = CreateController(mockService.Object);
         var result = await controller.Delete(supplierId);
@@ -108,7 +108,7 @@ public class SupplierControllerTests
     {
         var supplierId = Guid.NewGuid();
         var mockService = new Mock<ISupplierService>();
-        mockService.Setup(s => s.DeleteAsync(supplierId, null))
+        mockService.Setup(s => s.DeleteAsync(supplierId, null, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Microsoft.EntityFrameworkCore.DbUpdateException("FK conflict", new Exception("foreign key violation")));
 
         var controller = CreateController(mockService.Object);

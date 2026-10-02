@@ -8,7 +8,8 @@ public interface ILoyaltyCampaignService
     Task<LoyaltyCampaignDto?> GetByIdAsync(int id, CancellationToken ct = default);
     Task<LoyaltyCampaignDto> CreateAsync(CreateCampaignRequest request, CancellationToken ct = default);
     Task<LoyaltyCampaignDto?> UpdateAsync(int id, UpdateCampaignRequest request, CancellationToken ct = default);
-    Task<bool> DeleteAsync(int id, CancellationToken ct = default);
+    Task<bool> DeleteAsync(int id, Guid? deletedById = null, CancellationToken ct = default);
+    Task<bool> RestoreAsync(int id, CancellationToken ct = default);
 
     /// <summary>Returns active campaigns that match the given segment at the given point in time.</summary>
     Task<IEnumerable<LoyaltyCampaignDto>> GetActiveCampaignsForSegmentAsync(string segment, CancellationToken ct = default);

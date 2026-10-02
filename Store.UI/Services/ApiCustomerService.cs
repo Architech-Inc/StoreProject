@@ -47,4 +47,9 @@ public class ApiCustomerService : ICustomerService
     {
         return await _client.DeleteAsync($"/api/customers/{customerId}", ct);
     }
+
+    public async Task<bool> RestoreAsync(Guid customerId, CancellationToken ct = default)
+    {
+        return await _client.PostAsync($"/api/customers/{customerId}/restore", null, ct);
+    }
 }

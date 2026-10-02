@@ -8,5 +8,6 @@ public interface ISalaryService
     Task<Salary?> GetByIdAsync(int id, CancellationToken ct = default);
     Task<Salary> CreateAsync(string grade, decimal basicAmount, decimal? allowance, string? description, CancellationToken ct = default);
     Task<Salary?> UpdateAsync(int id, string grade, decimal basicAmount, decimal? allowance, string? description, CancellationToken ct = default);
-    Task<bool> DeleteAsync(int id, CancellationToken ct = default);
+    Task<bool> DeleteAsync(int id, Guid? deletedById = null, CancellationToken ct = default);
+    Task<bool> RestoreAsync(int id, CancellationToken ct = default);
 }

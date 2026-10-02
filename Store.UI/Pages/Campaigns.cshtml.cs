@@ -278,7 +278,7 @@ public class CampaignsModel : SecurePageModel
         }
         _apiClient.SetToken(token);
 
-        await _campaignService.DeleteAsync(campaignId, ct);
+        await _campaignService.DeleteAsync(campaignId, ct: ct);
         StatusMessage = "Campaign deleted.";
         return RedirectToPage(new { ViewMode, StatusFilter, SegmentFilter, TypeFilter });
     }

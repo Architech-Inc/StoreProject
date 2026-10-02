@@ -83,7 +83,10 @@ public class DepartmentsController : ControllerBase
     {
         try
         {
-            var deleted = await _deptService.DeleteAsync(id, ct);
+            var userIdClaim = User.FindFirst("uid")?.Value;
+            Guid.TryParse(userIdClaim, out var deletedById);
+
+            var deleted = await _deptService.DeleteAsync(id, deletedById == Guid.Empty ? null : deletedById, ct);
             if (!deleted)
                 return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "Department not found."));
 
@@ -93,5 +96,17 @@ public class DepartmentsController : ControllerBase
         {
             return Conflict(ApiErrorResponse.From(ErrorCode.Conflict, SafeErrorMessage.From(ex, _logger, "DeleteDepartment")));
         }
+    }
+
+    [HttpPost("{id:int}/restore")]
+    [Authorize(Policy = PermissionKeys.AdminSystem)]
+    [Audit("Restore Department", Category = "HR")]
+    public async Task<IActionResult> Restore(int id, CancellationToken ct)
+    {
+        var restored = await _deptService.RestoreAsync(id, ct);
+        if (!restored)
+            return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "Department not found or not deleted."));
+
+        return Ok(ApiResponse<object>.Ok(null!, "Department restored."));
     }
 }

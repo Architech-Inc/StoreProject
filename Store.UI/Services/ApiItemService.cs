@@ -71,4 +71,9 @@ public class ApiItemService : IItemService
     {
         return await _client.DeleteAsync($"/api/items/{itemId}", ct);
     }
+
+    public async Task<bool> RestoreAsync(Guid itemId, CancellationToken ct = default)
+    {
+        return await _client.PostAsync($"/api/items/{itemId}/restore", null, ct);
+    }
 }

@@ -140,7 +140,7 @@ public class CategoryServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteAsync_RemovesCategory_WhenNotInUse()
+    public async Task DeleteAsync_SoftDeletesCategory_WhenNotInUse()
     {
         // Arrange
         var cat = new Category { Name = "Seasonal" };
@@ -153,7 +153,32 @@ public class CategoryServiceTests : IDisposable
         // Assert
         Assert.True(deleted);
         var found = await _context.Categories.FindAsync(cat.CategoryId);
-        Assert.Null(found);
+        Assert.NotNull(found);
+        Assert.True(found.IsDeleted);
+        Assert.NotNull(found.DeletedAt);
+
+        var active = await _context.Categories.FirstOrDefaultAsync(c => c.CategoryId == cat.CategoryId);
+        Assert.Null(active);
+    }
+
+    [Fact]
+    public async Task RestoreAsync_RestoresSoftDeletedCategory()
+    {
+        // Arrange
+        var cat = new Category { Name = "ArchivedSeasonal" };
+        _context.Categories.Add(cat);
+        await _context.SaveChangesAsync();
+        await _service.DeleteAsync(cat.CategoryId);
+
+        // Act
+        var restored = await _service.RestoreAsync(cat.CategoryId);
+
+        // Assert
+        Assert.True(restored);
+        var active = await _context.Categories.FirstOrDefaultAsync(c => c.CategoryId == cat.CategoryId);
+        Assert.NotNull(active);
+        Assert.False(active.IsDeleted);
+        Assert.Null(active.DeletedAt);
     }
 
     [Fact]

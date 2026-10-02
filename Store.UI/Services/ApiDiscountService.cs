@@ -65,8 +65,11 @@ public class ApiDiscountService : IDiscountService
     public async Task<DiscountDto?> UpdateAsync(int id, UpdateDiscountRequest request)
         => await _client.PutAsync<DiscountDto>($"/api/discounts/{id}", request);
 
-    public async Task<bool> DeleteAsync(int id)
-        => await _client.DeleteAsync($"/api/discounts/{id}");
+    public async Task<bool> DeleteAsync(int id, Guid? deletedById = null, CancellationToken ct = default)
+        => await _client.DeleteAsync($"/api/discounts/{id}", ct);
+
+    public async Task<bool> RestoreAsync(int id, CancellationToken ct = default)
+        => await _client.PostAsync($"/api/discounts/{id}/restore", null, ct);
 
     public async Task<DiscountDto?> ValidateCouponAsync(string couponCode, int? branchId = null)
     {

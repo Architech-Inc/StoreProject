@@ -83,7 +83,10 @@ public class UnitsController : ControllerBase
     {
         try
         {
-            var deleted = await _unitService.DeleteAsync(id, ct);
+            var userIdClaim = User.FindFirst("uid")?.Value;
+            Guid.TryParse(userIdClaim, out var deletedById);
+
+            var deleted = await _unitService.DeleteAsync(id, deletedById == Guid.Empty ? null : deletedById, ct);
             if (!deleted)
                 return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "Unit not found."));
 
@@ -93,5 +96,17 @@ public class UnitsController : ControllerBase
         {
             return Conflict(ApiErrorResponse.From(ErrorCode.Conflict, SafeErrorMessage.From(ex, _logger, "DeleteUnit")));
         }
+    }
+
+    [HttpPost("{id:int}/restore")]
+    [Authorize(Policy = PermissionKeys.AdminSystem)]
+    [Audit("Restore Unit", Category = "Inventory")]
+    public async Task<IActionResult> Restore(int id, CancellationToken ct)
+    {
+        var restored = await _unitService.RestoreAsync(id, ct);
+        if (!restored)
+            return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "Unit not found or not deleted."));
+
+        return Ok(ApiResponse<object>.Ok(null!, "Unit restored."));
     }
 }

@@ -137,7 +137,7 @@ public class DepartmentServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteAsync_RemovesDepartment_WhenNotInUse()
+    public async Task DeleteAsync_SoftDeletesDepartment_WhenNotInUse()
     {
         // Arrange
         var dept = new Department { Name = "R&D" };
@@ -150,7 +150,32 @@ public class DepartmentServiceTests : IDisposable
         // Assert
         Assert.True(deleted);
         var found = await _context.Departments.FindAsync(dept.DepartmentId);
-        Assert.Null(found);
+        Assert.NotNull(found);
+        Assert.True(found.IsDeleted);
+        Assert.NotNull(found.DeletedAt);
+
+        var active = await _context.Departments.FirstOrDefaultAsync(d => d.DepartmentId == dept.DepartmentId);
+        Assert.Null(active);
+    }
+
+    [Fact]
+    public async Task RestoreAsync_RestoresSoftDeletedDepartment()
+    {
+        // Arrange
+        var dept = new Department { Name = "ArchivedR&D" };
+        _context.Departments.Add(dept);
+        await _context.SaveChangesAsync();
+        await _service.DeleteAsync(dept.DepartmentId);
+
+        // Act
+        var restored = await _service.RestoreAsync(dept.DepartmentId);
+
+        // Assert
+        Assert.True(restored);
+        var active = await _context.Departments.FirstOrDefaultAsync(d => d.DepartmentId == dept.DepartmentId);
+        Assert.NotNull(active);
+        Assert.False(active.IsDeleted);
+        Assert.Null(active.DeletedAt);
     }
 
     [Fact]

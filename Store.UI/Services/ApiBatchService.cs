@@ -63,8 +63,11 @@ public class ApiBatchService : IBatchService
     public async Task<BatchDto?> UpdateAsync(Guid id, UpdateBatchRequest request)
         => await _client.PutAsync<BatchDto>($"/api/batches/{id}", request);
 
-    public async Task<bool> DeleteAsync(Guid id)
-        => await _client.DeleteAsync($"/api/batches/{id}");
+    public async Task<bool> DeleteAsync(Guid id, Guid? deletedById = null, CancellationToken ct = default)
+        => await _client.DeleteAsync($"/api/batches/{id}", ct);
+
+    public async Task<bool> RestoreAsync(Guid id, CancellationToken ct = default)
+        => await _client.PostAsync($"/api/batches/{id}/restore", null, ct);
 
     public async Task<bool> WriteOffBatchAsync(WriteOffBatchRequest request, Guid? actingUserId, CancellationToken ct = default)
     {

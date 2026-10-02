@@ -73,4 +73,9 @@ public class ApiEmployeeService : IEmployeeService
     {
         return await _client.DeleteAsync($"/api/employees/{employeeId}", ct);
     }
+
+    public async Task<bool> RestoreAsync(Guid employeeId, CancellationToken ct = default)
+    {
+        return await _client.PostAsync($"/api/employees/{employeeId}/restore", null, ct);
+    }
 }

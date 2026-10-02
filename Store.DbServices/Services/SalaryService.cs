@@ -55,16 +55,40 @@ public class SalaryService : ISalaryService
         return salary;
     }
 
-    public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
+    public async Task<bool> DeleteAsync(int id, Guid? deletedById = null, CancellationToken ct = default)
     {
-        var salary = await _uow.Repository<Salary>().GetByIdAsync(id, ct);
+        var salary = await _uow.Repository<Salary>().Query()
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(s => s.SalaryId == id, ct);
         if (salary is null) return false;
+        if (salary.IsDeleted) return true; // idempotent
 
         var hasEmployees = await _uow.Repository<Employee>().ExistsAsync(e => e.SalaryId == id, ct);
         if (hasEmployees)
             throw new InvalidOperationException("Cannot delete salary grade because it is assigned to one or more employees.");
 
-        _uow.Repository<Salary>().Remove(salary);
+        salary.IsDeleted = true;
+        salary.DeletedAt = DateTime.UtcNow;
+        salary.DeletedById = deletedById;
+
+        _uow.Repository<Salary>().Update(salary);
+        await _uow.SaveChangesAsync(ct);
+        return true;
+    }
+
+    public async Task<bool> RestoreAsync(int id, CancellationToken ct = default)
+    {
+        var salary = await _uow.Repository<Salary>().Query()
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(s => s.SalaryId == id, ct);
+        if (salary is null) return false;
+        if (!salary.IsDeleted) return true; // already active
+
+        salary.IsDeleted = false;
+        salary.DeletedAt = null;
+        salary.DeletedById = null;
+
+        _uow.Repository<Salary>().Update(salary);
         await _uow.SaveChangesAsync(ct);
         return true;
     }

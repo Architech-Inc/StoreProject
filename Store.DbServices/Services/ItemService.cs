@@ -240,6 +240,25 @@ public class ItemService : IItemService
         return true;
     }
 
+    public async Task<bool> RestoreAsync(Guid itemId, CancellationToken ct = default)
+    {
+        var item = await _uow.Repository<Item>().Query()
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(i => i.ItemId == itemId, ct);
+
+        if (item is null) return false;
+        if (!item.IsDeleted) return true; // idempotent if already active
+
+        item.IsDeleted = false;
+        item.DeletedAt = null;
+        item.DeletedById = null;
+        item.IsActive = true;
+
+        _uow.Repository<Item>().Update(item);
+        await _uow.SaveChangesAsync(ct);
+        return true;
+    }
+
     private static ItemDto MapToDto(Item i) => new()
     {
         ItemId = i.ItemId,

@@ -53,16 +53,40 @@ public class UnitService : IUnitService
         return unit;
     }
 
-    public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
+    public async Task<bool> DeleteAsync(int id, Guid? deletedById = null, CancellationToken ct = default)
     {
-        var unit = await _uow.Repository<Unit>().GetByIdAsync(id, ct);
+        var unit = await _uow.Repository<Unit>().Query()
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(u => u.UnitId == id, ct);
         if (unit is null) return false;
+        if (unit.IsDeleted) return true; // idempotent
 
         var hasItems = await _uow.Repository<Item>().ExistsAsync(i => i.UnitId == id, ct);
         if (hasItems)
             throw new InvalidOperationException("Cannot delete unit because it is assigned to one or more items.");
 
-        _uow.Repository<Unit>().Remove(unit);
+        unit.IsDeleted = true;
+        unit.DeletedAt = DateTime.UtcNow;
+        unit.DeletedById = deletedById;
+
+        _uow.Repository<Unit>().Update(unit);
+        await _uow.SaveChangesAsync(ct);
+        return true;
+    }
+
+    public async Task<bool> RestoreAsync(int id, CancellationToken ct = default)
+    {
+        var unit = await _uow.Repository<Unit>().Query()
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(u => u.UnitId == id, ct);
+        if (unit is null) return false;
+        if (!unit.IsDeleted) return true; // already active
+
+        unit.IsDeleted = false;
+        unit.DeletedAt = null;
+        unit.DeletedById = null;
+
+        _uow.Repository<Unit>().Update(unit);
         await _uow.SaveChangesAsync(ct);
         return true;
     }

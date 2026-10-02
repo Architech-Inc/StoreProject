@@ -64,6 +64,9 @@ public class ApiSupplierService : ISupplierService
     public async Task<SupplierDto?> UpdateAsync(Guid id, UpdateSupplierRequest request)
         => await _client.PutAsync<SupplierDto>($"/api/suppliers/{id}", request);
 
-    public async Task<bool> DeleteAsync(Guid id, Guid? deletedById = null)
-        => await _client.DeleteAsync($"/api/suppliers/{id}");
+    public async Task<bool> DeleteAsync(Guid id, Guid? deletedById = null, CancellationToken ct = default)
+        => await _client.DeleteAsync($"/api/suppliers/{id}", ct);
+
+    public async Task<bool> RestoreAsync(Guid id, CancellationToken ct = default)
+        => await _client.PostAsync($"/api/suppliers/{id}/restore", null, ct);
 }

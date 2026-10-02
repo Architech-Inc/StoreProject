@@ -12,7 +12,8 @@ public interface IBatchService
     Task<BatchDto?> GetByBatchNumberAsync(string batchNumber, CancellationToken ct = default);
     Task<BatchDto> CreateAsync(CreateBatchRequest request);
     Task<BatchDto?> UpdateAsync(Guid id, UpdateBatchRequest request);
-    Task<bool> DeleteAsync(Guid id);
+    Task<bool> DeleteAsync(Guid id, Guid? deletedById = null, CancellationToken ct = default);
+    Task<bool> RestoreAsync(Guid id, CancellationToken ct = default);
     Task<bool> WriteOffBatchAsync(WriteOffBatchRequest request, Guid? actingUserId, CancellationToken ct = default);
 
     /// <summary>Returns batches expiring within the given number of days.</summary>

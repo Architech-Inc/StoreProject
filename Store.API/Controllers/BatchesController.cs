@@ -93,11 +93,25 @@ public class BatchesController : ControllerBase
 
     [HttpDelete("{id:guid}")]
     [Authorize(Policy = PermissionKeys.InventoryWrite)]
-    public async Task<IActionResult> Delete(Guid id)
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct = default)
     {
-        var ok = await _batchService.DeleteAsync(id);
+        var userIdClaim = User.FindFirst("uid")?.Value
+            ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        Guid.TryParse(userIdClaim, out var deletedById);
+
+        var ok = await _batchService.DeleteAsync(id, deletedById == Guid.Empty ? null : deletedById, ct);
         if (!ok)
             return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "Batch not found", traceId: HttpContext.TraceIdentifier));
         return NoContent();
+    }
+
+    [HttpPost("{id:guid}/restore")]
+    [Authorize(Policy = PermissionKeys.InventoryWrite)]
+    public async Task<IActionResult> Restore(Guid id, CancellationToken ct = default)
+    {
+        var restored = await _batchService.RestoreAsync(id, ct);
+        if (!restored)
+            return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "Batch not found or not deleted", traceId: HttpContext.TraceIdentifier));
+        return Ok(ApiResponse<object>.Ok(null!, "Batch restored successfully."));
     }
 }

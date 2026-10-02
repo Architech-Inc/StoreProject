@@ -96,12 +96,25 @@ public class DiscountsController : ControllerBase
 
     [HttpDelete("{id:int}")]
     [Authorize(Policy = PermissionKeys.PricingWrite)]
-    public async Task<IActionResult> Delete(int id)
+    public async Task<IActionResult> Delete(int id, CancellationToken ct = default)
     {
-        var ok = await _discountService.DeleteAsync(id);
+        var userIdClaim = User.FindFirst("uid")?.Value;
+        Guid.TryParse(userIdClaim, out var deletedById);
+
+        var ok = await _discountService.DeleteAsync(id, deletedById == Guid.Empty ? null : deletedById, ct);
         if (!ok)
             return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "Discount not found", traceId: HttpContext.TraceIdentifier));
         return NoContent();
+    }
+
+    [HttpPost("{id:int}/restore")]
+    [Authorize(Policy = PermissionKeys.PricingWrite)]
+    public async Task<IActionResult> Restore(int id, CancellationToken ct = default)
+    {
+        var restored = await _discountService.RestoreAsync(id, ct);
+        if (!restored)
+            return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "Discount not found or not deleted", traceId: HttpContext.TraceIdentifier));
+        return Ok(ApiResponse<object>.Ok(null!, "Discount restored successfully."));
     }
 
     [HttpPost("{id:int}/increment-usage")]

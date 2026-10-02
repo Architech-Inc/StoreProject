@@ -31,6 +31,9 @@ public class ApiCategoryService : ICategoryService
         return await _client.PutAsync<Category>($"/api/categories/{id}", req);
     }
 
-    public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
-        => await _client.DeleteAsync($"/api/categories/{id}");
+    public async Task<bool> DeleteAsync(int id, Guid? deletedById = null, CancellationToken ct = default)
+        => await _client.DeleteAsync($"/api/categories/{id}", ct);
+
+    public async Task<bool> RestoreAsync(int id, CancellationToken ct = default)
+        => await _client.PostAsync($"/api/categories/{id}/restore", null, ct);
 }

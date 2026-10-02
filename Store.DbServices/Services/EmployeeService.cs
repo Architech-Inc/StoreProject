@@ -232,6 +232,25 @@ public class EmployeeService : IEmployeeService
         return true;
     }
 
+    public async Task<bool> RestoreAsync(Guid employeeId, CancellationToken ct = default)
+    {
+        var employee = await _uow.Repository<Employee>().Query()
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(e => e.EmployeeId == employeeId, ct);
+
+        if (employee is null) return false;
+        if (!employee.IsDeleted) return true; // already active
+
+        employee.IsDeleted = false;
+        employee.DeletedAt = null;
+        employee.DeletedById = null;
+        employee.Status = EmployeeStatus.Active;
+
+        _uow.Repository<Employee>().Update(employee);
+        await _uow.SaveChangesAsync(ct);
+        return true;
+    }
+
     private static EmployeeDto MapToDto(Employee e) => new()
     {
         EmployeeId = e.EmployeeId,

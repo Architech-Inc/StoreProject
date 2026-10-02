@@ -116,4 +116,14 @@ public class SuppliersController : ControllerBase
                 traceId: HttpContext.TraceIdentifier));
         }
     }
+
+    [HttpPost("{id:guid}/restore")]
+    [Authorize(Policy = PermissionKeys.InventoryWrite)]
+    public async Task<IActionResult> Restore(Guid id, CancellationToken ct)
+    {
+        var restored = await _supplierService.RestoreAsync(id, ct);
+        if (!restored)
+            return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "Supplier not found or not deleted.", traceId: HttpContext.TraceIdentifier));
+        return Ok(ApiResponse<object>.Ok(null!, "Supplier restored successfully."));
+    }
 }

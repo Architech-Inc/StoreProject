@@ -179,15 +179,37 @@ public class WastageService : IWastageService
         return MapToDto(loaded);
     }
 
-    public async Task<bool> DeleteAsync(int id)
+    public async Task<bool> DeleteAsync(int id, Guid? deletedById = null, CancellationToken ct = default)
     {
         var entry = await _uow.Repository<WastageEntry>().Query()
-            .FirstOrDefaultAsync(w => w.WastageEntryId == id);
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(w => w.WastageEntryId == id, ct);
 
-        if (entry is null) return false;
+        if (entry is null || entry.IsDeleted) return false;
 
-        _uow.Repository<WastageEntry>().Remove(entry);
-        await _uow.SaveChangesAsync();
+        entry.IsDeleted = true;
+        entry.DeletedAt = DateTime.UtcNow;
+        entry.DeletedById = deletedById;
+
+        _uow.Repository<WastageEntry>().Update(entry);
+        await _uow.SaveChangesAsync(ct);
+        return true;
+    }
+
+    public async Task<bool> RestoreAsync(int id, CancellationToken ct = default)
+    {
+        var entry = await _uow.Repository<WastageEntry>().Query()
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(w => w.WastageEntryId == id, ct);
+
+        if (entry is null || !entry.IsDeleted) return false;
+
+        entry.IsDeleted = false;
+        entry.DeletedAt = null;
+        entry.DeletedById = null;
+
+        _uow.Repository<WastageEntry>().Update(entry);
+        await _uow.SaveChangesAsync(ct);
         return true;
     }
 

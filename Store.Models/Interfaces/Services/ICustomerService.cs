@@ -10,4 +10,5 @@ public interface ICustomerService
     Task<CustomerDto> CreateAsync(CreateCustomerRequest request, CancellationToken ct = default);
     Task<CustomerDto?> UpdateAsync(Guid customerId, UpdateCustomerRequest request, CancellationToken ct = default);
     Task<bool> DeleteAsync(Guid customerId, Guid? deletedById = null, CancellationToken ct = default);
+    Task<bool> RestoreAsync(Guid customerId, CancellationToken ct = default);
 }

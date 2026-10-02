@@ -139,7 +139,7 @@ public class UnitServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteAsync_RemovesUnit_WhenNotInUse()
+    public async Task DeleteAsync_SoftDeletesUnit_WhenNotInUse()
     {
         // Arrange
         var unit = new Unit { Name = "Custom Pack", Abbreviation = "cp" };
@@ -152,7 +152,32 @@ public class UnitServiceTests : IDisposable
         // Assert
         Assert.True(deleted);
         var found = await _context.Units.FindAsync(unit.UnitId);
-        Assert.Null(found);
+        Assert.NotNull(found);
+        Assert.True(found.IsDeleted);
+        Assert.NotNull(found.DeletedAt);
+
+        var active = await _context.Units.FirstOrDefaultAsync(u => u.UnitId == unit.UnitId);
+        Assert.Null(active);
+    }
+
+    [Fact]
+    public async Task RestoreAsync_RestoresSoftDeletedUnit()
+    {
+        // Arrange
+        var unit = new Unit { Name = "ArchivedPack", Abbreviation = "ap" };
+        _context.Units.Add(unit);
+        await _context.SaveChangesAsync();
+        await _service.DeleteAsync(unit.UnitId);
+
+        // Act
+        var restored = await _service.RestoreAsync(unit.UnitId);
+
+        // Assert
+        Assert.True(restored);
+        var active = await _context.Units.FirstOrDefaultAsync(u => u.UnitId == unit.UnitId);
+        Assert.NotNull(active);
+        Assert.False(active.IsDeleted);
+        Assert.Null(active.DeletedAt);
     }
 
     [Fact]

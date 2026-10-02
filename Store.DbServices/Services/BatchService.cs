@@ -190,15 +190,39 @@ public class BatchService : IBatchService
         return MapToDto(batch);
     }
 
-    public async Task<bool> DeleteAsync(Guid id)
+    public async Task<bool> DeleteAsync(Guid id, Guid? deletedById = null, CancellationToken ct = default)
     {
         var batch = await _uow.Repository<Batch>().Query()
-            .FirstOrDefaultAsync(b => b.BatchId == id);
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(b => b.BatchId == id, ct);
 
         if (batch is null) return false;
+        if (batch.IsDeleted) return true; // idempotent
 
-        _uow.Repository<Batch>().Remove(batch);
-        await _uow.SaveChangesAsync();
+        batch.IsDeleted = true;
+        batch.DeletedAt = DateTime.UtcNow;
+        batch.DeletedById = deletedById;
+
+        _uow.Repository<Batch>().Update(batch);
+        await _uow.SaveChangesAsync(ct);
+        return true;
+    }
+
+    public async Task<bool> RestoreAsync(Guid id, CancellationToken ct = default)
+    {
+        var batch = await _uow.Repository<Batch>().Query()
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(b => b.BatchId == id, ct);
+
+        if (batch is null) return false;
+        if (!batch.IsDeleted) return true; // already active
+
+        batch.IsDeleted = false;
+        batch.DeletedAt = null;
+        batch.DeletedById = null;
+
+        _uow.Repository<Batch>().Update(batch);
+        await _uow.SaveChangesAsync(ct);
         return true;
     }
 

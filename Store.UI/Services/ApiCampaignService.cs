@@ -37,9 +37,14 @@ public class ApiCampaignService : ILoyaltyCampaignService
         return await _client.PutAsync<LoyaltyCampaignDto>($"/api/loyaltycampaigns/{id}", request, ct);
     }
 
-    public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
+    public async Task<bool> DeleteAsync(int id, Guid? deletedById = null, CancellationToken ct = default)
     {
         return await _client.DeleteAsync($"/api/loyaltycampaigns/{id}", ct);
+    }
+
+    public async Task<bool> RestoreAsync(int id, CancellationToken ct = default)
+    {
+        return await _client.PostAsync($"/api/loyaltycampaigns/{id}/restore", null, ct);
     }
 
     public async Task<IEnumerable<LoyaltyCampaignDto>> GetActiveCampaignsForSegmentAsync(string segment, CancellationToken ct = default)

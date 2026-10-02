@@ -114,9 +114,22 @@ public class TaxBracketsController : ControllerBase
     [Authorize(Policy = PermissionKeys.AdminSystem)]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
-        var deleted = await _taxBracketService.DeleteAsync(id, ct);
+        var userIdClaim = User.FindFirst("uid")?.Value;
+        Guid.TryParse(userIdClaim, out var deletedById);
+
+        var deleted = await _taxBracketService.DeleteAsync(id, deletedById == Guid.Empty ? null : deletedById, ct);
         if (!deleted) return NotFound(ApiResponse<object>.Fail("Tax bracket not found."));
 
         return Ok(ApiResponse<object>.Ok(null!, "Tax bracket deleted."));
+    }
+
+    [HttpPost("{id:int}/restore")]
+    [Authorize(Policy = PermissionKeys.AdminSystem)]
+    public async Task<IActionResult> Restore(int id, CancellationToken ct)
+    {
+        var restored = await _taxBracketService.RestoreAsync(id, ct);
+        if (!restored) return NotFound(ApiResponse<object>.Fail("Tax bracket not found or not deleted."));
+
+        return Ok(ApiResponse<object>.Ok(null!, "Tax bracket restored."));
     }
 }

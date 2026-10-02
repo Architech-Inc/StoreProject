@@ -71,14 +71,40 @@ public class LoyaltyCampaignService : ILoyaltyCampaignService
         return MapToDto(campaign);
     }
 
-    public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
+    public async Task<bool> DeleteAsync(int id, Guid? deletedById = null, CancellationToken ct = default)
     {
         var campaign = await _uow.Repository<LoyaltyCampaign>().Query()
+            .IgnoreQueryFilters()
             .FirstOrDefaultAsync(c => c.LoyaltyCampaignId == id, ct);
 
         if (campaign is null) return false;
+        if (campaign.IsDeleted) return true; // idempotent
 
-        _uow.Repository<LoyaltyCampaign>().Remove(campaign);
+        campaign.IsDeleted = true;
+        campaign.DeletedAt = DateTime.UtcNow;
+        campaign.DeletedById = deletedById;
+        campaign.IsActive = false;
+
+        _uow.Repository<LoyaltyCampaign>().Update(campaign);
+        await _uow.SaveChangesAsync(ct);
+        return true;
+    }
+
+    public async Task<bool> RestoreAsync(int id, CancellationToken ct = default)
+    {
+        var campaign = await _uow.Repository<LoyaltyCampaign>().Query()
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(c => c.LoyaltyCampaignId == id, ct);
+
+        if (campaign is null) return false;
+        if (!campaign.IsDeleted) return true; // already active
+
+        campaign.IsDeleted = false;
+        campaign.DeletedAt = null;
+        campaign.DeletedById = null;
+        campaign.IsActive = true;
+
+        _uow.Repository<LoyaltyCampaign>().Update(campaign);
         await _uow.SaveChangesAsync(ct);
         return true;
     }

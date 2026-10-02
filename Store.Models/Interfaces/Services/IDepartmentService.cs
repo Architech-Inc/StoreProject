@@ -8,5 +8,6 @@ public interface IDepartmentService
     Task<Department?> GetByIdAsync(int id, CancellationToken ct = default);
     Task<Department> CreateAsync(string name, string? description, CancellationToken ct = default);
     Task<Department?> UpdateAsync(int id, string name, string? description, CancellationToken ct = default);
-    Task<bool> DeleteAsync(int id, CancellationToken ct = default);
+    Task<bool> DeleteAsync(int id, Guid? deletedById = null, CancellationToken ct = default);
+    Task<bool> RestoreAsync(int id, CancellationToken ct = default);
 }

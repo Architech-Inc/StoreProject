@@ -2881,13 +2881,71 @@ Resolve finding `OPS-07` by establishing centralized, structured log shipping an
   - `SendEmailAsync_WhenDisabled_SimulatesDispatchWithoutException`
   - `SendEmailAsync_WithEmptyRecipient_ThrowsArgumentException`
   - `NotificationService_DelegatesToSmtpEmailSender_WhenConfigured`
-- **Solution Verification**:
+- Solution Verification:
   - Release Build: `dotnet build StoreProject.sln --configuration Release` (**0 warnings, 0 errors**).
   - `Store.ControlPlane.Tests`: **51 passed, 0 failed**.
   - `Store.API.Tests`: **421 passed, 0 failed**.
   - `Store.TenantPortal.Tests`: **27 passed, 0 failed**.
   - Total: **499 tests passed, 0 failed**.
 - Audit tracker updated: `MT-04` marked `[x]`.
+
+---
+
+## Wave 48 — Universal Soft-Delete & Reversible Recovery (GAP-18 Follow-Up)
+
+Completes the soft-delete transition across all 13 core business aggregate roots and entities, ensuring zero destructive data loss, full audit trail attribution (`DeletedAt`, `DeletedById`), query exclusion via EF Core global query filters, and bidirectional reversible recovery (`RestoreAsync` and `POST .../{id}/restore`).
+
+### 48.A — Global Query Filters & DbContext Hardening
+- **`Store.DbServices/Context/StoreDbContext.cs`**:
+  - Expanded `softDeletableRoots` array to include all 13 business entities: `Item`, `Supplier`, `Employee`, `Customer`, `Category`, `Department`, `Unit`, `Salary`, `Batch`, `Discount`, `LoyaltyCampaign`, `WastageEntry`, `TaxBracket`.
+  - Registered `HasQueryFilter(e => !e.IsDeleted)` across each entity with navigation child filters linked through `AddMatchingChildQueryFilters`.
+  - Retains all historical audit records in MySQL while cleanly hiding soft-deleted rows from all standard LINQ queries.
+
+### 48.B — Service Layer Conversion & Restoration
+- **Service Interfaces (`Store.Models/Interfaces/Services/` and `Store.DbServices/Services/Interfaces/`)**:
+  - Standardized `Task<bool> DeleteAsync(..., Guid? deletedById = null, CancellationToken ct = default)` with backward-compatible default parameters.
+  - Added `Task<bool> RestoreAsync(..., CancellationToken ct = default)` across all 13 services:
+    - `IItemService`, `ISupplierService`, `IEmployeeService`, `ICustomerService`, `ICategoryService`, `IDepartmentService`, `IUnitService`, `ISalaryService`, `IBatchService`, `IDiscountService`, `ILoyaltyCampaignService`, `IWastageService`, `ITaxBracketService`.
+- **Service Implementations (`Store.DbServices/Services/`)**:
+  - Replaced legacy `.Remove()` hard deletions with soft-delete mutations (`entry.IsDeleted = true`, `entry.DeletedAt = DateTime.UtcNow`, `entry.DeletedById = deletedById`).
+  - Implemented `RestoreAsync` on all 13 services, using `.IgnoreQueryFilters()` to find the soft-deleted entity and resetting `IsDeleted = false`, `DeletedAt = null`, `DeletedById = null`, and restoring active status (e.g. `EmployeeStatus.Active`, `IsActive = true`).
+
+### 48.C — REST Controllers & Restore Endpoints
+- **Controllers (`Store.API/Controllers/`)**:
+  - Updated all 13 controllers to extract the calling user ID from `User.FindFirst("uid")` / `ClaimTypes.NameIdentifier` and forward it as `deletedById` to `DeleteAsync`.
+  - Added `[HttpPost("{id}/restore")]` actions across all 13 controllers protected by strict permission policies:
+    - `ItemController` (`PermissionKeys.ItemUpdate`)
+    - `SuppliersController` (`PermissionKeys.InventoryWrite`)
+    - `EmployeesController` (`PermissionKeys.EmployeeUpdate`)
+    - `CustomersController` (`PermissionKeys.CustomerUpdate`)
+    - `CategoriesController` (`PermissionKeys.AdminSystem`)
+    - `DepartmentsController` (`PermissionKeys.AdminSystem`)
+    - `UnitsController` (`PermissionKeys.AdminSystem`)
+    - `SalariesController` (`PermissionKeys.AdminSystem`)
+    - `BatchesController` (`PermissionKeys.InventoryWrite`)
+    - `DiscountsController` (`PermissionKeys.PricingWrite`)
+    - `LoyaltyCampaignsController` (`PermissionKeys.LoyaltyWrite`)
+    - `WastageController` (`PermissionKeys.InventoryWrite`)
+    - `TaxBracketsController` (`PermissionKeys.AdminSystem`)
+
+### 48.D — UI HTTP Service Clients
+- **`Store.UI/Services/`**:
+  - Updated `ApiItemService`, `ApiSupplierService`, `ApiEmployeeService`, `ApiCustomerService`, `ApiCategoryService`, `ApiBatchService`, `ApiDiscountService`, `ApiCampaignService`, and `ApiWastageService`.
+  - Synchronized `DeleteAsync` signatures and implemented `RestoreAsync` invoking `POST /api/{resource}/{id}/restore`.
+
+### 48.E — Test Suite & Verification
+- **Unit Tests (`Store.API.Tests/`)**:
+  - Updated `CategoryServiceTests.cs`, `DepartmentServiceTests.cs`, `UnitServiceTests.cs`, and `SalaryServiceTests.cs` to assert `IsDeleted == true`, `DeletedAt != null`, query filter exclusion on standard queries, and added `RestoreAsync` tests.
+  - Fixed Moq expression tree setups in `SupplierControllerTests.cs`.
+  - Created `SoftDeleteAndRestoreTests.cs` covering end-to-end soft deletion, audit trail verification, query filter exclusion, and reversible recovery for `ItemService`, `BatchService`, `DiscountService`, `TaxBracketService`, `WastageService`, and `EmployeeService`.
+- **Solution Verification**:
+  - Release Build: `dotnet build StoreProject.sln --configuration Release -m:1 --disable-build-servers` (**0 warnings, 0 errors**).
+  - `Store.API.Tests`: **431 passed, 0 failed**.
+  - `Store.ControlPlane.Tests`: **51 passed, 0 failed**.
+  - `Store.TenantPortal.Tests`: **27 passed, 0 failed**.
+  - Total: **509 passed, 0 failed**.
+- Tracker updated: `GAP-18` marked fully closed and removed from `AGENTS.md` runway.
+
 
 
 

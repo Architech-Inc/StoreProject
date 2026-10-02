@@ -410,22 +410,22 @@ public class SupplierService : ISupplierService
         return (await GetByIdAsync(supplier.SupplierId)) ?? MapToDto(supplier);
     }
 
-    public async Task<bool> DeleteAsync(Guid id, Guid? deletedById = null)
+    public async Task<bool> DeleteAsync(Guid id, Guid? deletedById = null, CancellationToken ct = default)
     {
         var supplier = await _uow.Repository<Supplier>().Query()
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(s => s.SupplierId == id);
+            .FirstOrDefaultAsync(s => s.SupplierId == id, ct);
         if (supplier is null) return false;
         if (supplier.IsDeleted) return true; // idempotent
 
         // Guard against deleting suppliers with open purchase orders, items orders, or preferred items.
-        var hasItemsOrders = await _uow.Repository<ItemsOrder>().ExistsAsync(o => o.SupplierId == id && !o.IsDeleted);
+        var hasItemsOrders = await _uow.Repository<ItemsOrder>().ExistsAsync(o => o.SupplierId == id && !o.IsDeleted, ct);
         if (hasItemsOrders) return false;
 
-        var hasPurchaseOrders = await _uow.Repository<PurchaseOrder>().ExistsAsync(p => p.SupplierId == id && !p.IsDeleted);
+        var hasPurchaseOrders = await _uow.Repository<PurchaseOrder>().ExistsAsync(p => p.SupplierId == id && !p.IsDeleted, ct);
         if (hasPurchaseOrders) return false;
 
-        var hasPreferredItems = await _uow.Repository<Item>().ExistsAsync(i => i.PreferredSupplierId == id && !i.IsDeleted);
+        var hasPreferredItems = await _uow.Repository<Item>().ExistsAsync(i => i.PreferredSupplierId == id && !i.IsDeleted, ct);
         if (hasPreferredItems) return false;
 
         supplier.IsDeleted = true;
@@ -433,7 +433,24 @@ public class SupplierService : ISupplierService
         supplier.DeletedById = deletedById;
 
         _uow.Repository<Supplier>().Update(supplier);
-        await _uow.SaveChangesAsync();
+        await _uow.SaveChangesAsync(ct);
+        return true;
+    }
+
+    public async Task<bool> RestoreAsync(Guid id, CancellationToken ct = default)
+    {
+        var supplier = await _uow.Repository<Supplier>().Query()
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(s => s.SupplierId == id, ct);
+        if (supplier is null) return false;
+        if (!supplier.IsDeleted) return true; // already active
+
+        supplier.IsDeleted = false;
+        supplier.DeletedAt = null;
+        supplier.DeletedById = null;
+
+        _uow.Repository<Supplier>().Update(supplier);
+        await _uow.SaveChangesAsync(ct);
         return true;
     }
 

@@ -74,8 +74,21 @@ public class LoyaltyCampaignsController : ControllerBase
     [Audit("Delete Loyalty Campaign", Category = "Loyalty")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
-        var success = await _campaignService.DeleteAsync(id, ct);
+        var userIdClaim = User.FindFirst("uid")?.Value;
+        Guid.TryParse(userIdClaim, out var deletedById);
+
+        var success = await _campaignService.DeleteAsync(id, deletedById == Guid.Empty ? null : deletedById, ct);
         if (!success) return NotFound(ApiErrorResponse.From(ErrorCode.CampaignNotFound, "Campaign not found.", traceId: HttpContext.TraceIdentifier));
         return NoContent();
+    }
+
+    [HttpPost("{id:int}/restore")]
+    [Authorize(Policy = PermissionKeys.LoyaltyWrite)]
+    [Audit("Restore Loyalty Campaign", Category = "Loyalty")]
+    public async Task<IActionResult> Restore(int id, CancellationToken ct)
+    {
+        var restored = await _campaignService.RestoreAsync(id, ct);
+        if (!restored) return NotFound(ApiErrorResponse.From(ErrorCode.CampaignNotFound, "Campaign not found or not deleted.", traceId: HttpContext.TraceIdentifier));
+        return Ok(ApiResponse<object>.Ok(null!, "Loyalty campaign restored successfully."));
     }
 }

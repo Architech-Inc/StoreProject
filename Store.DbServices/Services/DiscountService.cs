@@ -199,15 +199,41 @@ public class DiscountService : IDiscountService
         return MapToDto(discount);
     }
 
-    public async Task<bool> DeleteAsync(int id)
+    public async Task<bool> DeleteAsync(int id, Guid? deletedById = null, CancellationToken ct = default)
     {
         var discount = await _uow.Repository<Discount>().Query()
-            .FirstOrDefaultAsync(d => d.DiscountId == id);
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(d => d.DiscountId == id, ct);
 
         if (discount is null) return false;
+        if (discount.IsDeleted) return true; // idempotent
 
-        _uow.Repository<Discount>().Remove(discount);
-        await _uow.SaveChangesAsync();
+        discount.IsDeleted = true;
+        discount.DeletedAt = DateTime.UtcNow;
+        discount.DeletedById = deletedById;
+        discount.IsActive = false;
+
+        _uow.Repository<Discount>().Update(discount);
+        await _uow.SaveChangesAsync(ct);
+        return true;
+    }
+
+    public async Task<bool> RestoreAsync(int id, CancellationToken ct = default)
+    {
+        var discount = await _uow.Repository<Discount>().Query()
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(d => d.DiscountId == id, ct);
+
+        if (discount is null) return false;
+        if (!discount.IsDeleted) return true; // already active
+
+        discount.IsDeleted = false;
+        discount.DeletedAt = null;
+        discount.DeletedById = null;
+        discount.IsActive = true;
+
+        _uow.Repository<Discount>().Update(discount);
+        await _uow.SaveChangesAsync(ct);
         return true;
     }
 

@@ -141,7 +141,7 @@ public class SalaryServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteAsync_RemovesSalary_WhenNotInUse()
+    public async Task DeleteAsync_SoftDeletesSalary_WhenNotInUse()
     {
         // Arrange
         var salary = new Salary { Grade = "Contractor", BasicAmount = 1200m };
@@ -154,7 +154,32 @@ public class SalaryServiceTests : IDisposable
         // Assert
         Assert.True(deleted);
         var found = await _context.Salaries.FindAsync(salary.SalaryId);
-        Assert.Null(found);
+        Assert.NotNull(found);
+        Assert.True(found.IsDeleted);
+        Assert.NotNull(found.DeletedAt);
+
+        var active = await _context.Salaries.FirstOrDefaultAsync(s => s.SalaryId == salary.SalaryId);
+        Assert.Null(active);
+    }
+
+    [Fact]
+    public async Task RestoreAsync_RestoresSoftDeletedSalary()
+    {
+        // Arrange
+        var salary = new Salary { Grade = "ArchivedGrade", BasicAmount = 1800m };
+        _context.Salaries.Add(salary);
+        await _context.SaveChangesAsync();
+        await _service.DeleteAsync(salary.SalaryId);
+
+        // Act
+        var restored = await _service.RestoreAsync(salary.SalaryId);
+
+        // Assert
+        Assert.True(restored);
+        var active = await _context.Salaries.FirstOrDefaultAsync(s => s.SalaryId == salary.SalaryId);
+        Assert.NotNull(active);
+        Assert.False(active.IsDeleted);
+        Assert.Null(active.DeletedAt);
     }
 
     [Fact]

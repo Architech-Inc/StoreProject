@@ -231,6 +231,24 @@ public class CustomerService : ICustomerService
         return true;
     }
 
+    public async Task<bool> RestoreAsync(Guid customerId, CancellationToken ct = default)
+    {
+        var customer = await _uow.Repository<Customer>().Query()
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(c => c.CustomerId == customerId, ct);
+
+        if (customer is null) return false;
+        if (!customer.IsDeleted) return true; // already active
+
+        customer.IsDeleted = false;
+        customer.DeletedAt = null;
+        customer.DeletedById = null;
+
+        _uow.Repository<Customer>().Update(customer);
+        await _uow.SaveChangesAsync(ct);
+        return true;
+    }
+
     private async Task<Phone> GetOrCreatePhoneAsync(string number, PhoneType type, CancellationToken ct, string? dialCode = null)
     {
         var parsed = PhoneNumberHelper.Parse(number, dialCode ?? "+237");

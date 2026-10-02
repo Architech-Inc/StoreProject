@@ -55,17 +55,41 @@ public class CategoryService : ICategoryService
         return category;
     }
 
-    public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
+    public async Task<bool> DeleteAsync(int id, Guid? deletedById = null, CancellationToken ct = default)
     {
-        var category = await _uow.Repository<Category>().GetByIdAsync(id, ct);
+        var category = await _uow.Repository<Category>().Query()
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(c => c.CategoryId == id, ct);
         if (category is null) return false;
+        if (category.IsDeleted) return true; // idempotent
 
         var hasItems = await _uow.Repository<Item>().ExistsAsync(i => i.CategoryId == id, ct) ||
                        await _uow.Repository<ItemCategory>().ExistsAsync(ic => ic.CategoryId == id, ct);
         if (hasItems)
             throw new InvalidOperationException("Cannot delete category because it is assigned to one or more items.");
 
-        _uow.Repository<Category>().Remove(category);
+        category.IsDeleted = true;
+        category.DeletedAt = DateTime.UtcNow;
+        category.DeletedById = deletedById;
+
+        _uow.Repository<Category>().Update(category);
+        await _uow.SaveChangesAsync(ct);
+        return true;
+    }
+
+    public async Task<bool> RestoreAsync(int id, CancellationToken ct = default)
+    {
+        var category = await _uow.Repository<Category>().Query()
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(c => c.CategoryId == id, ct);
+        if (category is null) return false;
+        if (!category.IsDeleted) return true; // already active
+
+        category.IsDeleted = false;
+        category.DeletedAt = null;
+        category.DeletedById = null;
+
+        _uow.Repository<Category>().Update(category);
         await _uow.SaveChangesAsync(ct);
         return true;
     }

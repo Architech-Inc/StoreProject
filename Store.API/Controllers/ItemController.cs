@@ -88,4 +88,13 @@ public class ItemController : ControllerBase
         if (!deleted) return NotFound(ApiResponse<object>.Fail("Item not found."));
         return Ok(ApiResponse<object>.Ok(null!, "Item deactivated."));
     }
+
+    [HttpPost("{id:guid}/restore")]
+    [Authorize(Policy = PermissionKeys.ItemUpdate)]
+    public async Task<IActionResult> Restore(Guid id, CancellationToken ct)
+    {
+        var restored = await _itemService.RestoreAsync(id, ct);
+        if (!restored) return NotFound(ApiResponse<object>.Fail("Item not found or not deleted."));
+        return Ok(ApiResponse<object>.Ok(null!, "Item restored successfully."));
+    }
 }

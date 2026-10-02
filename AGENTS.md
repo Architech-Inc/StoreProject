@@ -223,9 +223,6 @@ starting work so you don't re-litigate closed items or miss open ones.
 landed. Do not start one without updating both files so the next agent has
 continuity. Items still on the runway:
 
-- Soft-delete service-layer conversion (columns + global filter added; delete
-  methods in `IItemService`, `ISupplierService`, `IEmployeeService`,
-  `ICustomerService` still hard-delete).
 - API versioning (`/api/v1/...` route prefix, ETag middleware).
 - SignalR hub for live notifications (low stock, approval, contact requests).
 - Stripe / PayDunya billing integration for plan-tier enforcement.

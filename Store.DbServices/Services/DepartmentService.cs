@@ -51,16 +51,40 @@ public class DepartmentService : IDepartmentService
         return dept;
     }
 
-    public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
+    public async Task<bool> DeleteAsync(int id, Guid? deletedById = null, CancellationToken ct = default)
     {
-        var dept = await _uow.Repository<Department>().GetByIdAsync(id, ct);
+        var dept = await _uow.Repository<Department>().Query()
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(d => d.DepartmentId == id, ct);
         if (dept is null) return false;
+        if (dept.IsDeleted) return true; // idempotent
 
         var hasEmployees = await _uow.Repository<Employee>().ExistsAsync(e => e.DepartmentId == id, ct);
         if (hasEmployees)
             throw new InvalidOperationException("Cannot delete department because it is assigned to one or more employees.");
 
-        _uow.Repository<Department>().Remove(dept);
+        dept.IsDeleted = true;
+        dept.DeletedAt = DateTime.UtcNow;
+        dept.DeletedById = deletedById;
+
+        _uow.Repository<Department>().Update(dept);
+        await _uow.SaveChangesAsync(ct);
+        return true;
+    }
+
+    public async Task<bool> RestoreAsync(int id, CancellationToken ct = default)
+    {
+        var dept = await _uow.Repository<Department>().Query()
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(d => d.DepartmentId == id, ct);
+        if (dept is null) return false;
+        if (!dept.IsDeleted) return true; // already active
+
+        dept.IsDeleted = false;
+        dept.DeletedAt = null;
+        dept.DeletedById = null;
+
+        _uow.Repository<Department>().Update(dept);
         await _uow.SaveChangesAsync(ct);
         return true;
     }

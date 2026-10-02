@@ -13,5 +13,6 @@ public interface ISupplierService
     Task<SupplierMetricsDto> GetMetricsAsync();
     Task<SupplierDto> CreateAsync(CreateSupplierRequest request, Guid createdByUserId);
     Task<SupplierDto?> UpdateAsync(Guid id, UpdateSupplierRequest request);
-    Task<bool> DeleteAsync(Guid id, Guid? deletedById = null);
+    Task<bool> DeleteAsync(Guid id, Guid? deletedById = null, CancellationToken ct = default);
+    Task<bool> RestoreAsync(Guid id, CancellationToken ct = default);
 }

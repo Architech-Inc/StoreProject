@@ -11,7 +11,8 @@ public interface IDiscountService
     Task<DiscountDto?> GetByIdAsync(int id);
     Task<DiscountDto> CreateAsync(CreateDiscountRequest request, Guid managedByUserId);
     Task<DiscountDto?> UpdateAsync(int id, UpdateDiscountRequest request);
-    Task<bool> DeleteAsync(int id);
+    Task<bool> DeleteAsync(int id, Guid? deletedById = null, CancellationToken ct = default);
+    Task<bool> RestoreAsync(int id, CancellationToken ct = default);
     Task<DiscountDto?> ValidateCouponAsync(string couponCode, int? branchId = null);
     Task IncrementUsageAsync(int discountId);
     Task<DiscountSimulationResult> SimulateDiscountAsync(DiscountSimulationRequest request, CancellationToken ct = default);

@@ -10,5 +10,6 @@ public interface IWastageService
     Task<List<WastageEntryDto>> GetAllAsync(Guid? itemId = null, string? wastageType = null);
     Task<WastageEntryDto?> GetByIdAsync(int id);
     Task<WastageEntryDto> RecordAsync(RecordWastageRequest request, Guid recordedByUserId);
-    Task<bool> DeleteAsync(int id);
+    Task<bool> DeleteAsync(int id, Guid? deletedById = null, CancellationToken ct = default);
+    Task<bool> RestoreAsync(int id, CancellationToken ct = default);
 }

@@ -83,7 +83,10 @@ public class SalariesController : ControllerBase
     {
         try
         {
-            var deleted = await _salaryService.DeleteAsync(id, ct);
+            var userIdClaim = User.FindFirst("uid")?.Value;
+            Guid.TryParse(userIdClaim, out var deletedById);
+
+            var deleted = await _salaryService.DeleteAsync(id, deletedById == Guid.Empty ? null : deletedById, ct);
             if (!deleted)
                 return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "Salary grade not found."));
 
@@ -93,5 +96,17 @@ public class SalariesController : ControllerBase
         {
             return Conflict(ApiErrorResponse.From(ErrorCode.Conflict, SafeErrorMessage.From(ex, _logger, "DeleteSalary")));
         }
+    }
+
+    [HttpPost("{id:int}/restore")]
+    [Authorize(Policy = PermissionKeys.AdminSystem)]
+    [Audit("Restore Salary Grade", Category = "HR")]
+    public async Task<IActionResult> Restore(int id, CancellationToken ct)
+    {
+        var restored = await _salaryService.RestoreAsync(id, ct);
+        if (!restored)
+            return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "Salary grade not found or not deleted."));
+
+        return Ok(ApiResponse<object>.Ok(null!, "Salary grade restored."));
     }
 }

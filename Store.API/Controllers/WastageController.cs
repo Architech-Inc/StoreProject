@@ -65,11 +65,25 @@ public class WastageController : ControllerBase
 
     [HttpDelete("{id:int}")]
     [Authorize(Policy = PermissionKeys.InventoryWrite)]
-    public async Task<IActionResult> Delete(int id)
+    public async Task<IActionResult> Delete(int id, CancellationToken ct = default)
     {
-        var ok = await _wastageService.DeleteAsync(id);
+        var userIdClaim = User.FindFirst("uid")?.Value
+            ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        Guid.TryParse(userIdClaim, out var deletedById);
+
+        var ok = await _wastageService.DeleteAsync(id, deletedById == Guid.Empty ? null : deletedById, ct);
         if (!ok)
             return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "Wastage entry not found", traceId: HttpContext.TraceIdentifier));
         return NoContent();
+    }
+
+    [HttpPost("{id:int}/restore")]
+    [Authorize(Policy = PermissionKeys.InventoryWrite)]
+    public async Task<IActionResult> Restore(int id, CancellationToken ct = default)
+    {
+        var restored = await _wastageService.RestoreAsync(id, ct);
+        if (!restored)
+            return NotFound(ApiErrorResponse.From(ErrorCode.NotFound, "Wastage entry not found or not deleted", traceId: HttpContext.TraceIdentifier));
+        return Ok(ApiResponse<object>.Ok(null!, "Wastage entry restored successfully."));
     }
 }

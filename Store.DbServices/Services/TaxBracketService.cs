@@ -57,12 +57,34 @@ public class TaxBracketService : ITaxBracketService
         return bracket;
     }
 
-    public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
+    public async Task<bool> DeleteAsync(int id, Guid? deletedById = null, CancellationToken ct = default)
     {
-        var bracket = await _context.TaxBrackets.FirstOrDefaultAsync(t => t.TaxBracketId == id, ct);
-        if (bracket is null) return false;
+        var bracket = await _context.TaxBrackets
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(t => t.TaxBracketId == id, ct);
+        if (bracket is null || bracket.IsDeleted) return false;
 
-        _context.TaxBrackets.Remove(bracket);
+        bracket.IsDeleted = true;
+        bracket.DeletedAt = DateTime.UtcNow;
+        bracket.DeletedById = deletedById;
+        bracket.IsActive = false;
+
+        await _context.SaveChangesAsync(ct);
+        return true;
+    }
+
+    public async Task<bool> RestoreAsync(int id, CancellationToken ct = default)
+    {
+        var bracket = await _context.TaxBrackets
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(t => t.TaxBracketId == id, ct);
+        if (bracket is null || !bracket.IsDeleted) return false;
+
+        bracket.IsDeleted = false;
+        bracket.DeletedAt = null;
+        bracket.DeletedById = null;
+        bracket.IsActive = true;
+
         await _context.SaveChangesAsync(ct);
         return true;
     }

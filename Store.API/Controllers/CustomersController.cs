@@ -112,4 +112,14 @@ public class CustomersController : ControllerBase
         if (!deleted) return NotFound(ApiResponse<object>.Fail("Customer not found."));
         return Ok(ApiResponse<object>.Ok(null!, "Customer deleted."));
     }
+
+    [HttpPost("{id:guid}/restore")]
+    [Authorize(Policy = PermissionKeys.CustomerUpdate)]
+    [Audit("Restore Customer", Category = "Customers")]
+    public async Task<IActionResult> Restore(Guid id, CancellationToken ct)
+    {
+        var restored = await _customerService.RestoreAsync(id, ct);
+        if (!restored) return NotFound(ApiResponse<object>.Fail("Customer not found or not deleted."));
+        return Ok(ApiResponse<object>.Ok(null!, "Customer restored."));
+    }
 }
