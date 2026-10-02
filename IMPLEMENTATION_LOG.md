@@ -3131,6 +3131,71 @@ Integrate Flutterwave across both platform SaaS subscription billing (`Store.Con
   - Total: **529 passed, 0 failed** (100% green).
 
 
+## Wave 52 — Formal API Versioning (`/api/v1`) & RFC 7232 ETag Middleware (GAP-15, GAP-16)
+
+### Objective
+Complete and harden `GAP-15` (API versioning) and `GAP-16` (ETag caching middleware):
+1. Support standard REST `/api/v1/...` URL routing across all 39 API controllers while retaining legacy `/api/...` endpoints without breaking existing UI or external clients.
+2. Configure multi-format `ApiVersionReader` combining URL segment (`/api/v1/...`), query string (`?api-version=1.0`), and header (`X-Version: 1.0`).
+3. Harden `ETagMiddleware.cs` for full RFC 7232 compliance: support multi-value `If-None-Match`, wildcard `*`, weak entity comparison, and `Cache-Control: no-store` suppression.
+4. Add comprehensive unit test suites in `Store.API.Tests` for route versioning conventions and ETag caching behavior.
+
+### 52.A — Dual Routing Application Model Convention (`ApiVersioningRouteConvention.cs`)
+- **Convention Implementation (`Store.API/Infrastructure/Conventions/ApiVersioningRouteConvention.cs`)**:
+  - Implements `IApplicationModelConvention`.
+  - Inspects each controller selector: matches route templates starting with `api/` or `api`.
+  - Automatically duplicates each selector to also register the versioned route `api/v1/{remaining}`.
+  - Guards against duplicating routes that are already versioned (`api/v1/...` or `api/v{...}`).
+  - Successfully registers both `/api/...` and `/api/v1/...` across all 39 controllers (e.g. `/api/v1/item`, `/api/v1/auth/login`, `/api/v1/cash/variances`, `/api/v1/admin/branches`) with zero manual attribute duplication or maintenance overhead.
+
+### 52.B — Service Configuration & Multi-Reader Pipeline (`Program.cs`)
+- **Combined `ApiVersionReader`**:
+  - Configured `ApiVersionReader.Combine`:
+    1. `UrlSegmentApiVersionReader`: supports URL route versions.
+    2. `QueryStringApiVersionReader`: supports `?api-version=1.0`.
+    3. `HeaderApiVersionReader("X-Version")`: supports `X-Version: 1.0` header.
+- **Convention Registration**:
+  - Registered `ApiVersioningRouteConvention("v1")` in `builder.Services.AddControllers(options => options.Conventions.Add(...))`.
+
+### 52.C — RFC 7232 ETag Middleware Hardening (`ETagMiddleware.cs`)
+- **RFC 7232 Specification Compliance**:
+  - Added `IsIfNoneMatchHit` evaluator supporting:
+    - Wildcard `*`: matches any current representation.
+    - Comma-delimited token lists: e.g. `"foo", W/"bar", "hash"`.
+    - Weak vs strong entity comparison: `NormalizeEtag` strips `W/` prefix and surrounding quotes, allowing weak tags (`W/"hash"`) to match strong validator tokens (`"hash"`) per RFC 7232 weak comparison rules.
+- **Cache-Control No-Store Protection**:
+  - Checks if downstream response sets `Cache-Control: no-store`.
+  - When `no-store` is present, suppresses ETag generation and never returns 304, preserving non-cacheable data confidentiality.
+- **Downstream ETag Preservation**:
+  - If a downstream controller handler sets its own custom `ETag`, `ETagMiddleware` preserves it and evaluates `If-None-Match` against it.
+- **Safe Cache Defaults**:
+  - Sets `Cache-Control: private, max-age=0, must-revalidate` on successful GET responses if downstream omitted cache control.
+- **304 Not Modified Execution**:
+  - On match, clears buffered body (`Content-Length = 0`), sets status 304, and preserves `ETag` response header.
+
+### 52.D — Unit Testing & Verification
+- **Route Versioning Test Suite (`Store.API.Tests/ApiVersioningTests.cs`)**:
+  - `Apply_DuplicatesApiRoutesToV1`: verifies multiple selectors (`api/item`, `api/items`) expand to 4 selectors including `/api/v1/...`.
+  - `Apply_DoesNotDuplicate_AlreadyVersionedRoutes`: verifies idempotence on versioned templates.
+  - `Apply_Ignores_NonApiRoutes`: verifies non-api routes remain untouched.
+  - `Apply_GeneratesV1Routes_ForControllers`: theory test across real controllers (`AuthController`, `BranchController`, `CashVarianceController`, `CashManagementController`, `PurchaseOrdersController`, `PasswordRecoveryController`).
+- **ETag Middleware Test Suite (`Store.API.Tests/ETagMiddlewareTests.cs`)**:
+  - Theory test `IsIfNoneMatchHit_EvaluatesCorrectly` covering 13 permutation scenarios (null, empty, wildcard, strong vs weak, comma lists).
+  - Pipeline test `InvokeAsync_Get200_EmitsWeakEtagAndCacheControl`.
+  - Pipeline test `InvokeAsync_MatchingIfNoneMatch_Returns304NotModifiedWithEmptyBody`.
+  - Pipeline test `InvokeAsync_WildcardIfNoneMatch_Returns304NotModified`.
+  - Pipeline test `InvokeAsync_PostRequest_BypassesEtagGeneration`.
+  - Pipeline test `InvokeAsync_CacheControlNoStore_SuppressesEtagAnd304`.
+  - Pipeline test `InvokeAsync_PreservesDownstreamCustomEtag`.
+- **Verification Results**:
+  - Solution build: `dotnet build StoreProject.sln --configuration Release` (**0 warnings, 0 errors**).
+  - `Store.API.Tests`: **473 passed, 0 failed** (+28 new test cases).
+  - `Store.ControlPlane.Tests`: **57 passed, 0 failed**.
+  - `Store.TenantPortal.Tests`: **27 passed, 0 failed**.
+  - Total: **557 passed, 0 failed** (100% green).
+
+
+
 
 
 

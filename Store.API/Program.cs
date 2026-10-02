@@ -23,6 +23,7 @@ using Store.Models.Interfaces.Services;
 using Hangfire;
 using Store.API.Extensions;
 using Store.Models.Logging;
+using Store.API.Infrastructure.Conventions;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.ConfigureEnterpriseLogging("Store.API");
@@ -328,12 +329,16 @@ builder.Services.AddApiVersioning(options =>
     options.ReportApiVersions = true;
     options.ApiVersionReader =
         Microsoft.AspNetCore.Mvc.Versioning.ApiVersionReader.Combine(
+            new Microsoft.AspNetCore.Mvc.Versioning.UrlSegmentApiVersionReader(),
             new Microsoft.AspNetCore.Mvc.Versioning.QueryStringApiVersionReader(),
             new Microsoft.AspNetCore.Mvc.Versioning.HeaderApiVersionReader("X-Version"));
 });
 
 // ─── Controllers ─────────────────────────────────────────────────────────────
-builder.Services.AddControllers()
+builder.Services.AddControllers(options =>
+    {
+        options.Conventions.Add(new ApiVersioningRouteConvention("v1"));
+    })
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;

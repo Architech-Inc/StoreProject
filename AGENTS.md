@@ -227,7 +227,6 @@ starting work so you don't re-litigate closed items or miss open ones.
 landed. Do not start one without updating both files so the next agent has
 continuity. Items still on the runway:
 
-- API versioning (`/api/v1/...` route prefix, ETag middleware).
 - Stripe / PayDunya billing integration for plan-tier enforcement.
 - Security upgrade to Argon2id password hashing (SEC-24).
 

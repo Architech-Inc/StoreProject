@@ -38,7 +38,7 @@ public class ETagMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
-        // Only GET responses are eligible. POST/PUT/PATCH/DELETE must NOT be
+        // Only GET and HEAD responses are eligible. POST/PUT/PATCH/DELETE must NOT be
         // ETagged — that would let an attacker poison caches for writes.
         var method = context.Request.Method;
         if (!HttpMethods.IsGet(method) && !HttpMethods.IsHead(method))
@@ -50,26 +50,41 @@ public class ETagMiddleware
         var originalBody = context.Response.Body;
         using var buffer = new MemoryStream();
         context.Response.Body = buffer;
-        context.Response.Headers["Cache-Control"] = "private, max-age=0, must-revalidate";
 
         try
         {
             await _next(context);
 
-            if (!context.Response.Headers.ContainsKey("ETag") &&
+            var cacheControl = context.Response.Headers.CacheControl.ToString();
+            bool hasNoStore = cacheControl.IndexOf("no-store", StringComparison.OrdinalIgnoreCase) >= 0;
+
+            if (!hasNoStore &&
                 context.Response.StatusCode == StatusCodes.Status200OK &&
                 buffer.Length > 0)
             {
-                buffer.Position = 0;
-                using var sha = SHA256.Create();
-                var hashBytes = await sha.ComputeHashAsync(buffer);
-                var etag = $"W/\"{Convert.ToHexString(hashBytes).ToLowerInvariant()}\"";
+                // Set default cache revalidation hint if downstream didn't set Cache-Control
+                if (!context.Response.Headers.ContainsKey("Cache-Control"))
+                {
+                    context.Response.Headers.CacheControl = "private, max-age=0, must-revalidate";
+                }
 
-                context.Response.Headers["ETag"] = etag;
+                string etag;
+                if (context.Response.Headers.TryGetValue("ETag", out var existingEtag) &&
+                    !string.IsNullOrWhiteSpace(existingEtag))
+                {
+                    etag = existingEtag.ToString();
+                }
+                else
+                {
+                    buffer.Position = 0;
+                    using var sha = SHA256.Create();
+                    var hashBytes = await sha.ComputeHashAsync(buffer);
+                    etag = $"W/\"{Convert.ToHexString(hashBytes).ToLowerInvariant()}\"";
+                    context.Response.Headers["ETag"] = etag;
+                }
 
                 var requestEtag = context.Request.Headers.IfNoneMatch.ToString();
-                if (!string.IsNullOrEmpty(requestEtag) &&
-                    string.Equals(requestEtag.Trim(), etag, System.StringComparison.Ordinal))
+                if (IsIfNoneMatchHit(requestEtag, etag))
                 {
                     // Short-circuit to 304 — clear the body and update the status.
                     buffer.SetLength(0);
@@ -77,6 +92,10 @@ public class ETagMiddleware
                     context.Response.ContentLength = 0;
                     _logger.LogDebug("ETag hit for {Method} {Path}", method, context.Request.Path);
                 }
+            }
+            else if (!context.Response.Headers.ContainsKey("Cache-Control") && !hasNoStore)
+            {
+                context.Response.Headers.CacheControl = "private, max-age=0, must-revalidate";
             }
 
             buffer.Position = 0;
@@ -86,6 +105,44 @@ public class ETagMiddleware
         {
             context.Response.Body = originalBody;
         }
+    }
+
+    /// <summary>
+    /// RFC 7232 compliant If-None-Match evaluator.
+    /// Handles wildcard '*', comma-separated lists of tags, and weak vs strong tags.
+    /// </summary>
+    public static bool IsIfNoneMatchHit(string? ifNoneMatchHeader, string? currentEtag)
+    {
+        if (string.IsNullOrWhiteSpace(ifNoneMatchHeader) || string.IsNullOrWhiteSpace(currentEtag))
+            return false;
+
+        var headerValue = ifNoneMatchHeader.Trim();
+        if (headerValue == "*")
+            return true;
+
+        var normalizedCurrent = NormalizeEtag(currentEtag);
+
+        var tokens = headerValue.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        foreach (var token in tokens)
+        {
+            if (token == "*")
+                return true;
+
+            if (string.Equals(NormalizeEtag(token), normalizedCurrent, StringComparison.Ordinal))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static string NormalizeEtag(string tag)
+    {
+        var trimmed = tag.Trim();
+        if (trimmed.StartsWith("W/", StringComparison.OrdinalIgnoreCase))
+        {
+            trimmed = trimmed.Substring(2).Trim();
+        }
+        return trimmed.Trim('"');
     }
 }
 
