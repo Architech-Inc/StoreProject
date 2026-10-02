@@ -47,13 +47,20 @@ public class RegisterModel : PageModel
 
             return RedirectToPage("/Onboarding");
         }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Failed to connect to ControlPlane service");
+            ErrorMessage = "Unable to connect to the Control Plane management service. Please ensure Store.ControlPlane is running on port 19999.";
+            return Page();
+        }
         catch (InvalidOperationException ex)
         {
             ErrorMessage = SafeErrorMessage.From(ex, _logger, "Register operation");
             return Page();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Unexpected error during registration");
             ErrorMessage = "An unexpected error occurred during registration. Please try again.";
             return Page();
         }

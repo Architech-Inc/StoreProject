@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Store.Models.Common;
 using Store.TenantPortal.Models.ViewModels;
 using Store.TenantPortal.Services;
 
@@ -9,11 +10,16 @@ public class LoginModel : PageModel
 {
     private readonly IControlPlaneClient _cpClient;
     private readonly IPortalSessionService _sessionService;
+    private readonly ILogger<LoginModel>? _logger;
 
-    public LoginModel(IControlPlaneClient cpClient, IPortalSessionService sessionService)
+    public LoginModel(
+        IControlPlaneClient cpClient,
+        IPortalSessionService sessionService,
+        ILogger<LoginModel>? logger = null)
     {
         _cpClient = cpClient;
         _sessionService = sessionService;
+        _logger = logger;
     }
 
     [BindProperty]
@@ -44,25 +50,45 @@ public class LoginModel : PageModel
             return Page();
         }
 
-        var authResult = await _cpClient.LoginAsync(Input.Email, Input.Password, ct);
-        if (authResult == null)
+        try
         {
-            ErrorMessage = "Invalid email address or password.";
+            var authResult = await _cpClient.LoginAsync(Input.Email, Input.Password, ct);
+            if (authResult == null)
+            {
+                ErrorMessage = "Invalid email address or password.";
+                return Page();
+            }
+
+            await _sessionService.SignInAsync(HttpContext, authResult);
+
+            if (!string.IsNullOrEmpty(Input.ReturnUrl) && Url.IsLocalUrl(Input.ReturnUrl))
+            {
+                return Redirect(Input.ReturnUrl);
+            }
+
+            if (authResult.TenantId.HasValue && !string.IsNullOrEmpty(authResult.TenantSlug))
+            {
+                return RedirectToPage("/Dashboard");
+            }
+
+            return RedirectToPage("/Onboarding");
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger?.LogError(ex, "Failed to connect to ControlPlane service");
+            ErrorMessage = "Unable to connect to the Control Plane management service. Please ensure Store.ControlPlane is running on port 19999.";
             return Page();
         }
-
-        await _sessionService.SignInAsync(HttpContext, authResult);
-
-        if (!string.IsNullOrEmpty(Input.ReturnUrl) && Url.IsLocalUrl(Input.ReturnUrl))
+        catch (InvalidOperationException ex)
         {
-            return Redirect(Input.ReturnUrl);
+            ErrorMessage = SafeErrorMessage.From(ex, _logger, "Login operation");
+            return Page();
         }
-
-        if (authResult.TenantId.HasValue && !string.IsNullOrEmpty(authResult.TenantSlug))
+        catch (Exception ex)
         {
-            return RedirectToPage("/Dashboard");
+            _logger?.LogError(ex, "Unexpected error during login");
+            ErrorMessage = "An unexpected error occurred during login. Please try again.";
+            return Page();
         }
-
-        return RedirectToPage("/Onboarding");
     }
 }
