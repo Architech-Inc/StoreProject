@@ -15,7 +15,7 @@ public static class ControlPlaneDataMigrator
         var env = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
 
         logger.LogInformation("Ensuring Control Plane MySQL database schema is up-to-date...");
-        await db.Database.EnsureCreatedAsync(ct);
+        await db.Database.MigrateAsync(ct);
 
         var appDataDir = Path.Combine(env.ContentRootPath, "App_Data");
         if (!Directory.Exists(appDataDir)) return;
