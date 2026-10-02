@@ -1,10 +1,11 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Store.ControlPlane</RootNamespace>
+    <UserSecretsId>398fab1a-42a6-413a-8a54-2d82c735b033</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

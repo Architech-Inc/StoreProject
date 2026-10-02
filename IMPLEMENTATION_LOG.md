@@ -3021,13 +3021,54 @@ Integrate Flutterwave across both platform SaaS subscription billing (`Store.Con
   - Total: **525 passed, 0 failed**.
 
 
+---
 
+## Wave 50 — Database Pruning, Salary Grade End-to-End Lifecycle & Tax Bracket Management
 
+### 50.A — UI Bug Fixes & Payroll Remediation
+- **Fixed Empty `Error:` bug in `ApiClientService.cs`**:
+  - `DeserializeResponse<T>` previously failed when deserializing already unwrapped `ApiResponse` / `ApiResponse<T>` objects, resulting in empty error banners. Added type check to return unwrapped payloads directly.
+- **Custom Confirm Dialog in `Payroll.cshtml`**:
+  - Replaced browser-native `confirm()` modal with `data-confirm` trigger hooked into `AppDialog.confirm` design system modal for payroll execution.
+- **Self-Healing Payroll Accounting & Cash Account Discovery**:
+  - Updated `PayrollService.PayPayrollRunAsync` with flexible account matching (`1000` Cash, `5200` Salary Expense, `2100` Payroll Tax Payable).
+  - Auto-provisions missing ledger accounts on-the-fly and seeded default chart of accounts (`5200` / `2100`) on application startup.
+- **Removed Deprecated Orders Route**:
+  - Eliminated dead `/Orders` navigation from `_AppLayout.cshtml` and redirected `/Orders` page to `/PurchaseOrders`.
 
+### 50.B — Dead Schema Pruning (9 Orphan Tables)
+- **Eliminated 9 Unused Leaf/Join Tables & Entities**:
+  - Dropped `Privilege`, `UserPrivilege`, `UserPrivilegeAction`, `EmployeePrivilege`, `EmployeePrivilegeAction`, `CustomerPrivilege`, `CustomerPrivilegeAction`, `CustomerLocation`, `EmployeeLocation`.
+  - Removed navigation collections from aggregate models (`Location.cs`, `Customer.cs`, `Employee.cs`, `User.cs`).
+  - Removed `DbSet` declarations from `StoreDbContext.cs`.
+  - Archived obsolete entity source files in `Store.Models/Entities/Archived/`.
+  - Generated and applied EF Core migration `20261002131000_PruneDeadPrivilegeAndLocationTables`.
 
+### 50.C — Salary Grade End-to-End Implementation
+- **Domain & API**:
+  - Added `UpdateAsync` to `ISalaryService` and created `CreateSalaryRequest` DTO in `Store.Models/DTOs/HR/SalaryDtos.cs`.
+  - Implemented `SalaryService` in `Store.DbServices/Services/LookupServices.cs` with full CRUD support, registered in `ServiceCollectionExtensions.cs`.
+  - Implemented `SalariesController` in `Store.API/Controllers/LookupControllers.cs` with JWT authentication and permission policies (`HRPayrollRead`, `HRPayrollWrite`).
+- **UI & Employee Integration**:
+  - Updated `ILookupManager` and `LookupManager` with `GetSalariesAsync`, `SaveSalaryAsync`, and `DeleteSalaryAsync`.
+  - Added "Salary Grades" tab to `Lookup.cshtml` & `Lookup.cshtml.cs` complete with KPI cards, searchable table, and modern modal.
+  - Linked Salary Grades into `Employees.cshtml`: added salary grade dropdown in Add/Edit Employee modal and wired `salaryId` parameter through `EmployeeManager`.
 
+### 50.D — Tax Bracket Admin Management
+- **Domain & API**:
+  - Created `ITaxBracketService` and implemented `TaxBracketService` in `Store.DbServices/Services/TaxBracketService.cs`.
+  - Created `TaxBracketsController` in `Store.API/Controllers/TaxBracketsController.cs` for configuring PAYE rates and brackets.
+- **UI**:
+  - Integrated Tax Bracket Management into `Payroll.cshtml`: added "Manage Tax Brackets" modal button, live bracket table, and Add/Edit Bracket modal.
+  - Updated `Payroll.cshtml.cs` with handlers `OnGetTaxBracketsAsync` and `OnPostSaveTaxBracketAsync`.
 
-
+### 50.E — Verification
+- **Automated Tests**:
+  - Solution build: `dotnet build StoreProject.sln --configuration Release` (**0 warnings, 0 errors**).
+  - `Store.API.Tests`: **442 passed, 0 failed** (includes new SalaryService CRUD test).
+  - `Store.ControlPlane.Tests`: **57 passed, 0 failed**.
+  - `Store.TenantPortal.Tests`: **27 passed, 0 failed**.
+  - Total: **526 passed, 0 failed**.
 
 
 

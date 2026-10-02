@@ -1,9 +1,10 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>e64132b6-508d-4411-884a-c6b56904ed37</UserSecretsId>
   </PropertyGroup>
 
   <!-- Presentation layer: JWT validation, CORS, Swagger, rate limiting -->
