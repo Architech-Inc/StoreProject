@@ -141,6 +141,15 @@ builder.Services.AddHttpClient<Store.Models.Interfaces.Services.IPayDunyaPayment
     }
 });
 
+// Flutterwave payment gateway + options for pan-African and international subscription billing
+builder.Services.Configure<Store.Models.DTOs.Payments.FlutterwaveOptions>(
+    builder.Configuration.GetSection(Store.Models.DTOs.Payments.FlutterwaveOptions.SectionName));
+builder.Services.AddHttpClient<Store.Models.Interfaces.Services.IFlutterwavePaymentService,
+    Store.DbServices.Services.FlutterwavePaymentService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(15);
+});
+
 // CORS — explicit allowlist only, env-supplied. We refuse AllowAnyOrigin.
 var controlPlaneOrigins = builder.Configuration.GetSection("ControlPlaneCors:AllowedOrigins").Get<string[]>()
     ?? Array.Empty<string>();

@@ -206,7 +206,13 @@ public class MobileMoneyService : IMobileMoneyService
     {
         MobileMoneyTransactionId = t.MobileMoneyTransactionId,
         InvoiceId = t.InvoiceId,
-        Provider = t.Provider == MobileMoneyProvider.MtnMomo ? "MTN MoMo" : "Orange Money",
+        Provider = t.Provider switch
+        {
+            MobileMoneyProvider.MtnMomo => "MTN MoMo",
+            MobileMoneyProvider.OrangeMoney => "Orange Money",
+            MobileMoneyProvider.Flutterwave => "Flutterwave",
+            _ => t.Provider.ToString()
+        },
         PhoneNumber = t.PhoneNumber,
         Amount = t.Amount,
         Status = t.Status.ToString(),

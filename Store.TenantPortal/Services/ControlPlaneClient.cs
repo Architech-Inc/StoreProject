@@ -607,6 +607,18 @@ public class ControlPlaneClient : IControlPlaneClient
         return dto;
     }
 
+    public async Task<CreateInvoiceResponse?> CreateFlutterwaveBillingInvoiceAsync(string slug, CreateBillingInvoiceRequest request, CancellationToken ct = default)
+    {
+        var response = await _http.PostAsJsonAsync($"api/billing/flutterwave/invoice", request, ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("CreateFlutterwaveBillingInvoice failed for {Slug}: {Status}", slug, response.StatusCode);
+            return null;
+        }
+        var dto = await response.Content.ReadFromJsonAsync<CreateInvoiceResponse>(cancellationToken: ct);
+        return dto;
+    }
+
     public async Task<TenantPaymentHistoryDto?> GetBillingHistoryAsync(string slug, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(slug)) return null;

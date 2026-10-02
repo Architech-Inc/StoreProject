@@ -75,6 +75,7 @@ public interface IControlPlaneClient
     // "recent payments" table.
     Task<TenantDetailDto?> GetTenantAsync(string slug, CancellationToken ct = default);
     Task<CreateInvoiceResponse?> CreateBillingInvoiceAsync(string slug, CreateBillingInvoiceRequest request, CancellationToken ct = default);
+    Task<CreateInvoiceResponse?> CreateFlutterwaveBillingInvoiceAsync(string slug, CreateBillingInvoiceRequest request, CancellationToken ct = default);
     Task<TenantPaymentHistoryDto?> GetBillingHistoryAsync(string slug, CancellationToken ct = default);
 
     // MT-04 — per-tenant custom SMTP mail relay

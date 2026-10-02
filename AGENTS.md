@@ -14,8 +14,9 @@ API, and UI behind a single Traefik. A `Store.ControlPlane` service orchestrates
 tenant lifecycle (provision, suspend, resume, restore, deprovision) and a
 `Store.TenantPortal` is the public SaaS signup/onboarding surface.
 
-The codebase has been iterated heavily by Antigravity IDE — see the three
-`*_conversation_history.md` files in the repo root for the long-form history of
+The codebase has been iterated heavily by Antigravity IDE — see the four
+`*_conversation_history.md` files in the repo root (`employee`, `image_processing`,
+`ui_ux_refinement`, `flutterwave_integration`) for the long-form history of
 decisions, refactors, and known half-built features.
 
 ## 2. Repository layout
@@ -90,6 +91,8 @@ Required env vars in production:
 | `Jwt__Key` | Store.API | ≥32 chars, no placeholder |
 | `Auth__OtpPepper` | Store.API | HMAC secret for OTP hashing, ≥32 chars/bytes |
 | `Payments__MoMoCallbackKey` | Store.API | HMAC secret, ≥32 chars |
+| `Payments__Flutterwave__SecretKey` | Store.API & ControlPlane | Flutterwave v3 API secret key |
+| `Payments__Flutterwave__SecretHash` | Store.API & ControlPlane | Secret hash for constant-time `verif-hash` validation |
 | `MongoDB__ConnectionString` | Store.API | per-tenant Atlas URI |
 | `ControlPlane__MasterEncryptionKey` | Store.ControlPlane | ≥32 chars, no placeholder |
 | `ControlPlane__WebhookSigningSecret` | Store.ControlPlane | ≥32 chars |
@@ -118,10 +121,11 @@ The runtime security model is layered:
 4. **Antivirus** — `ClamAvVirusScanner` is invoked by `FilesController`
    before any persisted image. Without ClamAV configured, the API refuses
    `Antivirus:Provider=NoOp` in production.
-5. **HMAC MoMo callbacks** — `PaymentsController` validates
-   `X-Callback-Signature: sha256=<hex>` over the raw body using
-   `Payments:MoMoCallbackKey` (constant-time compare). The older static
-   `X-Callback-Key` scheme is gone.
+5. **HMAC & Webhook Callbacks** — `PaymentsController` validates
+   `X-Callback-Signature: sha256=<hex>` over raw body using `Payments:MoMoCallbackKey`
+   for MTN/Orange Money, and `verif-hash` with constant-time compare (`CryptographicOperations.FixedTimeEquals`)
+   plus live out-of-band API verification (`GET /v3/transactions/{id}/verify`) for Flutterwave.
+   The older static `X-Callback-Key` scheme is gone.
 6. **Security headers** — `SecurityHeadersMiddleware` sets CSP,
    `X-Frame-Options: DENY`, HSTS on HTTPS, etc.
 7. **CORS** — explicit allowlist only. `*` is rejected on startup outside dev.

@@ -124,12 +124,12 @@ public class BillingModel : PageModel
     }
 
     /// <summary>
-    /// Subscribe to a plan via PayDunya. Creates the hosted-checkout invoice
-    /// and redirects the user to PayDunya's page. On success / cancel, the
+    /// Subscribe to a plan via PayDunya or Flutterwave. Creates the hosted-checkout invoice
+    /// and redirects the user to the provider's checkout page. On success / cancel, the
     /// user is bounced back to <see cref="OnGetAsync"/> with a query
     /// string the portal renders as a success or info toast.
     /// </summary>
-    public async Task<IActionResult> OnPostSubscribeAsync(string slug, string planId, CancellationToken ct)
+    public async Task<IActionResult> OnPostSubscribeAsync(string slug, string planId, string gateway = "paydunya", CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(slug) || string.IsNullOrWhiteSpace(planId))
         {
@@ -142,7 +142,7 @@ public class BillingModel : PageModel
             var amount = planId switch
             {
                 "starter" => 0,
-                "professional" => 29900, // XAF — unit-pricing, no decimals in PayDunya XAF
+                "professional" => 29900, // XAF / unit pricing
                 "enterprise" => -1,
                 _ => 0
             };
@@ -150,34 +150,58 @@ public class BillingModel : PageModel
             if (amount == -1)
             {
                 // Enterprise is contact-sales for now — render the portal
-                // email CTA instead of initiating a PayDunya invoice.
+                // email CTA instead of initiating an invoice.
                 Success = "Enterprise plans require a quick call. We've notified our team and they'll reach out within 1 business day.";
                 return RedirectToPage(new { slug });
             }
 
-            // Round-trip URL PayDunya redirects the user back to.
-            var returnUrl = $"{Request.Scheme}://{Request.Host}/Billing/{slug}?status={{status}}&token={{token}}";
-            var resp = await _cpClient.CreateBillingInvoiceAsync(slug, new Store.TenantPortal.Models.DTOs.CreateBillingInvoiceRequest(
-                TenantId: Guid.Empty, // populated server-side from the slug
-                PlanId: planId,
-                TotalAmount: amount,
-                Currency: "XAF",
-                Description: $"ClexAn Foods — {planId} plan",
-                ReturnUrl: returnUrl,
-                CallbackUrl: $"{Request.Scheme}://{Request.Host}/api/billing/paydunya/ipn"
-            ), ct);
-
-            if (resp is null || string.IsNullOrEmpty(resp.CheckoutUrl))
+            if (string.Equals(gateway, "flutterwave", StringComparison.OrdinalIgnoreCase))
             {
-                Error = "PayDunya is not configured on this environment. Please contact support.";
-                return RedirectToPage(new { slug });
-            }
+                var returnUrl = $"{Request.Scheme}://{Request.Host}/Billing/{slug}?status={{status}}&tx_ref={{tx_ref}}";
+                var resp = await _cpClient.CreateFlutterwaveBillingInvoiceAsync(slug, new Store.TenantPortal.Models.DTOs.CreateBillingInvoiceRequest(
+                    TenantId: Guid.Empty,
+                    PlanId: planId,
+                    TotalAmount: amount,
+                    Currency: "USD",
+                    Description: $"ClexAn Foods — {planId} plan (Flutterwave)",
+                    ReturnUrl: returnUrl,
+                    CallbackUrl: $"{Request.Scheme}://{Request.Host}/api/billing/flutterwave/webhook"
+                ), ct);
 
-            return Redirect(resp.CheckoutUrl);
+                if (resp is null || string.IsNullOrEmpty(resp.CheckoutUrl))
+                {
+                    Error = "Flutterwave is not configured on this environment. Please contact support.";
+                    return RedirectToPage(new { slug });
+                }
+
+                return Redirect(resp.CheckoutUrl);
+            }
+            else
+            {
+                // Round-trip URL PayDunya redirects the user back to.
+                var returnUrl = $"{Request.Scheme}://{Request.Host}/Billing/{slug}?status={{status}}&token={{token}}";
+                var resp = await _cpClient.CreateBillingInvoiceAsync(slug, new Store.TenantPortal.Models.DTOs.CreateBillingInvoiceRequest(
+                    TenantId: Guid.Empty, // populated server-side from the slug
+                    PlanId: planId,
+                    TotalAmount: amount,
+                    Currency: "XAF",
+                    Description: $"ClexAn Foods — {planId} plan",
+                    ReturnUrl: returnUrl,
+                    CallbackUrl: $"{Request.Scheme}://{Request.Host}/api/billing/paydunya/ipn"
+                ), ct);
+
+                if (resp is null || string.IsNullOrEmpty(resp.CheckoutUrl))
+                {
+                    Error = "PayDunya is not configured on this environment. Please contact support.";
+                    return RedirectToPage(new { slug });
+                }
+
+                return Redirect(resp.CheckoutUrl);
+            }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Billing subscribe failed for slug {Slug} plan {PlanId}.", slug, planId);
+            _logger.LogError(ex, "Billing subscribe failed for slug {Slug} plan {PlanId} via {Gateway}.", slug, planId, gateway);
             Error = "We couldn't start the checkout. Please try again or contact support.";
             return RedirectToPage(new { slug });
         }

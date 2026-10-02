@@ -174,7 +174,8 @@ public enum ShiftStatus
 public enum MobileMoneyProvider
 {
     MtnMomo,
-    OrangeMoney
+    OrangeMoney,
+    Flutterwave
 }
 
 public enum MobileMoneyStatus

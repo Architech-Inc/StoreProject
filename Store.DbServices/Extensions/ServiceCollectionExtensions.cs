@@ -84,6 +84,8 @@ public static class ServiceCollectionExtensions
         services.Configure<Store.Models.Configuration.SmtpOptions>(config.GetSection(Store.Models.Configuration.SmtpOptions.SectionName));
         services.AddScoped<ISmtpEmailSender, SmtpEmailSender>();
         services.AddScoped<IEmailService, MockEmailService>();
+        services.Configure<Store.Models.DTOs.Payments.FlutterwaveOptions>(config.GetSection(Store.Models.DTOs.Payments.FlutterwaveOptions.SectionName));
+        services.AddHttpClient<IFlutterwavePaymentService, FlutterwavePaymentService>();
 
         // SEC-06 — HMAC pepper for OTP hashing. Bound at startup so the service
         // throws on construction if the pepper is missing or < 32 bytes (raw or base64-decoded).

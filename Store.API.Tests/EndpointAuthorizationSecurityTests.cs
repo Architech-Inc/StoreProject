@@ -52,9 +52,10 @@ public class EndpointAuthorizationSecurityTests
             "WebAuthnController.AssertionOptions",
             "WebAuthnController.MakeAssertion",
 
-            // Webhook callbacks (HMAC-SHA256 signature verified)
+            // Webhook callbacks (HMAC-SHA256 signature / verif-hash verified)
             "PaymentsController.MtnMomoCallback",
             "PaymentsController.OrangeMoneyCallback",
+            "PaymentsController.FlutterwaveWebhook",
 
             // Public receipt lookup by GUID
             "InvoicesController.GetPublicReceipt",
@@ -259,6 +260,16 @@ public class EndpointAuthorizationSecurityTests
     public void PaymentsController_Initiate_RequiresCashWritePolicy()
     {
         var method = typeof(PaymentsController).GetMethod(nameof(PaymentsController.Initiate));
+        Assert.NotNull(method);
+        var auth = method.GetCustomAttribute<AuthorizeAttribute>();
+        Assert.NotNull(auth);
+        Assert.Equal(PermissionKeys.CashWrite, auth.Policy);
+    }
+
+    [Fact]
+    public void PaymentsController_InitiateFlutterwave_RequiresCashWritePolicy()
+    {
+        var method = typeof(PaymentsController).GetMethod(nameof(PaymentsController.InitiateFlutterwave));
         Assert.NotNull(method);
         var auth = method.GetCustomAttribute<AuthorizeAttribute>();
         Assert.NotNull(auth);

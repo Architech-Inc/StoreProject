@@ -2947,6 +2947,81 @@ Completes the soft-delete transition across all 13 core business aggregate roots
 - Tracker updated: `GAP-18` marked fully closed and removed from `AGENTS.md` runway.
 
 
+## Wave 49 — Flutterwave Payment Gateway Integration (SaaS Billing & In-Store POS)
+
+### Objective
+Integrate Flutterwave across both platform SaaS subscription billing (`Store.ControlPlane` & `Store.TenantPortal`) and in-store customer POS/invoicing (`Store.API` & `Store.DbServices`), expanding payment processing beyond Senegal/WAEMU (PayDunya) to pan-African and global payments (NGN, KES, GHS, ZAR, USD, EUR, GBP, XAF).
+
+### 49.A — Models, Enums & Service Abstractions
+- **`Store.Models/DTOs/Payments/FlutterwaveDtos.cs`**:
+  - `FlutterwaveOptions`: configuration options for `PublicKey`, `SecretKey`, `SecretHash` (`verif-hash`), and `BaseUrl`.
+  - `FlutterwavePaymentLinkRequest` / `FlutterwavePaymentLinkResponse`: hosted checkout link payload with metadata tracking.
+  - `FlutterwaveVerifyResponse`: strongly-typed model parsing Flutterwave transaction verification data (`id`, `tx_ref`, `flw_ref`, `amount`, `charged_amount`, `currency`, `status`, `payment_type`, customer info, and metadata).
+  - `FlutterwaveWebhookPayload` & `FlutterwaveWebhookData`: webhook payload serialization.
+  - `InitiateFlutterwaveStorePaymentRequest` & `InitiateFlutterwaveStorePaymentResponse`: in-store POS checkout initiation DTOs.
+- **`Store.Models/Enums/StoreEnums.cs`**:
+  - Added `Flutterwave` to `MobileMoneyProvider` enum.
+- **`Store.Models/Interfaces/Services/IFlutterwavePaymentService.cs`**:
+  - Service contract defining `CreatePaymentLinkAsync`, `VerifyTransactionAsync`, and `VerifyWebhookHash`.
+
+### 49.B — Core Service Implementation (`Store.DbServices`)
+- **`Store.DbServices/Services/FlutterwavePaymentService.cs`**:
+  - Typed `HttpClient` implementation consuming Flutterwave v3 API (`payments`, `transactions/{id}/verify`).
+  - Zero-trust security: Constant-time comparison (`CryptographicOperations.FixedTimeEquals`) for webhook `verif-hash` validation.
+  - Out-of-band transaction verification to guard against spoofed or replayed webhook events.
+  - Graceful fallback for unconfigured environments with structured logging.
+- **`Store.DbServices/Services/MobileMoneyService.cs`**:
+  - Extended `MapToDto` to recognize `MobileMoneyProvider.Flutterwave`.
+- **`Store.DbServices/Extensions/ServiceCollectionExtensions.cs`**:
+  - Registered `FlutterwaveOptions` and typed `HttpClient<IFlutterwavePaymentService, FlutterwavePaymentService>`.
+
+### 49.C — Platform SaaS Subscription Billing (`Store.ControlPlane` & `Store.TenantPortal`)
+- **`Store.ControlPlane/Controllers/FlutterwaveBillingController.cs`**:
+  - `POST api/billing/flutterwave/invoice`: Authenticated hosted-checkout invoice generation with tenant/plan metadata.
+  - `GET api/billing/flutterwave/verify/{transactionId}`: Authenticated direct verification and opportunistic tenant reconciliation.
+  - `POST api/billing/flutterwave/webhook`: Anonymous webhook receiver validating `verif-hash` header, performing live API transaction verification, and invoking `SubscriptionReconciler`.
+- **`Store.ControlPlane/Services/SubscriptionReconciler.cs`**:
+  - Added `string provider = "paydunya"` parameter to support attributing tenant payments, plan upgrades, and audit logs to `"flutterwave"` or `"paydunya"`.
+- **`Store.ControlPlane/Program.cs` & `appsettings.json`**:
+  - Registered Flutterwave typed client with timeout and options placeholder.
+- **`Store.TenantPortal/Services/IControlPlaneClient.cs` & `ControlPlaneClient.cs`**:
+  - Added `CreateFlutterwaveBillingInvoiceAsync(slug, request, ct)`.
+- **`Store.TenantPortal/Pages/Billing.cshtml` & `Billing.cshtml.cs`**:
+  - Added multi-gateway payment selector enabling tenants to select Flutterwave (Cards, M-Pesa, MoMo, Bank) or PayDunya (XAF / WAEMU).
+  - Updated footer and post-handler redirection.
+
+### 49.D — In-Store POS & Customer Invoicing (`Store.API`)
+- **`Store.API/Controllers/PaymentsController.cs`**:
+  - `POST api/payments/flutterwave/initiate`: `[Authorize(Policy = PermissionKeys.CashWrite)]` with `[Audit]`. Validates invoice, creates a pending `MobileMoneyTransaction`, and returns a Flutterwave hosted checkout link.
+  - `POST api/payments/flutterwave/webhook`: `[AllowAnonymous]`. Validates `verif-hash`, queries Flutterwave API for out-of-band verification, marks transaction as completed, and appends payment tender (`InvoiceTender`) to invoice via `InvoiceService.AddTenderAsync`.
+  - `GET api/payments/flutterwave/verify/{transactionId}`: `[Authorize(Policy = PermissionKeys.PaymentsRead)]`. Direct query for checkout status polling.
+- **`Store.API/appsettings.json` & `appsettings.Development.json`**:
+  - Injected `Payments:Flutterwave` configuration block.
+
+### 49.E — Automated Testing & Verification
+- **`Store.API.Tests/FlutterwavePaymentServiceTests.cs` (7 tests)**:
+  - Valid and invalid webhook hash validation.
+  - Constant-time comparison security checks.
+  - Payment link creation success, unconfigured, and API failure scenarios.
+  - Transaction verification parsing and failure handling.
+- **`Store.ControlPlane.Tests/FlutterwaveBillingControllerTests.cs` (6 tests)**:
+  - Input validation (amount <= 0, empty planId).
+  - 503 Service Unavailable when unconfigured.
+  - Payment link creation success.
+  - Verify transaction not found handling.
+  - Webhook rejection when `verif-hash` signature fails.
+- **`Store.API.Tests/EndpointAuthorizationSecurityTests.cs`**:
+  - Added `PaymentsController.FlutterwaveWebhook` to anonymous allowlist.
+  - Verified `PaymentsController.InitiateFlutterwave` enforces `PermissionKeys.CashWrite`.
+- **Solution Verification**:
+  - Release Build: `dotnet build StoreProject.sln --configuration Release` (**0 warnings, 0 errors**).
+  - `Store.API.Tests`: **441 passed, 0 failed** (includes new Flutterwave unit tests).
+  - `Store.ControlPlane.Tests`: **57 passed, 0 failed** (includes new billing controller tests).
+  - `Store.TenantPortal.Tests`: **27 passed, 0 failed**.
+  - Total: **525 passed, 0 failed**.
+
+
+
 
 
 

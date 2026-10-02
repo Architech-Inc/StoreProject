@@ -10,6 +10,11 @@ using Store.Models.DTOs.Payments;
 using Store.Models.Enums;
 using Store.Models.Interfaces.Services;
 
+using Microsoft.EntityFrameworkCore;
+using Store.Models.DTOs.Invoices;
+using Store.Models.Entities;
+using Store.Models.Interfaces;
+
 namespace Store.API.Controllers;
 
 [ApiController]
@@ -17,12 +22,24 @@ namespace Store.API.Controllers;
 public class PaymentsController : ControllerBase
 {
     private readonly IMobileMoneyService _momo;
+    private readonly IFlutterwavePaymentService _flutterwave;
+    private readonly IInvoiceService _invoiceService;
+    private readonly IUnitOfWork _uow;
     private readonly IConfiguration _config;
     private readonly ILogger<PaymentsController> _logger;
 
-    public PaymentsController(IMobileMoneyService momo, IConfiguration config, ILogger<PaymentsController> logger)
+    public PaymentsController(
+        IMobileMoneyService momo,
+        IFlutterwavePaymentService flutterwave,
+        IInvoiceService invoiceService,
+        IUnitOfWork uow,
+        IConfiguration config,
+        ILogger<PaymentsController> logger)
     {
         _momo = momo;
+        _flutterwave = flutterwave;
+        _invoiceService = invoiceService;
+        _uow = uow;
         _config = config;
         _logger = logger;
     }
@@ -64,6 +81,196 @@ public class PaymentsController : ControllerBase
         var result = await _momo.HandleOrangeMoneyCallbackAsync(callback, ct);
         if (result is null) return NotFound();
         return Ok(result);
+    }
+
+    // ─── Flutterwave (Store / In-Store POS & Customer Invoicing) ──────────────
+
+    [HttpPost("flutterwave/initiate")]
+    [Authorize(Policy = PermissionKeys.CashWrite)]
+    [Audit("Initiate Flutterwave Payment", Category = "Payments")]
+    public async Task<IActionResult> InitiateFlutterwave([FromBody] InitiateFlutterwaveStorePaymentRequest request, CancellationToken ct)
+    {
+        if (request.Amount <= 0)
+        {
+            return BadRequest(new { message = "Amount must be greater than zero." });
+        }
+
+        var invoice = await _uow.Repository<Invoice>().GetByIdAsync(request.InvoiceId, ct);
+        if (invoice is null)
+        {
+            return NotFound(new { message = $"Invoice {request.InvoiceId} not found." });
+        }
+
+        if (invoice.IsPaid)
+        {
+            return BadRequest(new { message = "Invoice is already fully paid." });
+        }
+
+        var txRef = $"flw-inv-{request.InvoiceId:N}-{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+
+        var tx = new MobileMoneyTransaction
+        {
+            MobileMoneyTransactionId = Guid.NewGuid(),
+            InvoiceId = request.InvoiceId,
+            Provider = MobileMoneyProvider.Flutterwave,
+            PhoneNumber = request.CustomerPhone ?? string.Empty,
+            Amount = request.Amount,
+            Status = MobileMoneyStatus.Pending,
+            ProviderTransactionId = txRef
+        };
+
+        await _uow.Repository<MobileMoneyTransaction>().AddAsync(tx, ct);
+        await _uow.SaveChangesAsync(ct);
+
+        var redirectUrl = !string.IsNullOrWhiteSpace(request.RedirectUrl)
+            ? request.RedirectUrl
+            : $"{Request.Scheme}://{Request.Host}/api/payments/flutterwave/verify/{txRef}";
+
+        var linkReq = new FlutterwavePaymentLinkRequest
+        {
+            TxRef = txRef,
+            Amount = request.Amount,
+            Currency = string.IsNullOrWhiteSpace(request.Currency) ? "XAF" : request.Currency.ToUpperInvariant(),
+            RedirectUrl = redirectUrl,
+            CustomerEmail = request.CustomerEmail,
+            CustomerName = request.CustomerName,
+            CustomerPhone = request.CustomerPhone,
+            Title = request.Title ?? $"Invoice #{invoice.InvoiceId.ToString()[..8]}",
+            Description = request.Description ?? $"Payment for invoice #{invoice.InvoiceId.ToString()[..8]}",
+            Meta = new Dictionary<string, string>
+            {
+                ["invoice_id"] = request.InvoiceId.ToString(),
+                ["transaction_id"] = tx.MobileMoneyTransactionId.ToString()
+            }
+        };
+
+        var resp = await _flutterwave.CreatePaymentLinkAsync(linkReq, ct);
+        if (!resp.Success || string.IsNullOrEmpty(resp.PaymentLink))
+        {
+            tx.Status = MobileMoneyStatus.Failed;
+            tx.CallbackPayload = resp.Message;
+            _uow.Repository<MobileMoneyTransaction>().Update(tx);
+            await _uow.SaveChangesAsync(ct);
+            return BadRequest(new { message = resp.Message ?? "Failed to initiate Flutterwave payment link." });
+        }
+
+        return Ok(new InitiateFlutterwaveStorePaymentResponse
+        {
+            TransactionId = tx.MobileMoneyTransactionId,
+            TxRef = txRef,
+            PaymentLink = resp.PaymentLink,
+            Status = "Pending"
+        });
+    }
+
+    [HttpPost("flutterwave/webhook")]
+    [AllowAnonymous]
+    public async Task<IActionResult> FlutterwaveWebhook(CancellationToken ct)
+    {
+        var providedHash = Request.Headers["verif-hash"].ToString();
+        if (!_flutterwave.VerifyWebhookHash(providedHash))
+        {
+            _logger.LogWarning("Flutterwave store webhook rejected: invalid or missing verif-hash header.");
+            return Unauthorized();
+        }
+
+        Request.EnableBuffering();
+        using var reader = new StreamReader(Request.Body, leaveOpen: true);
+        var body = await reader.ReadToEndAsync(ct);
+        Request.Body.Position = 0;
+
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            return BadRequest(new { message = "Empty body." });
+        }
+
+        FlutterwaveWebhookPayload? payload;
+        try
+        {
+            payload = JsonSerializer.Deserialize<FlutterwaveWebhookPayload>(body, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to deserialize Flutterwave store webhook payload.");
+            return BadRequest(new { message = "Invalid JSON." });
+        }
+
+        if (payload?.Data is null)
+        {
+            return BadRequest(new { message = "Missing transaction data." });
+        }
+
+        // Zero-trust verification: query Flutterwave directly
+        var verified = await _flutterwave.VerifyTransactionAsync(payload.Data.Id, ct);
+        if (verified is null)
+        {
+            _logger.LogWarning("Flutterwave store webhook: verification failed for transaction {Id}", payload.Data.Id);
+            return StatusCode(502, new { message = "Verification failed." });
+        }
+
+        var tx = await _uow.Repository<MobileMoneyTransaction>().Query()
+            .FirstOrDefaultAsync(t => t.ProviderTransactionId == verified.TxRef, ct);
+
+        if (tx is null && verified.InvoiceId.HasValue)
+        {
+            tx = await _uow.Repository<MobileMoneyTransaction>().Query()
+                .Where(t => t.InvoiceId == verified.InvoiceId.Value && t.Provider == MobileMoneyProvider.Flutterwave && t.Status == MobileMoneyStatus.Pending)
+                .OrderByDescending(t => t.DateCreated)
+                .FirstOrDefaultAsync(ct);
+        }
+
+        if (tx is null)
+        {
+            _logger.LogWarning("Flutterwave store webhook: no pending transaction found for TxRef={TxRef}, InvoiceId={InvoiceId}", verified.TxRef, verified.InvoiceId);
+            return NotFound(new { message = "Transaction not found." });
+        }
+
+        if (tx.Status != MobileMoneyStatus.Pending)
+        {
+            return Ok(new { status = "already_processed" });
+        }
+
+        var isSuccess = string.Equals(verified.Status, "successful", StringComparison.OrdinalIgnoreCase);
+        tx.Status = isSuccess ? MobileMoneyStatus.Completed : MobileMoneyStatus.Failed;
+        tx.CompletedAtUtc = DateTime.UtcNow;
+        tx.CallbackPayload = body;
+        tx.LastModified = DateTime.UtcNow;
+        _uow.Repository<MobileMoneyTransaction>().Update(tx);
+        await _uow.SaveChangesAsync(ct);
+
+        if (isSuccess)
+        {
+            var paymentType = string.Equals(verified.PaymentType, "card", StringComparison.OrdinalIgnoreCase)
+                ? PaymentType.Card
+                : PaymentType.MobileMoney;
+
+            try
+            {
+                await _invoiceService.AddTenderAsync(tx.InvoiceId, new AddTenderRequest
+                {
+                    PaymentType = paymentType,
+                    Amount = verified.Amount,
+                    Reference = $"FLW-{verified.Id}"
+                }, ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to apply tender for invoice {InvoiceId} via Flutterwave transaction {Id}", tx.InvoiceId, verified.Id);
+            }
+        }
+
+        return Ok(new { status = "success", verified = true });
+    }
+
+    [HttpGet("flutterwave/verify/{transactionId:long}")]
+    [Authorize(Policy = PermissionKeys.PaymentsRead)]
+    public async Task<IActionResult> VerifyFlutterwave(long transactionId, CancellationToken ct)
+    {
+        var verified = await _flutterwave.VerifyTransactionAsync(transactionId, ct);
+        return verified is not null ? Ok(verified) : NotFound();
     }
 
     // ─── Settlement report ────────────────────────────────────────────────────

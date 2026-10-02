@@ -39,6 +39,7 @@ public class SubscriptionReconciler
         string? planId,
         DateTime? completedAtUtc,
         string? failureReason,
+        string provider = "paydunya",
         CancellationToken ct = default)
     {
         if (tenantId is null || tenantId == Guid.Empty)
@@ -70,7 +71,7 @@ public class SubscriptionReconciler
 
         var payment = new TenantPayment
         {
-            Provider = "paydunya",
+            Provider = string.IsNullOrWhiteSpace(provider) ? "paydunya" : provider.ToLowerInvariant(),
             ProviderToken = providerToken ?? string.Empty,
             Channel = channel,
             Amount = amount ?? 0,
@@ -106,7 +107,7 @@ public class SubscriptionReconciler
                 {
                     TenantId = tenant.TenantId,
                     ActionType = "SubscriptionUpgraded",
-                    Details = $"Plan upgraded from {prevTier} to {newTier.Value} via PayDunya (token {providerToken}, {amount} {payment.Currency}). Limits: {limits.MaxBranches} branches / {limits.MaxUsers} users."
+                    Details = $"Plan upgraded from {prevTier} to {newTier.Value} via {payment.Provider} (token {providerToken}, {amount} {payment.Currency}). Limits: {limits.MaxBranches} branches / {limits.MaxUsers} users."
                 });
             }
             else
@@ -138,8 +139,8 @@ public class SubscriptionReconciler
 
         await _tenantRepo.SaveAsync(tenant, ct);
         _logger.LogInformation(
-            "Reconciled PayDunya IPN for tenant {Slug}: plan={PlanId} status={Status} amount={Amount} {Currency}",
-            tenant.Slug, planId, status, amount, currency);
+            "Reconciled {Provider} IPN for tenant {Slug}: plan={PlanId} status={Status} amount={Amount} {Currency}",
+            payment.Provider, tenant.Slug, planId, status, amount, currency);
         return true;
     }
 }
