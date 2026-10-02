@@ -29,6 +29,7 @@ public class AuthenticationService : IAuthenticationService
     private readonly ITrustedDeviceService? _trustedDevices;
     private readonly IDeviceBindingGuard? _deviceGuard;
     private readonly ILogger<AuthenticationService>? _logger;
+    private readonly IPasswordHasher _passwordHasher;
 
     public AuthenticationService(
         IUnitOfWork uow,
@@ -36,7 +37,8 @@ public class AuthenticationService : IAuthenticationService
         Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor,
         ITrustedDeviceService? trustedDevices = null,
         IDeviceBindingGuard? deviceGuard = null,
-        ILogger<AuthenticationService>? logger = null)
+        ILogger<AuthenticationService>? logger = null,
+        IPasswordHasher? passwordHasher = null)
     {
         _uow = uow;
         _config = config;
@@ -44,6 +46,7 @@ public class AuthenticationService : IAuthenticationService
         _trustedDevices = trustedDevices;
         _deviceGuard = deviceGuard;
         _logger = logger;
+        _passwordHasher = passwordHasher ?? Argon2idPasswordHasher.Default;
     }
 
     /// <summary>
@@ -418,10 +421,11 @@ public class AuthenticationService : IAuthenticationService
         if (user?.Password is null) return false;
 
         // Verify old password before allowing reset
-        if (!BCrypt.Net.BCrypt.EnhancedVerify(request.CurrentPassword, user.Password.PasswordHash))
+        if (!_passwordHasher.VerifyPassword(request.CurrentPassword, user.Password.PasswordHash))
             return false;
 
-        user.Password.PasswordHash = BCrypt.Net.BCrypt.EnhancedHashPassword(request.NewPassword, 12);
+        user.Password.PasswordHash = _passwordHasher.HashPassword(request.NewPassword);
+        user.Password.LastModified = DateTime.UtcNow;
         _uow.Repository<UserPassword>().Update(user.Password);
         await _uow.SaveChangesAsync(ct);
         return true;
@@ -447,7 +451,7 @@ public class AuthenticationService : IAuthenticationService
             };
         }
 
-        if (!BCrypt.Net.BCrypt.EnhancedVerify(password, user.Password.PasswordHash))
+        if (!_passwordHasher.VerifyPassword(password, user.Password.PasswordHash))
         {
             user.FailedLoginAttempts++;
             if (user.FailedLoginAttempts >= 5)
@@ -457,6 +461,15 @@ public class AuthenticationService : IAuthenticationService
             _uow.Repository<User>().Update(user);
             await _uow.SaveChangesAsync(ct);
             return null;
+        }
+
+        // SEC-24 — Transparent re-hash to Argon2id if user still has legacy BCrypt hash
+        if (_passwordHasher.NeedsRehash(user.Password.PasswordHash))
+        {
+            user.Password.PasswordHash = _passwordHasher.HashPassword(password);
+            user.Password.LastModified = DateTime.UtcNow;
+            _uow.Repository<UserPassword>().Update(user.Password);
+            _logger?.LogInformation("SEC-24: Password hash seamlessly upgraded to Argon2id for user {UserId}", user.UserId);
         }
 
         // On successful password, clear any lockout

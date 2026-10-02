@@ -44,6 +44,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUserAggregateRepository, UserAggregateRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork.UnitOfWork>();
 
+        // Security & Cryptography
+        services.AddSingleton<IPasswordHasher, Argon2idPasswordHasher>();
+
         // Services
         services.AddScoped<IAuthenticationService, AuthenticationService>();
         services.AddScoped<IUserService, UserService>();

@@ -21,16 +21,19 @@ public class PasswordRecoveryService : IPasswordRecoveryService
     private readonly INotificationService _notificationService;
     private readonly ILogger<PasswordRecoveryService> _logger;
     private readonly byte[] _otpPepper;
+    private readonly IPasswordHasher _passwordHasher;
 
     public PasswordRecoveryService(
         IUnitOfWork uow,
         INotificationService notificationService,
         ILogger<PasswordRecoveryService> logger,
-        IOptions<OtpPepperOptions> pepperOptions)
+        IOptions<OtpPepperOptions> pepperOptions,
+        IPasswordHasher? passwordHasher = null)
     {
         _uow = uow;
         _notificationService = notificationService;
         _logger = logger;
+        _passwordHasher = passwordHasher ?? Argon2idPasswordHasher.Default;
         _otpPepper = (pepperOptions?.Value ?? throw new ArgumentNullException(nameof(pepperOptions))).GetPepperBytes();
 
         if (_otpPepper.Length < 32)
@@ -196,7 +199,7 @@ public class PasswordRecoveryService : IPasswordRecoveryService
             "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789",
             12);
 
-        userPwd.PasswordHash = BCrypt.Net.BCrypt.HashPassword(rawTempPwd);
+        userPwd.PasswordHash = _passwordHasher.HashPassword(rawTempPwd);
         userPwd.ForcePasswordChange = true;
         userPwd.TempPasswordExpiresAt = DateTime.UtcNow.AddHours(24);
         userPwd.LastModified = DateTime.UtcNow;
@@ -220,8 +223,8 @@ public class PasswordRecoveryService : IPasswordRecoveryService
 
         if (resetToken == null || resetToken.User?.Password == null) return false;
 
-        // Apply new password
-        resetToken.User.Password.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+        // Apply new password with Argon2id
+        resetToken.User.Password.PasswordHash = _passwordHasher.HashPassword(request.NewPassword);
         resetToken.User.Password.ForcePasswordChange = false;
         resetToken.User.Password.TempPasswordExpiresAt = null;
         resetToken.User.Password.LastModified = DateTime.UtcNow;

@@ -7,6 +7,7 @@ using Store.ControlPlane.Models.DTOs;
 using Store.ControlPlane.Repositories;
 using Store.ControlPlane.Data;
 using Microsoft.EntityFrameworkCore;
+using Store.DbServices.Services;
 
 namespace Store.ControlPlane.Services;
 
@@ -127,7 +128,7 @@ public class TenantOrchestrator : ITenantOrchestrator
         var tenantsBaseDir = Path.Combine(_env.ContentRootPath, "Tenants", slug);
         Directory.CreateDirectory(tenantsBaseDir);
 
-        // Hash the admin password with BCrypt (work factor 12) and generate init SQL
+        // Hash the admin password with Argon2id and generate init SQL
         var rawPassword = string.IsNullOrWhiteSpace(request.AdminPassword) ? "Admin123!" : request.AdminPassword;
         var adminInitSql = GenerateAdminInitSql(tenant, rawPassword);
 
@@ -938,7 +939,7 @@ volumes:
 
     private static string GenerateAdminInitSql(Tenant tenant, string adminPassword)
     {
-        var bcryptHash = BCrypt.Net.BCrypt.EnhancedHashPassword(adminPassword, 12);
+        var passwordHash = Argon2idPasswordHasher.Hash(adminPassword);
         var adminUserId = Guid.NewGuid().ToString();
         var adminEmpId = Guid.NewGuid().ToString();
         var now = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.ffffff");
@@ -964,10 +965,10 @@ INSERT INTO `user` (`user_id`, `employee_id`, `role_id`, `username`, `status`, `
 VALUES ('{adminUserId}', '{adminEmpId}', 1, '{safeUsername}', 'Active', 'img/user_default.png', 0, 0, UUID(), '{now}', '{now}')
 ON DUPLICATE KEY UPDATE `username` = VALUES(`username`), `status` = 'Active';
 
--- 4. Set password hash (BCrypt Enhanced work factor 12)
+-- 4. Set password hash (Argon2id)
 INSERT INTO `user_password` (`user_id`, `password_hash`, `force_password_change`, `date_created`, `last_modified`)
-SELECT `user_id`, '{bcryptHash}', 0, '{now}', '{now}' FROM `user` WHERE `username` = '{safeUsername}' LIMIT 1
-ON DUPLICATE KEY UPDATE `password_hash` = '{bcryptHash}';
+SELECT `user_id`, '{passwordHash}', 0, '{now}', '{now}' FROM `user` WHERE `username` = '{safeUsername}' LIMIT 1
+ON DUPLICATE KEY UPDATE `password_hash` = '{passwordHash}';
 
 -- 5. Link user to email
 INSERT INTO `user_email` (`user_id`, `email_id`, `is_primary`, `date_created`, `last_modified`)

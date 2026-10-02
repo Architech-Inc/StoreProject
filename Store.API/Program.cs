@@ -162,7 +162,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateAudience = jwtAudience is not null,
             ValidAudience = jwtAudience,
             ValidateLifetime = true,
-            ClockSkew = TimeSpan.FromSeconds(30)
+            ClockSkew = TimeSpan.FromSeconds(60) // SEC-25 — 60s window for mobile network & device clock tolerance
         };
 
         options.Events = new JwtBearerEvents

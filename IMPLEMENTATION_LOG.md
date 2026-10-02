@@ -3195,6 +3195,78 @@ Complete and harden `GAP-15` (API versioning) and `GAP-16` (ETag caching middlew
   - Total: **557 passed, 0 failed** (100% green).
 
 
+## Wave 53 — Security Upgrade to Argon2id Password Hashing & Mobile Clock Tolerance (SEC-24, SEC-25)
+
+### Objective
+Complete and harden `SEC-24` (Password hashing upgrade to Argon2id) and `SEC-25` (JWT Bearer mobile clock drift tolerance):
+1. Upgrade password hashing from BCrypt cost 12 to Argon2id adhering to OWASP Password Storage guidelines (19 MiB memory, 2 iterations, 1 lane).
+2. Implement backward-compatible BCrypt verification with seamless, transparent in-place re-hashing to Argon2id upon successful user authentication (`AuthenticateUser`).
+3. Unify password hashing across all service entry points (`UserService`, `PasswordRecoveryService`, `AuthenticationService`, `DatabaseSeeder`, and `TenantOrchestrator`).
+4. Relax JWT `ClockSkew` to 60 seconds (`TimeSpan.FromSeconds(60)`) in `Store.API/Program.cs` to prevent spurious 401 Unauthorized errors on mobile networks and devices with minor clock drift.
+5. Add unit test suite in `Store.API.Tests/Argon2idPasswordHasherTests.cs` verifying Argon2id hashing, legacy BCrypt verification, auto-rehash signaling, and malformed input resistance.
+
+### 53.A — Abstraction & Implementation (`IPasswordHasher` & `Argon2idPasswordHasher`)
+- **Service Abstraction (`Store.Models/Interfaces/Services/IPasswordHasher.cs`)**:
+  - `string HashPassword(string password)`: creates a standard modular crypt formatted Argon2id hash.
+  - `bool VerifyPassword(string password, string storedHash)`: verifies against both modern Argon2id and legacy BCrypt formats.
+  - `bool NeedsRehash(string storedHash)`: detects legacy hashes needing migration.
+- **Service Implementation (`Store.DbServices/Services/Argon2idPasswordHasher.cs`)**:
+  - Leverages `Konscious.Security.Cryptography.Argon2id` (v1.3.1 managed implementation).
+  - Configured with OWASP-recommended parameters: MemorySize = 19,456 KiB (19 MiB), Iterations = 2, DegreeOfParallelism = 1, SaltSize = 16 bytes (128-bit CSPRNG), HashSize = 32 bytes (256-bit).
+  - Emits standard modular crypt format: `$argon2id$v=19$m=19456,t=2,p=1$<salt_base64>$<hash_base64>`.
+  - Performs constant-time comparison via `CryptographicOperations.FixedTimeEquals` to prevent side-channel timing attacks.
+  - Exposes `Argon2idPasswordHasher.Default`, `Hash(password)`, and `Verify(password, storedHash)` for static script contexts.
+- **Dependency Injection (`Store.DbServices/Extensions/ServiceCollectionExtensions.cs`)**:
+  - Registered `services.AddSingleton<IPasswordHasher, Argon2idPasswordHasher>();`.
+
+### 53.B — Seamless Runtime Migration & Service Integration
+- **Authentication Service (`AuthenticationService.cs`)**:
+  - Injected `IPasswordHasher`.
+  - In `AuthenticateUser`: verifies credentials via `_passwordHasher.VerifyPassword`.
+  - On successful authentication, checks `_passwordHasher.NeedsRehash(user.Password.PasswordHash)`: if the user still has a legacy BCrypt hash, immediately computes a new Argon2id hash, persists it to MySQL `UserPassword`, and logs structured audit entry: `SEC-24: Password hash seamlessly upgraded to Argon2id for user {UserId}`. Zero user friction or password reset prompts required.
+  - In `ResetPasswordAsync`: verifies old password with `_passwordHasher.VerifyPassword` and hashes new password with `_passwordHasher.HashPassword`.
+- **User Service (`UserService.cs`)**:
+  - Injected `IPasswordHasher`.
+  - In `CreateUserAsync`: creates new user passwords using Argon2id.
+  - In `ChangePasswordAsync`: verifies current password and hashes replacement with Argon2id.
+- **Password Recovery Service (`PasswordRecoveryService.cs`)**:
+  - Injected `IPasswordHasher`.
+  - In `IssueTempPasswordAsync`: hashes temporary 12-char CSPRNG password with Argon2id.
+  - In `ResetPasswordWithTokenAsync`: hashes token-reset password with Argon2id.
+- **Database Seeder (`DatabaseSeeder.cs`)**:
+  - Updated all baseline seed accounts (`admin`, `manager`, `cashier`, `inventory`, `finance`) and dynamic mock templates to generate Argon2id hashes via `Argon2idPasswordHasher.Hash`.
+- **Tenant Orchestrator (`TenantOrchestrator.cs`)**:
+  - Added `Konscious.Security.Cryptography.Argon2` to `Store.ControlPlane.csproj`.
+  - Updated `GenerateAdminInitSql` to generate Argon2id hashes in container initialization script `002_init_admin.sql`.
+
+### 53.C — Mobile Clock Drift Tolerance (SEC-25)
+- **JWT Bearer Configuration (`Store.API/Program.cs`)**:
+  - Updated `ClockSkew` from 30 seconds to 60 seconds (`TimeSpan.FromSeconds(60)`).
+  - Accommodates minor mobile device clock skew and high-latency cellular network roundtrips while preserving short token lifetime security.
+
+### 53.D — Automated Testing & Verification
+- **Argon2id Test Suite (`Store.API.Tests/Argon2idPasswordHasherTests.cs`)**:
+  - `HashPassword_ProducesStandardModularCryptFormat`: verifies format `$argon2id$v=19$m=19456,t=2,p=1$...` and byte lengths.
+  - `VerifyPassword_ValidPassword_ReturnsTrue`: verifies positive matching.
+  - `VerifyPassword_WrongPassword_ReturnsFalse`: verifies rejection of invalid passwords.
+  - `VerifyPassword_LegacyBcryptHash_ReturnsTrue_AndNeedsRehash`: verifies BCrypt Enhanced (cost 12) compatibility and rehash signaling.
+  - `VerifyPassword_LegacyStandardBcryptHash_ReturnsTrue`: verifies standard BCrypt compatibility.
+  - `VerifyPassword_LegacyBcryptHash_WrongPassword_ReturnsFalse`: verifies legacy rejection on wrong candidate.
+  - `NeedsRehash_Argon2idHash_ReturnsFalse`: verifies stable hashes do not trigger re-hashing.
+  - `HashPassword_GeneratesUniqueSaltsForIdenticalPasswords`: verifies CSPRNG salting across invocations.
+  - `VerifyPassword_MalformedOrNullInputs_FailsSafely`: theory test across corrupt, null, and empty payloads.
+  - `StaticHelpers_ExecuteCorrectly`: verifies static `Argon2idPasswordHasher.Hash` and `Verify`.
+- **Tenant Orchestrator Test Suite (`Store.API.Tests/TenantOrchestratorTests.cs`)**:
+  - Updated `ProvisionTenant_CreatesTenantAndGeneratesCompose` to assert generated SQL contains `$argon2id$v=19$`.
+- **Verification Results**:
+  - Solution build: `dotnet build StoreProject.sln --configuration Release` (**0 warnings, 0 errors**).
+  - `Store.API.Tests`: **488 passed, 0 failed** (+15 new passing test cases).
+  - `Store.ControlPlane.Tests`: **57 passed, 0 failed**.
+  - `Store.TenantPortal.Tests`: **27 passed, 0 failed**.
+  - Total: **572 passed, 0 failed** (100% green).
+
+
+
 
 
 

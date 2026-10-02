@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Reflection;
 using BCrypt.Net;
+using Store.DbServices.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.DependencyInjection;
@@ -325,11 +326,11 @@ public static class DatabaseSeeder
             db.Users.Add(user);
             await db.SaveChangesAsync(ct);
 
-            // Password
+            // Password (Argon2id)
             db.UserPasswords.Add(new UserPassword
             {
                 UserId       = user.UserId,
-                PasswordHash = BCrypt.Net.BCrypt.EnhancedHashPassword(acc.Password, 12)
+                PasswordHash = Argon2idPasswordHasher.Hash(acc.Password)
             });
 
             // Branch role assignment
@@ -565,7 +566,7 @@ public static class DatabaseSeeder
             var value = propName switch
             {
                 "Username" => "seed_user",
-                "PasswordHash" => BCrypt.Net.BCrypt.EnhancedHashPassword("ChangeMe123!", 12),
+                "PasswordHash" => Argon2idPasswordHasher.Hash("ChangeMe123!"),
                 "Token" => $"seed_token_{Guid.NewGuid():N}",
                 "RefreshTokenHash" => $"seed_refresh_{Guid.NewGuid():N}",
                 _ when propName.Contains("Email", StringComparison.OrdinalIgnoreCase) => $"seed_{ToSnakeCase(entityName)}@example.com",

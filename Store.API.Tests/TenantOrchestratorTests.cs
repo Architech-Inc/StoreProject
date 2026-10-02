@@ -130,7 +130,7 @@ public class TenantOrchestratorTests
         Assert.True(File.Exists(generatedAdminSql));
         var sqlContent = await File.ReadAllTextAsync(generatedAdminSql);
         Assert.Contains("contact@bonanjo.cm", sqlContent);
-        Assert.Contains("$2a$12$", sqlContent);
+        Assert.Contains("$argon2id$v=19$", sqlContent);
     }
 
     [Fact]

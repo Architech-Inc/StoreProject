@@ -17,12 +17,18 @@ public class UserService : IUserService
     private readonly IUserAggregateRepository _users;
     private readonly StoreDbContext _db;
     private readonly INotificationService? _notificationService;
+    private readonly IPasswordHasher _passwordHasher;
 
-    public UserService(IUserAggregateRepository users, StoreDbContext db, INotificationService? notificationService = null)
+    public UserService(
+        IUserAggregateRepository users,
+        StoreDbContext db,
+        INotificationService? notificationService = null,
+        IPasswordHasher? passwordHasher = null)
     {
         _users = users;
         _db = db;
         _notificationService = notificationService;
+        _passwordHasher = passwordHasher ?? Argon2idPasswordHasher.Default;
     }
 
     public async Task<UserDto?> GetByIdAsync(Guid userId, CancellationToken ct = default)
@@ -98,7 +104,7 @@ public class UserService : IUserService
             FullImageUrl = request.FullImageUrl?.Trim()
         };
 
-        var passwordHash = BCrypt.Net.BCrypt.EnhancedHashPassword(request.Password, 12);
+        var passwordHash = _passwordHasher.HashPassword(request.Password);
         user.Password = new UserPassword
         {
             UserId = user.UserId,
@@ -177,10 +183,11 @@ public class UserService : IUserService
 
         if (userPassword is null) return false;
 
-        if (!BCrypt.Net.BCrypt.EnhancedVerify(request.CurrentPassword, userPassword.PasswordHash))
+        if (!_passwordHasher.VerifyPassword(request.CurrentPassword, userPassword.PasswordHash))
             return false;
 
-        userPassword.PasswordHash = BCrypt.Net.BCrypt.EnhancedHashPassword(request.NewPassword, 12);
+        userPassword.PasswordHash = _passwordHasher.HashPassword(request.NewPassword);
+        userPassword.LastModified = DateTime.UtcNow;
         _users.UpdateUserPassword(userPassword);
         await _users.SaveChangesAsync(ct);
         return true;
