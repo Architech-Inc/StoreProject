@@ -743,6 +743,7 @@ public class TenantOrchestrator : ITenantOrchestrator
             .Replace("{{BACKUP_CRON}}", "0 2 * * *")
             .Replace("{{BACKUP_RETENTION_DAYS}}", "7")
             .Replace("{{BACKUP_RETENTION_COUNT}}", (t.BackupSchedule?.RetentionCount ?? 14).ToString())
+            .Replace("{{STORE_BACKUP_IMAGE:-clexan-tenant-backup:latest}}", _config["ControlPlane:StoreBackupImage"] ?? "clexan-tenant-backup:latest")
             .Replace("{{STORE_BACKUP_IMAGE}}", _config["ControlPlane:StoreBackupImage"] ?? "clexan-tenant-backup:latest")
             .Replace("{{STORE_API_IMAGE}}", storeApiImage)
             .Replace("{{STORE_UI_IMAGE}}", storeUiImage)

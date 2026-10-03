@@ -51,6 +51,7 @@ services:
       - ControlPlane__TenantsHostPath=/opt/projects/platform/tenants
       - ControlPlane__StoreApiImage=${IMAGE_PREFIX:-ghcr.io/architech-inc/storeproject}/store-api:latest
       - ControlPlane__StoreUiImage=${IMAGE_PREFIX:-ghcr.io/architech-inc/storeproject}/store-ui:latest
+      - ControlPlane__StoreBackupImage=${IMAGE_PREFIX:-ghcr.io/architech-inc/storeproject}/store-tenant-backup:latest
       - ControlPlaneCors__AllowedOrigins__0=https://portal.${ROOT_DOMAIN}
       - ControlPlaneCors__AllowedOrigins__1=http://portal.${ROOT_DOMAIN}
       - Seq__ServerUrl=${SEQ_SERVER_URL:-http://store-seq:5341}
@@ -65,6 +66,9 @@ services:
       - /opt/projects/proxy/dynamic:/app/traefik/dynamic
       - /opt/projects/platform/tenants:/app/Tenants
       - controlplane_data:/app/App_Data
+      # Registry credentials (written by CI `docker login ghcr.io` as the deploy user) so the
+      # docker CLI in this container can pull the private tenant images (api/ui/backup).
+      - /home/deploy/.docker/config.json:/root/.docker/config.json:ro
     depends_on:
       store-controlplane-db:
         condition: service_healthy

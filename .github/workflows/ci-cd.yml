@@ -209,6 +209,16 @@ jobs:
           provenance: true
           sbom: true
 
+      - name: Build and Push Tenant Backup Container
+        uses: docker/build-push-action@v5
+        with:
+          context: docker/backup
+          file: docker/backup/Dockerfile.tenant-backup
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/store-tenant-backup:latest
+            ${{ env.IMAGE_PREFIX }}/store-tenant-backup:${{ github.sha }}
+
   # ═══════════════════════════════════════════════════════════════════════════
   # Stage 3: Zero-Downtime Deployment
   # ═══════════════════════════════════════════════════════════════════════════
