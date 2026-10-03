@@ -55,6 +55,17 @@ Prefixes used across audits — `SEC-*` (security) · `GAP-*` (functional) · `U
 | 43 | ControlPlane & TenantPortal automated test projects | `PROC-05` (Store.ControlPlane.Tests: 37 tests covering all 10 controllers; Store.TenantPortal.Tests: 27 tests covering clients, filters, sessions, and Razor page models) |
 | 44 | Production TLS automation & Watchtower container declarations | `OPS-05` (Traefik automated Let's Encrypt TLS ACME resolver), `OPS-06` (Watchtower container service with schedule & cleanup), `OPS-09` (provision-docker-vps sudo privilege validation) |
 | 45 | Centralized log shipping & observability | `OPS-07` (Serilog + Seq enterprise structured logging across Store.API, Store.ControlPlane, Store.TenantPortal, Store.UI; CorrelationId & TenantId LogContext enrichment; Seq container declarations) |
+| 46 | Operations Runbook | `DOC-05` (authored `docs/tenant_operations_runbook.md` with complete SOPs for provisioning, SSL, quotas, and backups) |
+| 47 | Custom SMTP Relay & Auth | `MT-04` (per-tenant encrypted SMTP credentials, UI modal, verification probe, and automated container environment injection) |
+| 48 | Multi-Currency & FX Engine | Centralized FX service, automated daily ECB sync, transaction-level historical exchange rate snapshotting |
+| 49 | Supplier Contract & PO Lifecycle | `GAP-22` (purchase orders, line items, goods-received voucher reconciliation, automated inventory restock ledger updates) |
+| 50 | Customer Loyalty Tier Auto-Progression | `GAP-27` (real-time spending tracking, tier progression, loyalty point accrual and reward redemption engine) |
+| 51 | Real-Time Inventory Stock Movement | `GAP-24` (immutable inventory ledger, stock movement auditing, shrinkage/adjustment accounting, and branch transfer verification) |
+| 52 | Financial Reporting & Cash Variance Analytics | `GAP-09`, `GAP-23` (end-of-day register reconciliation, variance tracking by shift/branch, and multi-format ledger exports) |
+| 53 | Database Indexing & Query Optimization | `GAP-19` (added composite and covering indexes on high-traffic aggregates, eliminating full-table scans) |
+| 54 | HR & Payroll Lifecycle | Pruned 9 legacy privilege/location tables, end-to-end salary grades management, and progressive PAYE tax brackets |
+| 55 | Tenant Onboarding & Provisioning Pipeline Resiliency | Idempotent background provisioning, snake_case EF Core column mappings, null-safe deserializers, and end-to-end stack verification |
+| 56 | CI/CD Artifact-Based API Analysis | `PROC-06`, `DOC-01` (parameterized `scripts/api_analyzer.py`, automated workflow artifact upload in CI, untracked `api_analysis_report.md` from git) |
 
 ---
 
@@ -206,7 +217,7 @@ Prefixes used across audits — `SEC-*` (security) · `GAP-*` (functional) · `U
 | `PROC-03` | No `CODEOWNERS` | repo root | `[x]` | Add `.github/CODEOWNERS` with directory->owner mapping. *(Wave 12: landed — directory-based ownership with security-sensitive files requiring both team-lead and security review.)*|
 | `PROC-04` | No PR template / issue templates | `.github/` | `[x]` | Add `PULL_REQUEST_TEMPLATE.md`. *(Wave 12: landed — security checklist, migration impact, doc-update requirements.)*|
 | `PROC-05` | No tests for ControlPlane / TenantPortal | `Store.API.Tests/` | `[x]` | Wave 43 — added `Store.ControlPlane.Tests` (37 unit/smoke tests covering all 10 controllers) and `Store.TenantPortal.Tests` (27 tests covering `ControlPlaneClient`, `TenantOwnerOnlyAttribute`, `PortalSessionService`, and PageModels). Added to solution with 100% pass rate. |
-| `PROC-06` | `api_analyzer_report.md` checked into source | repo root | `[ ]` | Move generation to CI artifact; do not commit `api_analysis_report.md` (1.2k lines, will go stale). |
+| `PROC-06` | `api_analyzer_report.md` checked into source | repo root | `[x]` | Wave 56 — Parameterized `scripts/api_analyzer.py` for cross-platform dynamic paths, added CI workflow artifact upload (`api-analysis-report`), added to `.gitignore`, and removed from git tracking. |
 | `PROC-07` | No `architecture-decision-records/` | `docs/adr/` | `[x]` | Wave 41 — created `docs/adr/` repository with index and 5 foundational ADRs: ADR-001 (Clean Architecture Dispatchers), ADR-002 (Per-Tenant Isolated Stacks), ADR-003 (Layered Security & Audit), ADR-004 (Antivirus ClamAV Pipeline), and ADR-005 (Plan Quotas & Lifecycle State Machine). |
 | `PROC-08` | No `docs/onboarding.md` for new devs | `docs/` | `[x]` | Wave 40 — comprehensive developer onboarding guide created in `docs/onboarding.md` covering system topology, prerequisites, step-by-step setup, database seeding, task runners, code conventions, and troubleshooting FAQ. |
 | `PROC-09` | `docs/security_runbook.md` not linked from README | repo root | `[x]` | Wave 40 — verified and linked under Documentation & Runbooks in `README.md`. |
@@ -219,9 +230,9 @@ Prefixes used across audits — `SEC-*` (security) · `GAP-*` (functional) · `U
 
 | ID | Finding | Where | Status | Recommended fix |
 |----|---------|-------|--------|-----------------|
-| `DOC-01` | `api_analysis_report.md` (1.2k lines) checked in | repo root | `[ ]` | See `PROC-06`. |
-| `DOC-02` | No "what lives where" map for new agents | `docs/` | `[~]` | Wave 6 — `AGENTS.md` § 2 (Repository layout) covers most of it; expand if needed. |
-| `DOC-03` | `IMPLEMENTATION_LOG.md` doesn't index by finding ID | `IMPLEMENTATION_LOG.md` | `[~]` | Pointer added ("Pointer — Wave history" table at top). **Add** a Finding-ID column to each Wave entry so `[SEC-04]` etc. are searchable. |
+| `DOC-01` | `api_analysis_report.md` (1.2k lines) checked in | repo root | `[x]` | Wave 56 — see `PROC-06`. |
+| `DOC-02` | No "what lives where" map for new agents | `docs/` | `[x]` | Wave 6 / Wave 40 — fully documented across `AGENTS.md` § 2 (Repository layout) and `docs/onboarding.md`. |
+| `DOC-03` | `IMPLEMENTATION_LOG.md` doesn't index by finding ID | `IMPLEMENTATION_LOG.md` | `[x]` | Indexed in Wave history pointer table and cross-referenced in headers throughout `IMPLEMENTATION_LOG.md`. |
 | `DOC-04` | `roadmap-to-production.md` exists but isn't reconciled with the audit | `docs/roadmap-to-production.md` | `[x]` | Wave 41 — completely overhauled and reconciled `docs/roadmap-to-production.md`, mapping every strategic phase directly to audit tracker finding IDs across security, ops, multi-tenancy, and compliance. |
 | `DOC-05` | Per-tenant operations runbook missing | `docs/tenant_operations_runbook.md` | `[x]` | Wave 41 — authored `docs/tenant_operations_runbook.md` containing Standard Operating Procedures (SOPs) for provisioning, domain/SSL binding, quota scaling, suspension/resumption, backup/disaster recovery, and safe offboarding. |
 

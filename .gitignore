@@ -578,6 +578,9 @@ Store.ControlPlane/Backups/*.enc
 .idea/
 *.swp
 
+# Generated audit & analysis artifacts (PROC-06 / DOC-01)
+api_analysis_report.md
+
 # Secrets scanner caches
 .gitleaks/
 .trufflehog/

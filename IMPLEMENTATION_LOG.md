@@ -3406,6 +3406,39 @@ Three compounding issues caused the failure:
   - Successfully linked portal account to tenant ID in database.
 - **Automated Test Suite**: Ran `dotnet test Store.ControlPlane.Tests` (**57 passed, 0 failed**).
 
+---
+
+## Wave 56 — CI/CD Artifact-Based API Analysis & Repo Clean-Up (`PROC-06` / `DOC-01`)
+
+**Date:** 2026-10-03  
+**Focus:** Eliminate stale checked-in report files, parameterize API analysis script for CI/CD portability, and automate report generation as a workflow artifact.
+
+### Changes & Hardening
+
+1. **Cross-Platform Script Parameterization (`scripts/api_analyzer.py`)**:
+   - Replaced Windows-specific hardcoded absolute paths with dynamic repository root discovery (`REPO_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))`).
+   - Added CLI arguments with `argparse` (`--api-dir`, `--ui-dir`, `--output`) supporting custom paths while defaulting to repository conventions.
+   - Tested report generation locally: mapped all 276 endpoints against UI client calls.
+
+2. **Git Hygiene & Untracking (`.gitignore` & git cache)**:
+   - Untracked `api_analysis_report.md` (1.2k lines) from git index to prevent repo bloat and stale documentation drift.
+   - Added `api_analysis_report.md` to `.gitignore` under `# Generated audit & analysis artifacts`.
+
+3. **CI/CD Pipeline Integration (`.github/workflows/ci-cd.yml`)**:
+   - Added `actions/setup-python@v5` step in `build-and-test`.
+   - Wired automated execution: `python scripts/api_analyzer.py`.
+   - Published report via `actions/upload-artifact@v4` with name `api-analysis-report`.
+   - Added test execution steps for `Store.ControlPlane.Tests` and `Store.TenantPortal.Tests` in CI.
+
+4. **Audit Tracker Synchronization (`docs/audit-tracker.md`)**:
+   - Closed findings:
+     - `PROC-06`: `[x]` (api_analyzer_report.md generation moved to CI artifact).
+     - `DOC-01`: `[x]` (api_analysis_report.md un-tracked).
+     - `DOC-02`: `[x]` (architecture layout documented in `AGENTS.md` and `docs/onboarding.md`).
+     - `DOC-03`: `[x]` (indexed in Pointer table and tagged across wave headers).
+   - Synchronized "Pointer — Wave history" table with Waves 46 through 56.
+
+
 
 
 

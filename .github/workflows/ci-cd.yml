@@ -79,8 +79,30 @@ jobs:
       - name: Build Solution (Release)
         run: dotnet build StoreProject.sln --configuration Release --no-restore
 
-      - name: Execute Automated Unit Test Suite
+      - name: Execute Automated Unit Test Suite (Store.API)
         run: dotnet test Store.API.Tests/Store.API.Tests.csproj --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage"
+
+      - name: Execute Automated Unit Test Suite (Store.ControlPlane)
+        run: dotnet test Store.ControlPlane.Tests/Store.ControlPlane.Tests.csproj --configuration Release --no-build --verbosity normal
+
+      - name: Execute Automated Unit Test Suite (Store.TenantPortal)
+        run: dotnet test Store.TenantPortal.Tests/Store.TenantPortal.Tests.csproj --configuration Release --no-build --verbosity normal
+
+      # ── PROC-06 / DOC-01: Generate API Analysis Report and publish as CI artifact ─
+      - name: Setup Python for API Analysis
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Generate API Analysis Report
+        run: python scripts/api_analyzer.py
+
+      - name: Publish API Analysis Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-analysis-report
+          path: api_analysis_report.md
+          if-no-files-found: error
 
   # ═══════════════════════════════════════════════════════════════════════════
   # Stage 2: Container Image Packaging (Docker Multi-Stage Builds)
