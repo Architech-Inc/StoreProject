@@ -322,29 +322,12 @@ jobs:
                 [ "$STATUS" = "healthy" ] && break
                 sleep 5
               done
-              [ "$(docker inspect --format="{{.State.Health.Status}}" store-controlplane-db 2>/dev/null)" = "healthy" ] || { echo "DB did not become healthy"; exit 1; }'
+              STATUS=$(docker inspect --format="{{.State.Health.Status}}" store-controlplane-db 2>/dev/null || echo "missing")
+              [ "$STATUS" = "healthy" ] || { echo "ERROR: DB did not become healthy (status=$STATUS)"; exit 1; }'
 
-          echo "==> Phase 3: Seeding __EFMigrationsHistory (idempotent stamp)..."
-          # The VPS DB was created by a raw SQL script before EF migrations were
-          # introduced. All tables already exist, but __EFMigrationsHistory was
-          # empty — EF crashed with "Table already exists" on every startup.
-          # INSERT IGNORE is safe to run on every deploy (no-op if already stamped).
-          ssh -i ~/.ssh/deploy_key -p $VPS_PORT -o StrictHostKeyChecking=yes \
-              $VPS_USER@$VPS_HOST \
-              "docker exec store-controlplane-db mysql -u root -p\"$DB_PWD\" store_controlplane -e \"
-          CREATE TABLE IF NOT EXISTS \`__EFMigrationsHistory\`(
-            \`MigrationId\` varchar(150) CHARACTER SET utf8mb4 NOT NULL,
-            \`ProductVersion\` varchar(32) CHARACTER SET utf8mb4 NOT NULL,
-            PRIMARY KEY(\`MigrationId\`)
-          ) CHARACTER SET utf8mb4;
-          INSERT IGNORE INTO \`__EFMigrationsHistory\`(\`MigrationId\`,\`ProductVersion\`) VALUES
-            ('20260902234358_AddTenantSdlcFeatures','8.0.0'),
-            ('20260916133000_AsyncProvisioningJobs_MT01','8.0.0'),
-            ('20260916170000_TenantMaintenanceWindows_MT07','8.0.0'),
-            ('20260916180000_TenantSubscription_MT02','8.0.0');
-          SELECT MigrationId FROM \`__EFMigrationsHistory\` ORDER BY MigrationId;\"" 2>&1
-
-          echo "==> Phase 4: Starting full platform stack..."
+          echo "==> Phase 3: Starting full platform stack..."
+          # NOTE: __EFMigrationsHistory stamping is now handled automatically inside
+          # ControlPlaneDataMigrator.StampExistingSchemaAsync (C#), so no shell SQL needed here.
           ssh -i ~/.ssh/deploy_key -p $VPS_PORT -o StrictHostKeyChecking=yes -o BatchMode=yes \
               $VPS_USER@$VPS_HOST \
               "cd /opt/projects/platform && \
