@@ -353,6 +353,39 @@ jobs:
                docker compose --env-file .env.production -f docker-compose.platform.yml up -d --remove-orphans && \
                docker compose --env-file .env.production -f docker-compose.platform.yml ps"
 
+      - name: Deploy Traefik edge proxy + dashboard
+        if: steps.check-secrets.outputs.has_secrets == 'true'
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER || 'deploy' }}
+          VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
+          ROOT_DOMAIN: ${{ secrets.ROOT_DOMAIN }}
+          TRAEFIK_DASHBOARD_USER: ${{ secrets.TRAEFIK_DASHBOARD_USER }}
+          TRAEFIK_DASHBOARD_PASSWORD: ${{ secrets.TRAEFIK_DASHBOARD_PASSWORD }}
+        run: |
+          if [ -z "$TRAEFIK_DASHBOARD_USER" ] || [ -z "$TRAEFIK_DASHBOARD_PASSWORD" ]; then
+            echo "::warning::TRAEFIK_DASHBOARD_USER / TRAEFIK_DASHBOARD_PASSWORD secrets not set - edge proxy left unchanged (dashboard stays disabled)."
+            exit 0
+          fi
+
+          # apr1 (htpasswd MD5) hash; the single quotes keep the '$' characters literal in the env file.
+          HASH=$(openssl passwd -apr1 "$TRAEFIK_DASHBOARD_PASSWORD")
+          printf "ROOT_DOMAIN=%s\nTRAEFIK_DASHBOARD_AUTH='%s:%s'\n" \
+            "$ROOT_DOMAIN" "$TRAEFIK_DASHBOARD_USER" "$HASH" > /tmp/.env.proxy
+
+          scp -i ~/.ssh/deploy_key -P $VPS_PORT -o StrictHostKeyChecking=yes \
+              docker-compose.proxy.yml /tmp/.env.proxy \
+              $VPS_USER@$VPS_HOST:/tmp/
+          ssh -i ~/.ssh/deploy_key -p $VPS_PORT -o StrictHostKeyChecking=yes -o BatchMode=yes \
+              $VPS_USER@$VPS_HOST \
+              "cd /opt/projects/proxy && \
+               cp -n docker-compose.yml docker-compose.yml.orig-backup 2>/dev/null; \
+               install -m 0644 /tmp/docker-compose.proxy.yml docker-compose.yml && \
+               install -m 0600 /tmp/.env.proxy .env.proxy && \
+               rm -f /tmp/docker-compose.proxy.yml /tmp/.env.proxy && \
+               docker compose --env-file .env.proxy -f docker-compose.yml up -d && \
+               docker compose --env-file .env.proxy -f docker-compose.yml ps"
+
       - name: Post-deploy health-check
         id: healthcheck
         if: steps.check-secrets.outputs.has_secrets == 'true'

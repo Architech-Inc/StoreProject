@@ -1,0 +1,47 @@
+# Edge proxy (Traefik) for the VPS — deployed by CI to /opt/projects/proxy.
+#
+# This mirrors the hand-written file that was already running on the VPS (ports 18080/18443,
+# docker provider, proxy-network) and adds a password-protected dashboard:
+#
+#   https://traefik.${ROOT_DOMAIN}:18443/dashboard/
+#
+# Credentials come from the GitHub secrets TRAEFIK_DASHBOARD_USER / TRAEFIK_DASHBOARD_PASSWORD
+# (CI hashes the password with `openssl passwd -apr1` and passes it as TRAEFIK_DASHBOARD_AUTH).
+# Port 8080 (the raw API) is never published.
+services:
+  traefik:
+    image: traefik:latest
+    container_name: traefik
+    restart: unless-stopped
+    ports:
+      - "18080:80"
+      - "18443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./letsencrypt:/letsencrypt"
+    command:
+      - "--api.dashboard=true"
+      - "--api.insecure=false"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      # --- Uncomment below to enable Let's Encrypt SSL ---
+      # - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
+      # - "--certificatesresolvers.myresolver.acme.email=your-email@example.com"
+      # - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy-network"
+      - "traefik.http.routers.traefik-dashboard.rule=Host(`traefik.${ROOT_DOMAIN:?ROOT_DOMAIN is required}`)"
+      - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
+      - "traefik.http.routers.traefik-dashboard.tls=true"
+      - "traefik.http.routers.traefik-dashboard.service=api@internal"
+      - "traefik.http.routers.traefik-dashboard.middlewares=traefik-dashboard-auth"
+      - "traefik.http.middlewares.traefik-dashboard-auth.basicauth.users=${TRAEFIK_DASHBOARD_AUTH:?TRAEFIK_DASHBOARD_AUTH is required}"
+    networks:
+      - proxy-network
+
+networks:
+  proxy-network:
+    external: true
