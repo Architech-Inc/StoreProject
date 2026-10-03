@@ -293,6 +293,7 @@ jobs:
                docker compose --env-file .env.production -f docker-compose.platform.yml ps"
 
       - name: Post-deploy health-check
+        id: healthcheck
         if: steps.check-secrets.outputs.has_secrets == 'true'
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
@@ -315,3 +316,30 @@ jobs:
           done
           echo "::error::Control plane failed to come up within 120s"
           exit 1
+
+      - name: Dump container diagnostics (always)
+        if: steps.check-secrets.outputs.has_secrets == 'true' && always()
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER || 'deploy' }}
+          VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
+        run: |
+          echo "======= docker ps (all containers) ======="
+          ssh -i ~/.ssh/deploy_key -p $VPS_PORT -o StrictHostKeyChecking=yes \
+              $VPS_USER@$VPS_HOST "docker ps -a --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' 2>&1 || true"
+
+          echo ""
+          echo "======= store-controlplane-db logs (last 50 lines) ======="
+          ssh -i ~/.ssh/deploy_key -p $VPS_PORT -o StrictHostKeyChecking=yes \
+              $VPS_USER@$VPS_HOST "docker logs --tail=50 store-controlplane-db 2>&1 || true"
+
+          echo ""
+          echo "======= store-controlplane logs (last 100 lines) ======="
+          ssh -i ~/.ssh/deploy_key -p $VPS_PORT -o StrictHostKeyChecking=yes \
+              $VPS_USER@$VPS_HOST "docker logs --tail=100 store-controlplane 2>&1 || true"
+
+          echo ""
+          echo "======= store-controlplane inspect (State + RestartCount) ======="
+          ssh -i ~/.ssh/deploy_key -p $VPS_PORT -o StrictHostKeyChecking=yes \
+              $VPS_USER@$VPS_HOST "docker inspect store-controlplane --format '{{json .State}}' 2>&1 | python3 -m json.tool || true"
+
