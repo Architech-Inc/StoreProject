@@ -61,11 +61,10 @@
                         </div>
                     </div>
 
-                    <form method="post" asp-page-handler="RestartService" asp-route-service="@c.ServiceType.ToLowerInvariant()">
-                        @{
-                            var svcKey = c.Name.Contains("MySQL") ? "mysql" : c.Name.Contains("Mongo") ? "mongodb" : c.Name.Contains("API") ? "api" : "ui";
-                        }
-                        <input type="hidden" name="service" value="@svcKey" />
+                    @{
+                        var svcKey = c.Name.Contains("MySQL") ? "mysql" : c.Name.Contains("Mongo") ? "mongodb" : c.Name.Contains("API") ? "api" : "ui";
+                    }
+                    <form method="post" asp-page-handler="RestartService" asp-route-service="@svcKey">
                         <button type="submit" class="btn-glass" style="width: 100%; font-size: 12px; padding: 8px 12px;">
                             Restart Service
                         </button>
