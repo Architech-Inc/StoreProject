@@ -27,6 +27,8 @@ public interface IControlPlaneClient
     Task<bool> RestartServiceAsync(Guid tenantId, string serviceName, CancellationToken ct = default);
     Task<bool> SuspendTenantAsync(Guid tenantId, CancellationToken ct = default);
     Task<bool> ResumeTenantAsync(Guid tenantId, CancellationToken ct = default);
+    // Permanently deletes the tenant's silo (containers + volumes) and its ControlPlane record.
+    Task<bool> DeprovisionTenantAsync(Guid tenantId, CancellationToken ct = default);
 
     // Domains
     Task<TenantDomainDto?> GetDomainConfigAsync(Guid tenantId, CancellationToken ct = default);

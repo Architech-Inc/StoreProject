@@ -232,6 +232,20 @@ public class ControlPlaneClient : IControlPlaneClient
         }
     }
 
+    public async Task<bool> DeprovisionTenantAsync(Guid tenantId, CancellationToken ct = default)
+    {
+        try
+        {
+            var response = await _http.DeleteAsync($"api/control/tenants/{tenantId}", ct);
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deprovisioning tenant {TenantId}", tenantId);
+            return false;
+        }
+    }
+
     public async Task<bool> ResumeTenantAsync(Guid tenantId, CancellationToken ct = default)
     {
         try

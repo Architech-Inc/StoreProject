@@ -297,12 +297,29 @@ public class TenantOrchestrator : ITenantOrchestrator
             var tenantsBaseDir = Path.Combine(_env.ContentRootPath, "Tenants", tenant.Slug);
             if (Directory.Exists(tenantsBaseDir))
             {
-                await RunDockerCommandAsync(tenantsBaseDir, "compose down -v", ct);
-                try { Directory.Delete(tenantsBaseDir, true); } catch { }
+                var (downOk, downOutput) = await RunDockerCommandAsync(tenantsBaseDir, "compose down -v", ct);
+                if (!downOk)
+                {
+                    _logger.LogWarning("compose down -v for tenant {Slug} reported a problem: {Output}", tenant.Slug, downOutput);
+                }
+
+                try { Directory.Delete(tenantsBaseDir, true); }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Could not delete tenant folder {Dir} for {Slug}; remove it manually.", tenantsBaseDir, tenant.Slug);
+                }
             }
         }
 
         await _tenantRepo.DeleteAsync(tenantId, ct);
+
+        // Detach any portal account still pointing at this (now deleted) tenant so its owner
+        // lands back on onboarding instead of a dead dashboard.
+        await _dbContext.PortalAccounts
+            .Where(a => a.TenantId == tenantId)
+            .ExecuteUpdateAsync(s => s.SetProperty(a => a.TenantId, (Guid?)null), ct);
+
+        _logger.LogInformation("Tenant {Slug} ({TenantId}) deprovisioned; admin {AdminEmail}.", tenant.Slug, tenantId, tenant.AdminEmail);
         return true;
     }
 

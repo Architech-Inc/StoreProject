@@ -113,6 +113,23 @@
                     </button>
                 </form>
             }
+
+            <hr style="border: none; border-top: 1px solid rgba(209, 52, 56, 0.25); margin: 24px 0 20px;" />
+
+            <h4 style="font-size: 1rem; margin: 0 0 8px; color: #f87171;">Delete store permanently</h4>
+            <p style="color: var(--p-text-muted); font-size: 13px; margin-bottom: 14px;">
+                This removes all containers and <strong>permanently erases the store's databases, uploads and backups</strong>. This cannot be undone.
+                Type <span class="code-font" style="color: #f87171;">@envStatus?.Slug</span> to confirm.
+            </p>
+            <form method="post" asp-page-handler="DeleteSilo" style="display: flex; gap: 10px; flex-wrap: wrap;"
+                  onsubmit="return confirm('Permanently delete this store and ALL of its data? This cannot be undone.');">
+                <input type="text" name="confirmSlug" autocomplete="off" spellcheck="false" required
+                       placeholder="@envStatus?.Slug" aria-label="Type the store name to confirm deletion"
+                       style="flex: 1; min-width: 160px; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--p-border); background: var(--p-surface-alt); color: var(--p-text); font-size: 13px;" />
+                <button type="submit" class="btn-danger-glass" style="font-size: 13px;">
+                    Delete Store
+                </button>
+            </form>
         </div>
     </div>
 </div>

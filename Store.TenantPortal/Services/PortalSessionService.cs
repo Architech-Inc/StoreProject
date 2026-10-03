@@ -93,6 +93,25 @@ public class PortalSessionService : IPortalSessionService
         };
     }
 
+    public async Task ClearTenantInfoAsync(HttpContext httpContext)
+    {
+        var session = GetCurrentSession(httpContext.User);
+        if (session == null) return;
+
+        var authDto = new PortalAuthDto(
+            session.AccountId,
+            session.Email,
+            session.FullName,
+            null,
+            null,
+            null,
+            session.SessionToken,
+            DateTime.UtcNow.AddHours(8)
+        );
+
+        await SignInAsync(httpContext, authDto);
+    }
+
     public async Task UpdateTenantInfoAsync(HttpContext httpContext, Guid tenantId, string tenantSlug, string tenantName)
     {
         var session = GetCurrentSession(httpContext.User);

@@ -55,6 +55,33 @@ public class EnvironmentModel : PageModel
         return Page();
     }
 
+    public async Task<IActionResult> OnPostDeleteSiloAsync(string? confirmSlug, CancellationToken ct)
+    {
+        var session = _sessionService.GetCurrentSession(User);
+        if (session?.HasTenant != true) return RedirectToPage("/Onboarding");
+
+        if (string.IsNullOrWhiteSpace(session.TenantSlug) ||
+            !string.Equals(confirmSlug?.Trim(), session.TenantSlug, StringComparison.OrdinalIgnoreCase))
+        {
+            FeedbackMessage = "The store name you typed doesn't match. Nothing was deleted.";
+            IsError = true;
+            EnvStatus = await _cpClient.GetEnvironmentStatusAsync(session.TenantId!.Value, ct);
+            return Page();
+        }
+
+        var deleted = await _cpClient.DeprovisionTenantAsync(session.TenantId!.Value, ct);
+        if (!deleted)
+        {
+            FeedbackMessage = "We couldn't delete your store. Please try again, or contact support if it keeps failing.";
+            IsError = true;
+            EnvStatus = await _cpClient.GetEnvironmentStatusAsync(session.TenantId!.Value, ct);
+            return Page();
+        }
+
+        await _sessionService.ClearTenantInfoAsync(HttpContext);
+        return RedirectToPage("/Onboarding");
+    }
+
     public async Task<IActionResult> OnPostSuspendSiloAsync(CancellationToken ct)
     {
         var session = _sessionService.GetCurrentSession(User);

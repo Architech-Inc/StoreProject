@@ -10,4 +10,6 @@ public interface IPortalSessionService
     Task SignOutAsync(HttpContext httpContext);
     PortalSession? GetCurrentSession(ClaimsPrincipal user);
     Task UpdateTenantInfoAsync(HttpContext httpContext, Guid tenantId, string tenantSlug, string tenantName);
+    // Re-issues the sign-in cookie without any tenant claims (e.g. after the store is deleted).
+    Task ClearTenantInfoAsync(HttpContext httpContext);
 }
