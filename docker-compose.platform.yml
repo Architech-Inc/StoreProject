@@ -47,6 +47,8 @@ services:
       - ControlPlane__WebhookSigningSecret=${CONTROLPLANE_WEBHOOK_SIGNING_SECRET:?CONTROLPLANE_WEBHOOK_SIGNING_SECRET is required}
       - ControlPlane__RootDomain=${ROOT_DOMAIN:?ROOT_DOMAIN is required}
       - ControlPlane__AutoDeployDocker=true
+      # Host-side path of /app/Tenants (the docker daemon resolves bind mounts on the host).
+      - ControlPlane__TenantsHostPath=/opt/projects/platform/tenants
       - ControlPlane__StoreApiImage=${IMAGE_PREFIX:-ghcr.io/architech-inc/storeproject}/store-api:latest
       - ControlPlane__StoreUiImage=${IMAGE_PREFIX:-ghcr.io/architech-inc/storeproject}/store-ui:latest
       - ControlPlaneCors__AllowedOrigins__0=https://portal.${ROOT_DOMAIN}

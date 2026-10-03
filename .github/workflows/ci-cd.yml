@@ -277,7 +277,10 @@ jobs:
           echo "==> Ensuring target directories exist on VPS..."
           ssh -i ~/.ssh/deploy_key -p $VPS_PORT -o StrictHostKeyChecking=yes \
               $VPS_USER@$VPS_HOST \
-              "sudo mkdir -p /opt/projects/platform/tenants /opt/projects/proxy/dynamic && sudo chown -R \$USER:\$USER /opt/projects/platform"
+              "sudo mkdir -p /opt/projects/platform/tenants /opt/projects/proxy/dynamic && \
+               sudo chown \$USER:\$USER /opt/projects/platform && \
+               sudo chown \$USER:\$USER /opt/projects/platform/*.yml /opt/projects/platform/.env.production 2>/dev/null || true; \
+               sudo chown -R 0:0 /opt/projects/platform/tenants /opt/projects/proxy/dynamic"
 
           echo "==> Writing .env.production on runner..."
           # Extract the password from the connection string secret

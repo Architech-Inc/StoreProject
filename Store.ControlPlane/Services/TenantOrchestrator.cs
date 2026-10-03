@@ -800,6 +800,19 @@ public class TenantOrchestrator : ITenantOrchestrator
             return Task.FromResult((true, "Skipped because AutoDeployDocker is false"));
         }
 
+        // The ControlPlane talks to the HOST docker daemon through the mounted socket, so
+        // relative bind mounts (e.g. ./initdb) in a tenant compose file are resolved by the
+        // daemon against the HOST filesystem. Inside the container the same folder lives at
+        // /app/Tenants/<slug>, which does not exist on the host. When a host path is configured,
+        // point compose's project directory at the host-side location of the tenant folder.
+        var hostTenantsPath = _config["ControlPlane:TenantsHostPath"];
+        if (!string.IsNullOrWhiteSpace(hostTenantsPath) && arguments.StartsWith("compose "))
+        {
+            var slugDir = Path.GetFileName(workingDir.TrimEnd(Path.DirectorySeparatorChar, '/'));
+            var hostProjectDir = hostTenantsPath.TrimEnd('/') + "/" + slugDir;
+            arguments = $"compose --project-directory \"{hostProjectDir}\" {arguments.Substring("compose ".Length)}";
+        }
+
         return RunProcessAsync("docker", arguments, workingDir, ct);
     }
 
