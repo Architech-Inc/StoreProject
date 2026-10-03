@@ -326,6 +326,12 @@ jobs:
                docker compose --env-file .env.production -f docker-compose.platform.yml pull && \
                docker compose --env-file .env.production -f docker-compose.platform.yml up -d store-controlplane-db"
 
+          echo "==> Publishing registry credentials for the ControlPlane (root-owned, 0600)..."
+          ssh -i ~/.ssh/deploy_key -p $VPS_PORT -o StrictHostKeyChecking=yes -o BatchMode=yes \
+              $VPS_USER@$VPS_HOST \
+              "sudo install -d -m 0700 -o root -g root /opt/projects/platform/docker-config && \
+               sudo install -m 0600 -o root -g root ~/.docker/config.json /opt/projects/platform/docker-config/config.json"
+
           echo "==> Phase 2: Waiting for DB to be healthy (up to 90s)..."
           ssh -i ~/.ssh/deploy_key -p $VPS_PORT -o StrictHostKeyChecking=yes \
               $VPS_USER@$VPS_HOST \

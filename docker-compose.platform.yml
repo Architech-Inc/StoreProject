@@ -66,9 +66,10 @@ services:
       - /opt/projects/proxy/dynamic:/app/traefik/dynamic
       - /opt/projects/platform/tenants:/app/Tenants
       - controlplane_data:/app/App_Data
-      # Registry credentials (written by CI `docker login ghcr.io` as the deploy user) so the
-      # docker CLI in this container can pull the private tenant images (api/ui/backup).
-      - /home/deploy/.docker/config.json:/root/.docker/config.json:ro
+      # Registry credentials: root-owned 0600 copy of the deploy user's `docker login ghcr.io`
+      # config, refreshed by CI. (The original is owned by the deploy user, which this
+      # cap_drop:ALL container's root cannot read.) Lets the docker CLI pull private tenant images.
+      - /opt/projects/platform/docker-config/config.json:/root/.docker/config.json:ro
     depends_on:
       store-controlplane-db:
         condition: service_healthy
