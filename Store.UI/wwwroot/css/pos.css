@@ -310,6 +310,12 @@ body {
     margin-bottom: 0.8rem;
 }
 
+#cartEmpty[hidden],
+.empty-state[hidden],
+[hidden] {
+    display: none !important;
+}
+
 .cart-table {
     width: 100%;
     border-collapse: collapse;

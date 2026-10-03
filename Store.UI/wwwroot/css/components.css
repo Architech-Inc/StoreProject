@@ -630,6 +630,11 @@ tbody tr:hover {
     width: 100%;
 }
 
+.empty-state[hidden],
+[hidden] {
+    display: none !important;
+}
+
 .empty-state svg {
     width: 120px;
     height: 120px;

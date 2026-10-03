@@ -634,6 +634,7 @@
                 mobileCartBar.hidden = true;
             }
             cartEmpty.hidden = false;
+            cartEmpty.style.display = '';
             cartTable.hidden = true;
             subtotalText.textContent = '0 XAF';
             updateTenderTotals();
@@ -661,6 +662,7 @@
         }
 
         cartEmpty.hidden = true;
+        cartEmpty.style.display = 'none';
         cartTable.hidden = false;
         cartBody.innerHTML = '';
 
@@ -1315,9 +1317,9 @@
     resumeSaleBtn.addEventListener('click', () => restoreSuspendedSale(true));
     deleteSuspendedBtn.addEventListener('click', deleteSuspendedSale);
     receiptCloseBtn.addEventListener('click', closeReceipt);
-    receiptPrintBtn.addEventListener('click', () => window.print());
     receiptBlade.addEventListener('click', (e) => {
         if (e.target.dataset.close === 'receipt') closeReceipt();
+    });
 
     // Wave 23.B — override modal handlers. Stored on a module-scope
     // variable so the open function can stamp the line on submit.

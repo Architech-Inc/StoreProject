@@ -3438,6 +3438,33 @@ Three compounding issues caused the failure:
      - `DOC-03`: `[x]` (indexed in Pointer table and tagged across wave headers).
    - Synchronized "Pointer — Wave history" table with Waves 46 through 56.
 
+---
+
+## Wave 57 — POS Terminal Catalog Initialization & Cart Empty State Hardening (`UX-08`)
+
+**Date:** 2026-10-03  
+**Focus:** Fix POS terminal blank catalog startup failure caused by unclosed event listener syntax error, and fix CSS specificity leak causing "Cart is Empty" to remain visible when cart items are present.
+
+### Changes & Hardening
+
+1. **POS Terminal Script Startup & Syntax Correction (`Store.UI/Pages/Pos.cshtml`)**:
+   - Diagnosed blank catalog panel on page load: `receiptBlade.addEventListener('click', ...)` was missing its closing `});` delimiter at line 1321, causing an uncaught `SyntaxError: Unexpected end of input` during browser script evaluation.
+   - Closed event listener block, restoring full execution of initialization sequence (`seedCustomers`, `addTenderLine`, `renderSuspendedSales`, `renderCatalog`, `renderCart`, `initPosSignalR`, and offline cache priming).
+   - Validated complete JavaScript payload through AST parser to verify 0 syntax errors.
+
+2. **Cart Empty-State Display & Specificity Hardening (`components.css`, `pos.css`, `Pos.cshtml`)**:
+   - Diagnosed bug where "Cart is Empty" state remained visible when items were in the cart: `.empty-state` sets `display: flex;` with class specificity `(0, 1, 0)`, which overrides HTML user-agent attribute `[hidden] { display: none; }` `(0, 0, 0)`.
+   - Added `[hidden], .empty-state[hidden] { display: none !important; }` in `Store.UI/wwwroot/css/components.css` and `Store.UI/wwwroot/css/pos.css`.
+   - Hardened `renderCart()` in `Store.UI/Pages/Pos.cshtml` with explicit DOM style management: sets `cartEmpty.style.display = 'none'` when cart items exist, and resets (`''`) when cart is empty.
+
+3. **Audit Tracker & Test Verification**:
+   - Logged `UX-08: [x]` in `docs/audit-tracker.md` and added Wave 57 to the Pointer table.
+   - Ran automated test suites across all projects:
+     - `Store.API.Tests`: **488 passed, 0 failed**.
+     - `Store.ControlPlane.Tests`: **57 passed, 0 failed**.
+     - `Store.TenantPortal.Tests`: **27 passed, 0 failed**.
+
+
 
 
 
